@@ -133,6 +133,7 @@ dependencies = [
  "fs2",
  "hex",
  "ignore",
+ "lib-cli-common",
  "lib-embed",
  "lib-migrations",
  "memmap2",
@@ -3633,6 +3634,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "console",
+ "directories",
  "serde",
  "serde_json",
  "tracing",
@@ -3647,8 +3649,8 @@ version = "0.8.3"
 name = "lib-embed"
 version = "0.8.3"
 dependencies = [
- "directories",
  "fastembed",
+ "lib-cli-common",
  "serde",
  "thiserror 2.0.17",
  "toml",
