@@ -18,6 +18,10 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/adi-tasks-cli` - Task management CLI
 - `crates/adi-tasks-http` - Task management HTTP server
 - `crates/adi-tasks-mcp` - Task management MCP server
+- `crates/adi-knowledgebase-core` - Knowledgebase core library (graph DB + embeddings)
+- `crates/adi-knowledgebase-cli` - Knowledgebase CLI
+- `crates/adi-knowledgebase-http` - Knowledgebase HTTP server
+- `crates/adi-knowledgebase-mcp` - Knowledgebase MCP server
 - `crates/lib-color` - Unified color type (RGB/RGBA/Hex)
 - `crates/lib-animation` - UI animation utilities
 - `crates/lib-syntax-highlight` - Syntax highlighting tokenizer
@@ -27,6 +31,7 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/lib-iced-ui` - Reusable iced UI components
 - `crates/tarminal` - GPU-accelerated terminal emulator
 - `crates/debug-metal-shader` - Metal shader debug app
+- `crates/docs-knowledgebase` - Knowledgebase documentation
 
 ## Setup
 ```bash
@@ -70,4 +75,5 @@ Each submodule is an independent repo that can be developed standalone:
 - lib-iced-ui: `../lib-iced-ui`
 - tarminal: `../tarminal-app`
 - debug-metal-shader: `../debug-metal-shader`
+- docs-knowledgebase: `../docs-knowledgebase`
 - each crate in the crates dir must be a submodule

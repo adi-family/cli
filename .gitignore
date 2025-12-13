@@ -1,3 +1,4 @@
 /target
 .adi/
 .idea/
+.env
