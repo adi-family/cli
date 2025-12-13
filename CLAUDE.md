@@ -8,6 +8,7 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 ## Submodules
 - `crates/adi-cli` - Component installer/manager
 - `crates/lib-embed` - Shared embedding library
+- `crates/lib-cli-common` - Common CLI utilities
 - `crates/adi-indexer-core` - Code indexer core library
 - `crates/adi-indexer-cli` - Code indexer CLI
 - `crates/adi-indexer-http` - Code indexer HTTP server
@@ -49,6 +50,7 @@ git submodule update --remote     # Pull latest from all submodules
 Each submodule is an independent repo that can be developed standalone:
 - adi-cli: `../adi-cli`
 - lib-embed: `../lib-embed`
+- lib-cli-common: `../lib-cli-common`
 - adi-indexer-core: `../adi-indexer-core`
 - adi-indexer-cli: `../adi-indexer-cli`
 - adi-indexer-http: `../adi-indexer-http`
