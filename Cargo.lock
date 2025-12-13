@@ -66,6 +66,7 @@ dependencies = [
  "hex",
  "ignore",
  "lib-embed",
+ "lib-migrations",
  "memmap2",
  "notify",
  "rusqlite",
@@ -166,9 +167,11 @@ version = "0.8.3"
 dependencies = [
  "async-trait",
  "dirs 5.0.1",
+ "lib-migrations",
  "rusqlite",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -3468,6 +3471,15 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
+]
+
+[[package]]
+name = "lib-migrations"
+version = "0.1.0"
+dependencies = [
+ "rusqlite",
+ "tempfile",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

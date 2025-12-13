@@ -58,3 +58,6 @@
 [submodule "crates/lib-cli-common"]
 	path = crates/lib-cli-common
 	url = https://github.com/adi-family/lib-cli-common.git
+[submodule "crates/lib-migrations"]
+	path = crates/lib-migrations
+	url = https://github.com/adi-family/lib-migrations.git

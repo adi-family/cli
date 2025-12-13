@@ -6,6 +6,7 @@ members = [
 
     # Shared libraries
     "crates/lib-cli-common",
+    "crates/lib-migrations",
 
     # Indexer components (flat submodules)
     "crates/lib-embed",
@@ -55,6 +56,7 @@ lib-terminal-grid = { path = "crates/lib-terminal-grid" }
 lib-iced-ui = { path = "crates/lib-iced-ui" }
 lib-embed = { path = "crates/lib-embed" }
 lib-cli-common = { path = "crates/lib-cli-common" }
+lib-migrations = { path = "crates/lib-migrations" }
 
 # Error handling
 thiserror = "2"

@@ -9,6 +9,7 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/adi-cli` - Component installer/manager
 - `crates/lib-embed` - Shared embedding library
 - `crates/lib-cli-common` - Common CLI utilities
+- `crates/lib-migrations` - Database migration framework
 - `crates/adi-indexer-core` - Code indexer core library
 - `crates/adi-indexer-cli` - Code indexer CLI
 - `crates/adi-indexer-http` - Code indexer HTTP server
@@ -51,6 +52,7 @@ Each submodule is an independent repo that can be developed standalone:
 - adi-cli: `../adi-cli`
 - lib-embed: `../lib-embed`
 - lib-cli-common: `../lib-cli-common`
+- lib-migrations: `../lib-migrations`
 - adi-indexer-core: `../adi-indexer-core`
 - adi-indexer-cli: `../adi-indexer-cli`
 - adi-indexer-http: `../adi-indexer-http`
@@ -68,3 +70,4 @@ Each submodule is an independent repo that can be developed standalone:
 - lib-iced-ui: `../lib-iced-ui`
 - tarminal: `../tarminal-app`
 - debug-metal-shader: `../debug-metal-shader`
+- each crate in the crates dir must be a submodule
