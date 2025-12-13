@@ -41,7 +41,7 @@ members = [
     "crates/lib-json-tree",
     "crates/lib-terminal-grid",
     "crates/lib-iced-ui",
-    # "crates/tarminal",  # Requires fonts to be downloaded
+    "crates/tarminal",
 
     # Debug app (submodule)
     "crates/debug-metal-shader",
