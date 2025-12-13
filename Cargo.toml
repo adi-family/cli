@@ -44,7 +44,7 @@ members = [
     "crates/tarminal",
 
     # Debug app (submodule)
-    "crates/debug-metal-shader",
+    "crates/debug-metal-shader", "crates/tool-generate-heartbit",
 ]
 
 [workspace.package]
