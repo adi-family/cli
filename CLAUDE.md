@@ -22,6 +22,10 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/adi-knowledgebase-cli` - Knowledgebase CLI
 - `crates/adi-knowledgebase-http` - Knowledgebase HTTP server
 - `crates/adi-knowledgebase-mcp` - Knowledgebase MCP server
+- `crates/adi-agent-loop-core` - Agent loop core library (autonomous LLM agents)
+- `crates/adi-agent-loop-cli` - Agent loop CLI
+- `crates/adi-agent-loop-http` - Agent loop HTTP server
+- `crates/adi-agent-loop-mcp` - Agent loop MCP server
 - `crates/lib-color` - Unified color type (RGB/RGBA/Hex)
 - `crates/lib-animation` - UI animation utilities
 - `crates/lib-syntax-highlight` - Syntax highlighting tokenizer

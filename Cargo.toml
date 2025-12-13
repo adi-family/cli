@@ -27,6 +27,12 @@ members = [
     "crates/adi-knowledgebase-http",
     "crates/adi-knowledgebase-mcp",
 
+    # Agent Loop components
+    "crates/adi-agent-loop-core",
+    "crates/adi-agent-loop-cli",
+    "crates/adi-agent-loop-http",
+    "crates/adi-agent-loop-mcp",
+
     # Tarminal components (flat submodules)
     "crates/lib-color",
     "crates/lib-animation",
@@ -52,6 +58,7 @@ authors = ["ADI Team"]
 adi-indexer-core = { path = "crates/adi-indexer-core" }
 adi-tasks-core = { path = "crates/adi-tasks-core" }
 adi-knowledgebase-core = { path = "crates/adi-knowledgebase-core" }
+adi-agent-loop-core = { path = "crates/adi-agent-loop-core" }
 
 # Libraries (flat submodules)
 lib-color = { path = "crates/lib-color" }
@@ -162,3 +169,6 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 sha2 = "0.10"
 hex = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
+futures = "0.3"
+glob = "0.3"
+regex = "1"
