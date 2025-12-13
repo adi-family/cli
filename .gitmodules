@@ -61,6 +61,3 @@
 [submodule "crates/lib-migrations"]
 	path = crates/lib-migrations
 	url = https://github.com/adi-family/lib-migrations.git
-[submodule "crates/docs-knowledgebase"]
-	path = crates/docs-knowledgebase
-	url = https://github.com/adi-family/docs-knowledgebase.git

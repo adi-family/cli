@@ -35,8 +35,6 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/lib-iced-ui` - Reusable iced UI components
 - `crates/tarminal` - GPU-accelerated terminal emulator
 - `crates/debug-metal-shader` - Metal shader debug app
-- `crates/docs-knowledgebase` - Knowledgebase documentation
-- `crates/docs-agent-loop` - Agent loop architecture documentation
 
 ## Setup
 ```bash
@@ -80,6 +78,4 @@ Each submodule is an independent repo that can be developed standalone:
 - lib-iced-ui: `../lib-iced-ui`
 - tarminal: `../tarminal-app`
 - debug-metal-shader: `../debug-metal-shader`
-- docs-knowledgebase: `../docs-knowledgebase`
-- docs-agent-loop: `../docs-agent-loop`
 - each crate in the crates dir must be a submodule
