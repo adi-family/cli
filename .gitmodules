@@ -1,0 +1,57 @@
+[submodule "crates/adi-cli"]
+	path = crates/adi-cli
+	url = https://github.com/adi-family/adi-cli.git
+[submodule "crates/debug-metal-shader"]
+	path = crates/debug-metal-shader
+	url = https://github.com/adi-family/debug-metal-shader.git
+[submodule "crates/lib-embed"]
+	path = crates/lib-embed
+	url = https://github.com/adi-family/lib-embed.git
+[submodule "crates/adi-indexer-core"]
+	path = crates/adi-indexer-core
+	url = https://github.com/adi-family/adi-indexer-core.git
+[submodule "crates/adi-indexer-cli"]
+	path = crates/adi-indexer-cli
+	url = https://github.com/adi-family/adi-indexer-cli.git
+[submodule "crates/adi-indexer-http"]
+	path = crates/adi-indexer-http
+	url = https://github.com/adi-family/adi-indexer-http.git
+[submodule "crates/adi-indexer-mcp"]
+	path = crates/adi-indexer-mcp
+	url = https://github.com/adi-family/adi-indexer-mcp.git
+[submodule "crates/adi-tasks-core"]
+	path = crates/adi-tasks-core
+	url = https://github.com/adi-family/adi-tasks-core.git
+[submodule "crates/adi-tasks-cli"]
+	path = crates/adi-tasks-cli
+	url = https://github.com/adi-family/adi-tasks-cli.git
+[submodule "crates/adi-tasks-http"]
+	path = crates/adi-tasks-http
+	url = https://github.com/adi-family/adi-tasks-http.git
+[submodule "crates/adi-tasks-mcp"]
+	path = crates/adi-tasks-mcp
+	url = https://github.com/adi-family/adi-tasks-mcp.git
+[submodule "crates/lib-color"]
+	path = crates/lib-color
+	url = https://github.com/adi-family/lib-color.git
+[submodule "crates/lib-animation"]
+	path = crates/lib-animation
+	url = https://github.com/adi-family/lib-animation.git
+[submodule "crates/lib-syntax-highlight"]
+	path = crates/lib-syntax-highlight
+	url = https://github.com/adi-family/lib-syntax-highlight.git
+[submodule "crates/lib-json-tree"]
+	path = crates/lib-json-tree
+	url = https://github.com/adi-family/lib-json-tree.git
+[submodule "crates/lib-terminal-theme"]
+	path = crates/lib-terminal-theme
+	url = https://github.com/adi-family/lib-terminal-theme.git
+[submodule "crates/lib-terminal-grid"]
+	path = crates/lib-terminal-grid
+	url = https://github.com/adi-family/lib-terminal-grid.git
+[submodule "crates/lib-iced-ui"]
+	path = crates/lib-iced-ui
+	url = https://github.com/adi-family/lib-iced-ui.git
+[submodule "crates/tarminal"]
+	path = crates/tarminal
+	url = https://github.com/adi-family/tarminal.git

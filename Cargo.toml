@@ -1,0 +1,154 @@
+[workspace]
+resolver = "2"
+members = [
+    # CLI manager (submodule)
+    "crates/adi-cli",
+
+    # Shared libraries
+    "crates/lib-cli-common",
+
+    # Indexer components (flat submodules)
+    "crates/lib-embed",
+    "crates/adi-indexer-core",
+    "crates/adi-indexer-cli",
+    "crates/adi-indexer-http",
+    "crates/adi-indexer-mcp",
+
+    # Tasks components (flat submodules)
+    "crates/adi-tasks-core",
+    "crates/adi-tasks-cli",
+    "crates/adi-tasks-http",
+    "crates/adi-tasks-mcp",
+
+    # Tarminal components (flat submodules)
+    "crates/lib-color",
+    "crates/lib-animation",
+    "crates/lib-syntax-highlight",
+    "crates/lib-terminal-theme",
+    "crates/lib-json-tree",
+    "crates/lib-terminal-grid",
+    "crates/lib-iced-ui",
+    # "crates/tarminal",  # Requires fonts to be downloaded
+
+    # Debug app (submodule)
+    "crates/debug-metal-shader",
+]
+
+[workspace.package]
+version = "0.8.3"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+
+[workspace.dependencies]
+# Core crates (from submodules)
+adi-indexer-core = { path = "crates/adi-indexer-core" }
+adi-tasks-core = { path = "crates/adi-tasks-core" }
+
+# Libraries (flat submodules)
+lib-color = { path = "crates/lib-color" }
+lib-animation = { path = "crates/lib-animation" }
+lib-syntax-highlight = { path = "crates/lib-syntax-highlight" }
+lib-terminal-theme = { path = "crates/lib-terminal-theme" }
+lib-json-tree = { path = "crates/lib-json-tree" }
+lib-terminal-grid = { path = "crates/lib-terminal-grid" }
+lib-iced-ui = { path = "crates/lib-iced-ui" }
+lib-embed = { path = "crates/lib-embed" }
+lib-cli-common = { path = "crates/lib-cli-common" }
+
+# Error handling
+thiserror = "2"
+anyhow = "1.0"
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# CLI
+clap = { version = "4.0", features = ["derive"] }
+indicatif = "0.17"
+console = "0.15"
+dialoguer = "0.11"
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "native-tls-vendored"] }
+
+# Compression
+flate2 = "1"
+tar = "0.4"
+zip = "0.6"
+
+# File system
+dirs = "5"
+directories = "5.0"
+walkdir = "2.4"
+ignore = "0.4"
+notify = { version = "6.1", features = ["serde"] }
+fs2 = "0.4"
+
+# Tree-sitter core
+tree-sitter = "0.25"
+
+# Tree-sitter languages
+tree-sitter-typescript = "0.23"
+tree-sitter-javascript = "0.25"
+tree-sitter-css = "0.25"
+tree-sitter-html = "0.23"
+tree-sitter-python = "0.25"
+tree-sitter-java = "0.23"
+tree-sitter-rust = "0.24"
+tree-sitter-ruby = "0.23"
+tree-sitter-go = "0.25"
+tree-sitter-c = "0.24"
+tree-sitter-cpp = "0.23"
+tree-sitter-c-sharp = "0.23"
+tree-sitter-php = "0.24"
+tree-sitter-kotlin = "0.3"
+tree-sitter-scala = "0.24"
+tree-sitter-swift = "0.7"
+tree-sitter-sql = "0.0.2"
+tree-sitter-bash = "0.25"
+tree-sitter-lua = "0.2"
+tree-sitter-json = "0.24"
+tree-sitter-yaml = "0.7"
+tree-sitter-toml = "0.20"
+tree-sitter-xml = "0.7"
+tree-sitter-md = "0.5"
+tree-sitter-dockerfile = "0.2"
+tree-sitter-hcl = "1.1"
+tree-sitter-graphql = "0.1"
+tree-sitter-haskell = "0.23"
+tree-sitter-ocaml = "0.24"
+tree-sitter-elixir = "0.3"
+tree-sitter-erlang = "0.15"
+tree-sitter-zig = "1.1"
+
+# Storage
+rusqlite = { version = "0.31", features = ["bundled"] }
+memmap2 = "0.9"
+bytemuck = { version = "1.14", features = ["derive"] }
+
+# Vector search
+usearch = "2.8"
+
+# Embedding
+fastembed = "4"
+
+# HTTP server
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Logging/tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Misc
+uuid = { version = "1.0", features = ["v4", "serde"] }
+sha2 = "0.10"
+hex = "0.4"
