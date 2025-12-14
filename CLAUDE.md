@@ -5,6 +5,9 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - Build all components: `cargo build --workspace`
 - License: BSL-1.0
 
+## Resources
+- Icons: https://phosphoricons.com
+
 ## Submodules
 - `crates/adi-cli` - Component installer/manager
 - `crates/lib-embed` - Shared embedding library
