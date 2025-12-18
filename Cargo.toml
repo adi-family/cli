@@ -44,7 +44,15 @@ members = [
     "crates/tarminal",
 
     # Debug app (submodule)
-    "crates/debug-metal-shader", "crates/tool-generate-heartbit",
+    "crates/debug-metal-shader",
+    "crates/tool-generate-heartbit",
+
+    # Plugin system
+    "crates/lib-plugin-abi",
+    "crates/lib-plugin-manifest",
+    "crates/lib-plugin-verify",
+    "crates/lib-plugin-registry",
+    "crates/lib-plugin-host",
 ]
 
 [workspace.package]
@@ -71,6 +79,26 @@ lib-iced-ui = { path = "crates/lib-iced-ui" }
 lib-embed = { path = "crates/lib-embed" }
 lib-cli-common = { path = "crates/lib-cli-common" }
 lib-migrations = { path = "crates/lib-migrations" }
+
+# Plugin system
+lib-plugin-abi = { path = "crates/lib-plugin-abi" }
+lib-plugin-manifest = { path = "crates/lib-plugin-manifest" }
+lib-plugin-verify = { path = "crates/lib-plugin-verify" }
+lib-plugin-registry = { path = "crates/lib-plugin-registry" }
+lib-plugin-host = { path = "crates/lib-plugin-host" }
+
+# ABI stability for plugins
+abi_stable = "0.11"
+
+# Crypto for plugin verification
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+base64 = "0.22"
+
+# Dynamic loading
+libloading = "0.8"
+
+# Semver
+semver = "1"
 
 # Error handling
 thiserror = "2"
