@@ -8,6 +8,10 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 ## Resources
 - Icons: https://phosphoricons.com
 
+## Code Guidelines
+- NEVER use emojis in code - use Phosphor icons from https://phosphoricons.com instead
+- All icons must be Phosphor unicode glyphs rendered with ICON_FONT
+
 ## Submodules
 - `crates/adi-cli` - Component installer/manager
 - `crates/lib-embed` - Shared embedding library
