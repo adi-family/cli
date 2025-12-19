@@ -53,6 +53,7 @@ members = [
     "crates/lib-plugin-verify",
     "crates/lib-plugin-registry",
     "crates/lib-plugin-host",
+    "crates/adi-plugin-registry-http",
 ]
 
 [workspace.package]

@@ -147,7 +147,9 @@ dependencies = [
  "dialoguer",
  "dirs 5.0.1",
  "flate2",
+ "futures",
  "indicatif",
+ "lib-plugin-registry",
  "reqwest",
  "serde",
  "serde_json",
@@ -330,6 +332,30 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "adi-plugin-registry-http"
+version = "0.8.3"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "flate2",
+ "hex",
+ "lib-plugin-manifest",
+ "lib-plugin-registry",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tar",
+ "tokio",
+ "tokio-util",
+ "tower 0.4.13",
+ "tower-http 0.5.2",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -917,6 +943,7 @@ dependencies = [
  "matchit",
  "memchr",
  "mime",
+ "multer",
  "percent-encoding",
  "pin-project-lite",
  "rustversion",
@@ -4561,6 +4588,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "multer"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83e87776546dc87511aa5ee218730c92b666d7264ab6ed41f9d215af9cd5224b"
+dependencies = [
+ "bytes",
+ "encoding_rs",
+ "futures-util",
+ "http",
+ "httparse",
+ "memchr",
+ "mime",
+ "spin",
+ "version_check",
+]
+
+[[package]]
 name = "mutate_once"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6815,6 +6859,12 @@ dependencies = [
  "windows-sys 0.59.0",
  "x11rb",
 ]
+
+[[package]]
+name = "spin"
+version = "0.9.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 
 [[package]]
 name = "spirv"
