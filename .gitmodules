@@ -64,3 +64,57 @@
 [submodule "crates/adi-plugin-registry-http"]
 	path = crates/adi-plugin-registry-http
 	url = https://github.com/adi-family/adi-plugin-registry.git
+[submodule "crates/adi-agent-loop-cli"]
+	path = crates/adi-agent-loop-cli
+	url = https://github.com/adi-family/adi-agent-loop-cli.git
+[submodule "crates/adi-agent-loop-core"]
+	path = crates/adi-agent-loop-core
+	url = https://github.com/adi-family/adi-agent-loop-core.git
+[submodule "crates/adi-agent-loop-http"]
+	path = crates/adi-agent-loop-http
+	url = https://github.com/adi-family/adi-agent-loop-http.git
+[submodule "crates/adi-agent-loop-mcp"]
+	path = crates/adi-agent-loop-mcp
+	url = https://github.com/adi-family/adi-agent-loop-mcp.git
+[submodule "crates/adi-agent-loop-plugin"]
+	path = crates/adi-agent-loop-plugin
+	url = https://github.com/adi-family/adi-agent-loop-plugin.git
+[submodule "crates/adi-indexer-plugin"]
+	path = crates/adi-indexer-plugin
+	url = https://github.com/adi-family/adi-indexer-plugin.git
+[submodule "crates/adi-knowledgebase-cli"]
+	path = crates/adi-knowledgebase-cli
+	url = https://github.com/adi-family/adi-knowledgebase-cli.git
+[submodule "crates/adi-knowledgebase-core"]
+	path = crates/adi-knowledgebase-core
+	url = https://github.com/adi-family/adi-knowledgebase-core.git
+[submodule "crates/adi-knowledgebase-http"]
+	path = crates/adi-knowledgebase-http
+	url = https://github.com/adi-family/adi-knowledgebase-http.git
+[submodule "crates/adi-knowledgebase-mcp"]
+	path = crates/adi-knowledgebase-mcp
+	url = https://github.com/adi-family/adi-knowledgebase-mcp.git
+[submodule "crates/adi-knowledgebase-plugin"]
+	path = crates/adi-knowledgebase-plugin
+	url = https://github.com/adi-family/adi-knowledgebase-plugin.git
+[submodule "crates/adi-tasks-plugin"]
+	path = crates/adi-tasks-plugin
+	url = https://github.com/adi-family/adi-tasks-plugin.git
+[submodule "crates/lib-plugin-abi"]
+	path = crates/lib-plugin-abi
+	url = https://github.com/adi-family/lib-plugin-abi.git
+[submodule "crates/lib-plugin-host"]
+	path = crates/lib-plugin-host
+	url = https://github.com/adi-family/lib-plugin-host.git
+[submodule "crates/lib-plugin-manifest"]
+	path = crates/lib-plugin-manifest
+	url = https://github.com/adi-family/lib-plugin-manifest.git
+[submodule "crates/lib-plugin-registry"]
+	path = crates/lib-plugin-registry
+	url = https://github.com/adi-family/lib-plugin-registry.git
+[submodule "crates/lib-plugin-verify"]
+	path = crates/lib-plugin-verify
+	url = https://github.com/adi-family/lib-plugin-verify.git
+[submodule "crates/tool-generate-heartbit"]
+	path = crates/tool-generate-heartbit
+	url = https://github.com/adi-family/tool-generate-heartbit.git
