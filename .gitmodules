@@ -118,3 +118,6 @@
 [submodule "crates/tool-generate-heartbit"]
 	path = crates/tool-generate-heartbit
 	url = https://github.com/adi-family/tool-generate-heartbit.git
+[submodule "apps/tarminal-native-macos"]
+	path = apps/tarminal-native-macos
+	url = https://github.com/adi-family/tarminal-native-macos.git

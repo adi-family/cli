@@ -43,6 +43,9 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/tarminal` - GPU-accelerated terminal emulator
 - `crates/debug-metal-shader` - Metal shader debug app
 
+## Apps
+- `apps/tarminal-native-macos` - Native macOS app for Tarminal (SwiftUI)
+
 ## Setup
 ```bash
 git clone --recursive <repo>
@@ -85,4 +88,6 @@ Each submodule is an independent repo that can be developed standalone:
 - lib-iced-ui: `../lib-iced-ui`
 - tarminal: `../tarminal-app`
 - debug-metal-shader: `../debug-metal-shader`
+- tarminal-native-macos: `../tarminal-native-macos`
 - each crate in the crates dir must be a submodule
+- each app in the apps dir must be a submodule
