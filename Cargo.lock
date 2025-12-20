@@ -113,7 +113,7 @@ version = "0.8.3"
 dependencies = [
  "adi-agent-loop-core",
  "anyhow",
- "axum",
+ "axum 0.7.9",
  "serde",
  "serde_json",
  "tokio",
@@ -137,19 +137,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "adi-agent-loop-plugin"
+version = "0.8.3"
+dependencies = [
+ "abi_stable",
+ "adi-agent-loop-core",
+ "lib-plugin-abi",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "adi-cli"
 version = "0.8.3"
 dependencies = [
  "anyhow",
- "async-trait",
+ "axum 0.8.7",
  "clap",
  "console",
  "dialoguer",
  "dirs 5.0.1",
  "flate2",
- "futures",
  "indicatif",
+ "lib-plugin-abi",
+ "lib-plugin-host",
+ "lib-plugin-manifest",
  "lib-plugin-registry",
+ "lib-plugin-verify",
  "reqwest",
  "serde",
  "serde_json",
@@ -157,6 +173,10 @@ dependencies = [
  "thiserror 2.0.17",
  "tokio",
  "toml",
+ "tower 0.5.2",
+ "tower-http 0.6.8",
+ "tracing",
+ "tracing-subscriber",
  "zip",
 ]
 
@@ -243,7 +263,7 @@ version = "0.8.3"
 dependencies = [
  "adi-indexer-core",
  "anyhow",
- "axum",
+ "axum 0.7.9",
  "serde",
  "serde_json",
  "tokio",
@@ -265,6 +285,19 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "adi-indexer-plugin"
+version = "0.8.3"
+dependencies = [
+ "abi_stable",
+ "adi-indexer-core",
+ "lib-plugin-abi",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -309,7 +342,7 @@ version = "0.8.3"
 dependencies = [
  "adi-knowledgebase-core",
  "anyhow",
- "axum",
+ "axum 0.7.9",
  "serde",
  "serde_json",
  "tokio",
@@ -335,11 +368,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "adi-plugin-registry-http"
+name = "adi-knowledgebase-plugin"
 version = "0.8.3"
 dependencies = [
+ "abi_stable",
+ "adi-knowledgebase-core",
+ "lib-plugin-abi",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "adi-plugin-registry-http"
+version = "0.8.4"
+dependencies = [
  "anyhow",
- "axum",
+ "axum 0.7.9",
  "chrono",
  "flate2",
  "hex",
@@ -394,7 +440,7 @@ name = "adi-tasks-http"
 version = "0.8.3"
 dependencies = [
  "adi-tasks-core",
- "axum",
+ "axum 0.7.9",
  "serde",
  "serde_json",
  "tokio",
@@ -414,6 +460,18 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "adi-tasks-plugin"
+version = "0.8.3"
+dependencies = [
+ "abi_stable",
+ "adi-tasks-core",
+ "lib-plugin-abi",
+ "once_cell",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -931,7 +989,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edca88bc138befd0323b20752846e6587272d3b03b0343c8ea28a6f819e6e71f"
 dependencies = [
  "async-trait",
- "axum-core",
+ "axum-core 0.4.5",
  "bytes",
  "futures-util",
  "http",
@@ -940,7 +998,7 @@ dependencies = [
  "hyper",
  "hyper-util",
  "itoa",
- "matchit",
+ "matchit 0.7.3",
  "memchr",
  "mime",
  "multer",
@@ -948,6 +1006,39 @@ dependencies = [
  "pin-project-lite",
  "rustversion",
  "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "serde_urlencoded",
+ "sync_wrapper",
+ "tokio",
+ "tower 0.5.2",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+]
+
+[[package]]
+name = "axum"
+version = "0.8.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b098575ebe77cb6d14fc7f32749631a6e44edbef6b796f89b020e99ba20d425"
+dependencies = [
+ "axum-core 0.5.5",
+ "bytes",
+ "form_urlencoded",
+ "futures-util",
+ "http",
+ "http-body",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "itoa",
+ "matchit 0.8.4",
+ "memchr",
+ "mime",
+ "percent-encoding",
+ "pin-project-lite",
+ "serde_core",
  "serde_json",
  "serde_path_to_error",
  "serde_urlencoded",
@@ -974,6 +1065,25 @@ dependencies = [
  "mime",
  "pin-project-lite",
  "rustversion",
+ "sync_wrapper",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+]
+
+[[package]]
+name = "axum-core"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59446ce19cd142f8833f856eb31f3eb097812d1479ab224f54d72428ca21ea22"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "http",
+ "http-body",
+ "http-body-util",
+ "mime",
+ "pin-project-lite",
  "sync_wrapper",
  "tower-layer",
  "tower-service",
@@ -4118,14 +4228,14 @@ dependencies = [
 
 [[package]]
 name = "lib-plugin-abi"
-version = "0.8.3"
+version = "0.8.4"
 dependencies = [
  "abi_stable",
 ]
 
 [[package]]
 name = "lib-plugin-host"
-version = "0.8.3"
+version = "0.8.4"
 dependencies = [
  "abi_stable",
  "dirs 5.0.1",
@@ -4141,7 +4251,7 @@ dependencies = [
 
 [[package]]
 name = "lib-plugin-manifest"
-version = "0.8.3"
+version = "0.8.4"
 dependencies = [
  "semver",
  "serde",
@@ -4151,7 +4261,7 @@ dependencies = [
 
 [[package]]
 name = "lib-plugin-registry"
-version = "0.8.3"
+version = "0.8.4"
 dependencies = [
  "futures",
  "lib-plugin-manifest",
@@ -4166,7 +4276,7 @@ dependencies = [
 
 [[package]]
 name = "lib-plugin-verify"
-version = "0.8.3"
+version = "0.8.4"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
@@ -4426,6 +4536,12 @@ name = "matchit"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
+
+[[package]]
+name = "matchit"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
 name = "matrixmultiply"
@@ -7594,6 +7710,7 @@ dependencies = [
  "tower 0.5.2",
  "tower-layer",
  "tower-service",
+ "tracing",
 ]
 
 [[package]]

@@ -54,10 +54,16 @@ members = [
     "crates/lib-plugin-registry",
     "crates/lib-plugin-host",
     "crates/adi-plugin-registry-http",
+
+    # Core plugins
+    "crates/adi-indexer-plugin",
+    "crates/adi-tasks-plugin",
+    "crates/adi-knowledgebase-plugin",
+    "crates/adi-agent-loop-plugin",
 ]
 
 [workspace.package]
-version = "0.8.3"
+version = "0.8.4"
 edition = "2021"
 license = "BSL-1.0"
 authors = ["ADI Team"]
