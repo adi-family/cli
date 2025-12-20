@@ -61,3 +61,6 @@
 [submodule "crates/lib-migrations"]
 	path = crates/lib-migrations
 	url = https://github.com/adi-family/lib-migrations.git
+[submodule "crates/adi-plugin-registry-http"]
+	path = crates/adi-plugin-registry-http
+	url = https://github.com/adi-family/adi-plugin-registry.git
