@@ -52,9 +52,6 @@
 [submodule "crates/lib-iced-ui"]
 	path = crates/lib-iced-ui
 	url = https://github.com/adi-family/lib-iced-ui.git
-[submodule "crates/tarminal"]
-	path = crates/tarminal
-	url = https://github.com/adi-family/tarminal.git
 [submodule "crates/lib-cli-common"]
 	path = crates/lib-cli-common
 	url = https://github.com/adi-family/lib-cli-common.git
