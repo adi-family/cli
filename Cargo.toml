@@ -62,6 +62,9 @@ members = [
     "crates/adi-agent-loop-plugin",
 ]
 
+# Note: tarminal-signaling-server is standalone (not in workspace) - build with:
+# cd crates/tarminal-signaling-server && cargo build
+
 [workspace.package]
 version = "0.8.4"
 edition = "2021"
