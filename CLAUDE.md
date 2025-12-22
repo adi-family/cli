@@ -33,6 +33,7 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/adi-agent-loop-cli` - Agent loop CLI
 - `crates/adi-agent-loop-http` - Agent loop HTTP server
 - `crates/adi-agent-loop-mcp` - Agent loop MCP server
+- `crates/adi-executor` - Docker-based task execution service
 - `crates/lib-color` - Unified color type (RGB/RGBA/Hex)
 - `crates/lib-animation` - UI animation utilities
 - `crates/lib-syntax-highlight` - Syntax highlighting tokenizer
@@ -40,7 +41,6 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/lib-json-tree` - JSON tree view state management
 - `crates/lib-terminal-grid` - VTE terminal emulation + PTY
 - `crates/lib-iced-ui` - Reusable iced UI components
-- `crates/tarminal` - GPU-accelerated terminal emulator
 - `crates/debug-metal-shader` - Metal shader debug app
 
 ## Apps
@@ -86,8 +86,8 @@ Each submodule is an independent repo that can be developed standalone:
 - lib-json-tree: `../lib-json-tree`
 - lib-terminal-grid: `../lib-terminal-grid`
 - lib-iced-ui: `../lib-iced-ui`
-- tarminal: `../tarminal-app`
 - debug-metal-shader: `../debug-metal-shader`
+- adi-executor: `../adi-executor`
 - tarminal-native-macos: `../tarminal-native-macos`
 - each crate in the crates dir must be a submodule
 - each app in the apps dir must be a submodule

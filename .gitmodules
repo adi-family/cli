@@ -121,3 +121,6 @@
 [submodule "crates/tarminal-signaling-server"]
 	path = crates/tarminal-signaling-server
 	url = https://github.com/adi-family/tarminal-signaling-server.git
+[submodule "crates/adi-executor"]
+	path = crates/adi-executor
+	url = https://github.com/adi-family/adi-executor.git
