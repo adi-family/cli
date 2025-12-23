@@ -127,3 +127,6 @@
 [submodule "crates/adi-worker"]
 	path = crates/adi-worker
 	url = git@github.com:adi-family/adi-worker.git
+[submodule "crates/lib-github-client"]
+	path = crates/lib-github-client
+	url = git@github.com:adi-family/lib-github-client.git
