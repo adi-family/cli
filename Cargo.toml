@@ -44,6 +44,7 @@ members = [
 
     # Executor service
     "crates/adi-executor",
+    "crates/adi-worker",
 
     # Debug app (submodule)
     "crates/debug-metal-shader",
