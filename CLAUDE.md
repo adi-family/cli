@@ -41,6 +41,7 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/lib-json-tree` - JSON tree view state management
 - `crates/lib-terminal-grid` - VTE terminal emulation + PTY
 - `crates/lib-iced-ui` - Reusable iced UI components
+- `crates/lib-github-client` - GitHub API client library
 - `crates/debug-metal-shader` - Metal shader debug app
 
 ## Apps
@@ -86,6 +87,7 @@ Each submodule is an independent repo that can be developed standalone:
 - lib-json-tree: `../lib-json-tree`
 - lib-terminal-grid: `../lib-terminal-grid`
 - lib-iced-ui: `../lib-iced-ui`
+- lib-github-client: `../lib-github-client`
 - debug-metal-shader: `../debug-metal-shader`
 - adi-executor: `../adi-executor`
 - tarminal-native-macos: `../tarminal-native-macos`

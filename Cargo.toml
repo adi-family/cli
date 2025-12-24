@@ -32,6 +32,7 @@ members = [
     "crates/adi-agent-loop-cli",
     "crates/adi-agent-loop-http",
     "crates/adi-agent-loop-mcp",
+    "crates/lib-llm-providers",
 
     # Tarminal components (flat submodules)
     "crates/lib-color",
@@ -49,6 +50,12 @@ members = [
     # Debug app (submodule)
     "crates/debug-metal-shader",
     "crates/tool-generate-heartbit",
+
+    # API clients
+    "crates/lib-github-client",
+    "crates/lib-anthropic-client",
+    "crates/lib-openai-client",
+    "crates/lib-ollama-client",
 
     # Plugin system
     "crates/lib-plugin-abi",
@@ -80,6 +87,7 @@ adi-indexer-core = { path = "crates/adi-indexer-core" }
 adi-tasks-core = { path = "crates/adi-tasks-core" }
 adi-knowledgebase-core = { path = "crates/adi-knowledgebase-core" }
 adi-agent-loop-core = { path = "crates/adi-agent-loop-core" }
+lib-llm-providers = { path = "crates/lib-llm-providers" }
 
 # Libraries (flat submodules)
 lib-color = { path = "crates/lib-color" }
@@ -92,6 +100,12 @@ lib-iced-ui = { path = "crates/lib-iced-ui" }
 lib-embed = { path = "crates/lib-embed" }
 lib-cli-common = { path = "crates/lib-cli-common" }
 lib-migrations = { path = "crates/lib-migrations" }
+
+# API clients
+lib-github-client = { path = "crates/lib-github-client" }
+lib-anthropic-client = { path = "crates/lib-anthropic-client" }
+lib-openai-client = { path = "crates/lib-openai-client" }
+lib-ollama-client = { path = "crates/lib-ollama-client" }
 
 # Plugin system
 lib-plugin-abi = { path = "crates/lib-plugin-abi" }
@@ -213,3 +227,4 @@ chrono = { version = "0.4", features = ["serde"] }
 futures = "0.3"
 glob = "0.3"
 regex = "1"
+fastrand = "2"
