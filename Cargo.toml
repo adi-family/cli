@@ -51,10 +51,10 @@ members = [
     "crates/tool-generate-heartbit",
 
     # API clients
-    "crates/lib-github-client",
-    "crates/lib-anthropic-client",
-    "crates/lib-openai-client",
-    "crates/lib-ollama-client",
+    "crates/lib-client-github",
+    "crates/lib-client-anthropic",
+    "crates/lib-client-openai",
+    "crates/lib-client-ollama",
 
     # Plugin system
     "crates/lib-plugin-abi",
@@ -100,10 +100,10 @@ lib-cli-common = { path = "crates/lib-cli-common" }
 lib-migrations = { path = "crates/lib-migrations" }
 
 # API clients
-lib-github-client = { path = "crates/lib-github-client" }
-lib-anthropic-client = { path = "crates/lib-anthropic-client" }
-lib-openai-client = { path = "crates/lib-openai-client" }
-lib-ollama-client = { path = "crates/lib-ollama-client" }
+lib-client-github = { path = "crates/lib-client-github" }
+lib-client-anthropic = { path = "crates/lib-client-anthropic" }
+lib-client-openai = { path = "crates/lib-client-openai" }
+lib-client-ollama = { path = "crates/lib-client-ollama" }
 
 # Plugin system
 lib-plugin-abi = { path = "crates/lib-plugin-abi" }

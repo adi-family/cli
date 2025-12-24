@@ -1,8 +1,8 @@
 [package]
-name = "lib-ollama-client"
+name = "lib-client-anthropic"
 version = "0.1.0"
 edition = "2021"
-description = "Ollama API client library"
+description = "Anthropic Claude API client library"
 license = "MIT"
 
 [dependencies]

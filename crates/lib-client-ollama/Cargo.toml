@@ -1,8 +1,8 @@
 [package]
-name = "lib-openai-client"
+name = "lib-client-ollama"
 version = "0.1.0"
 edition = "2021"
-description = "OpenAI API client library"
+description = "Ollama API client library"
 license = "MIT"
 
 [dependencies]

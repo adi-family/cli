@@ -1,8 +1,8 @@
 [package]
-name = "lib-anthropic-client"
+name = "lib-client-openai"
 version = "0.1.0"
 edition = "2021"
-description = "Anthropic Claude API client library"
+description = "OpenAI API client library"
 license = "MIT"
 
 [dependencies]

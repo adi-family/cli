@@ -161,7 +161,7 @@ dependencies = [
  "dirs 5.0.1",
  "flate2",
  "indicatif",
- "lib-github-client",
+ "lib-client-github",
  "lib-plugin-abi",
  "lib-plugin-host",
  "lib-plugin-manifest",
@@ -192,7 +192,7 @@ dependencies = [
  "chrono",
  "dashmap",
  "futures-util",
- "lib-github-client",
+ "lib-client-github",
  "parking_lot 0.12.5",
  "reqwest",
  "serde",
@@ -4099,18 +4099,6 @@ name = "lib-animation"
 version = "0.8.3"
 
 [[package]]
-name = "lib-anthropic-client"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "tracing",
-]
-
-[[package]]
 name = "lib-cli-common"
 version = "0.1.0"
 dependencies = [
@@ -4124,19 +4112,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "lib-embed"
-version = "0.8.3"
+name = "lib-client-anthropic"
+version = "0.1.0"
 dependencies = [
- "fastembed",
- "lib-cli-common",
+ "async-trait",
+ "reqwest",
  "serde",
+ "serde_json",
  "thiserror 2.0.17",
- "toml",
  "tracing",
 ]
 
 [[package]]
-name = "lib-github-client"
+name = "lib-client-github"
 version = "0.1.0"
 dependencies = [
  "async-trait",
@@ -4146,6 +4134,42 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.17",
+ "tracing",
+]
+
+[[package]]
+name = "lib-client-ollama"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+]
+
+[[package]]
+name = "lib-client-openai"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+]
+
+[[package]]
+name = "lib-embed"
+version = "0.8.3"
+dependencies = [
+ "fastembed",
+ "lib-cli-common",
+ "serde",
+ "thiserror 2.0.17",
+ "toml",
  "tracing",
 ]
 
@@ -4180,30 +4204,6 @@ dependencies = [
 [[package]]
 name = "lib-misc-color"
 version = "0.8.3"
-
-[[package]]
-name = "lib-ollama-client"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "tracing",
-]
-
-[[package]]
-name = "lib-openai-client"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "tracing",
-]
 
 [[package]]
 name = "lib-plugin-abi"
