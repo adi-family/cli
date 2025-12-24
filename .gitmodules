@@ -130,3 +130,6 @@
 [submodule "crates/lib-client-github"]
 	path = crates/lib-client-github
 	url = git@github.com:adi-family/lib-client-github.git
+[submodule "crates/lib-client-openrouter"]
+	path = crates/lib-client-openrouter
+	url = https://github.com/adi-family/lib-client-openrouter.git

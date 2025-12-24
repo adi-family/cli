@@ -42,6 +42,7 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/lib-terminal-grid` - VTE terminal emulation + PTY
 - `crates/lib-iced-ui` - Reusable iced UI components
 - `crates/lib-client-github` - GitHub API client library
+- `crates/lib-client-openrouter` - OpenRouter API client library
 - `crates/debug-metal-shader` - Metal shader debug app
 
 ## Apps
@@ -88,6 +89,7 @@ Each submodule is an independent repo that can be developed standalone:
 - lib-terminal-grid: `../lib-terminal-grid`
 - lib-iced-ui: `../lib-iced-ui`
 - lib-client-github: `../lib-client-github`
+- lib-client-openrouter: `../lib-client-openrouter`
 - debug-metal-shader: `../debug-metal-shader`
 - adi-executor: `../adi-executor`
 - tarminal-native-macos: `../tarminal-native-macos`

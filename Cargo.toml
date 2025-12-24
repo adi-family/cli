@@ -55,6 +55,7 @@ members = [
     "crates/lib-client-anthropic",
     "crates/lib-client-openai",
     "crates/lib-client-ollama",
+    "crates/lib-client-openrouter",
 
     # Plugin system
     "crates/lib-plugin-abi",
@@ -104,6 +105,7 @@ lib-client-github = { path = "crates/lib-client-github" }
 lib-client-anthropic = { path = "crates/lib-client-anthropic" }
 lib-client-openai = { path = "crates/lib-client-openai" }
 lib-client-ollama = { path = "crates/lib-client-ollama" }
+lib-client-openrouter = { path = "crates/lib-client-openrouter" }
 
 # Plugin system
 lib-plugin-abi = { path = "crates/lib-plugin-abi" }
