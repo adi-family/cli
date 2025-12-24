@@ -31,9 +31,6 @@
 [submodule "crates/adi-tasks-mcp"]
 	path = crates/adi-tasks-mcp
 	url = https://github.com/adi-family/adi-tasks-mcp.git
-[submodule "crates/lib-color"]
-	path = crates/lib-color
-	url = https://github.com/adi-family/lib-color.git
 [submodule "crates/lib-animation"]
 	path = crates/lib-animation
 	url = https://github.com/adi-family/lib-animation.git
@@ -130,3 +127,6 @@
 [submodule "crates/lib-github-client"]
 	path = crates/lib-github-client
 	url = git@github.com:adi-family/lib-github-client.git
+[submodule "crates/lib-misc-color"]
+	path = crates/lib-misc-color
+	url = https://github.com/adi-family/lib-misc-color.git

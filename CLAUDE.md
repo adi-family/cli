@@ -34,7 +34,7 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/adi-agent-loop-http` - Agent loop HTTP server
 - `crates/adi-agent-loop-mcp` - Agent loop MCP server
 - `crates/adi-executor` - Docker-based task execution service
-- `crates/lib-color` - Unified color type (RGB/RGBA/Hex)
+- `crates/lib-misc-color` - Unified color type (RGB/RGBA/Hex)
 - `crates/lib-animation` - UI animation utilities
 - `crates/lib-syntax-highlight` - Syntax highlighting tokenizer
 - `crates/lib-terminal-theme` - Terminal color themes
@@ -80,7 +80,7 @@ Each submodule is an independent repo that can be developed standalone:
 - adi-tasks-cli: `../adi-tasks-cli`
 - adi-tasks-http: `../adi-tasks-http`
 - adi-tasks-mcp: `../adi-tasks-mcp`
-- lib-color: `../lib-color`
+- lib-misc-color: `../lib-misc-color`
 - lib-animation: `../lib-animation`
 - lib-syntax-highlight: `../lib-syntax-highlight`
 - lib-terminal-theme: `../lib-terminal-theme`

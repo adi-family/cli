@@ -34,7 +34,7 @@ members = [
     "crates/adi-agent-loop-mcp",
 
     # Tarminal components (flat submodules)
-    "crates/lib-color",
+    "crates/lib-misc-color",
     "crates/lib-animation",
     "crates/lib-syntax-highlight",
     "crates/lib-terminal-theme",
@@ -88,7 +88,7 @@ adi-knowledgebase-core = { path = "crates/adi-knowledgebase-core" }
 adi-agent-loop-core = { path = "crates/adi-agent-loop-core" }
 
 # Libraries (flat submodules)
-lib-color = { path = "crates/lib-color" }
+lib-misc-color = { path = "crates/lib-misc-color" }
 lib-animation = { path = "crates/lib-animation" }
 lib-syntax-highlight = { path = "crates/lib-syntax-highlight" }
 lib-terminal-theme = { path = "crates/lib-terminal-theme" }

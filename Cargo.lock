@@ -4124,10 +4124,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lib-color"
-version = "0.8.3"
-
-[[package]]
 name = "lib-embed"
 version = "0.8.3"
 dependencies = [
@@ -4180,6 +4176,10 @@ dependencies = [
  "tempfile",
  "thiserror 1.0.69",
 ]
+
+[[package]]
+name = "lib-misc-color"
+version = "0.8.3"
 
 [[package]]
 name = "lib-ollama-client"
@@ -4285,7 +4285,7 @@ dependencies = [
 name = "lib-terminal-theme"
 version = "0.8.3"
 dependencies = [
- "lib-color",
+ "lib-misc-color",
 ]
 
 [[package]]
