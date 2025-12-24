@@ -16,9 +16,6 @@
 [submodule "crates/adi-indexer-http"]
 	path = crates/adi-indexer-http
 	url = https://github.com/adi-family/adi-indexer-http.git
-[submodule "crates/adi-indexer-mcp"]
-	path = crates/adi-indexer-mcp
-	url = https://github.com/adi-family/adi-indexer-mcp.git
 [submodule "crates/adi-tasks-core"]
 	path = crates/adi-tasks-core
 	url = https://github.com/adi-family/adi-tasks-core.git
@@ -28,9 +25,6 @@
 [submodule "crates/adi-tasks-http"]
 	path = crates/adi-tasks-http
 	url = https://github.com/adi-family/adi-tasks-http.git
-[submodule "crates/adi-tasks-mcp"]
-	path = crates/adi-tasks-mcp
-	url = https://github.com/adi-family/adi-tasks-mcp.git
 [submodule "crates/lib-animation"]
 	path = crates/lib-animation
 	url = https://github.com/adi-family/lib-animation.git
@@ -67,9 +61,6 @@
 [submodule "crates/adi-agent-loop-http"]
 	path = crates/adi-agent-loop-http
 	url = https://github.com/adi-family/adi-agent-loop-http.git
-[submodule "crates/adi-agent-loop-mcp"]
-	path = crates/adi-agent-loop-mcp
-	url = https://github.com/adi-family/adi-agent-loop-mcp.git
 [submodule "crates/adi-agent-loop-plugin"]
 	path = crates/adi-agent-loop-plugin
 	url = https://github.com/adi-family/adi-agent-loop-plugin.git
@@ -85,9 +76,6 @@
 [submodule "crates/adi-knowledgebase-http"]
 	path = crates/adi-knowledgebase-http
 	url = https://github.com/adi-family/adi-knowledgebase-http.git
-[submodule "crates/adi-knowledgebase-mcp"]
-	path = crates/adi-knowledgebase-mcp
-	url = https://github.com/adi-family/adi-knowledgebase-mcp.git
 [submodule "crates/adi-knowledgebase-plugin"]
 	path = crates/adi-knowledgebase-plugin
 	url = https://github.com/adi-family/adi-knowledgebase-plugin.git

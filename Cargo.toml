@@ -13,25 +13,21 @@ members = [
     "crates/adi-indexer-core",
     "crates/adi-indexer-cli",
     "crates/adi-indexer-http",
-    "crates/adi-indexer-mcp",
 
     # Tasks components (flat submodules)
     "crates/adi-tasks-core",
     "crates/adi-tasks-cli",
     "crates/adi-tasks-http",
-    "crates/adi-tasks-mcp",
 
     # Knowledgebase components
     "crates/adi-knowledgebase-core",
     "crates/adi-knowledgebase-cli",
     "crates/adi-knowledgebase-http",
-    "crates/adi-knowledgebase-mcp",
 
     # Agent Loop components
     "crates/adi-agent-loop-core",
     "crates/adi-agent-loop-cli",
     "crates/adi-agent-loop-http",
-    "crates/adi-agent-loop-mcp",
 
     # Tarminal components (flat submodules)
     "crates/lib-misc-color",
