@@ -32,7 +32,6 @@ members = [
     "crates/adi-agent-loop-cli",
     "crates/adi-agent-loop-http",
     "crates/adi-agent-loop-mcp",
-    "crates/lib-llm-providers",
 
     # Tarminal components (flat submodules)
     "crates/lib-color",
@@ -87,7 +86,6 @@ adi-indexer-core = { path = "crates/adi-indexer-core" }
 adi-tasks-core = { path = "crates/adi-tasks-core" }
 adi-knowledgebase-core = { path = "crates/adi-knowledgebase-core" }
 adi-agent-loop-core = { path = "crates/adi-agent-loop-core" }
-lib-llm-providers = { path = "crates/lib-llm-providers" }
 
 # Libraries (flat submodules)
 lib-color = { path = "crates/lib-color" }
