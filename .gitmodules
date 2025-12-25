@@ -139,3 +139,21 @@
 [submodule "crates/adi-lang-go"]
 	path = crates/adi-lang-go
 	url = https://github.com/adi-family/adi-lang-go.git
+[submodule "crates/adi-lang-java"]
+	path = crates/adi-lang-java
+	url = https://github.com/adi-family/adi-lang-java.git
+[submodule "crates/adi-lang-csharp"]
+	path = crates/adi-lang-csharp
+	url = https://github.com/adi-family/adi-lang-csharp.git
+[submodule "crates/adi-lang-ruby"]
+	path = crates/adi-lang-ruby
+	url = https://github.com/adi-family/adi-lang-ruby.git
+[submodule "crates/adi-lang-php"]
+	path = crates/adi-lang-php
+	url = https://github.com/adi-family/adi-lang-php.git
+[submodule "crates/adi-lang-swift"]
+	path = crates/adi-lang-swift
+	url = https://github.com/adi-family/adi-lang-swift.git
+[submodule "crates/adi-lang-lua"]
+	path = crates/adi-lang-lua
+	url = https://github.com/adi-family/adi-lang-lua.git
