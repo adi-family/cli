@@ -120,10 +120,12 @@ pub struct SyncableCommandBlock {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum SignalingMessage {
-    /// Register device with server (server assigns ID)
-    Register,
+    /// Register device with server using client secret
+    /// Server derives deterministic device_id from secret using HMAC
+    Register { secret: String },
 
-    /// Registration confirmed with server-assigned device ID
+    /// Registration confirmed with derived device ID
+    /// Same secret always produces same device_id (persistent sessions)
     Registered { device_id: String },
 
     /// Create a pairing code
