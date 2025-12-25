@@ -61,6 +61,14 @@ members = [
     "crates/lib-plugin-host",
     "crates/adi-plugin-registry-http",
 
+    # Indexer language plugins
+    "crates/lib-indexer-lang-abi",
+    "crates/adi-lang-rust",
+    "crates/adi-lang-python",
+    "crates/adi-lang-typescript",
+    "crates/adi-lang-cpp",
+    "crates/adi-lang-go",
+
     # Core plugins
     "crates/adi-indexer-plugin",
     "crates/adi-tasks-plugin",
@@ -109,6 +117,9 @@ lib-plugin-manifest = { path = "crates/lib-plugin-manifest" }
 lib-plugin-verify = { path = "crates/lib-plugin-verify" }
 lib-plugin-registry = { path = "crates/lib-plugin-registry" }
 lib-plugin-host = { path = "crates/lib-plugin-host" }
+
+# Indexer language plugins
+lib-indexer-lang-abi = { path = "crates/lib-indexer-lang-abi" }
 
 # ABI stability for plugins
 abi_stable = "0.11"

@@ -121,3 +121,21 @@
 [submodule "crates/lib-client-openrouter"]
 	path = crates/lib-client-openrouter
 	url = https://github.com/adi-family/lib-client-openrouter.git
+[submodule "crates/lib-indexer-lang-abi"]
+	path = crates/lib-indexer-lang-abi
+	url = https://github.com/adi-family/lib-indexer-lang-abi.git
+[submodule "crates/adi-lang-rust"]
+	path = crates/adi-lang-rust
+	url = https://github.com/adi-family/adi-lang-rust.git
+[submodule "crates/adi-lang-python"]
+	path = crates/adi-lang-python
+	url = https://github.com/adi-family/adi-lang-python.git
+[submodule "crates/adi-lang-typescript"]
+	path = crates/adi-lang-typescript
+	url = https://github.com/adi-family/adi-lang-typescript.git
+[submodule "crates/adi-lang-cpp"]
+	path = crates/adi-lang-cpp
+	url = https://github.com/adi-family/adi-lang-cpp.git
+[submodule "crates/adi-lang-go"]
+	path = crates/adi-lang-go
+	url = https://github.com/adi-family/adi-lang-go.git
