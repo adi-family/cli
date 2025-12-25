@@ -1,9 +1,9 @@
 #!/bin/sh
 # Cocoon Installer
-# Usage: curl -fsSL https://adi.dev/cocoon.sh | sh -s -- <setup_token>
+# Usage: curl -fsSL https://adi.the-ihor.com/cocoon.sh | sh -s -- <setup_token>
 #
 # Environment variables:
-#   SIGNALING_URL    - Signaling server URL (default: wss://signal.adi.dev/ws)
+#   SIGNALING_URL    - Signaling server URL (default: wss://signal.adi.the-ihor.com/ws)
 #   COCOON_NAME      - Display name for this cocoon (default: hostname)
 #   INSTALL_DIR      - Installation directory (default: /usr/local/bin)
 #   NO_SYSTEMD       - Set to 1 to skip systemd service creation
@@ -220,9 +220,9 @@ main() {
 
     # Validate setup token
     if [ -z "$setup_token" ]; then
-        echo "Usage: curl -fsSL https://adi.dev/cocoon.sh | sh -s -- <setup_token>"
+        echo "Usage: curl -fsSL https://adi.the-ihor.com/cocoon.sh | sh -s -- <setup_token>"
         echo ""
-        echo "Get your setup token from: https://app.adi.dev/servers/new"
+        echo "Get your setup token from: https://app.adi.the-ihor.com/servers/new"
         echo ""
         error "Setup token is required"
     fi
@@ -301,7 +301,7 @@ main() {
     local cocoon_name="${COCOON_NAME:-$(hostname)}"
 
     # Determine signaling URL
-    local signaling_url="${SIGNALING_URL:-wss://signal.adi.dev/ws}"
+    local signaling_url="${SIGNALING_URL:-wss://signal.adi.the-ihor.com/ws}"
 
     # Create config file
     info "Creating configuration"
