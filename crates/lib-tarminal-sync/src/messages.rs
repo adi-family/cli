@@ -122,7 +122,12 @@ pub struct SyncableCommandBlock {
 pub enum SignalingMessage {
     /// Register device with server using client secret
     /// Server derives deterministic device_id from secret using HMAC
-    Register { secret: String },
+    /// On reconnect, device_id must match derived ID (prevents secret theft attacks)
+    Register {
+        secret: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        device_id: Option<String>,
+    },
 
     /// Registration confirmed with derived device ID
     /// Same secret always produces same device_id (persistent sessions)
@@ -183,15 +188,17 @@ mod tests {
     #[test]
     fn test_signaling_message_serialization() {
         let msg = SignalingMessage::Register {
-            device_id: "test-device".to_string(),
+            secret: "test-secret-with-at-least-32-chars-for-validation".to_string(),
+            device_id: None,
         };
 
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: SignalingMessage = serde_json::from_str(&json).unwrap();
 
         match deserialized {
-            SignalingMessage::Register { device_id } => {
-                assert_eq!(device_id, "test-device");
+            SignalingMessage::Register { secret, device_id } => {
+                assert_eq!(secret, "test-secret-with-at-least-32-chars-for-validation");
+                assert_eq!(device_id, None);
             }
             _ => panic!("Wrong message type"),
         }
