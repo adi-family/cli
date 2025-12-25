@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarminal Sync - Web Client Example</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 { color: #4ec9b0; }
+        .section {
+            background: #252526;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #3e3e42;
+        }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #1177bb; }
+        pre {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #3e3e42;
+        }
+        code { color: #ce9178; }
+        .status { color: #4ec9b0; font-weight: bold; }
+        .error { color: #f48771; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Tarminal Sync - Web Client Example</h1>
+
+    <div class="section">
+        <h2>1. Connect to Signaling Server</h2>
+        <button onclick="connect()">Connect to ws://localhost:8080/ws</button>
+        <p class="status" id="connection-status">Not connected</p>
+    </div>
+
+    <div class="section">
+        <h2>2. Generate Pairing Code</h2>
+        <button onclick="createPairingCode()">Create Pairing Code</button>
+        <p>Pairing Code: <code id="pairing-code">-</code></p>
+    </div>
+
+    <div class="section">
+        <h2>3. Send Workspace Update</h2>
+        <button onclick="sendWorkspace()">Send Workspace</button>
+        <pre id="workspace-preview"></pre>
+    </div>
+
+    <div class="section">
+        <h2>4. Messages Log</h2>
+        <pre id="messages-log"></pre>
+    </div>
+
+    <script type="module">
+        // Import types (in real app, you'd use the generated types.d.ts)
+        let ws = null;
+        let deviceId = crypto.randomUUID();
+
+        window.connect = () => {
+            ws = new WebSocket('ws://localhost:8080/ws');
+
+            ws.onopen = () => {
+                log('✅ Connected to signaling server');
+                document.getElementById('connection-status').textContent = 'Connected';
+
+                // Register device
+                send({ type: 'register', device_id: deviceId });
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                log(`📥 Received: ${JSON.stringify(msg, null, 2)}`);
+
+                if (msg.type === 'pairing_code') {
+                    document.getElementById('pairing-code').textContent = msg.code;
+                }
+            };
+
+            ws.onerror = (error) => {
+                log(`❌ Error: ${error.message}`, true);
+            };
+
+            ws.onclose = () => {
+                log('🔌 Disconnected');
+                document.getElementById('connection-status').textContent = 'Disconnected';
+            };
+        };
+
+        window.createPairingCode = () => {
+            send({ type: 'create_pairing_code' });
+        };
+
+        window.sendWorkspace = () => {
+            const workspace = {
+                id: crypto.randomUUID(),
+                name: 'Web Client Workspace',
+                icon: '🌐',
+                session_ids: [],
+                active_session_id: null,
+                sync_metadata: {
+                    created_at: new Date().toISOString(),
+                    modified_at: new Date().toISOString(),
+                    version: { clocks: { [deviceId]: 1 } },
+                    origin_device_id: deviceId,
+                    tombstone: false
+                }
+            };
+
+            const msg = {
+                type: 'workspace_update',
+                workspace
+            };
+
+            document.getElementById('workspace-preview').textContent =
+                JSON.stringify(msg, null, 2);
+
+            // In real scenario, this would be sent via sync_data message
+            log('📤 Workspace created (would be sent to paired device)');
+        };
+
+        function send(msg) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(msg));
+                log(`📤 Sent: ${JSON.stringify(msg, null, 2)}`);
+            } else {
+                log('❌ Not connected', true);
+            }
+        }
+
+        function log(message, isError = false) {
+            const logEl = document.getElementById('messages-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = isError ? 'error' : '';
+            logEl.textContent += `[${timestamp}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        console.log('Device ID:', deviceId);
+    </script>
+</body>
+</html>

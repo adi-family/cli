@@ -37,6 +37,7 @@ members = [
     "crates/lib-json-tree",
     "crates/lib-terminal-grid",
     "crates/lib-iced-ui",
+    "crates/lib-tarminal-sync",
 
     # Executor service
     "crates/adi-executor",
@@ -106,6 +107,7 @@ lib-terminal-theme = { path = "crates/lib-terminal-theme" }
 lib-json-tree = { path = "crates/lib-json-tree" }
 lib-terminal-grid = { path = "crates/lib-terminal-grid" }
 lib-iced-ui = { path = "crates/lib-iced-ui" }
+lib-tarminal-sync = { path = "crates/lib-tarminal-sync" }
 lib-embed = { path = "crates/lib-embed" }
 lib-cli-common = { path = "crates/lib-cli-common" }
 lib-migrations = { path = "crates/lib-migrations" }

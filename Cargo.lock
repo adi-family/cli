@@ -135,7 +135,7 @@ dependencies = [
 
 [[package]]
 name = "adi-cli"
-version = "0.8.4"
+version = "0.8.5"
 dependencies = [
  "anyhow",
  "axum 0.8.7",
@@ -4356,6 +4356,16 @@ dependencies = [
 [[package]]
 name = "lib-syntax-highlight"
 version = "0.8.3"
+
+[[package]]
+name = "lib-tarminal-sync"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "uuid",
+]
 
 [[package]]
 name = "lib-terminal-grid"
