@@ -1,6 +1,6 @@
 #!/bin/sh
 # Cocoon Installer
-# Usage: curl -fsSL https://adi.the-ihor.com/family/install/cocoon.sh | sh -s -- <setup_token>
+# Usage: curl -fsSL https://adi.the-ihor.com/family/cocoon/install.sh | sh -s -- <setup_token>
 #
 # Environment variables:
 #   SIGNALING_URL    - Signaling server URL (default: wss://signal.adi.the-ihor.com/ws)
@@ -220,7 +220,7 @@ main() {
 
     # Validate setup token
     if [ -z "$setup_token" ]; then
-        echo "Usage: curl -fsSL https://adi.the-ihor.com/family/install/cocoon.sh | sh -s -- <setup_token>"
+        echo "Usage: curl -fsSL https://adi.the-ihor.com/family/cocoon/install.sh | sh -s -- <setup_token>"
         echo ""
         echo "Get your setup token from: https://app.adi.the-ihor.com/servers/new"
         echo ""
