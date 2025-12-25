@@ -54,8 +54,16 @@ git submodule update --init --recursive
 ## Building
 ```bash
 cargo build --workspace           # Build all
+cargo build -p adi-cli            # Build adi CLI
 cargo build -p adi-indexer-cli    # Build specific package
-cargo build -p tarminal           # Build tarminal
+```
+
+## CLI Usage
+The `adi` CLI provides direct plugin commands for convenience:
+```bash
+adi tasks list                    # Direct task management
+adi agent-loop run                # Direct agent loop access
+adi run adi.tasks list            # Alternative plugin run syntax
 ```
 
 ## Updating Submodules
