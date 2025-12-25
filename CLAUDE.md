@@ -30,6 +30,7 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/adi-agent-loop-cli` - Agent loop CLI
 - `crates/adi-agent-loop-http` - Agent loop HTTP server
 - `crates/adi-executor` - Docker-based task execution service
+- `crates/cocoon` - Containerized worker with signaling server connectivity for remote command execution
 - `crates/lib-misc-color` - Unified color type (RGB/RGBA/Hex)
 - `crates/lib-animation` - UI animation utilities
 - `crates/lib-syntax-highlight` - Syntax highlighting tokenizer
@@ -39,7 +40,15 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/lib-iced-ui` - Reusable iced UI components
 - `crates/lib-client-github` - GitHub API client library
 - `crates/lib-client-openrouter` - OpenRouter API client library
+- `crates/lib-tarminal-sync` - Client-agnostic sync protocol for Tarminal
+- `crates/tarminal-signaling-server` - WebSocket signaling server for device pairing
 - `crates/debug-metal-shader` - Metal shader debug app
+
+## Cocoon
+- Cocoon is a containerized worker environment that connects to the signaling server
+- Provides isolated execution environment for running commands remotely
+- Replaces file-based execution with real-time WebSocket communication
+- Used by adi-executor to run tasks in Docker containers with live command streaming
 
 ## Apps
 - `apps/adi-web-ui` - Web UI for ADI (React TypeScript + Tailwind CSS)

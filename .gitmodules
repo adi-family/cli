@@ -106,9 +106,9 @@
 [submodule "crates/adi-executor"]
 	path = crates/adi-executor
 	url = https://github.com/adi-family/adi-executor.git
-[submodule "crates/adi-worker"]
-	path = crates/adi-worker
-	url = git@github.com:adi-family/adi-worker.git
+[submodule "crates/cocoon"]
+	path = crates/cocoon
+	url = git@github.com:adi-family/cocoon.git
 [submodule "crates/lib-misc-color"]
 	path = crates/lib-misc-color
 	url = https://github.com/adi-family/lib-misc-color.git
