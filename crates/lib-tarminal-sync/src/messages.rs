@@ -129,9 +129,27 @@ pub enum SignalingMessage {
         device_id: Option<String>,
     },
 
+    /// Register with setup token (one-command install flow)
+    /// Server validates JWT, derives device_id, and auto-claims for the token's user
+    /// Used by: curl https://adi.dev/cocoon.sh | sh -s -- <setup_token>
+    RegisterWithSetupToken {
+        secret: String,
+        setup_token: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        name: Option<String>, // Optional display name for this cocoon
+    },
+
     /// Registration confirmed with derived device ID
     /// Same secret always produces same device_id (persistent sessions)
     Registered { device_id: String },
+
+    /// Registration with setup token confirmed
+    /// Includes user_id that now owns this cocoon
+    RegisteredWithOwner {
+        device_id: String,
+        owner_id: String,
+        name: Option<String>,
+    },
 
     /// Create a pairing code
     CreatePairingCode,
@@ -238,6 +256,29 @@ mod tests {
             SignalingMessage::Register { secret, device_id } => {
                 assert_eq!(secret, "test-secret-with-at-least-32-chars-for-validation");
                 assert_eq!(device_id, None);
+            }
+            _ => panic!("Wrong message type"),
+        }
+    }
+
+    #[test]
+    fn test_register_with_setup_token_serialization() {
+        let msg = SignalingMessage::RegisterWithSetupToken {
+            secret: "test-secret-with-at-least-32-chars-for-validation".to_string(),
+            setup_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test".to_string(),
+            name: Some("production-api".to_string()),
+        };
+
+        let json = serde_json::to_string(&msg).unwrap();
+        assert!(json.contains("register_with_setup_token"));
+        assert!(json.contains("setup_token"));
+
+        let deserialized: SignalingMessage = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            SignalingMessage::RegisterWithSetupToken { secret, setup_token, name } => {
+                assert_eq!(secret, "test-secret-with-at-least-32-chars-for-validation");
+                assert!(setup_token.starts_with("eyJ"));
+                assert_eq!(name, Some("production-api".to_string()));
             }
             _ => panic!("Wrong message type"),
         }
