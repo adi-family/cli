@@ -42,7 +42,6 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/debug-metal-shader` - Metal shader debug app
 
 ## Apps
-- `apps/tarminal-native-macos` - Native macOS app for Tarminal (SwiftUI)
 - `apps/adi-web-ui` - Web UI for ADI (React TypeScript + Tailwind CSS)
 
 ## Setup
@@ -95,7 +94,6 @@ Each submodule is an independent repo that can be developed standalone:
 - lib-client-openrouter: `../lib-client-openrouter`
 - debug-metal-shader: `../debug-metal-shader`
 - adi-executor: `../adi-executor`
-- tarminal-native-macos: `../tarminal-native-macos`
 - adi-web-ui: `../adi-web-ui`
 - each crate in the crates dir must be a submodule
 - each app in the apps dir must be a submodule

@@ -30,6 +30,18 @@ PLUGINS=(
     "adi-agent-loop-plugin:adi.agent-loop:ADI Agent Loop:core"
     "adi-indexer-plugin:adi.indexer:ADI Indexer:core"
     "adi-knowledgebase-plugin:adi.knowledgebase:ADI Knowledgebase:core"
+    # Language plugins
+    "adi-lang-rust:adi.lang.rust:Rust Language Support:language"
+    "adi-lang-python:adi.lang.python:Python Language Support:language"
+    "adi-lang-typescript:adi.lang.typescript:TypeScript Language Support:language"
+    "adi-lang-cpp:adi.lang.cpp:C++ Language Support:language"
+    "adi-lang-go:adi.lang.go:Go Language Support:language"
+    "adi-lang-java:adi.lang.java:Java Language Support:language"
+    "adi-lang-csharp:adi.lang.csharp:C# Language Support:language"
+    "adi-lang-ruby:adi.lang.ruby:Ruby Language Support:language"
+    "adi-lang-php:adi.lang.php:PHP Language Support:language"
+    "adi-lang-swift:adi.lang.swift:Swift Language Support:language"
+    "adi-lang-lua:adi.lang.lua:Lua Language Support:language"
 )
 
 # Get current version from first plugin's plugin.toml
