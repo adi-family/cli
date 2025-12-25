@@ -157,8 +157,83 @@ pub enum SignalingMessage {
     /// Peer went offline
     PeerDisconnected { peer_id: String },
 
+    // ========== Token-Based Access Control ==========
+    /// Claim ownership of a cocoon by proving secret knowledge
+    /// First user(s) to claim become owners with full control
+    ClaimCocoon {
+        device_id: String,
+        secret: String,
+        access_token: String, // JWT or API token from auth system
+    },
+
+    /// Claim successful - user is now an owner
+    ClaimSuccessful {
+        device_id: String,
+        role: String, // "owner"
+    },
+
+    /// Connect to cocoon using access token (no secret needed)
+    /// User must have been granted access previously
+    ConnectToCocoon {
+        device_id: String,
+        access_token: String,
+    },
+
+    /// Connection successful - paired with cocoon
+    Connected { device_id: String },
+
+    /// Grant access to another user (owners only)
+    GrantAccess {
+        device_id: String,
+        access_token: String,      // Requester's token (must be owner)
+        grant_to_user: String,     // user_id to grant access to
+        role: String,              // "owner" or "member"
+        #[serde(skip_serializing_if = "Option::is_none")]
+        expires_at: Option<String>, // ISO 8601 datetime
+    },
+
+    /// Access granted successfully
+    AccessGranted {
+        device_id: String,
+        granted_to: String,
+        role: String,
+    },
+
+    /// Revoke access from a user (owners only)
+    RevokeAccess {
+        device_id: String,
+        access_token: String, // Requester's token (must be owner)
+        revoke_user: String,  // user_id to revoke
+    },
+
+    /// Access revoked successfully
+    AccessRevoked {
+        device_id: String,
+        revoked_user: String,
+    },
+
+    /// List all cocoons accessible to this token
+    ListMyCocoons { access_token: String },
+
+    /// List of accessible cocoons
+    MyCocoons {
+        cocoons: Vec<CocoonInfo>,
+    },
+
+    /// Access denied (insufficient permissions)
+    AccessDenied { reason: String },
+
     /// Error message
     Error { message: String },
+}
+
+/// Information about an accessible cocoon
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CocoonInfo {
+    pub device_id: String,
+    pub role: String, // "owner" or "member"
+    pub status: String, // "online" or "offline"
+    pub granted_at: String, // ISO 8601 datetime
 }
 
 #[cfg(test)]
