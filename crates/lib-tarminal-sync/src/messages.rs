@@ -120,10 +120,10 @@ pub struct SyncableCommandBlock {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum SignalingMessage {
-    /// Register device with server
-    Register { device_id: String },
+    /// Register device with server (server assigns ID)
+    Register,
 
-    /// Registration confirmed
+    /// Registration confirmed with server-assigned device ID
     Registered { device_id: String },
 
     /// Create a pairing code
