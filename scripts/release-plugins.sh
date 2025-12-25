@@ -32,17 +32,34 @@ PLUGINS=(
     "adi-knowledgebase-plugin:adi.knowledgebase:ADI Knowledgebase:core"
 )
 
-# Get version from argument or plugin.toml
+# Get current version from first plugin's plugin.toml
+CURRENT_VERSION=$(grep '^version' "$ROOT_DIR/crates/adi-tasks-plugin/plugin.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+info "Current version: v$CURRENT_VERSION"
+
+# Get version from argument or prompt
 VERSION="${1:-}"
 SPECIFIC_PLUGIN="${2:-}"
 
 if [ -z "$VERSION" ]; then
-    # Try to get version from first plugin's plugin.toml
-    VERSION=$(grep '^version' "$ROOT_DIR/crates/adi-tasks-plugin/plugin.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+    read -p "Enter new version (or press Enter for v$CURRENT_VERSION): " VERSION
+    VERSION="${VERSION:-$CURRENT_VERSION}"
 fi
 
 # Remove 'v' prefix if present
 VERSION="${VERSION#v}"
+
+# Update plugin.toml files if version changed
+if [ "$VERSION" != "$CURRENT_VERSION" ]; then
+    info "Updating plugin.toml files to v$VERSION..."
+    for plugin_spec in "${PLUGINS[@]}"; do
+        IFS=':' read -r crate_name _ _ _ <<< "$plugin_spec"
+        manifest="$ROOT_DIR/crates/$crate_name/plugin.toml"
+        if [ -f "$manifest" ]; then
+            sed -i '' "s/^version = \"$CURRENT_VERSION\"/version = \"$VERSION\"/" "$manifest"
+        fi
+    done
+    success "Updated plugin.toml files"
+fi
 
 info "Releasing plugins v$VERSION"
 info "Registry: $REGISTRY_URL"
@@ -184,7 +201,7 @@ for plugin_spec in "${PLUGINS[@]}"; do
     url="$REGISTRY_URL/v1/publish/plugins/$plugin_id/$VERSION/$PLATFORM"
     url="$url?name=$(echo "$plugin_name" | sed 's/ /%20/g')&plugin_type=$plugin_type&author=ADI%20Team"
 
-    response=$(curl -s -X POST "$url" -F "file=@$archive_path")
+    response=$(curl -s --max-time 300 -X POST "$url" -F "file=@$archive_path")
     echo "$response" | jq . 2>/dev/null || echo "$response"
 
     success "Published $plugin_id"

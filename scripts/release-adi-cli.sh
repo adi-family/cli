@@ -21,23 +21,38 @@ success() { printf "${GREEN}[DONE]${NC} %s\n" "$1"; }
 warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1"; }
 error() { printf "${RED}[ERROR]${NC} %s\n" "$1" >&2; exit 1; }
 
-# Get version from argument or Cargo.toml
+# Get current version from Cargo.toml
+CURRENT_VERSION=$(grep '^version' "$CRATE_PATH/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+info "Current version: v$CURRENT_VERSION"
+
+# Get version from argument or prompt
 VERSION="${1:-}"
 if [ -z "$VERSION" ]; then
-    VERSION="v$(grep '^version' "$CRATE_PATH/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')"
+    read -p "Enter new version (or press Enter for v$CURRENT_VERSION): " VERSION
+    VERSION="${VERSION:-$CURRENT_VERSION}"
 fi
 
-# Ensure version starts with 'v'
-[[ "$VERSION" != v* ]] && VERSION="v$VERSION"
+# Remove 'v' prefix for comparison
+VERSION="${VERSION#v}"
 
-info "Releasing $BINARY_NAME $VERSION"
+# Ensure version starts with 'v' for display
+DISPLAY_VERSION="v$VERSION"
+
+# Update Cargo.toml if version changed
+if [ "$VERSION" != "$CURRENT_VERSION" ]; then
+    info "Updating $CRATE_PATH/Cargo.toml to v$VERSION..."
+    sed -i '' "s/^version = \"$CURRENT_VERSION\"/version = \"$VERSION\"/" "$CRATE_PATH/Cargo.toml"
+    success "Updated Cargo.toml"
+fi
+
+info "Releasing $BINARY_NAME $DISPLAY_VERSION"
 
 # Check prerequisites
 command -v gh >/dev/null 2>&1 || error "gh CLI not found. Install: brew install gh"
 command -v cargo >/dev/null 2>&1 || error "cargo not found"
 
 # Create dist directory
-DIST_DIR="dist/adi-cli-$VERSION"
+DIST_DIR="dist/adi-cli-$DISPLAY_VERSION"
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 
@@ -68,7 +83,7 @@ for TARGET in "${TARGETS[@]}"; do
     }
 
     # Create archive
-    ARCHIVE_NAME="adi-${VERSION}-${TARGET}.tar.gz"
+    ARCHIVE_NAME="adi-${DISPLAY_VERSION}-${TARGET}.tar.gz"
     BINARY_PATH="target/$TARGET/release/$BINARY_NAME"
 
     if [ ! -f "$BINARY_PATH" ]; then
@@ -95,7 +110,7 @@ ls -lh "$DIST_DIR"
 echo ""
 
 # Confirm release
-read -p "Create GitHub release $VERSION? [y/N] " -n 1 -r
+read -p "Create GitHub release $DISPLAY_VERSION? [y/N] " -n 1 -r
 echo ""
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     info "Aborted. Artifacts are in $DIST_DIR"
@@ -103,15 +118,15 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 # Check if release already exists
-if gh release view "$VERSION" -R "$REPO" >/dev/null 2>&1; then
-    error "Release $VERSION already exists"
+if gh release view "$DISPLAY_VERSION" -R "$REPO" >/dev/null 2>&1; then
+    error "Release $DISPLAY_VERSION already exists"
 fi
 
 # Create release
 info "Creating GitHub release..."
-gh release create "$VERSION" \
+gh release create "$DISPLAY_VERSION" \
     --repo "$REPO" \
-    --title "$BINARY_NAME $VERSION" \
+    --title "$BINARY_NAME $DISPLAY_VERSION" \
     --notes "## Installation
 
 \`\`\`sh
@@ -120,10 +135,10 @@ curl -fsSL https://raw.githubusercontent.com/adi-family/cli/main/scripts/install
 
 Or specify version:
 \`\`\`sh
-ADI_VERSION=$VERSION curl -fsSL https://raw.githubusercontent.com/adi-family/cli/main/scripts/install.sh | sh
+ADI_VERSION=$DISPLAY_VERSION curl -fsSL https://raw.githubusercontent.com/adi-family/cli/main/scripts/install.sh | sh
 \`\`\`" \
     "$DIST_DIR"/*
 
-success "Released $BINARY_NAME $VERSION"
+success "Released $BINARY_NAME $DISPLAY_VERSION"
 echo ""
-info "Release URL: https://github.com/$REPO/releases/tag/$VERSION"
+info "Release URL: https://github.com/$REPO/releases/tag/$DISPLAY_VERSION"

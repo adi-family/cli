@@ -68,6 +68,12 @@ members = [
     "crates/adi-lang-typescript",
     "crates/adi-lang-cpp",
     "crates/adi-lang-go",
+    "crates/adi-lang-java",
+    "crates/adi-lang-csharp",
+    "crates/adi-lang-ruby",
+    "crates/adi-lang-php",
+    "crates/adi-lang-swift",
+    "crates/adi-lang-lua",
 
     # Core plugins
     "crates/adi-indexer-plugin",
