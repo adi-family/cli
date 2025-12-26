@@ -154,6 +154,6 @@
 [submodule "crates/adi-lang-lua"]
 	path = crates/adi-lang-lua
 	url = https://github.com/adi-family/adi-lang-lua.git
-[submodule "apps/adi-web"]
-	path = apps/adi-web
+[submodule "apps/infra-service-web"]
+	path = apps/infra-service-web
 	url = https://github.com/adi-family/adi-web.git
