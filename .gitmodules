@@ -157,3 +157,6 @@
 [submodule "apps/adi-web-ui"]
 	path = apps/adi-web-ui
 	url = https://github.com/adi-family/adi-web-ui.git
+[submodule "apps/adi-web"]
+	path = apps/adi-web
+	url = https://github.com/adi-family/adi-web.git
