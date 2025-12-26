@@ -19,6 +19,10 @@ members = [
     "crates/adi-tasks-cli",
     "crates/adi-tasks-http",
 
+    # Auth components
+    "crates/adi-auth-core",
+    "crates/adi-auth-http",
+
     # Knowledgebase components
     "crates/adi-knowledgebase-core",
     "crates/adi-knowledgebase-cli",
@@ -98,6 +102,7 @@ adi-indexer-core = { path = "crates/adi-indexer-core" }
 adi-tasks-core = { path = "crates/adi-tasks-core" }
 adi-knowledgebase-core = { path = "crates/adi-knowledgebase-core" }
 adi-agent-loop-core = { path = "crates/adi-agent-loop-core" }
+adi-auth-core = { path = "crates/adi-auth-core" }
 
 # Libraries (flat submodules)
 lib-misc-color = { path = "crates/lib-misc-color" }
@@ -243,3 +248,7 @@ futures = "0.3"
 glob = "0.3"
 regex = "1"
 fastrand = "2"
+
+# Auth
+jsonwebtoken = "9"
+lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "smtp-transport"] }

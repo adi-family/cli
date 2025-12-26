@@ -1,0 +1,118 @@
+# Local Development Environment
+# Usage: docker compose -f docker-compose.local.yml up -d
+#
+# Services:
+#   - signaling:  WebSocket relay server (ws://localhost:8080/ws)
+#   - auth:       Authentication service (http://localhost:8090)
+#   - web:        Next.js web UI (http://localhost:3000)
+#   - cocoon:     Worker container (connects to signaling)
+#   - registry:   Plugin registry (http://localhost:8081)
+#
+# Quick start:
+#   cp .env.local.example .env.local
+#   docker compose -f docker-compose.local.yml up -d
+
+services:
+  # WebSocket signaling server for device pairing and cocoon communication
+  signaling:
+    build:
+      context: .
+      dockerfile: ./crates/tarminal-signaling-server/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - HMAC_SALT=${HMAC_SALT:-local-dev-salt-change-in-production}
+      - RUST_LOG=${RUST_LOG:-info}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Authentication service (email + TOTP)
+  auth:
+    build:
+      context: ./crates/adi-auth
+      dockerfile: Dockerfile
+    ports:
+      - "8090:8090"
+    environment:
+      - PORT=8090
+      - AUTH_DB_PATH=/data/auth.sqlite
+      - JWT_SECRET=${JWT_SECRET:-local-dev-jwt-secret-32-chars-min}
+      - JWT_EXPIRY_HOURS=${JWT_EXPIRY_HOURS:-168}
+      # SMTP - optional for local dev (emails will fail but app works)
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@localhost}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-ADI Auth (Local)}
+      - RUST_LOG=${RUST_LOG:-info}
+    volumes:
+      - auth-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # Next.js web UI
+  web:
+    build:
+      context: ./apps/infra-service-web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:8090
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
+    depends_on:
+      - auth
+      - signaling
+    restart: unless-stopped
+
+  # Cocoon worker (connects to signaling server)
+  cocoon:
+    build:
+      context: .
+      dockerfile: ./crates/cocoon/Dockerfile
+    environment:
+      - SIGNALING_SERVER_URL=ws://signaling:8080/ws
+      - RUST_LOG=${RUST_LOG:-info}
+    volumes:
+      - cocoon-data:/cocoon
+    depends_on:
+      signaling:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Plugin registry (optional - uncomment if needed)
+  # registry:
+  #   build:
+  #     context: ./crates/adi-plugin-registry-http
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     - PORT=8081
+  #     - REGISTRY_DATA_PATH=/data
+  #     - RUST_LOG=${RUST_LOG:-info}
+  #   volumes:
+  #     - registry-data:/data
+  #   restart: unless-stopped
+
+volumes:
+  auth-data:
+  cocoon-data:
+  # registry-data:
+
+# Network configuration (optional - for service discovery)
+networks:
+  default:
+    name: adi-local

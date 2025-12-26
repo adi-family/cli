@@ -1,4 +1,7 @@
 /target
 .adi/
+.dev/
 .idea/
 .env
+.env.local
+dist/
