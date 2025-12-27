@@ -20,6 +20,30 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Load .env.local if exists (export only valid KEY=value lines)
+if [ -f "$PROJECT_DIR/.env.local" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Skip comments and empty lines
+        [[ -z "$line" || "$line" =~ ^# ]] && continue
+        # Extract key (everything before first =)
+        key="${line%%=*}"
+        # Extract value (everything after first =)
+        value="${line#*=}"
+        # Remove surrounding quotes from value
+        value="${value%\"}"
+        value="${value#\"}"
+        value="${value%\'}"
+        value="${value#\'}"
+        # Export if key looks valid
+        if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+            export "$key=$value"
+        fi
+    done < "$PROJECT_DIR/.env.local"
+fi
+
 # Configuration
 COOLIFY_URL="${COOLIFY_URL:-http://in.the-ihor.com}"
 API_BASE="$COOLIFY_URL/api/v1"
@@ -102,21 +126,23 @@ api_call() {
 status_color() {
     local status="$1"
     case "$status" in
-        running|finished|success)  echo "$GREEN" ;;
-        queued|in_progress|building) echo "$YELLOW" ;;
-        failed|error|cancelled)    echo "$RED" ;;
-        *)                         echo "$NC" ;;
+        running:healthy|running|finished|success)  echo "$GREEN" ;;
+        running:unhealthy|running:unknown)         echo "$YELLOW" ;;
+        queued|in_progress|building)               echo "$YELLOW" ;;
+        exited*|failed|error|cancelled|stopped)    echo "$RED" ;;
+        *)                                         echo "$NC" ;;
     esac
 }
 
 status_icon() {
     local status="$1"
     case "$status" in
-        running|finished|success)  echo "●" ;;
-        queued)                    echo "○" ;;
-        in_progress|building)      echo "◐" ;;
-        failed|error|cancelled)    echo "✗" ;;
-        *)                         echo "?" ;;
+        running:healthy|running|finished|success)  echo "●" ;;
+        running:unhealthy|running:unknown)         echo "◐" ;;
+        queued)                                    echo "○" ;;
+        in_progress|building)                      echo "◐" ;;
+        exited*|failed|error|cancelled|stopped)    echo "✗" ;;
+        *)                                         echo "?" ;;
     esac
 }
 
@@ -131,8 +157,8 @@ cmd_status() {
     echo -e "${DIM}Coolify: $COOLIFY_URL${NC}"
     echo ""
 
-    printf "%-12s %-20s %-12s %s\n" "SERVICE" "NAME" "STATUS" "LAST DEPLOY"
-    echo "────────────────────────────────────────────────────────────────"
+    printf "%-12s %-20s %-20s\n" "SERVICE" "NAME" "STATUS"
+    echo "────────────────────────────────────────────────────────"
 
     for service in $ALL_SERVICES; do
         local uuid
@@ -140,25 +166,19 @@ cmd_status() {
         local name
         name=$(service_name "$service")
 
-        # Get latest deployment
-        local deployments
-        deployments=$(api_call GET "/applications/$uuid/deployments?take=1" 2>/dev/null)
+        # Get application status
+        local app_info
+        app_info=$(api_call GET "/applications/$uuid" 2>/dev/null)
 
-        local last_deploy last_status
-        last_deploy=$(echo "$deployments" | jq -r '.[0].created_at // "never"' 2>/dev/null || echo "never")
-        last_status=$(echo "$deployments" | jq -r '.[0].status // "none"' 2>/dev/null || echo "none")
-
-        # Format timestamp
-        if [ "$last_deploy" != "never" ] && [ "$last_deploy" != "null" ]; then
-            last_deploy=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${last_deploy%%.*}" "+%m/%d %H:%M" 2>/dev/null || echo "$last_deploy")
-        fi
+        local status
+        status=$(echo "$app_info" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
 
         local color
-        color=$(status_color "$last_status")
+        color=$(status_color "$status")
         local icon
-        icon=$(status_icon "$last_status")
+        icon=$(status_icon "$status")
 
-        printf "%-12s %-20s ${color}%-12s${NC} %s\n" "$service" "$name" "$icon $last_status" "$last_deploy"
+        printf "%-12s %-20s ${color}%s %s${NC}\n" "$service" "$name" "$icon" "$status"
     done
 }
 
