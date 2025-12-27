@@ -175,6 +175,17 @@ adi run adi.tasks list            # Alternative plugin run syntax
 git submodule update --remote     # Pull latest from all submodules
 ```
 
+## Deployment Repos
+Some crates have separate deployment wrapper repos that contain them as submodules:
+- `apps/infra-service-auth` wraps `crates/adi-auth`
+
+After pushing changes to a crate, also update its deployment repo:
+```bash
+cd apps/infra-service-auth
+git submodule update --remote adi-auth
+git add adi-auth && git commit -m "🔗 Update adi-auth: <description>" && git push
+```
+
 ## Component Repos
 Each submodule is an independent repo that can be developed standalone:
 - adi-cli: `../adi-cli`
