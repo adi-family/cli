@@ -163,3 +163,9 @@
 [submodule "apps/infra-service-platform-backend"]
 	path = apps/infra-service-platform-backend
 	url = https://github.com/adi-family/infra-service-platform-backend.git
+[submodule "apps/infra-service-signaling"]
+	path = apps/infra-service-signaling
+	url = https://github.com/adi-family/infra-service-signaling.git
+[submodule "apps/infra-service-executor"]
+	path = apps/infra-service-executor
+	url = https://github.com/adi-family/infra-service-executor.git
