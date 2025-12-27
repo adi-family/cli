@@ -166,6 +166,3 @@
 [submodule "apps/infra-service-signaling"]
 	path = apps/infra-service-signaling
 	url = https://github.com/adi-family/infra-service-signaling.git
-[submodule "apps/infra-service-executor"]
-	path = apps/infra-service-executor
-	url = https://github.com/adi-family/infra-service-executor.git
