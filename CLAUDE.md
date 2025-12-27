@@ -162,6 +162,34 @@ Key variables:
 - `SMTP_*` - Email settings (optional for local dev)
 - `RUST_LOG` - Log level (info, debug, trace)
 
+## Production Deployment
+
+### Deploy Script (`./scripts/deploy.sh`)
+Manages Coolify deployments for production services.
+
+**Requirements:**
+- `COOLIFY_API_KEY` environment variable (get from Coolify → Keys & Tokens → API tokens)
+- `COOLIFY_URL` (default: http://in.the-ihor.com)
+
+**Commands:**
+```bash
+./scripts/deploy.sh status              # Check all services status
+./scripts/deploy.sh deploy web          # Deploy single service
+./scripts/deploy.sh deploy all          # Deploy all services
+./scripts/deploy.sh deploy auth -f      # Force rebuild (no cache)
+./scripts/deploy.sh watch platform      # Watch deployment progress
+./scripts/deploy.sh logs signaling      # View deployment logs
+./scripts/deploy.sh list web 10         # List last 10 deployments
+```
+
+**Services:**
+| Name | Description |
+|------|-------------|
+| auth | Auth API (adi-auth) |
+| platform | Platform API (adi-platform-api) |
+| signaling | Signaling Server (tarminal-signaling-server) |
+| web | Web UI (infra-service-web) |
+
 ## CLI Usage
 The `adi` CLI provides direct plugin commands for convenience:
 ```bash
