@@ -231,16 +231,19 @@ start_service() {
         platform)
             # Platform service needs DATABASE_URL, JWT_SECRET from .env.local
             if [ -f "$PROJECT_DIR/.env.local" ]; then
-                set -a
                 # shellcheck disable=SC1091
                 source "$PROJECT_DIR/.env.local" 2>/dev/null || true
-                set +a
+                if [ -n "$JWT_SECRET" ]; then
+                    env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
+                fi
             fi
-            # Use platform-specific database if set, otherwise auth's database
-            if [ -z "$PLATFORM_DATABASE_URL" ]; then
-                env_cmd="$env_cmd DATABASE_URL=${DATABASE_URL:-postgres://adi:adi@localhost:5432/adi_platform}"
-            else
+            # Use platform-specific database if set, otherwise default
+            if [ -n "$PLATFORM_DATABASE_URL" ]; then
                 env_cmd="$env_cmd DATABASE_URL=$PLATFORM_DATABASE_URL"
+            elif [ -n "$DATABASE_URL" ]; then
+                env_cmd="$env_cmd DATABASE_URL=$DATABASE_URL"
+            else
+                env_cmd="$env_cmd DATABASE_URL=postgres://adi:adi@localhost:5432/adi_platform"
             fi
             ;;
         auth)
