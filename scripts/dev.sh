@@ -48,7 +48,7 @@ service_cmd() {
     case "$1" in
         signaling) echo "cargo run" ;;
         auth)      echo "cargo run -p adi-auth-http" ;;
-        platform)  echo "cargo run" ;;
+        platform)  echo "cargo run --bin adi-platform-api" ;;
         web)       echo "npm run dev" ;;
         cocoon)    echo "cargo run" ;;
         *)         echo "" ;;
