@@ -246,12 +246,13 @@ start_service() {
         auth)
             # Dev mode: print verification codes to console
             env_cmd="$env_cmd UNSAFE_PRINT_EMAIL_CODE_IN_CONSOLE=1"
-            # Auth service might need DATABASE_URL etc from .env.local
+            # Auth service needs JWT_SECRET from .env.local
             if [ -f "$PROJECT_DIR/.env.local" ]; then
-                set -a
                 # shellcheck disable=SC1091
                 source "$PROJECT_DIR/.env.local" 2>/dev/null || true
-                set +a
+                if [ -n "$JWT_SECRET" ]; then
+                    env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
+                fi
             fi
             ;;
     esac
