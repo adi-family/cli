@@ -166,3 +166,6 @@
 [submodule "apps/infra-service-signaling"]
 	path = apps/infra-service-signaling
 	url = https://github.com/adi-family/infra-service-signaling.git
+[submodule "crates/lib-tarminal-sync"]
+	path = crates/lib-tarminal-sync
+	url = git@github.com:adi-family/lib-tarminal-sync.git
