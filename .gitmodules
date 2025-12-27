@@ -157,3 +157,6 @@
 [submodule "apps/infra-service-web"]
 	path = apps/infra-service-web
 	url = https://github.com/adi-family/adi-web.git
+[submodule "crates/adi-platform-api"]
+	path = crates/adi-platform-api
+	url = https://github.com/adi-family/adi-platform-api.git

@@ -25,9 +25,9 @@ PID_DIR="$PROJECT_DIR/.dev"
 LOG_DIR="$PROJECT_DIR/.dev/logs"
 
 # All services
-ALL_SERVICES="signaling auth web cocoon"
+ALL_SERVICES="signaling auth platform web cocoon"
 # Default services to start (cocoon is optional)
-DEFAULT_SERVICES="signaling auth web"
+DEFAULT_SERVICES="signaling auth platform web"
 
 # -----------------------------------------------------------------------------
 # Service Configuration (functions for bash 3.2 compatibility)
@@ -37,6 +37,7 @@ service_dir() {
     case "$1" in
         signaling) echo "crates/tarminal-signaling-server" ;;
         auth)      echo "crates/adi-auth" ;;
+        platform)  echo "crates/adi-platform-api" ;;
         web)       echo "apps/infra-service-web" ;;
         cocoon)    echo "crates/cocoon" ;;
         *)         echo "" ;;
@@ -47,6 +48,7 @@ service_cmd() {
     case "$1" in
         signaling) echo "cargo run" ;;
         auth)      echo "cargo run -p adi-auth-http" ;;
+        platform)  echo "cargo run" ;;
         web)       echo "npm run dev" ;;
         cocoon)    echo "cargo run" ;;
         *)         echo "" ;;
@@ -57,6 +59,7 @@ service_port_name() {
     case "$1" in
         signaling) echo "adi-signaling" ;;
         auth)      echo "adi-auth" ;;
+        platform)  echo "adi-platform" ;;
         web)       echo "adi-web" ;;
         cocoon)    echo "adi-cocoon" ;;
         *)         echo "" ;;
@@ -67,6 +70,7 @@ service_description() {
     case "$1" in
         signaling) echo "WebSocket relay for sync" ;;
         auth)      echo "Authentication API" ;;
+        platform)  echo "Platform API (tasks, integrations)" ;;
         web)       echo "Next.js frontend" ;;
         cocoon)    echo "Worker container" ;;
         *)         echo "" ;;
@@ -217,7 +221,31 @@ start_service() {
             signaling_port=$(get_port "signaling")
             env_cmd="$env_cmd SIGNALING_SERVER_URL=ws://localhost:$signaling_port/ws"
             ;;
+        web)
+            local auth_port platform_port
+            auth_port=$(get_port "auth")
+            platform_port=$(get_port "platform")
+            env_cmd="$env_cmd AUTH_API_URL=http://localhost:$auth_port"
+            env_cmd="$env_cmd NEXT_PUBLIC_PLATFORM_API_URL=http://localhost:$platform_port"
+            ;;
+        platform)
+            # Platform service needs DATABASE_URL, JWT_SECRET from .env.local
+            if [ -f "$PROJECT_DIR/.env.local" ]; then
+                set -a
+                # shellcheck disable=SC1091
+                source "$PROJECT_DIR/.env.local" 2>/dev/null || true
+                set +a
+            fi
+            # Use platform-specific database if set, otherwise auth's database
+            if [ -z "$PLATFORM_DATABASE_URL" ]; then
+                env_cmd="$env_cmd DATABASE_URL=${DATABASE_URL:-postgres://adi:adi@localhost:5432/adi_platform}"
+            else
+                env_cmd="$env_cmd DATABASE_URL=$PLATFORM_DATABASE_URL"
+            fi
+            ;;
         auth)
+            # Dev mode: print verification codes to console
+            env_cmd="$env_cmd UNSAFE_PRINT_EMAIL_CODE_IN_CONSOLE=1"
             # Auth service might need DATABASE_URL etc from .env.local
             if [ -f "$PROJECT_DIR/.env.local" ]; then
                 set -a
@@ -422,16 +450,18 @@ cmd_ports() {
     echo -e "${BOLD}Service Ports${NC}"
     echo ""
 
-    local signaling_port auth_port web_port cocoon_port
+    local signaling_port auth_port platform_port web_port cocoon_port
     signaling_port=$(get_port "signaling")
     auth_port=$(get_port "auth")
+    platform_port=$(get_port "platform")
     web_port=$(get_port "web")
     cocoon_port=$(get_port "cocoon")
 
-    echo -e "  ${CYAN}Web UI:${NC}      http://localhost:$web_port"
-    echo -e "  ${CYAN}Auth API:${NC}    http://localhost:$auth_port"
-    echo -e "  ${CYAN}Signaling:${NC}   ws://localhost:$signaling_port/ws"
-    echo -e "  ${CYAN}Cocoon:${NC}      (internal, port $cocoon_port)"
+    echo -e "  ${CYAN}Web UI:${NC}       http://localhost:$web_port"
+    echo -e "  ${CYAN}Auth API:${NC}     http://localhost:$auth_port"
+    echo -e "  ${CYAN}Platform API:${NC} http://localhost:$platform_port"
+    echo -e "  ${CYAN}Signaling:${NC}    ws://localhost:$signaling_port/ws"
+    echo -e "  ${CYAN}Cocoon:${NC}       (internal, port $cocoon_port)"
     echo ""
 }
 

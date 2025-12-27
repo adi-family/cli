@@ -42,6 +42,7 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/lib-client-openrouter` - OpenRouter API client library
 - `crates/lib-tarminal-sync` - Client-agnostic sync protocol for Tarminal
 - `crates/tarminal-signaling-server` - WebSocket signaling server for device pairing
+- `crates/adi-platform-api` - Unified Platform API (tasks, integrations, orchestration)
 - `crates/debug-metal-shader` - Metal shader debug app
 
 ## Cocoon
@@ -81,6 +82,7 @@ cp .env.local.example .env.local  # Create config (one time)
 |---------|-----|-------------|
 | Web UI | http://localhost:3000 | Next.js frontend |
 | Auth API | http://localhost:8090 | Authentication (email + TOTP) |
+| Platform API | http://localhost:8091 | Tasks, projects, integrations |
 | Signaling | ws://localhost:8080/ws | WebSocket relay for sync |
 | Cocoon | (internal) | Worker container |
 
