@@ -160,3 +160,6 @@
 [submodule "crates/adi-platform-api"]
 	path = crates/adi-platform-api
 	url = https://github.com/adi-family/adi-platform-api.git
+[submodule "apps/infra-service-platform-backend"]
+	path = apps/infra-service-platform-backend
+	url = https://github.com/adi-family/infra-service-platform-backend.git
