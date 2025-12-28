@@ -4413,12 +4413,148 @@ dependencies = [
 ]
 
 [[package]]
+name = "lib-client-asana"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+]
+
+[[package]]
+name = "lib-client-confluence"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
+name = "lib-client-gemini"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+]
+
+[[package]]
 name = "lib-client-github"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
  "bytes",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+]
+
+[[package]]
+name = "lib-client-gitlab"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
+name = "lib-client-google-auth"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "chrono",
+ "jsonwebtoken",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
+name = "lib-client-google-docs"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "lib-client-google-auth",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+]
+
+[[package]]
+name = "lib-client-google-drive"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "lib-client-google-auth",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
+name = "lib-client-google-sheets"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "lib-client-google-auth",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
+name = "lib-client-jira"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
+name = "lib-client-linear"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
  "reqwest",
  "serde",
  "serde_json",
@@ -4460,6 +4596,31 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.17",
  "tracing",
+]
+
+[[package]]
+name = "lib-client-slack"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+]
+
+[[package]]
+name = "lib-client-trello"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+ "urlencoding",
 ]
 
 [[package]]
@@ -4869,6 +5030,16 @@ name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
+
+[[package]]
+name = "mime_guess"
+version = "2.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7c44f8e672c00fe5308fa235f821cb4198414e1c77935c1ab6948d3fd78550e"
+dependencies = [
+ "mime",
+ "unicase",
+]
 
 [[package]]
 name = "minimal-lexical"
@@ -6491,6 +6662,7 @@ dependencies = [
  "js-sys",
  "log",
  "mime",
+ "mime_guess",
  "native-tls",
  "percent-encoding",
  "pin-project-lite",
@@ -8195,6 +8367,12 @@ name = "unarray"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eaea85b334db583fe3274d12b4cd1880032beab409c0d774be044d4480ab9a94"
+
+[[package]]
+name = "unicase"
+version = "2.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75b844d17643ee918803943289730bec8aac480150456169e647ed0b576ba539"
 
 [[package]]
 name = "unicode-bidi"

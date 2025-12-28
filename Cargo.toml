@@ -57,6 +57,18 @@ members = [
     "crates/lib-client-openai",
     "crates/lib-client-ollama",
     "crates/lib-client-openrouter",
+    "crates/lib-client-google-auth",
+    "crates/lib-client-gemini",
+    "crates/lib-client-linear",
+    "crates/lib-client-gitlab",
+    "crates/lib-client-jira",
+    "crates/lib-client-slack",
+    "crates/lib-client-confluence",
+    "crates/lib-client-google-sheets",
+    "crates/lib-client-google-drive",
+    "crates/lib-client-google-docs",
+    "crates/lib-client-asana",
+    "crates/lib-client-trello",
 
     # Plugin system
     "crates/lib-plugin-abi",
@@ -123,6 +135,18 @@ lib-client-anthropic = { path = "crates/lib-client-anthropic" }
 lib-client-openai = { path = "crates/lib-client-openai" }
 lib-client-ollama = { path = "crates/lib-client-ollama" }
 lib-client-openrouter = { path = "crates/lib-client-openrouter" }
+lib-client-google-auth = { path = "crates/lib-client-google-auth" }
+lib-client-gemini = { path = "crates/lib-client-gemini" }
+lib-client-linear = { path = "crates/lib-client-linear" }
+lib-client-gitlab = { path = "crates/lib-client-gitlab" }
+lib-client-jira = { path = "crates/lib-client-jira" }
+lib-client-slack = { path = "crates/lib-client-slack" }
+lib-client-confluence = { path = "crates/lib-client-confluence" }
+lib-client-google-sheets = { path = "crates/lib-client-google-sheets" }
+lib-client-google-drive = { path = "crates/lib-client-google-drive" }
+lib-client-google-docs = { path = "crates/lib-client-google-docs" }
+lib-client-asana = { path = "crates/lib-client-asana" }
+lib-client-trello = { path = "crates/lib-client-trello" }
 
 # Plugin system
 lib-plugin-abi = { path = "crates/lib-plugin-abi" }
