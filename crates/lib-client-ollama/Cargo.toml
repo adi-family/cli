@@ -4,6 +4,12 @@ version = "0.1.0"
 edition = "2021"
 description = "Ollama API client library"
 license = "MIT"
+authors = ["ADI Team"]
+keywords = ["ollama", "llm", "api", "local"]
+categories = ["api-bindings", "web-programming"]
+repository = "https://github.com/adi-family/lib-client-ollama"
+homepage = "https://adi.the-ihor.com"
+documentation = "https://docs.rs/lib-client-ollama"
 
 [dependencies]
 reqwest = { version = "0.12", features = ["json"] }
