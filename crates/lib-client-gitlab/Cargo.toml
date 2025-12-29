@@ -1,9 +1,15 @@
 [package]
 name = "lib-client-gitlab"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 license = "BSL-1.0"
 description = "GitLab API client library for ADI"
+authors = ["ADI Team"]
+keywords = ["gitlab", "api", "git"]
+categories = ["api-bindings", "development-tools"]
+repository = "https://github.com/adi-family/lib-client-gitlab"
+homepage = "https://adi.the-ihor.com"
+documentation = "https://docs.rs/lib-client-gitlab"
 
 [lib]
 name = "lib_client_gitlab"
