@@ -1,9 +1,15 @@
 [package]
 name = "lib-client-linear"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 license = "BSL-1.0"
 description = "Linear API client library for ADI"
+authors = ["ADI Team"]
+keywords = ["linear", "api", "project-management"]
+categories = ["api-bindings", "web-programming"]
+repository = "https://github.com/adi-family/lib-client-linear"
+homepage = "https://adi.the-ihor.com"
+documentation = "https://docs.rs/lib-client-linear"
 
 [lib]
 name = "lib_client_linear"
