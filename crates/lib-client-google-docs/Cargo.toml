@@ -4,12 +4,13 @@ version = "0.1.0"
 edition = "2024"
 license = "BSL-1.0"
 description = "Google Docs API client library for ADI"
+repository = "https://github.com/adi-family/lib-client-google-docs"
 
 [lib]
 name = "lib_client_google_docs"
 
 [dependencies]
-lib-client-google-auth = { path = "../lib-client-google-auth" }
+lib-client-google-auth = { git = "https://github.com/adi-family/lib-client-google-auth.git" }
 reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
