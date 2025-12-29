@@ -7,6 +7,7 @@ members = [
     # Shared libraries
     "crates/lib-cli-common",
     "crates/lib-migrations",
+    "crates/lib-typespec-api",
 
     # Indexer components (flat submodules)
     "crates/lib-embed",
@@ -91,6 +92,9 @@ members = [
     "crates/adi-lang-php",
     "crates/adi-lang-swift",
     "crates/adi-lang-lua",
+
+    # TypeSpec API generator
+    "crates/lib-typespec-api",
 
     # Core plugins
     "crates/adi-indexer-plugin",
