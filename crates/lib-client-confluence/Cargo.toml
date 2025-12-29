@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 license = "BSL-1.0"
 description = "Confluence API client library for ADI"
-repository = "https://github.com/adi-family/lib-client-confluence"
+repository = "https://github.com/adi-family/cli/tree/main/crates/lib-client-confluence"
 
 [lib]
 name = "lib_client_confluence"

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 license = "BSL-1.0"
 description = "Trello API client library for ADI"
-repository = "https://github.com/adi-family/lib-client-trello"
+repository = "https://github.com/adi-family/cli/tree/main/crates/lib-client-trello"
 
 [lib]
 name = "lib_client_trello"
