@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 license = "BSL-1.0"
 description = "Asana API client library for ADI"
+repository = "https://github.com/adi-family/lib-client-asana"
 
 [lib]
 name = "lib_client_asana"
