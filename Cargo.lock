@@ -1743,9 +1743,12 @@ dependencies = [
 name = "cocoon"
 version = "0.1.0"
 dependencies = [
+ "abi_stable",
  "base64 0.22.1",
  "futures",
+ "lib-plugin-abi",
  "lib-tarminal-sync",
+ "once_cell",
  "portable-pty",
  "rand 0.8.5",
  "serde",

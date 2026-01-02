@@ -25,9 +25,9 @@ PID_DIR="$PROJECT_DIR/.dev"
 LOG_DIR="$PROJECT_DIR/.dev/logs"
 
 # All services
-ALL_SERVICES="signaling auth platform web cocoon"
+ALL_SERVICES="signaling auth platform web flowmap cocoon"
 # Default services to start (cocoon is optional)
-DEFAULT_SERVICES="signaling auth platform web"
+DEFAULT_SERVICES="signaling auth platform web flowmap"
 
 # -----------------------------------------------------------------------------
 # Service Configuration (functions for bash 3.2 compatibility)
@@ -39,6 +39,7 @@ service_dir() {
         auth)      echo "crates/adi-auth" ;;
         platform)  echo "crates/adi-platform-api" ;;
         web)       echo "apps/infra-service-web" ;;
+        flowmap)   echo "apps/flowmap-api" ;;
         cocoon)    echo "crates/cocoon" ;;
         *)         echo "" ;;
     esac
@@ -50,6 +51,7 @@ service_cmd() {
         auth)      echo "cargo run -p adi-auth-http" ;;
         platform)  echo "cargo run --bin adi-platform-api" ;;
         web)       echo "npm run dev" ;;
+        flowmap)   echo "cargo run --release" ;;
         cocoon)    echo "cargo run" ;;
         *)         echo "" ;;
     esac
@@ -61,6 +63,7 @@ service_port_name() {
         auth)      echo "adi-auth" ;;
         platform)  echo "adi-platform" ;;
         web)       echo "adi-web" ;;
+        flowmap)   echo "adi-flowmap" ;;
         cocoon)    echo "adi-cocoon" ;;
         *)         echo "" ;;
     esac
@@ -72,6 +75,7 @@ service_description() {
         auth)      echo "Authentication API" ;;
         platform)  echo "Platform API (tasks, integrations)" ;;
         web)       echo "Next.js frontend" ;;
+        flowmap)   echo "Code flow visualization API" ;;
         cocoon)    echo "Worker container" ;;
         *)         echo "" ;;
     esac
@@ -222,11 +226,13 @@ start_service() {
             env_cmd="$env_cmd SIGNALING_SERVER_URL=ws://localhost:$signaling_port/ws"
             ;;
         web)
-            local auth_port platform_port
+            local auth_port platform_port flowmap_port
             auth_port=$(get_port "auth")
             platform_port=$(get_port "platform")
+            flowmap_port=$(get_port "flowmap")
             env_cmd="$env_cmd AUTH_API_URL=http://localhost:$auth_port"
             env_cmd="$env_cmd NEXT_PUBLIC_PLATFORM_API_URL=http://localhost:$platform_port"
+            env_cmd="$env_cmd NEXT_PUBLIC_FLOWMAP_API_URL=http://localhost:$flowmap_port"
             ;;
         platform)
             # Platform service needs DATABASE_URL, JWT_SECRET from .env.local
@@ -247,15 +253,21 @@ start_service() {
             fi
             ;;
         auth)
-            # Dev mode: print verification codes to console
-            env_cmd="$env_cmd UNSAFE_PRINT_EMAIL_CODE_IN_CONSOLE=1"
-            # Auth service needs JWT_SECRET from .env.local
+            # Auth service needs JWT_SECRET and SMTP config from .env.local
             if [ -f "$PROJECT_DIR/.env.local" ]; then
                 # shellcheck disable=SC1091
                 source "$PROJECT_DIR/.env.local" 2>/dev/null || true
                 if [ -n "$JWT_SECRET" ]; then
                     env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
                 fi
+                # Load SMTP configuration
+                [ -n "$SMTP_HOST" ] && env_cmd="$env_cmd SMTP_HOST=$SMTP_HOST"
+                [ -n "$SMTP_PORT" ] && env_cmd="$env_cmd SMTP_PORT=$SMTP_PORT"
+                [ -n "$SMTP_USERNAME" ] && env_cmd="$env_cmd SMTP_USERNAME=$SMTP_USERNAME"
+                [ -n "$SMTP_PASSWORD" ] && env_cmd="$env_cmd SMTP_PASSWORD=$SMTP_PASSWORD"
+                [ -n "$SMTP_FROM_EMAIL" ] && env_cmd="$env_cmd SMTP_FROM_EMAIL=$SMTP_FROM_EMAIL"
+                [ -n "$SMTP_FROM_NAME" ] && env_cmd="$env_cmd SMTP_FROM_NAME='$SMTP_FROM_NAME'"
+                [ -n "$SMTP_TLS" ] && env_cmd="$env_cmd SMTP_TLS=$SMTP_TLS"
             fi
             ;;
     esac
@@ -454,16 +466,19 @@ cmd_ports() {
     echo -e "${BOLD}Service Ports${NC}"
     echo ""
 
-    local signaling_port auth_port platform_port web_port cocoon_port
+    local signaling_port auth_port platform_port web_port flowmap_port cocoon_port
     signaling_port=$(get_port "signaling")
     auth_port=$(get_port "auth")
     platform_port=$(get_port "platform")
     web_port=$(get_port "web")
+    flowmap_port=$(get_port "flowmap")
     cocoon_port=$(get_port "cocoon")
 
     echo -e "  ${CYAN}Web UI:${NC}       http://localhost:$web_port"
+    echo -e "  ${CYAN}FlowMap UI:${NC}   http://localhost:$web_port/flowmap"
     echo -e "  ${CYAN}Auth API:${NC}     http://localhost:$auth_port"
     echo -e "  ${CYAN}Platform API:${NC} http://localhost:$platform_port"
+    echo -e "  ${CYAN}FlowMap API:${NC}  http://localhost:$flowmap_port"
     echo -e "  ${CYAN}Signaling:${NC}    ws://localhost:$signaling_port/ws"
     echo -e "  ${CYAN}Cocoon:${NC}       (internal, port $cocoon_port)"
     echo ""

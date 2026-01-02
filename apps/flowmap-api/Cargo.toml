@@ -1,0 +1,24 @@
+[package]
+name = "flowmap-api"
+version = "0.1.0"
+edition = "2024"
+license = "BSL-1.1"
+description = "FlowMap HTTP API server"
+
+[[bin]]
+name = "flowmap-api"
+path = "src/main.rs"
+
+[dependencies]
+lib-flowmap-core = { path = "../../crates/lib-flowmap-core" }
+lib-flowmap-parser = { path = "../../crates/lib-flowmap-parser" }
+
+axum = { version = "0.8", features = ["json"] }
+tokio = { version = "1.43", features = ["full"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "2.0"
+walkdir = "2.5"

@@ -45,6 +45,38 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/adi-platform-api` - Unified Platform API (tasks, integrations, orchestration)
 - `crates/debug-metal-shader` - Metal shader debug app
 
+## FlowMap (Standalone)
+- `crates/lib-flowmap-core` - Core flow graph types
+- `crates/lib-flowmap-parser` - TypeScript/JavaScript flow extraction
+- `apps/flowmap-api` - HTTP API server for flow visualization
+
+### Build FlowMap
+```bash
+cargo build --release
+# Binary at: ./target/release/flowmap-api
+```
+
+### Run FlowMap
+```bash
+# Start the API server (default port 8092)
+./target/release/flowmap-api
+
+# Or with custom port
+PORT=8080 ./target/release/flowmap-api
+```
+
+### FlowMap API
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/parse?path=/dir` | Parse a directory, returns flow summaries |
+| `GET /api/flows?path=/dir` | List flows for a parsed directory |
+| `GET /api/flows/{id}?path=/dir` | Get full flow graph by ID |
+| `GET /api/flows/{id}/issues?path=/dir` | Get issues (unhandled errors) |
+
+### FlowMap Frontend
+- Located at: `/flowmap` in the web UI (apps/infra-service-web)
+- Set `NEXT_PUBLIC_FLOWMAP_API_URL` to point to the API server
+
 ## Cocoon
 - Cocoon is a containerized worker environment that connects to the signaling server
 - Provides isolated execution environment for running commands remotely

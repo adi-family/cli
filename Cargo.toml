@@ -1,5 +1,10 @@
 [workspace]
 resolver = "2"
+exclude = [
+    "crates/lib-flowmap-core",
+    "crates/lib-flowmap-parser",
+    "apps/flowmap-api",
+]
 members = [
     # CLI manager (submodule)
     "crates/adi-cli",
@@ -101,7 +106,11 @@ members = [
     "crates/adi-tasks-plugin",
     "crates/adi-knowledgebase-plugin",
     "crates/adi-agent-loop-plugin",
+
 ]
+
+# FlowMap is standalone (not in workspace) - build with:
+# cd apps/flowmap-api && cargo build
 
 # Note: tarminal-signaling-server is standalone (not in workspace) - build with:
 # cd crates/tarminal-signaling-server && cargo build
