@@ -25,8 +25,8 @@ PID_DIR="$PROJECT_DIR/.dev"
 LOG_DIR="$PROJECT_DIR/.dev/logs"
 
 # All services
-ALL_SERVICES="signaling auth platform web flowmap cocoon registry"
-# Default services to start (cocoon and registry are optional)
+ALL_SERVICES="signaling auth platform web flowmap cocoon registry cocoon-manager"
+# Default services to start (cocoon, registry, cocoon-manager are optional)
 DEFAULT_SERVICES="signaling auth platform web flowmap"
 
 # -----------------------------------------------------------------------------
@@ -42,6 +42,7 @@ service_dir() {
         flowmap)   echo "apps/flowmap-api" ;;
         cocoon)    echo "crates/cocoon" ;;
         registry)  echo "crates/adi-plugin-registry-http" ;;
+        cocoon-manager) echo "crates/cocoon-manager" ;;
         *)         echo "" ;;
     esac
 }
@@ -55,6 +56,7 @@ service_cmd() {
         flowmap)   echo "cargo run --release" ;;
         cocoon)    echo "cargo run --features standalone" ;;
         registry)  echo "cargo run" ;;
+        cocoon-manager) echo "cargo run" ;;
         *)         echo "" ;;
     esac
 }
@@ -68,6 +70,7 @@ service_port_name() {
         flowmap)   echo "adi-flowmap" ;;
         cocoon)    echo "adi-cocoon" ;;
         registry)  echo "adi-registry" ;;
+        cocoon-manager) echo "adi-cocoon-manager" ;;
         *)         echo "" ;;
     esac
 }
@@ -81,6 +84,7 @@ service_description() {
         flowmap)   echo "Code flow visualization API" ;;
         cocoon)    echo "Worker container" ;;
         registry)  echo "Plugin registry (local)" ;;
+        cocoon-manager) echo "Cocoon orchestration API" ;;
         *)         echo "" ;;
     esac
 }
@@ -284,6 +288,18 @@ start_service() {
                 [ -n "$SMTP_TLS" ] && env_cmd="$env_cmd SMTP_TLS=$SMTP_TLS"
             fi
             ;;
+        cocoon-manager)
+            # Cocoon manager needs database, signaling URL, and Docker config
+            local signaling_port
+            signaling_port=$(get_port "signaling")
+            local db_dir="$PROJECT_DIR/.dev/cocoon-manager-data"
+            mkdir -p "$db_dir"
+            env_cmd="$env_cmd DATABASE_URL=sqlite:$db_dir/cocoon-manager.db"
+            env_cmd="$env_cmd SIGNALING_SERVER_URL=ws://localhost:$signaling_port/ws"
+            env_cmd="$env_cmd COCOON_IMAGE=ghcr.io/adi-family/cocoon:latest"
+            env_cmd="$env_cmd MAX_COCOONS=100"
+            env_cmd="$env_cmd BIND_ADDRESS=0.0.0.0:$port"
+            ;;
     esac
 
     log "Starting $service on port $port..."
@@ -480,21 +496,23 @@ cmd_ports() {
     echo -e "${BOLD}Service Ports${NC}"
     echo ""
 
-    local signaling_port auth_port platform_port web_port flowmap_port cocoon_port
+    local signaling_port auth_port platform_port web_port flowmap_port cocoon_port manager_port
     signaling_port=$(get_port "signaling")
     auth_port=$(get_port "auth")
     platform_port=$(get_port "platform")
     web_port=$(get_port "web")
     flowmap_port=$(get_port "flowmap")
     cocoon_port=$(get_port "cocoon")
+    manager_port=$(get_port "cocoon-manager")
 
-    echo -e "  ${CYAN}Web UI:${NC}       http://localhost:$web_port"
-    echo -e "  ${CYAN}FlowMap UI:${NC}   http://localhost:$web_port/flowmap"
-    echo -e "  ${CYAN}Auth API:${NC}     http://localhost:$auth_port"
-    echo -e "  ${CYAN}Platform API:${NC} http://localhost:$platform_port"
-    echo -e "  ${CYAN}FlowMap API:${NC}  http://localhost:$flowmap_port"
-    echo -e "  ${CYAN}Signaling:${NC}    ws://localhost:$signaling_port/ws"
-    echo -e "  ${CYAN}Cocoon:${NC}       (internal, port $cocoon_port)"
+    echo -e "  ${CYAN}Web UI:${NC}           http://localhost:$web_port"
+    echo -e "  ${CYAN}FlowMap UI:${NC}       http://localhost:$web_port/flowmap"
+    echo -e "  ${CYAN}Auth API:${NC}         http://localhost:$auth_port"
+    echo -e "  ${CYAN}Platform API:${NC}     http://localhost:$platform_port"
+    echo -e "  ${CYAN}FlowMap API:${NC}      http://localhost:$flowmap_port"
+    echo -e "  ${CYAN}Cocoon Manager:${NC}   http://localhost:$manager_port"
+    echo -e "  ${CYAN}Signaling:${NC}        ws://localhost:$signaling_port/ws"
+    echo -e "  ${CYAN}Cocoon:${NC}           (internal, port $cocoon_port)"
     echo ""
 }
 

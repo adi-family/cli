@@ -52,6 +52,7 @@ members = [
     # Executor service
     "crates/adi-executor",
     "crates/cocoon",
+    "crates/cocoon-manager",
 
     # Debug app (submodule)
     "crates/debug-metal-shader",

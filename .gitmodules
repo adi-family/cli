@@ -172,3 +172,6 @@
 [submodule "crates/lib-typespec-api"]
 	path = crates/lib-typespec-api
 	url = https://github.com/adi-family/lib-typespec-api.git
+[submodule "crates/cocoon-manager"]
+	path = crates/cocoon-manager
+	url = https://github.com/adi-family/cocoon-manager.git
