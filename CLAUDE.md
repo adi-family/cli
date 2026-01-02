@@ -112,11 +112,13 @@ cp .env.local.example .env.local  # Create config (one time)
 ### Services
 | Service | URL | Description |
 |---------|-----|-------------|
-| Web UI | http://localhost:3000 | Next.js frontend |
+| Web UI | http://localhost:8013 | Next.js frontend |
 | Auth API | http://localhost:8090 | Authentication (email + TOTP) |
 | Platform API | http://localhost:8091 | Tasks, projects, integrations |
-| Signaling | ws://localhost:8080/ws | WebSocket relay for sync |
-| Cocoon | (internal) | Worker container |
+| Signaling | ws://localhost:8011/ws | WebSocket relay for sync |
+| FlowMap API | http://localhost:8092 | Code flow visualization |
+| Registry | http://localhost:8019 | Plugin registry (local) |
+| Cocoon | (internal) | Worker container (optional) |
 
 ### Dev Script (`./scripts/dev.sh`)
 Works in terminal, tmux, screen, and CI/CD pipelines.

@@ -25,8 +25,8 @@ PID_DIR="$PROJECT_DIR/.dev"
 LOG_DIR="$PROJECT_DIR/.dev/logs"
 
 # All services
-ALL_SERVICES="signaling auth platform web flowmap cocoon"
-# Default services to start (cocoon is optional)
+ALL_SERVICES="signaling auth platform web flowmap cocoon registry"
+# Default services to start (cocoon and registry are optional)
 DEFAULT_SERVICES="signaling auth platform web flowmap"
 
 # -----------------------------------------------------------------------------
@@ -41,6 +41,7 @@ service_dir() {
         web)       echo "apps/infra-service-web" ;;
         flowmap)   echo "apps/flowmap-api" ;;
         cocoon)    echo "crates/cocoon" ;;
+        registry)  echo "crates/adi-plugin-registry-http" ;;
         *)         echo "" ;;
     esac
 }
@@ -52,7 +53,8 @@ service_cmd() {
         platform)  echo "cargo run --bin adi-platform-api" ;;
         web)       echo "npm run dev" ;;
         flowmap)   echo "cargo run --release" ;;
-        cocoon)    echo "cargo run" ;;
+        cocoon)    echo "cargo run --features standalone" ;;
+        registry)  echo "cargo run" ;;
         *)         echo "" ;;
     esac
 }
@@ -65,6 +67,7 @@ service_port_name() {
         web)       echo "adi-web" ;;
         flowmap)   echo "adi-flowmap" ;;
         cocoon)    echo "adi-cocoon" ;;
+        registry)  echo "adi-registry" ;;
         *)         echo "" ;;
     esac
 }
@@ -77,6 +80,7 @@ service_description() {
         web)       echo "Next.js frontend" ;;
         flowmap)   echo "Code flow visualization API" ;;
         cocoon)    echo "Worker container" ;;
+        registry)  echo "Plugin registry (local)" ;;
         *)         echo "" ;;
     esac
 }
@@ -224,6 +228,16 @@ start_service() {
             local signaling_port
             signaling_port=$(get_port "signaling")
             env_cmd="$env_cmd SIGNALING_SERVER_URL=ws://localhost:$signaling_port/ws"
+            ;;
+        registry)
+            # Registry service needs REGISTRY_DATA_DIR from .env.local
+            if [ -f "$PROJECT_DIR/.env.local" ]; then
+                # shellcheck disable=SC1091
+                source "$PROJECT_DIR/.env.local" 2>/dev/null || true
+            fi
+            local data_dir="${REGISTRY_DATA_DIR:-$PROJECT_DIR/.dev/registry-data}"
+            mkdir -p "$data_dir"
+            env_cmd="$env_cmd REGISTRY_DATA_DIR=$data_dir"
             ;;
         web)
             local auth_port platform_port flowmap_port
