@@ -58,9 +58,10 @@ fi
 
 cd "$PLUGIN_DIR"
 
-# Read plugin info from plugin.toml
-PLUGIN_ID=$(grep '^id = ' plugin.toml | sed 's/id = "\(.*\)"/\1/')
-PLUGIN_VERSION=$(grep '^version = ' plugin.toml | sed 's/version = "\(.*\)"/\1/')
+# Read plugin info from plugin.toml (from [plugin] section only)
+# Use sed to extract only from [plugin] section
+PLUGIN_ID=$(sed -n '/^\[plugin\]/,/^\[/{/^id = /p;}' plugin.toml | sed 's/id = "\(.*\)"/\1/' | tr -d '\n')
+PLUGIN_VERSION=$(sed -n '/^\[plugin\]/,/^\[/{/^version = /p;}' plugin.toml | sed 's/version = "\(.*\)"/\1/' | tr -d '\n')
 
 if [ -z "$PLUGIN_ID" ] || [ -z "$PLUGIN_VERSION" ]; then
     error "Could not read plugin ID or version from plugin.toml"
@@ -71,11 +72,13 @@ info "Building plugin: $PLUGIN_ID v$PLUGIN_VERSION"
 # Build the plugin
 cargo build --release --lib 2>&1 | grep -E "Finished|error" || true
 
-# Find the built library
-LIB_NAME=$(echo "$PLUGIN_ID" | sed 's/\./-/g')
-DYLIB_PATH="../../../target/release/lib${LIB_NAME}.dylib"
-SO_PATH="../../../target/release/lib${LIB_NAME}.so"
-DLL_PATH="../../../target/release/${LIB_NAME}.dll"
+# Find the built library - use Cargo.toml package name, not plugin ID
+PACKAGE_NAME=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/')
+# Find target directory (relative to plugin dir)
+TARGET_DIR="$PROJECT_DIR/target/release"
+DYLIB_PATH="$TARGET_DIR/lib${PACKAGE_NAME}.dylib"
+SO_PATH="$TARGET_DIR/lib${PACKAGE_NAME}.so"
+DLL_PATH="$TARGET_DIR/${PACKAGE_NAME}.dll"
 
 PLUGIN_LIB=""
 if [ -f "$DYLIB_PATH" ]; then
@@ -101,17 +104,33 @@ tar czf "$TARBALL" \
     -C "$(dirname "$PLUGIN_LIB")" "$(basename "$PLUGIN_LIB")" \
     -C "$PWD" plugin.toml
 
+# Detect platform
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+case "$OS-$ARCH" in
+    darwin-arm64|darwin-aarch64) PLATFORM="darwin-aarch64" ;;
+    darwin-x86_64|darwin-amd64) PLATFORM="darwin-x86_64" ;;
+    linux-x86_64|linux-amd64) PLATFORM="linux-x86_64" ;;
+    linux-aarch64|linux-arm64) PLATFORM="linux-aarch64" ;;
+    *) error "Unsupported platform: $OS-$ARCH" ;;
+esac
+
+# Read plugin metadata from plugin.toml
+PLUGIN_NAME=$(grep '^name = ' plugin.toml | sed 's/name = "\(.*\)"/\1/')
+PLUGIN_DESC=$(grep '^description = ' plugin.toml | sed 's/description = "\(.*\)"/\1/')
+PLUGIN_AUTHOR=$(grep '^author = ' plugin.toml | sed 's/author = "\(.*\)"/\1/')
+PLUGIN_TYPE=$(grep '^type = ' plugin.toml | sed 's/type = "\(.*\)"/\1/' || echo "extension")
+
 # Publish to registry
 info "Publishing to registry: $REGISTRY_URL"
+info "Platform: $PLATFORM"
 
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-    -F "file=@$TARBALL" \
-    -F "id=$PLUGIN_ID" \
-    -F "version=$PLUGIN_VERSION" \
-    "$REGISTRY_URL/v1/plugins/publish")
+    "$REGISTRY_URL/v1/publish/plugins/$PLUGIN_ID/$PLUGIN_VERSION/$PLATFORM?name=$PLUGIN_NAME&description=$PLUGIN_DESC&plugin_type=$PLUGIN_TYPE&author=$PLUGIN_AUTHOR" \
+    -F "file=@$TARBALL")
 
-HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-BODY=$(echo "$RESPONSE" | head -n -1)
+HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
+BODY=$(echo "$RESPONSE" | sed '$d')
 
 if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
     success "Published $PLUGIN_ID v$PLUGIN_VERSION to local registry"
