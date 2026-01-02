@@ -31,6 +31,7 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/adi-agent-loop-http` - Agent loop HTTP server
 - `crates/adi-executor` - Docker-based task execution service
 - `crates/cocoon` - Containerized worker with signaling server connectivity for remote command execution
+- `crates/cocoon-manager` - REST API for on-demand cocoon container orchestration
 - `crates/lib-misc-color` - Unified color type (RGB/RGBA/Hex)
 - `crates/lib-animation` - UI animation utilities
 - `crates/lib-syntax-highlight` - Syntax highlighting tokenizer
@@ -117,6 +118,7 @@ cp .env.local.example .env.local  # Create config (one time)
 | Platform API | http://localhost:8091 | Tasks, projects, integrations |
 | Signaling | ws://localhost:8011/ws | WebSocket relay for sync |
 | FlowMap API | http://localhost:8092 | Code flow visualization |
+| Cocoon Manager | http://localhost:8020 | Cocoon orchestration API (optional) |
 | Registry | http://localhost:8019 | Plugin registry (local) |
 | Cocoon | (internal) | Worker container (optional) |
 
