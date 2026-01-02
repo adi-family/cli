@@ -25,9 +25,9 @@ PID_DIR="$PROJECT_DIR/.dev"
 LOG_DIR="$PROJECT_DIR/.dev/logs"
 
 # All services
-ALL_SERVICES="signaling auth platform web flowmap cocoon registry cocoon-manager"
+ALL_SERVICES="signaling auth platform web flowmap analytics-ingestion analytics cocoon registry cocoon-manager"
 # Default services to start (cocoon, registry, cocoon-manager are optional)
-DEFAULT_SERVICES="signaling auth platform web flowmap"
+DEFAULT_SERVICES="signaling auth platform web flowmap analytics-ingestion analytics"
 
 # -----------------------------------------------------------------------------
 # Service Configuration (functions for bash 3.2 compatibility)
@@ -40,6 +40,8 @@ service_dir() {
         platform)  echo "crates/adi-platform-api" ;;
         web)       echo "apps/infra-service-web" ;;
         flowmap)   echo "apps/flowmap-api" ;;
+        analytics-ingestion) echo "crates/adi-analytics-ingestion" ;;
+        analytics) echo "crates/adi-analytics-api" ;;
         cocoon)    echo "crates/cocoon" ;;
         registry)  echo "crates/adi-plugin-registry-http" ;;
         cocoon-manager) echo "crates/cocoon-manager" ;;
@@ -54,6 +56,8 @@ service_cmd() {
         platform)  echo "cargo run --bin adi-platform-api" ;;
         web)       echo "npm run dev" ;;
         flowmap)   echo "cargo run --release" ;;
+        analytics-ingestion) echo "cargo run" ;;
+        analytics) echo "cargo run" ;;
         cocoon)    echo "cargo run --features standalone" ;;
         registry)  echo "cargo run" ;;
         cocoon-manager) echo "cargo run" ;;
@@ -68,6 +72,8 @@ service_port_name() {
         platform)  echo "adi-platform" ;;
         web)       echo "adi-web" ;;
         flowmap)   echo "adi-flowmap" ;;
+        analytics-ingestion) echo "adi-analytics-ingestion" ;;
+        analytics) echo "adi-analytics" ;;
         cocoon)    echo "adi-cocoon" ;;
         registry)  echo "adi-registry" ;;
         cocoon-manager) echo "adi-cocoon-manager" ;;
@@ -82,6 +88,8 @@ service_description() {
         platform)  echo "Platform API (tasks, integrations)" ;;
         web)       echo "Next.js frontend" ;;
         flowmap)   echo "Code flow visualization API" ;;
+        analytics-ingestion) echo "Analytics event ingestion (writes)" ;;
+        analytics) echo "Analytics API (metrics, dashboards)" ;;
         cocoon)    echo "Worker container" ;;
         registry)  echo "Plugin registry (local)" ;;
         cocoon-manager) echo "Cocoon orchestration API" ;;

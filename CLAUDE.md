@@ -44,6 +44,8 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/lib-tarminal-sync` - Client-agnostic sync protocol for Tarminal
 - `crates/tarminal-signaling-server` - WebSocket signaling server for device pairing
 - `crates/adi-platform-api` - Unified Platform API (tasks, integrations, orchestration)
+- `crates/lib-analytics-core` - Analytics event tracking and persistence library
+- `crates/adi-analytics-api` - Analytics API (metrics, dashboards, aggregates)
 - `crates/debug-metal-shader` - Metal shader debug app
 
 ## FlowMap (Standalone)
@@ -77,6 +79,123 @@ PORT=8080 ./target/release/flowmap-api
 ### FlowMap Frontend
 - Located at: `/flowmap` in the web UI (apps/infra-service-web)
 - Set `NEXT_PUBLIC_FLOWMAP_API_URL` to point to the API server
+
+## Analytics System
+
+### Architecture
+```
+Services → lib-analytics-core → HTTP POST → adi-analytics-ingestion → TimescaleDB
+                                                                             ↓
+                                              adi-analytics-api ← (reads) ←─┘
+```
+
+- **lib-analytics-core**: HTTP client library that sends events to ingestion service
+- **adi-analytics-ingestion**: Receives events via HTTP and writes to TimescaleDB
+- **adi-analytics-api**: REST API for querying metrics and dashboards
+- **TimescaleDB**: Time-series database (PostgreSQL extension) for storing events
+- **Continuous Aggregates**: Auto-updating materialized views for fast analytics queries
+
+### Event Tracking
+All services automatically track events via `AnalyticsClient`:
+- API requests (latency, status codes, endpoints)
+- Authentication events (login attempts, token refreshes)
+- Task lifecycle (created, started, completed, failed)
+- Integration health (connections, errors, usage)
+- Cocoon activity (registrations, connections, session duration)
+- System errors (application errors with context)
+
+### Analytics API Endpoints
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/analytics/overview` | Dashboard summary (DAU/WAU/MAU, tasks, cocoons) |
+| `GET /api/analytics/users/daily` | Daily active users over time |
+| `GET /api/analytics/users/weekly` | Weekly active users over time |
+| `GET /api/analytics/tasks/daily` | Task stats by day (created, completed, failed) |
+| `GET /api/analytics/tasks/overview` | Task success rate and avg duration |
+| `GET /api/analytics/api/latency` | API endpoint latency (p50, p95, p99) |
+| `GET /api/analytics/api/slowest` | Top 10 slowest endpoints (24h) |
+
+### Key Metrics Tracked
+**User Activity:**
+- Daily/Weekly/Monthly Active Users
+- Total unique users
+- Authentication success rates
+
+**Task Performance:**
+- Task creation, completion, failure rates
+- Average task duration
+- P95 task duration
+- Success rate percentage
+
+**API Performance:**
+- Request latency (p50, p95, p99)
+- Requests per endpoint
+- Error rates (4xx, 5xx)
+
+**Integration Health:**
+- Connections/disconnections
+- Usage patterns
+- Error frequency
+
+**Cocoon Activity:**
+- Active cocoons
+- Session durations
+- Registration trends
+
+### Database Migrations
+Analytics migrations are managed by `lib-analytics-core` binary:
+```bash
+# Run analytics migrations
+cd crates/lib-analytics-core
+cargo run --bin analytics-migrate --features migrate all
+
+# Check status
+cargo run --bin analytics-migrate --features migrate status
+```
+
+### Database Schema
+Events are stored in `analytics_events` table (TimescaleDB hypertable):
+- Automatic time-series partitioning by day
+- Compression after 7 days (~90% space savings)
+- 90-day retention policy for raw events
+- Continuous aggregates kept indefinitely
+
+### Continuous Aggregates
+Auto-updating materialized views for fast queries:
+- `analytics_daily_active_users` - DAU/WAU/MAU
+- `analytics_task_stats_daily` - Task metrics by day
+- `analytics_api_latency_hourly` - API performance by hour
+- `analytics_integration_health_daily` - Integration status
+- `analytics_auth_events_daily` - Authentication metrics
+- `analytics_cocoon_activity_daily` - Cocoon usage
+- `analytics_errors_hourly` - Error tracking
+
+### Integration Example
+```rust
+use lib_analytics_core::{AnalyticsClient, AnalyticsEvent};
+
+// Initialize in main (points to ingestion service)
+let analytics_url = std::env::var("ANALYTICS_URL")
+    .unwrap_or_else(|_| "http://localhost:8094".to_string());
+let analytics_client = AnalyticsClient::new(analytics_url);
+
+// Track events (batched automatically, sent via HTTP)
+analytics_client.track(AnalyticsEvent::TaskCreated {
+    task_id: task.id,
+    user_id: user.id,
+    project_id: Some(project_id),
+    cocoon_id: task.cocoon_id,
+    command: task.command.clone(),
+});
+```
+
+### Configuration
+Services that track events need:
+- `ANALYTICS_URL` - URL of analytics ingestion service (e.g., `http://localhost:8094`)
+
+Analytics ingestion service needs:
+- `DATABASE_URL` - PostgreSQL connection string
+- `PORT` - Listen port (default: 8094)
 
 ## Cocoon
 - Cocoon is a containerized worker environment that connects to the signaling server
@@ -118,6 +237,8 @@ cp .env.local.example .env.local  # Create config (one time)
 | Platform API | http://localhost:8091 | Tasks, projects, integrations |
 | Signaling | ws://localhost:8011/ws | WebSocket relay for sync |
 | FlowMap API | http://localhost:8092 | Code flow visualization |
+| Analytics Ingestion | http://localhost:8094 | Event ingestion (receives from services) |
+| Analytics API | http://localhost:8093 | Metrics, dashboards, aggregates |
 | Cocoon Manager | http://localhost:8020 | Cocoon orchestration API (optional) |
 | Registry | http://localhost:8019 | Plugin registry (local) |
 | Cocoon | (internal) | Worker container (optional) |

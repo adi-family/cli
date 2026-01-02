@@ -140,6 +140,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "adi-analytics-api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum 0.8.7",
+ "chrono",
+ "dotenvy",
+ "lib-migrations-core 0.1.0 (git+https://github.com/adi-family/lib-migrations-core.git)",
+ "lib-migrations-sql",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.17",
+ "tokio",
+ "tower 0.5.2",
+ "tower-http 0.6.8",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "adi-auth-core"
 version = "0.8.4"
 dependencies = [
@@ -4543,6 +4565,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "lib-analytics-core"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.17",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "lib-animation"
 version = "0.8.3"
 
@@ -4848,6 +4885,33 @@ dependencies = [
  "rusqlite",
  "tempfile",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "lib-migrations-core"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dc8785cc1c81f7f07076ce4eebe3c136a349b84884a6a172d98e0f46443f98b"
+dependencies = [
+ "thiserror 2.0.17",
+]
+
+[[package]]
+name = "lib-migrations-core"
+version = "0.1.0"
+source = "git+https://github.com/adi-family/lib-migrations-core.git#cf2fdcca764eb1978f4c99991feaa96ca94efedf"
+dependencies = [
+ "thiserror 2.0.17",
+]
+
+[[package]]
+name = "lib-migrations-sql"
+version = "0.1.0"
+source = "git+https://github.com/adi-family/lib-migrations-sql.git#9f9c3f071f72c3f55a1776890dd14766a61cface"
+dependencies = [
+ "lib-migrations-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusqlite",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -7836,6 +7900,7 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "url",
+ "uuid",
  "webpki-roots 0.25.4",
 ]
 
@@ -7918,6 +7983,7 @@ dependencies = [
  "stringprep",
  "thiserror 1.0.69",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -7957,6 +8023,7 @@ dependencies = [
  "stringprep",
  "thiserror 1.0.69",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -7982,6 +8049,7 @@ dependencies = [
  "sqlx-core",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]

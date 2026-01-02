@@ -54,6 +54,11 @@ members = [
     "crates/cocoon",
     "crates/cocoon-manager",
 
+    # Analytics
+    "crates/lib-analytics-core",
+    "crates/adi-analytics-ingestion",
+    "crates/adi-analytics-api",
+
     # Debug app (submodule)
     "crates/debug-metal-shader",
     "crates/tool-generate-heartbit",
@@ -142,6 +147,7 @@ lib-tarminal-sync = { path = "crates/lib-tarminal-sync" }
 lib-embed = { path = "crates/lib-embed" }
 lib-cli-common = { path = "crates/lib-cli-common" }
 lib-migrations = { path = "crates/lib-migrations" }
+lib-analytics-core = { path = "crates/lib-analytics-core" }
 
 # API clients
 lib-client-github = { path = "crates/lib-client-github" }
