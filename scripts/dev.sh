@@ -19,10 +19,15 @@
 
 set -e
 
+# Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 PID_DIR="$PROJECT_DIR/.dev"
 LOG_DIR="$PROJECT_DIR/.dev/logs"
+
+# Load libraries
+source "$SCRIPT_DIR/lib/log.sh"
+source "$SCRIPT_DIR/lib/common.sh"
 
 # All services
 ALL_SERVICES="signaling auth platform web flowmap analytics-ingestion analytics cocoon registry cocoon-manager"
@@ -98,81 +103,12 @@ service_description() {
 }
 
 # -----------------------------------------------------------------------------
-# TTY and Color Detection (tmux/screen compatible)
-# -----------------------------------------------------------------------------
-
-has_tty() {
-    [ -t 0 ] && [ -t 1 ]
-}
-
-in_multiplexer() {
-    [ -n "$TMUX" ] || [ "$TERM" = "screen" ] || [[ "$TERM" == screen* ]]
-}
-
-supports_color() {
-    [ -n "$FORCE_COLOR" ] && return 0
-    if [ -t 1 ]; then
-        case "$TERM" in
-            xterm*|rxvt*|vt100|screen*|tmux*|linux|cygwin|ansi)
-                return 0
-                ;;
-        esac
-        if command -v tput &>/dev/null && [ "$(tput colors 2>/dev/null)" -ge 8 ]; then
-            return 0
-        fi
-    fi
-    return 1
-}
-
-setup_colors() {
-    if supports_color; then
-        RED='\033[0;31m'
-        GREEN='\033[0;32m'
-        YELLOW='\033[1;33m'
-        BLUE='\033[0;34m'
-        CYAN='\033[0;36m'
-        BOLD='\033[1m'
-        DIM='\033[2m'
-        NC='\033[0m'
-    else
-        RED=''
-        GREEN=''
-        YELLOW=''
-        BLUE=''
-        CYAN=''
-        BOLD=''
-        DIM=''
-        NC=''
-    fi
-}
-
-setup_colors
-
-# -----------------------------------------------------------------------------
-# Logging Functions
-# -----------------------------------------------------------------------------
-
-log() { echo -e "${BLUE}[dev]${NC} $1"; }
-success() { echo -e "${GREEN}[dev]${NC} $1"; }
-warn() { echo -e "${YELLOW}[dev]${NC} $1"; }
-error() { echo -e "${RED}[dev]${NC} $1"; exit 1; }
-
-# -----------------------------------------------------------------------------
-# Directory Setup
-# -----------------------------------------------------------------------------
-
-ensure_dirs() {
-    mkdir -p "$PID_DIR" "$LOG_DIR"
-}
-
-# -----------------------------------------------------------------------------
 # Port Management (via ports-manager)
 # -----------------------------------------------------------------------------
 
 get_port() {
     local service="$1"
-    local port_name
-    port_name=$(service_port_name "$service")
+    local port_name=$(service_port_name "$service")
     # ports-manager get outputs the port (auto-assigns if new)
     # Use tail -1 to get just the port number in case of auto-assign message
     ports-manager get "$port_name" 2>/dev/null | tail -1
@@ -192,11 +128,9 @@ log_file() {
 
 is_running() {
     local service="$1"
-    local pf
-    pf=$(pid_file "$service")
+    local pf=$(pid_file "$service")
     if [ -f "$pf" ]; then
-        local pid
-        pid=$(cat "$pf")
+        local pid=$(cat "$pf")
         if kill -0 "$pid" 2>/dev/null; then
             return 0
         fi
@@ -208,16 +142,11 @@ is_running() {
 
 start_service() {
     local service="$1"
-    local dir
-    local cmd
-    local port
-    dir=$(service_dir "$service")
-    cmd=$(service_cmd "$service")
-    port=$(get_port "$service")
+    local dir=$(service_dir "$service")
+    local cmd=$(service_cmd "$service")
+    local port=$(get_port "$service")
 
-    if [ -z "$dir" ]; then
-        error "Unknown service: $service"
-    fi
+    [ -z "$dir" ] && error "Unknown service: $service"
 
     if is_running "$service"; then
         warn "$service is already running"
@@ -225,20 +154,16 @@ start_service() {
     fi
 
     local service_dir="$PROJECT_DIR/$dir"
-    if [ ! -d "$service_dir" ]; then
-        error "Service directory not found: $service_dir"
-    fi
+    [ ! -d "$service_dir" ] && error "Service directory not found: $service_dir"
 
-    local lf pf
-    lf=$(log_file "$service")
-    pf=$(pid_file "$service")
+    local lf=$(log_file "$service")
+    local pf=$(pid_file "$service")
 
     # Service-specific environment setup
     local env_cmd="PORT=$port"
     case "$service" in
         cocoon)
-            local signaling_port
-            signaling_port=$(get_port "signaling")
+            local signaling_port=$(get_port "signaling")
             env_cmd="$env_cmd SIGNALING_SERVER_URL=ws://localhost:$signaling_port/ws"
             ;;
         registry)
@@ -248,14 +173,13 @@ start_service() {
                 source "$PROJECT_DIR/.env.local" 2>/dev/null || true
             fi
             local data_dir="${REGISTRY_DATA_DIR:-$PROJECT_DIR/.dev/registry-data}"
-            mkdir -p "$data_dir"
+            ensure_dir "$data_dir"
             env_cmd="$env_cmd REGISTRY_DATA_DIR=$data_dir"
             ;;
         web)
-            local auth_port platform_port flowmap_port
-            auth_port=$(get_port "auth")
-            platform_port=$(get_port "platform")
-            flowmap_port=$(get_port "flowmap")
+            local auth_port=$(get_port "auth")
+            local platform_port=$(get_port "platform")
+            local flowmap_port=$(get_port "flowmap")
             env_cmd="$env_cmd AUTH_API_URL=http://localhost:$auth_port"
             env_cmd="$env_cmd NEXT_PUBLIC_PLATFORM_API_URL=http://localhost:$platform_port"
             env_cmd="$env_cmd NEXT_PUBLIC_FLOWMAP_API_URL=http://localhost:$flowmap_port"
@@ -265,9 +189,7 @@ start_service() {
             if [ -f "$PROJECT_DIR/.env.local" ]; then
                 # shellcheck disable=SC1091
                 source "$PROJECT_DIR/.env.local" 2>/dev/null || true
-                if [ -n "$JWT_SECRET" ]; then
-                    env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
-                fi
+                [ -n "$JWT_SECRET" ] && env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
             fi
             # Use platform-specific database if set, otherwise default
             if [ -n "$PLATFORM_DATABASE_URL" ]; then
@@ -283,9 +205,7 @@ start_service() {
             if [ -f "$PROJECT_DIR/.env.local" ]; then
                 # shellcheck disable=SC1091
                 source "$PROJECT_DIR/.env.local" 2>/dev/null || true
-                if [ -n "$JWT_SECRET" ]; then
-                    env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
-                fi
+                [ -n "$JWT_SECRET" ] && env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
                 # Load SMTP configuration
                 [ -n "$SMTP_HOST" ] && env_cmd="$env_cmd SMTP_HOST=$SMTP_HOST"
                 [ -n "$SMTP_PORT" ] && env_cmd="$env_cmd SMTP_PORT=$SMTP_PORT"
@@ -298,10 +218,9 @@ start_service() {
             ;;
         cocoon-manager)
             # Cocoon manager needs database, signaling URL, and Docker config
-            local signaling_port
-            signaling_port=$(get_port "signaling")
+            local signaling_port=$(get_port "signaling")
             local db_dir="$PROJECT_DIR/.dev/cocoon-manager-data"
-            mkdir -p "$db_dir"
+            ensure_dir "$db_dir"
             env_cmd="$env_cmd DATABASE_URL=sqlite:$db_dir/cocoon-manager.db"
             env_cmd="$env_cmd SIGNALING_SERVER_URL=ws://localhost:$signaling_port/ws"
             env_cmd="$env_cmd COCOON_IMAGE=ghcr.io/adi-family/cocoon:latest"
@@ -343,16 +262,14 @@ start_service() {
 
 stop_service() {
     local service="$1"
-    local pf
-    pf=$(pid_file "$service")
+    local pf=$(pid_file "$service")
 
     if [ ! -f "$pf" ]; then
         warn "$service is not running"
         return 0
     fi
 
-    local pid
-    pid=$(cat "$pf")
+    local pid=$(cat "$pf")
 
     if kill -0 "$pid" 2>/dev/null; then
         log "Stopping $service (PID: $pid)..."
@@ -384,9 +301,10 @@ stop_service() {
 # -----------------------------------------------------------------------------
 
 cmd_up() {
-    ensure_dirs
+    ensure_dir "$PID_DIR"
+    ensure_dir "$LOG_DIR"
+
     local services="${1:-$DEFAULT_SERVICES}"
-    # If empty string was passed, use default
     [ -z "$services" ] && services="$DEFAULT_SERVICES"
 
     log "Starting services: $services"
@@ -410,9 +328,7 @@ cmd_down() {
     log "Stopping services..."
 
     for service in $services; do
-        if [ -n "$(service_dir "$service")" ]; then
-            stop_service "$service"
-        fi
+        [ -n "$(service_dir "$service")" ] && stop_service "$service"
     done
 
     success "All services stopped"
@@ -437,14 +353,12 @@ cmd_logs() {
         follow_flag=""
     fi
 
-    ensure_dirs
+    ensure_dir "$PID_DIR"
+    ensure_dir "$LOG_DIR"
 
     if [ -n "$service" ]; then
-        local lf
-        lf=$(log_file "$service")
-        if [ ! -f "$lf" ]; then
-            error "No logs for $service"
-        fi
+        local lf=$(log_file "$service")
+        [ ! -f "$lf" ] && error "No logs for $service"
         if [ -n "$follow_flag" ]; then
             tail -f "$lf"
         else
@@ -454,16 +368,11 @@ cmd_logs() {
         # Follow all logs
         local log_files=""
         for svc in $ALL_SERVICES; do
-            local lf
-            lf=$(log_file "$svc")
-            if [ -f "$lf" ]; then
-                log_files="$log_files $lf"
-            fi
+            local lf=$(log_file "$svc")
+            [ -f "$lf" ] && log_files="$log_files $lf"
         done
 
-        if [ -z "$log_files" ]; then
-            error "No log files found. Start services first."
-        fi
+        [ -z "$log_files" ] && error "No log files found. Start services first."
 
         if [ -n "$follow_flag" ]; then
             # shellcheck disable=SC2086
@@ -476,7 +385,8 @@ cmd_logs() {
 }
 
 cmd_status() {
-    ensure_dirs
+    ensure_dir "$PID_DIR"
+    ensure_dir "$LOG_DIR"
 
     echo -e "${BOLD}Service Status${NC}"
     echo ""
@@ -504,14 +414,13 @@ cmd_ports() {
     echo -e "${BOLD}Service Ports${NC}"
     echo ""
 
-    local signaling_port auth_port platform_port web_port flowmap_port cocoon_port manager_port
-    signaling_port=$(get_port "signaling")
-    auth_port=$(get_port "auth")
-    platform_port=$(get_port "platform")
-    web_port=$(get_port "web")
-    flowmap_port=$(get_port "flowmap")
-    cocoon_port=$(get_port "cocoon")
-    manager_port=$(get_port "cocoon-manager")
+    local signaling_port=$(get_port "signaling")
+    local auth_port=$(get_port "auth")
+    local platform_port=$(get_port "platform")
+    local web_port=$(get_port "web")
+    local flowmap_port=$(get_port "flowmap")
+    local cocoon_port=$(get_port "cocoon")
+    local manager_port=$(get_port "cocoon-manager")
 
     echo -e "  ${CYAN}Web UI:${NC}           http://localhost:$web_port"
     echo -e "  ${CYAN}FlowMap UI:${NC}       http://localhost:$web_port/flowmap"
@@ -536,15 +445,10 @@ cmd_clean() {
 
 cmd_shell() {
     local service="${1:-}"
-    if [ -z "$service" ]; then
-        error "Usage: ./scripts/dev.sh shell <service>"
-    fi
+    [ -z "$service" ] && error "Usage: ./scripts/dev.sh shell <service>"
 
-    local dir
-    dir=$(service_dir "$service")
-    if [ -z "$dir" ]; then
-        error "Unknown service: $service"
-    fi
+    local dir=$(service_dir "$service")
+    [ -z "$dir" ] && error "Unknown service: $service"
 
     local svc_dir="$PROJECT_DIR/$dir"
     log "Opening shell in $svc_dir"
@@ -568,9 +472,8 @@ cmd_help() {
     echo ""
     echo -e "${BOLD}Services:${NC}"
     for service in $ALL_SERVICES; do
-        local port desc
-        port=$(get_port "$service")
-        desc=$(service_description "$service")
+        local port=$(get_port "$service")
+        local desc=$(service_description "$service")
         printf "  %-12s port %-5s  %s\n" "$service" "$port" "$desc"
     done
     echo ""
