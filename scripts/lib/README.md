@@ -126,6 +126,13 @@ Common utilities. Auto-loads `log.sh` and `colors.sh`.
 
 **Functions:**
 
+**Requirements Checking:**
+- `require_value <value> [msg]` - Exit if value is empty
+- `require_env <var_name>` - Exit if env var not set
+- `require_file <file> [msg]` - Exit if file doesn't exist
+- `require_dir <dir> [msg]` - Exit if directory doesn't exist
+- `require_one_of <msg> <val1> <val2> ...` - Exit if all values empty
+
 **Command Checking:**
 - `check_command <cmd>` - Returns 0 if exists
 - `ensure_command <cmd> [hint]` - Exit if command missing
@@ -160,12 +167,21 @@ Common utilities. Auto-loads `log.sh` and `colors.sh`.
 ```bash
 source scripts/lib/common.sh
 
-ensure_command "cargo" "brew install rust"
-ensure_dir "/tmp/build"
+# Require values to be set
+REGISTRY_URL=$(require_value "$ADI_REGISTRY_URL" "ADI_REGISTRY_URL not set")
+DATABASE_URL=$(require_env "DATABASE_URL")
 
+# Require files/directories
+require_file ".env.local"
+require_dir "/tmp/build"
+
+# Require at least one value
+require_one_of "Either GITHUB_TOKEN or CI_TOKEN must be set" "$GITHUB_TOKEN" "$CI_TOKEN"
+
+# Other utilities
+ensure_command "cargo" "brew install rust"
 SECRET=$(generate_secret)
 TEMP=$(create_temp_dir)  # Auto-cleaned on exit
-
 extract_archive "file.tar.gz" "$TEMP"
 ```
 

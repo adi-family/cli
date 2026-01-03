@@ -137,7 +137,8 @@ main() {
     fi
 
     # Basic JWT structure check
-    local token_parts=$(echo "$setup_token" | tr '.' '\n' | wc -l)
+    local token_parts
+    token_parts=$(echo "$setup_token" | tr '.' '\n' | wc -l)
     if [ "$token_parts" -ne 3 ]; then
         error "Invalid setup token format (expected JWT)"
     fi
@@ -148,15 +149,19 @@ main() {
     check_root
 
     # Detect platform
-    local os=$(detect_os)
-    local arch=$(detect_arch)
-    local target=$(get_target_musl "$os" "$arch")  # Use musl for static linking
+    local os
+    os=$(detect_os)
+    local arch
+    arch=$(detect_arch)
+    local target
+    target=$(get_target_musl "$os" "$arch")  # Use musl for static linking
 
     info "Detected platform: $target"
 
     # Fetch latest version
     info "Fetching latest version"
-    local version=$(fetch_latest_version "$REPO")
+    local version
+    version=$(fetch_latest_version "$REPO")
     [ -z "$version" ] && error "Failed to fetch latest version"
 
     info "Installing version: $version"
@@ -174,7 +179,8 @@ main() {
     chmod 700 "$DATA_DIR"
 
     # Download and install binary
-    local temp_dir=$(create_temp_dir)
+    local temp_dir
+    temp_dir=$(create_temp_dir)
     local archive_name="cocoon-${version}-${target}.tar.gz"
 
     download_github_asset "$REPO" "$version" "$archive_name" "$temp_dir/$archive_name"
@@ -190,7 +196,8 @@ main() {
 
     # Generate secret
     info "Generating cryptographic secret"
-    local secret=$(generate_secret)
+    local secret
+    secret=$(generate_secret)
 
     # Determine configuration
     local cocoon_name="${COCOON_NAME:-$(hostname)}"

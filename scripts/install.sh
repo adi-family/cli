@@ -37,9 +37,12 @@ main() {
     echo ""
 
     # Detect platform
-    local os=$(detect_os)
-    local arch=$(detect_arch)
-    local target=$(get_target "$os" "$arch")
+    local os
+    os=$(detect_os)
+    local arch
+    arch=$(detect_arch)
+    local target
+    target=$(get_target "$os" "$arch")
 
     # Windows redirects to winget
     if [ "$os" = "windows" ]; then
@@ -57,7 +60,8 @@ main() {
     fi
 
     # Normalize version
-    local version_num=$(normalize_version "$version")
+    local version_num
+    version_num=$(normalize_version "$version")
     version=$(ensure_v_prefix "$version_num")
 
     info "Installing version: $version"
@@ -69,7 +73,8 @@ main() {
     info "Install directory: $install_dir"
 
     # Get archive extension
-    local archive_ext=$(get_archive_extension "$os")
+    local archive_ext
+    archive_ext=$(get_archive_extension "$os")
 
     # Construct download URLs
     local archive_name="adi-${version}-${target}.${archive_ext}"
@@ -77,7 +82,8 @@ main() {
     local checksums_url="https://github.com/${REPO}/releases/download/${version}/SHA256SUMS"
 
     # Create temp directory (auto-cleaned on exit)
-    local temp_dir=$(create_temp_dir)
+    local temp_dir
+    temp_dir=$(create_temp_dir)
 
     # Download archive
     local archive_path="$temp_dir/$archive_name"
@@ -86,7 +92,8 @@ main() {
     # Download and verify checksum
     local checksums_path="$temp_dir/SHA256SUMS"
     if download "$checksums_url" "$checksums_path" 2>/dev/null; then
-        local expected_checksum=$(grep "$archive_name" "$checksums_path" | cut -d' ' -f1)
+        local expected_checksum
+        expected_checksum=$(grep "$archive_name" "$checksums_path" | cut -d' ' -f1)
         verify_checksum "$archive_path" "$expected_checksum"
     else
         warn "Checksums file not available, skipping verification"
@@ -110,7 +117,8 @@ main() {
     # Verify installation
     echo ""
     if command -v adi >/dev/null 2>&1 || [ -x "$install_dir/$BINARY_NAME" ]; then
-        local installed_version=$("$install_dir/$BINARY_NAME" --version 2>/dev/null || echo "unknown")
+        local installed_version
+        installed_version=$("$install_dir/$BINARY_NAME" --version 2>/dev/null || echo "unknown")
         success "ADI CLI installed successfully!"
         echo ""
         printf "  Version: ${CYAN}%s${NC}\n" "$installed_version"

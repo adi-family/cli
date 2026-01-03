@@ -8,6 +8,16 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 ## Resources
 - Icons: https://phosphoricons.com
 
+## Bash Script Libraries
+- Located in `scripts/lib/` with reusable utilities
+- `common.sh` provides requirement checking functions:
+  - `require_value <value> [msg]` - Exit if value is empty
+  - `require_env <var_name>` - Exit if env var not set
+  - `require_file <file> [msg]` - Exit if file doesn't exist
+  - `require_dir <dir> [msg]` - Exit if directory doesn't exist
+  - `require_one_of <msg> <val1> <val2> ...` - Exit if all values empty
+- See `scripts/lib/README.md` for full documentation
+
 ## Code Guidelines
 - NEVER use emojis in code - use Phosphor icons from https://phosphoricons.com instead
 - All icons must be Phosphor unicode glyphs rendered with ICON_FONT
@@ -206,6 +216,11 @@ Analytics ingestion service needs:
 ## Apps
 - `apps/infra-service-web` - Web UI for ADI (Next.js + Tailwind CSS)
 - `apps/infra-service-auth` - Auth service deployment (docker-compose + adi-auth submodule)
+- `apps/infra-service-platform-backend` - Platform API deployment
+- `apps/infra-service-signaling` - Signaling server deployment
+- `apps/infra-service-analytics-ingestion` - Analytics ingestion service deployment
+- `apps/infra-service-analytics` - Analytics API deployment
+- `apps/infra-service-registry` - Plugin registry deployment
 
 ## Setup
 ```bash
@@ -346,6 +361,9 @@ Manages Coolify deployments for production services.
 | platform | Platform API (adi-platform-api) |
 | signaling | Signaling Server (tarminal-signaling-server) |
 | web | Web UI (infra-service-web) |
+| analytics-ingestion | Analytics Ingestion (adi-analytics-ingestion) |
+| analytics | Analytics API (adi-analytics-api) |
+| registry | Plugin Registry (adi-plugin-registry-http) |
 
 ## CLI Usage
 The `adi` CLI provides direct plugin commands for convenience:

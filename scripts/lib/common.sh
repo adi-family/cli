@@ -8,12 +8,34 @@
 #   source scripts/lib/common.sh
 #
 # Functions:
-#   verify_checksum <file> <expected>   - Verify SHA256 checksum
-#   extract_archive <archive> <dest>    - Extract tar.gz or zip archive
-#   setup_path <install_dir>            - Add directory to PATH
-#   generate_secret                     - Generate cryptographic secret
-#   check_command <cmd>                 - Check if command exists
-#   ensure_command <cmd> [install_hint] - Ensure command exists or exit
+#   Requirements:
+#     require_value <value> [msg]        - Exit if value is empty
+#     require_env <var_name>             - Exit if env var not set
+#     require_file <file> [msg]          - Exit if file doesn't exist
+#     require_dir <dir> [msg]            - Exit if directory doesn't exist
+#     require_one_of <msg> <vals...>     - Exit if all values empty
+#
+#   Commands:
+#     check_command <cmd>                - Check if command exists
+#     ensure_command <cmd> [hint]        - Ensure command exists or exit
+#
+#   Checksums:
+#     verify_checksum <file> <expected>  - Verify SHA256 checksum
+#     generate_checksums <out> <files>   - Generate SHA256SUMS file
+#
+#   Archives:
+#     extract_archive <archive> <dest>   - Extract tar.gz or zip archive
+#     create_tarball <out> <dir> <files> - Create tar.gz archive
+#
+#   Other:
+#     setup_path <install_dir>           - Add directory to PATH
+#     generate_secret [length]           - Generate cryptographic secret
+#     normalize_version <version>        - Remove 'v' prefix
+#     ensure_v_prefix <version>          - Add 'v' prefix
+#     ensure_dir <dir>                   - Create directory if missing
+#     create_temp_dir                    - Create temp dir with cleanup trap
+#     check_root                         - Exit if not root
+#     check_not_root                     - Exit if root
 # =============================================================================
 
 # Prevent double-loading
@@ -26,6 +48,74 @@ COMMON_LIB_LOADED=1
 SCRIPT_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib/log.sh
 source "$SCRIPT_LIB_DIR/log.sh"
+
+# -----------------------------------------------------------------------------
+# Requirements Checking
+# -----------------------------------------------------------------------------
+
+# Require a non-empty value
+# Usage: require_value <value> [error_message]
+# Example: REGISTRY_URL=$(require_value "$ADI_REGISTRY_URL" "ADI_REGISTRY_URL not set")
+require_value() {
+    local value="$1"
+    local message="${2:-Value is required}"
+
+    if [ -z "$value" ]; then
+        error "$message"
+    fi
+    echo "$value"
+}
+
+# Require environment variable to be set
+# Usage: require_env <var_name>
+# Example: require_env "DATABASE_URL"
+require_env() {
+    local var_name="$1"
+    local value="${!var_name}"
+
+    if [ -z "$value" ]; then
+        error "Environment variable $var_name is not set"
+    fi
+    echo "$value"
+}
+
+# Require file to exist
+# Usage: require_file <file> [error_message]
+require_file() {
+    local file="$1"
+    local message="${2:-File not found: $file}"
+
+    if [ ! -f "$file" ]; then
+        error "$message"
+    fi
+}
+
+# Require directory to exist
+# Usage: require_dir <dir> [error_message]
+require_dir() {
+    local dir="$1"
+    local message="${2:-Directory not found: $dir}"
+
+    if [ ! -d "$dir" ]; then
+        error "$message"
+    fi
+}
+
+# Require one of multiple values to be set
+# Usage: require_one_of <error_message> <var1> <var2> ...
+# Example: require_one_of "Either GITHUB_TOKEN or CI_TOKEN must be set" "$GITHUB_TOKEN" "$CI_TOKEN"
+require_one_of() {
+    local message="$1"
+    shift
+
+    for value in "$@"; do
+        if [ -n "$value" ]; then
+            return 0
+        fi
+    done
+
+    error "$message"
+}
 
 # -----------------------------------------------------------------------------
 # Command Checking

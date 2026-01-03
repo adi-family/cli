@@ -108,7 +108,8 @@ service_description() {
 
 get_port() {
     local service="$1"
-    local port_name=$(service_port_name "$service")
+    local port_name
+    port_name=$(service_port_name "$service")
     # ports-manager get outputs the port (auto-assigns if new)
     # Use tail -1 to get just the port number in case of auto-assign message
     ports-manager get "$port_name" 2>/dev/null | tail -1
@@ -128,9 +129,11 @@ log_file() {
 
 is_running() {
     local service="$1"
-    local pf=$(pid_file "$service")
+    local pf
+    pf=$(pid_file "$service")
     if [ -f "$pf" ]; then
-        local pid=$(cat "$pf")
+        local pid
+        pid=$(cat "$pf")
         if kill -0 "$pid" 2>/dev/null; then
             return 0
         fi
@@ -142,9 +145,12 @@ is_running() {
 
 start_service() {
     local service="$1"
-    local dir=$(service_dir "$service")
-    local cmd=$(service_cmd "$service")
-    local port=$(get_port "$service")
+    local dir
+    dir=$(service_dir "$service")
+    local cmd
+    cmd=$(service_cmd "$service")
+    local port
+    port=$(get_port "$service")
 
     [ -z "$dir" ] && error "Unknown service: $service"
 
@@ -156,14 +162,17 @@ start_service() {
     local service_dir="$PROJECT_DIR/$dir"
     [ ! -d "$service_dir" ] && error "Service directory not found: $service_dir"
 
-    local lf=$(log_file "$service")
-    local pf=$(pid_file "$service")
+    local lf
+    lf=$(log_file "$service")
+    local pf
+    pf=$(pid_file "$service")
 
     # Service-specific environment setup
     local env_cmd="PORT=$port"
     case "$service" in
         cocoon)
-            local signaling_port=$(get_port "signaling")
+            local signaling_port
+            signaling_port=$(get_port "signaling")
             env_cmd="$env_cmd SIGNALING_SERVER_URL=ws://localhost:$signaling_port/ws"
             ;;
         registry)
@@ -177,9 +186,12 @@ start_service() {
             env_cmd="$env_cmd REGISTRY_DATA_DIR=$data_dir"
             ;;
         web)
-            local auth_port=$(get_port "auth")
-            local platform_port=$(get_port "platform")
-            local flowmap_port=$(get_port "flowmap")
+            local auth_port
+            auth_port=$(get_port "auth")
+            local platform_port
+            platform_port=$(get_port "platform")
+            local flowmap_port
+            flowmap_port=$(get_port "flowmap")
             env_cmd="$env_cmd AUTH_API_URL=http://localhost:$auth_port"
             env_cmd="$env_cmd NEXT_PUBLIC_PLATFORM_API_URL=http://localhost:$platform_port"
             env_cmd="$env_cmd NEXT_PUBLIC_FLOWMAP_API_URL=http://localhost:$flowmap_port"
@@ -218,7 +230,8 @@ start_service() {
             ;;
         cocoon-manager)
             # Cocoon manager needs database, signaling URL, and Docker config
-            local signaling_port=$(get_port "signaling")
+            local signaling_port
+            signaling_port=$(get_port "signaling")
             local db_dir="$PROJECT_DIR/.dev/cocoon-manager-data"
             ensure_dir "$db_dir"
             env_cmd="$env_cmd DATABASE_URL=sqlite:$db_dir/cocoon-manager.db"
@@ -262,14 +275,16 @@ start_service() {
 
 stop_service() {
     local service="$1"
-    local pf=$(pid_file "$service")
+    local pf
+    pf=$(pid_file "$service")
 
     if [ ! -f "$pf" ]; then
         warn "$service is not running"
         return 0
     fi
 
-    local pid=$(cat "$pf")
+    local pid
+    pid=$(cat "$pf")
 
     if kill -0 "$pid" 2>/dev/null; then
         log "Stopping $service (PID: $pid)..."
@@ -357,7 +372,8 @@ cmd_logs() {
     ensure_dir "$LOG_DIR"
 
     if [ -n "$service" ]; then
-        local lf=$(log_file "$service")
+        local lf
+        lf=$(log_file "$service")
         [ ! -f "$lf" ] && error "No logs for $service"
         if [ -n "$follow_flag" ]; then
             tail -f "$lf"
@@ -368,7 +384,8 @@ cmd_logs() {
         # Follow all logs
         local log_files=""
         for svc in $ALL_SERVICES; do
-            local lf=$(log_file "$svc")
+            local lf
+            lf=$(log_file "$svc")
             [ -f "$lf" ] && log_files="$log_files $lf"
         done
 
@@ -414,13 +431,20 @@ cmd_ports() {
     echo -e "${BOLD}Service Ports${NC}"
     echo ""
 
-    local signaling_port=$(get_port "signaling")
-    local auth_port=$(get_port "auth")
-    local platform_port=$(get_port "platform")
-    local web_port=$(get_port "web")
-    local flowmap_port=$(get_port "flowmap")
-    local cocoon_port=$(get_port "cocoon")
-    local manager_port=$(get_port "cocoon-manager")
+    local signaling_port
+    signaling_port=$(get_port "signaling")
+    local auth_port
+    auth_port=$(get_port "auth")
+    local platform_port
+    platform_port=$(get_port "platform")
+    local web_port
+    web_port=$(get_port "web")
+    local flowmap_port
+    flowmap_port=$(get_port "flowmap")
+    local cocoon_port
+    cocoon_port=$(get_port "cocoon")
+    local manager_port
+    manager_port=$(get_port "cocoon-manager")
 
     echo -e "  ${CYAN}Web UI:${NC}           http://localhost:$web_port"
     echo -e "  ${CYAN}FlowMap UI:${NC}       http://localhost:$web_port/flowmap"
@@ -447,7 +471,8 @@ cmd_shell() {
     local service="${1:-}"
     [ -z "$service" ] && error "Usage: ./scripts/dev.sh shell <service>"
 
-    local dir=$(service_dir "$service")
+    local dir
+    dir=$(service_dir "$service")
     [ -z "$dir" ] && error "Unknown service: $service"
 
     local svc_dir="$PROJECT_DIR/$dir"
@@ -472,8 +497,10 @@ cmd_help() {
     echo ""
     echo -e "${BOLD}Services:${NC}"
     for service in $ALL_SERVICES; do
-        local port=$(get_port "$service")
-        local desc=$(service_description "$service")
+        local port
+        port=$(get_port "$service")
+        local desc
+        desc=$(service_description "$service")
         printf "  %-12s port %-5s  %s\n" "$service" "$port" "$desc"
     done
     echo ""

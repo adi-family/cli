@@ -13,7 +13,7 @@ source "$SCRIPT_DIR/lib/platform.sh"
 source "$SCRIPT_DIR/lib/common.sh"
 
 # Configuration
-REGISTRY_URL="${ADI_REGISTRY_URL:-http://localhost:8019}"
+REGISTRY_URL=$(require_value "${ADI_REGISTRY_URL:-http://localhost:8019}" "ADI_REGISTRY_URL not set")
 
 # =============================================================================
 # Main Flow
@@ -38,23 +38,19 @@ main() {
 
     # Verify plugin directory exists
     cd "$PROJECT_DIR"
-    if [ ! -d "$plugin_dir" ]; then
-        error "Plugin directory not found: $plugin_dir"
-    fi
-
-    if [ ! -f "$plugin_dir/plugin.toml" ]; then
-        error "No plugin.toml found in $plugin_dir"
-    fi
+    require_dir "$plugin_dir"
+    require_file "$plugin_dir/plugin.toml"
 
     cd "$plugin_dir"
 
     # Read plugin info from plugin.toml (from [plugin] section only)
-    local plugin_id=$(sed -n '/^\[plugin\]/,/^\[/{/^id = /p;}' plugin.toml | sed 's/id = "\(.*\)"/\1/' | tr -d '\n')
-    local plugin_version=$(sed -n '/^\[plugin\]/,/^\[/{/^version = /p;}' plugin.toml | sed 's/version = "\(.*\)"/\1/' | tr -d '\n')
+    local plugin_id
+    plugin_id=$(sed -n '/^\[plugin\]/,/^\[/{/^id = /p;}' plugin.toml | sed 's/id = "\(.*\)"/\1/' | tr -d '\n')
+    local plugin_version
+    plugin_version=$(sed -n '/^\[plugin\]/,/^\[/{/^version = /p;}' plugin.toml | sed 's/version = "\(.*\)"/\1/' | tr -d '\n')
 
-    if [ -z "$plugin_id" ] || [ -z "$plugin_version" ]; then
-        error "Could not read plugin ID or version from plugin.toml"
-    fi
+    plugin_id=$(require_value "$plugin_id" "Could not read plugin ID from plugin.toml")
+    plugin_version=$(require_value "$plugin_version" "Could not read plugin version from plugin.toml")
 
     info "Building plugin: $plugin_id v$plugin_version"
 
@@ -62,12 +58,15 @@ main() {
     cargo build --release --lib 2>&1 | grep -E "Finished|error" || true
 
     # Find the built library - use Cargo.toml package name, not plugin ID
-    local package_name=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/')
+    local package_name
+    package_name=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/')
     local target_dir="$PROJECT_DIR/target/release"
 
     # Detect platform and library extension
-    local platform=$(get_platform)
-    local lib_ext=$(get_lib_extension "$platform")
+    local platform
+    platform=$(get_platform)
+    local lib_ext
+    lib_ext=$(get_lib_extension "$platform")
 
     # Find plugin library
     local lib_name="lib${package_name//-/_}"
@@ -78,14 +77,13 @@ main() {
         plugin_lib="$target_dir/${package_name}.dll"
     fi
 
-    if [ ! -f "$plugin_lib" ]; then
-        error "Could not find built plugin library: $plugin_lib"
-    fi
+    require_file "$plugin_lib" "Could not find built plugin library: $plugin_lib"
 
     info "Found plugin library: $plugin_lib"
 
     # Create tarball
-    local temp_dir=$(create_temp_dir)
+    local temp_dir
+    temp_dir=$(create_temp_dir)
     local tarball="$temp_dir/${plugin_id}-${plugin_version}.tar.gz"
 
     info "Creating tarball: $tarball"
@@ -95,21 +93,28 @@ main() {
         -C "$PWD" plugin.toml
 
     # Read plugin metadata from plugin.toml
-    local plugin_name=$(grep '^name = ' plugin.toml | sed 's/name = "\(.*\)"/\1/')
-    local plugin_desc=$(grep '^description = ' plugin.toml | sed 's/description = "\(.*\)"/\1/')
-    local plugin_author=$(grep '^author = ' plugin.toml | sed 's/author = "\(.*\)"/\1/')
-    local plugin_type=$(grep '^type = ' plugin.toml | sed 's/type = "\(.*\)"/\1/' || echo "extension")
+    local plugin_name
+    plugin_name=$(grep '^name = ' plugin.toml | sed 's/name = "\(.*\)"/\1/')
+    local plugin_desc
+    plugin_desc=$(grep '^description = ' plugin.toml | sed 's/description = "\(.*\)"/\1/')
+    local plugin_author
+    plugin_author=$(grep '^author = ' plugin.toml | sed 's/author = "\(.*\)"/\1/')
+    local plugin_type
+    plugin_type=$(grep '^type = ' plugin.toml | sed 's/type = "\(.*\)"/\1/' || echo "extension")
 
     # Publish to registry
     info "Publishing to registry: $REGISTRY_URL"
     info "Platform: $platform"
 
-    local response=$(curl -s -w "\n%{http_code}" -X POST \
+    local response
+    response=$(curl -s -w "\n%{http_code}" -X POST \
         "$REGISTRY_URL/v1/publish/plugins/$plugin_id/$plugin_version/$platform?name=$plugin_name&description=$plugin_desc&plugin_type=$plugin_type&author=$plugin_author" \
         -F "file=@$tarball")
 
-    local http_code=$(echo "$response" | tail -n 1)
-    local body=$(echo "$response" | sed '$d')
+    local http_code
+    http_code=$(echo "$response" | tail -n 1)
+    local body
+    body=$(echo "$response" | sed '$d')
 
     if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
         success "Published $plugin_id v$plugin_version to local registry"

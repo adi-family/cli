@@ -16,7 +16,7 @@ source "$SCRIPT_DIR/lib/platform.sh"
 source "$SCRIPT_DIR/lib/common.sh"
 
 # Configuration
-REGISTRY_URL="${ADI_REGISTRY_URL:-https://adi-plugin-registry.the-ihor.com}"
+REGISTRY_URL=$(require_value "${ADI_REGISTRY_URL:-https://adi-plugin-registry.the-ihor.com}" "ADI_REGISTRY_URL not set")
 
 # Core plugins
 PLUGINS=(
@@ -44,7 +44,8 @@ PLUGINS=(
 
 main() {
     # Get current version from first plugin's plugin.toml
-    local current_version=$(grep '^version' "$ROOT_DIR/crates/adi-tasks-plugin/plugin.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+    local current_version
+    current_version=$(grep '^version' "$ROOT_DIR/crates/adi-tasks-plugin/plugin.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
     info "Current version: v$current_version"
 
     # Get version from argument or prompt
@@ -82,8 +83,10 @@ main() {
     ensure_command "jq" "brew install jq"
 
     # Detect platform
-    local platform=$(get_platform)
-    local lib_ext=$(get_lib_extension "$platform")
+    local platform
+    platform=$(get_platform)
+    local lib_ext
+    lib_ext=$(get_lib_extension "$platform")
 
     info "Platform: $platform"
     echo ""
@@ -130,7 +133,8 @@ main() {
         fi
 
         # Create package
-        local pkg_dir=$(create_temp_dir)
+        local pkg_dir
+        pkg_dir=$(create_temp_dir)
         cp "$lib_path" "$pkg_dir/plugin.$lib_ext"
         cp "$manifest_path" "$pkg_dir/plugin.toml"
 
@@ -182,7 +186,8 @@ main() {
         local url="$REGISTRY_URL/v1/publish/plugins/$plugin_id/$version/$platform"
         url="$url?name=$(echo "$plugin_name" | sed 's/ /%20/g')&plugin_type=$plugin_type&author=ADI%20Team"
 
-        local response=$(curl -s --max-time 300 -X POST "$url" -F "file=@$archive_path")
+        local response
+        response=$(curl -s --max-time 300 -X POST "$url" -F "file=@$archive_path")
         echo "$response" | jq . 2>/dev/null || echo "$response"
 
         success "Published $plugin_id"

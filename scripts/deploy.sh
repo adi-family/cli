@@ -85,11 +85,7 @@ service_name() {
 # -----------------------------------------------------------------------------
 
 check_api_key() {
-    if [ -z "$COOLIFY_API_KEY" ]; then
-        echo -e "${RED}Error: COOLIFY_API_KEY not set${NC}"
-        echo "Set it in your environment or .env.local file"
-        exit 1
-    fi
+    require_env "COOLIFY_API_KEY" >/dev/null
 }
 
 api_call() {
@@ -144,14 +140,23 @@ cmd_status() {
     echo "────────────────────────────────────────────────────────"
 
     for service in $ALL_SERVICES; do
-        local uuid=$(service_uuid "$service")
-        local name=$(service_name "$service")
+        local uuid
+        local name
 
-        local app_info=$(api_call GET "/applications/$uuid" 2>/dev/null)
-        local status=$(echo "$app_info" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
+        uuid=$(service_uuid "$service")
+        name=$(service_name "$service")
 
-        local color=$(status_color "$status")
-        local icon=$(status_icon "$status")
+        local app_info
+        local status
+
+        app_info=$(api_call GET "/applications/$uuid" 2>/dev/null)
+        status=$(echo "$app_info" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
+
+        local color
+        local icon
+
+        color=$(status_color "$status")
+        icon=$(status_icon "$status")
 
         printf "%-12s %-20s ${color}%s %s${NC}\n" "$service" "$name" "$icon" "$status"
     done
@@ -173,12 +178,16 @@ cmd_deploy() {
     if [ "$service" = "all" ]; then
         services_to_deploy="$ALL_SERVICES"
     else
-        local uuid=$(service_uuid "$service")
+        local uuid
+
+        uuid=$(service_uuid "$service")
+
         if [ -z "$uuid" ]; then
             echo -e "${RED}Error: Unknown service '$service'${NC}"
             echo "Available: $ALL_SERVICES"
             exit 1
         fi
+
         services_to_deploy="$service"
     fi
 
@@ -193,19 +202,26 @@ cmd_deploy() {
     local deployment_info=""
 
     for svc in $services_to_deploy; do
-        local uuid=$(service_uuid "$svc")
-        local name=$(service_name "$svc")
+        local uuid
+        local name
+
+        uuid=$(service_uuid "$svc")
+        name=$(service_name "$svc")
 
         echo -ne "  ${CYAN}$name${NC}: Triggering deploy... "
 
-        local result=$(api_call GET "/deploy?uuid=$uuid$force_param" 2>/dev/null)
-        local deploy_uuid=$(echo "$result" | jq -r '.deployments[0].deployment_uuid // empty' 2>/dev/null)
+        local result
+        local deploy_uuid
+
+        result=$(api_call GET "/deploy?uuid=$uuid$force_param" 2>/dev/null)
+        deploy_uuid=$(echo "$result" | jq -r '.deployments[0].deployment_uuid // empty' 2>/dev/null)
 
         if [ -n "$deploy_uuid" ]; then
             echo -e "${GREEN}Started${NC} ($deploy_uuid)"
             deployment_info="$deployment_info $svc:$deploy_uuid"
         else
-            local error=$(echo "$result" | jq -r '.message // .error // "Unknown error"' 2>/dev/null)
+            local error
+            error=$(echo "$result" | jq -r '.message // .error // "Unknown error"' 2>/dev/null)
             echo -e "${RED}Failed${NC}: $error"
         fi
     done
@@ -231,13 +247,20 @@ watch_deployments() {
         for item in "$@"; do
             local svc="${item%%:*}"
             local deploy_uuid="${item#*:}"
-            local name=$(service_name "$svc")
+            local name
+            name=$(service_name "$svc")
 
-            local deploy_info=$(api_call GET "/deployments/$deploy_uuid" 2>/dev/null)
-            local status=$(echo "$deploy_info" | jq -r '.status // "unknown"' 2>/dev/null)
+            local deploy_info
+            local status
 
-            local color=$(status_color "$status")
-            local icon=$(status_icon "$status")
+            deploy_info=$(api_call GET "/deployments/$deploy_uuid" 2>/dev/null)
+            status=$(echo "$deploy_info" | jq -r '.status // "unknown"' 2>/dev/null)
+
+            local color
+            local icon
+
+            color=$(status_color "$status")
+            icon=$(status_icon "$status")
 
             output="$output  $name: $color$icon $status$NC\n"
 
@@ -269,26 +292,35 @@ cmd_watch() {
         exit 1
     fi
 
-    local uuid=$(service_uuid "$service")
+    local uuid
+    uuid=$(service_uuid "$service")
     if [ -z "$uuid" ]; then
         echo -e "${RED}Error: Unknown service '$service'${NC}"
         exit 1
     fi
 
-    local name=$(service_name "$service")
+    local name
+    name=$(service_name "$service")
 
     echo -e "${BOLD}Watching $name deployments...${NC}"
     echo -e "${DIM}Press Ctrl+C to stop${NC}"
     echo ""
 
     while true; do
-        local deployments=$(api_call GET "/applications/$uuid/deployments?take=1" 2>/dev/null)
+        local deployments
+        deployments=$(api_call GET "/applications/$uuid/deployments?take=1" 2>/dev/null)
 
-        local status=$(echo "$deployments" | jq -r '.[0].status // "none"' 2>/dev/null)
-        local commit=$(echo "$deployments" | jq -r '.[0].commit // "none"' 2>/dev/null | head -c 7)
+        local status
+        local commit
 
-        local color=$(status_color "$status")
-        local icon=$(status_icon "$status")
+        status=$(echo "$deployments" | jq -r '.[0].status // "none"' 2>/dev/null)
+        commit=$(echo "$deployments" | jq -r '.[0].commit // "none"' 2>/dev/null | head -c 7)
+
+        local color
+        local icon
+
+        color=$(status_color "$status")
+        icon=$(status_icon "$status")
 
         printf "\r  ${color}%s %-15s${NC} commit: %s   " "$icon" "$status" "$commit"
 
@@ -313,16 +345,20 @@ cmd_logs() {
         exit 1
     fi
 
-    local uuid=$(service_uuid "$service")
+    local uuid
+    uuid=$(service_uuid "$service")
     if [ -z "$uuid" ]; then
         echo -e "${RED}Error: Unknown service '$service'${NC}"
         exit 1
     fi
 
-    local name=$(service_name "$service")
+    local name
+    name=$(service_name "$service")
 
-    local deployments=$(api_call GET "/applications/$uuid/deployments?take=1" 2>/dev/null)
-    local deploy_uuid=$(echo "$deployments" | jq -r '.[0].deployment_uuid // empty' 2>/dev/null)
+    local deployments
+    deployments=$(api_call GET "/applications/$uuid/deployments?take=1" 2>/dev/null)
+    local deploy_uuid
+    deploy_uuid=$(echo "$deployments" | jq -r '.[0].deployment_uuid // empty' 2>/dev/null)
 
     if [ -z "$deploy_uuid" ]; then
         echo -e "${RED}No deployments found for $name${NC}"
@@ -333,7 +369,8 @@ cmd_logs() {
     echo -e "${DIM}Deployment: $deploy_uuid${NC}"
     echo ""
 
-    local deploy_info=$(api_call GET "/deployments/$deploy_uuid" 2>/dev/null)
+    local deploy_info
+    deploy_info=$(api_call GET "/deployments/$deploy_uuid" 2>/dev/null)
     echo "$deploy_info" | jq -r '.logs // "No logs available"' 2>/dev/null
 }
 
@@ -348,25 +385,30 @@ cmd_list() {
         exit 1
     fi
 
-    local uuid=$(service_uuid "$service")
+    local uuid
+    uuid=$(service_uuid "$service")
     if [ -z "$uuid" ]; then
         echo -e "${RED}Error: Unknown service '$service'${NC}"
         exit 1
     fi
 
-    local name=$(service_name "$service")
+    local name
+    name=$(service_name "$service")
 
     echo -e "${BOLD}Recent deployments for $name${NC}"
     echo ""
 
-    local deployments=$(api_call GET "/applications/$uuid/deployments?take=$take" 2>/dev/null)
+    local deployments
+    deployments=$(api_call GET "/applications/$uuid/deployments?take=$take" 2>/dev/null)
 
     printf "%-12s %-15s %s\n" "STATUS" "COMMIT" "CREATED"
     echo "────────────────────────────────────────────────"
 
     echo "$deployments" | jq -r '.[] | [.status, .commit[0:7], .created_at] | @tsv' 2>/dev/null | while IFS=$'\t' read -r status commit created; do
-        local color=$(status_color "$status")
-        local icon=$(status_icon "$status")
+        local color
+        color=$(status_color "$status")
+        local icon
+        icon=$(status_icon "$status")
 
         if [ -n "$created" ] && [ "$created" != "null" ]; then
             created=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${created%%.*}" "+%m/%d %H:%M" 2>/dev/null || echo "$created")

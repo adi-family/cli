@@ -25,7 +25,8 @@ CRATE_PATH="crates/adi-cli"
 
 main() {
     # Get current version from Cargo.toml
-    local current_version=$(grep '^version' "$CRATE_PATH/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+    local current_version
+    current_version=$(grep '^version' "$CRATE_PATH/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
     info "Current version: v$current_version"
 
     # Get version from argument or prompt
@@ -37,7 +38,8 @@ main() {
 
     # Normalize version
     version=$(normalize_version "$version")
-    local display_version=$(ensure_v_prefix "$version")
+    local display_version
+    display_version=$(ensure_v_prefix "$version")
 
     # Update Cargo.toml if version changed
     if [ "$version" != "$current_version" ]; then
