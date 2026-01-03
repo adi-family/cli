@@ -175,3 +175,6 @@
 [submodule "crates/cocoon-manager"]
 	path = crates/cocoon-manager
 	url = https://github.com/adi-family/cocoon-manager.git
+[submodule "release/adi.the-ihor.com"]
+	path = release/adi.the-ihor.com
+	url = git@github.com:adi-family/adi.the-ihor.com.git

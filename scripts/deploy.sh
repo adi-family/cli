@@ -11,7 +11,7 @@
 #   list                List all deployments
 #   watch <service>     Watch deployment progress live
 #
-# Services: auth, platform, signaling, web
+# Services: auth, platform, signaling, web, analytics-ingestion, analytics, registry
 #
 # Environment:
 #   COOLIFY_URL         Coolify instance URL (default: http://in.the-ihor.com)
@@ -48,7 +48,7 @@ fi
 COOLIFY_URL="${COOLIFY_URL:-http://in.the-ihor.com}"
 API_BASE="$COOLIFY_URL/api/v1"
 
-ALL_SERVICES="auth platform signaling web"
+ALL_SERVICES="auth platform signaling web analytics-ingestion analytics registry"
 
 # -----------------------------------------------------------------------------
 # Service Configuration (functions for bash 3.2 compatibility)
@@ -56,21 +56,27 @@ ALL_SERVICES="auth platform signaling web"
 
 service_uuid() {
     case "$1" in
-        auth)      echo "ngg488ogoc80c8wogowkckow" ;;
-        platform)  echo "cosw4cw0gscso88w8sskgk8g" ;;
-        signaling) echo "t0k0owcw00w00s4w4o0c000w" ;;
-        web)       echo "tkg84kg0o0ok8gkcs8wcggck" ;;
-        *)         echo "" ;;
+        auth)                echo "ngg488ogoc80c8wogowkckow" ;;
+        platform)            echo "cosw4cw0gscso88w8sskgk8g" ;;
+        signaling)           echo "t0k0owcw00w00s4w4o0c000w" ;;
+        web)                 echo "tkg84kg0o0ok8gkcs8wcggck" ;;
+        analytics-ingestion) echo "TODO_COOLIFY_UUID" ;;
+        analytics)           echo "TODO_COOLIFY_UUID" ;;
+        registry)            echo "TODO_COOLIFY_UUID" ;;
+        *)                   echo "" ;;
     esac
 }
 
 service_name() {
     case "$1" in
-        auth)      echo "Auth API" ;;
-        platform)  echo "Platform API" ;;
-        signaling) echo "Signaling Server" ;;
-        web)       echo "Web UI" ;;
-        *)         echo "$1" ;;
+        auth)                echo "Auth API" ;;
+        platform)            echo "Platform API" ;;
+        signaling)           echo "Signaling Server" ;;
+        web)                 echo "Web UI" ;;
+        analytics-ingestion) echo "Analytics Ingestion" ;;
+        analytics)           echo "Analytics API" ;;
+        registry)            echo "Plugin Registry" ;;
+        *)                   echo "$1" ;;
     esac
 }
 
@@ -457,6 +463,9 @@ SERVICES:
     platform            Platform API (adi-platform-api)
     signaling           Signaling Server (tarminal-signaling-server)
     web                 Web UI (infra-service-web)
+    analytics-ingestion Analytics Ingestion (adi-analytics-ingestion)
+    analytics           Analytics API (adi-analytics-api)
+    registry            Plugin Registry (adi-plugin-registry-http)
 
 ENVIRONMENT:
     COOLIFY_URL         Coolify instance URL (default: http://in.the-ihor.com)
