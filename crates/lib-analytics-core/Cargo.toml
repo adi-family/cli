@@ -30,7 +30,7 @@ tracing = "0.1"
 
 # Error handling
 thiserror = "2.0"
-anyhow = "2.0"
+anyhow = "1.0"
 
 # Database (for migration binary only)
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"], optional = true }
