@@ -30,6 +30,7 @@
 #   Other:
 #     setup_path <install_dir>           - Add directory to PATH
 #     generate_secret [length]           - Generate cryptographic secret
+#     get_cargo_version [toml]           - Extract version from Cargo.toml
 #     normalize_version <version>        - Remove 'v' prefix
 #     ensure_v_prefix <version>          - Add 'v' prefix
 #     ensure_dir <dir>                   - Create directory if missing
@@ -322,6 +323,21 @@ generate_secret() {
 # -----------------------------------------------------------------------------
 # Version Management
 # -----------------------------------------------------------------------------
+
+# Extract version from Cargo.toml
+# Usage: get_cargo_version [cargo_toml_path]
+# Returns: version string without quotes
+get_cargo_version() {
+    local cargo_toml="${1:-Cargo.toml}"
+    local version
+
+    require_file "$cargo_toml"
+
+    version=$(grep '^version = ' "$cargo_toml" | head -1 | sed 's/version = "\(.*\)"/\1/')
+    require_value "$version" "Could not extract version from $cargo_toml" >/dev/null
+
+    echo "$version"
+}
 
 # Normalize version (remove 'v' prefix)
 # Usage: normalize_version <version>

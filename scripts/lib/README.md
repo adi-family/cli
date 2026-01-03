@@ -152,6 +152,7 @@ Common utilities. Auto-loads `log.sh` and `colors.sh`.
 - `generate_secret [length]` - Generate strong secret
 
 **Version:**
+- `get_cargo_version [toml]` - Extract version from Cargo.toml
 - `normalize_version <version>` - Remove 'v' prefix
 - `ensure_v_prefix <version>` - Add 'v' prefix
 
@@ -180,6 +181,7 @@ require_one_of "Either GITHUB_TOKEN or CI_TOKEN must be set" "$GITHUB_TOKEN" "$C
 
 # Other utilities
 ensure_command "cargo" "brew install rust"
+VERSION=$(get_cargo_version)  # Extract from Cargo.toml
 SECRET=$(generate_secret)
 TEMP=$(create_temp_dir)  # Auto-cleaned on exit
 extract_archive "file.tar.gz" "$TEMP"

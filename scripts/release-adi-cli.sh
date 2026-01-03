@@ -26,7 +26,7 @@ CRATE_PATH="crates/adi-cli"
 main() {
     # Get current version from Cargo.toml
     local current_version
-    current_version=$(grep '^version' "$CRATE_PATH/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+    current_version=$(get_cargo_version "$CRATE_PATH/Cargo.toml")
     info "Current version: v$current_version"
 
     # Get version from argument or prompt
