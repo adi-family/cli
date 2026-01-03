@@ -162,6 +162,7 @@ Common utilities. Auto-loads `log.sh` and `colors.sh`.
 
 **Docker:**
 - `docker_image_exists <image:tag>` - Check if image exists in registry
+- `deploy_docker_image <registry> <name> <version> [dockerfile] [context]` - Build and push image with version and latest tags
 
 **Root Checking:**
 - `check_root` - Exit if not root
@@ -188,6 +189,11 @@ VERSION=$(get_cargo_version)  # Extract from Cargo.toml
 SECRET=$(generate_secret)
 TEMP=$(create_temp_dir)  # Auto-cleaned on exit
 extract_archive "file.tar.gz" "$TEMP"
+
+# Docker deployment
+deploy_docker_image "registry.example.com" "my-app" "$VERSION"
+# Custom Dockerfile and context:
+deploy_docker_image "registry.example.com" "my-app" "$VERSION" "Dockerfile.prod" "./build"
 ```
 
 ## Dependency Tree

@@ -29,6 +29,8 @@
 #
 #   Docker:
 #     docker_image_exists <image:tag>    - Check if image exists in registry
+#     deploy_docker_image <reg> <name> <ver> [dockerfile] [context]
+#                                            - Build and push Docker image
 #
 #   Other:
 #     setup_path <install_dir>           - Add directory to PATH
@@ -391,6 +393,57 @@ create_temp_dir() {
 docker_image_exists() {
     local image="$1"
     docker manifest inspect "$image" >/dev/null 2>&1
+}
+
+# Build and push Docker image with version and latest tags
+# Usage: deploy_docker_image <registry> <image_name> <version> [dockerfile] [build_context]
+# Example: deploy_docker_image "registry.example.com" "my-app" "1.2.3"
+# Example: deploy_docker_image "registry.example.com" "my-app" "1.2.3" "Dockerfile" "."
+deploy_docker_image() {
+    local registry="$1"
+    local image_name="$2"
+    local version="$3"
+    local dockerfile="${4:-Dockerfile}"
+    local build_context="${5:-.}"
+
+    require_value "$registry" "Registry is required"
+    require_value "$image_name" "Image name is required"
+    require_value "$version" "Version is required"
+    ensure_command "docker" "Install Docker Desktop"
+
+    local image_tag="$registry/$image_name:$version"
+    local latest_tag="$registry/$image_name:latest"
+
+    # Check if image already exists
+    if docker_image_exists "$image_tag"; then
+        success "Image already exists in registry: $image_tag"
+        warn "Skipping build"
+        return 0
+    fi
+
+    info "Image not found in registry, building..."
+
+    # Build image with both tags
+    info "Building Docker image..."
+    docker build -f "$dockerfile" \
+        -t "$image_tag" \
+        -t "$latest_tag" \
+        "$build_context"
+
+    success "Build complete"
+
+    # Push both tags
+    echo ""
+    info "Pushing to registry: $registry"
+    docker push "$image_tag"
+    docker push "$latest_tag"
+
+    success "Push complete"
+
+    echo ""
+    echo -e "${BOLD}Image deployed:${NC}"
+    echo -e "  ${CYAN}$image_tag${NC}"
+    echo -e "  ${CYAN}$latest_tag${NC}"
 }
 
 # -----------------------------------------------------------------------------
