@@ -27,6 +27,9 @@
 #     extract_archive <archive> <dest>   - Extract tar.gz or zip archive
 #     create_tarball <out> <dir> <files> - Create tar.gz archive
 #
+#   Docker:
+#     docker_image_exists <image:tag>    - Check if image exists in registry
+#
 #   Other:
 #     setup_path <install_dir>           - Add directory to PATH
 #     generate_secret [length]           - Generate cryptographic secret
@@ -376,6 +379,18 @@ create_temp_dir() {
     temp_dir=$(mktemp -d)
     trap "rm -rf '$temp_dir'" EXIT
     echo "$temp_dir"
+}
+
+# -----------------------------------------------------------------------------
+# Docker Utilities
+# -----------------------------------------------------------------------------
+
+# Check if Docker image exists in registry
+# Usage: docker_image_exists <image:tag>
+# Returns: 0 if exists, 1 if not
+docker_image_exists() {
+    local image="$1"
+    docker manifest inspect "$image" >/dev/null 2>&1
 }
 
 # -----------------------------------------------------------------------------

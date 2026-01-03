@@ -160,6 +160,9 @@ Common utilities. Auto-loads `log.sh` and `colors.sh`.
 - `ensure_dir <dir>` - Create if missing
 - `create_temp_dir` - Create temp dir with cleanup trap
 
+**Docker:**
+- `docker_image_exists <image:tag>` - Check if image exists in registry
+
 **Root Checking:**
 - `check_root` - Exit if not root
 - `check_not_root` - Exit if root
