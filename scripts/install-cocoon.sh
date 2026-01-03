@@ -10,127 +10,29 @@
 
 set -e
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# Convert to bash for library support
+if [ -z "$BASH_VERSION" ]; then
+    exec bash "$0" "$@"
+fi
 
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load libraries
+source "$SCRIPT_DIR/lib/log.sh"
+source "$SCRIPT_DIR/lib/platform.sh"
+source "$SCRIPT_DIR/lib/github.sh"
+source "$SCRIPT_DIR/lib/common.sh"
+
+# Configuration
 REPO="adi-family/cocoon"
 BINARY_NAME="cocoon"
 CONFIG_DIR="/etc/cocoon"
 DATA_DIR="/var/lib/cocoon"
 
-info() {
-    printf "${CYAN}info${NC} %s\n" "$1"
-}
-
-success() {
-    printf "${GREEN}done${NC} %s\n" "$1"
-}
-
-warn() {
-    printf "${YELLOW}warn${NC} %s\n" "$1"
-}
-
-error() {
-    printf "${RED}error${NC} %s\n" "$1" >&2
-    exit 1
-}
-
-# Check if running as root
-check_root() {
-    if [ "$(id -u)" -ne 0 ]; then
-        error "This script must be run as root. Try: sudo sh -s -- <token>"
-    fi
-}
-
-# Detect OS
-detect_os() {
-    case "$(uname -s)" in
-        Darwin)
-            echo "darwin"
-            ;;
-        Linux)
-            echo "linux"
-            ;;
-        *)
-            error "Unsupported operating system: $(uname -s)"
-            ;;
-    esac
-}
-
-# Detect architecture
-detect_arch() {
-    case "$(uname -m)" in
-        x86_64|amd64)
-            echo "x86_64"
-            ;;
-        arm64|aarch64)
-            echo "aarch64"
-            ;;
-        *)
-            error "Unsupported architecture: $(uname -m)"
-            ;;
-    esac
-}
-
-# Get target triple
-get_target() {
-    local os="$1"
-    local arch="$2"
-
-    case "$os" in
-        darwin)
-            echo "${arch}-apple-darwin"
-            ;;
-        linux)
-            echo "${arch}-unknown-linux-musl"
-            ;;
-    esac
-}
-
-# Fetch latest version from GitHub API
-fetch_latest_version() {
-    local url="https://api.github.com/repos/${REPO}/releases/latest"
-
-    if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$url" | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/'
-    elif command -v wget >/dev/null 2>&1; then
-        wget -qO- "$url" | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/'
-    else
-        error "Neither curl nor wget found. Please install one of them."
-    fi
-}
-
-# Download file
-download() {
-    local url="$1"
-    local output="$2"
-
-    info "Downloading from $url"
-
-    if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$url" -o "$output"
-    elif command -v wget >/dev/null 2>&1; then
-        wget -q "$url" -O "$output"
-    else
-        error "Neither curl nor wget found"
-    fi
-}
-
-# Generate strong secret
-generate_secret() {
-    if command -v openssl >/dev/null 2>&1; then
-        openssl rand -base64 36
-    elif [ -r /dev/urandom ]; then
-        head -c 36 /dev/urandom | base64 | tr -d '\n'
-    else
-        error "Cannot generate secret: openssl or /dev/urandom required"
-    fi
-}
+# =============================================================================
+# Service Creation Functions
+# =============================================================================
 
 # Create systemd service
 create_systemd_service() {
@@ -174,6 +76,9 @@ EOF
 # Create launchd plist (macOS)
 create_launchd_plist() {
     local install_dir="$1"
+    local signaling_url="$2"
+    local secret="$3"
+    local setup_token="$4"
     local plist_path="/Library/LaunchDaemons/com.adi.cocoon.plist"
 
     cat > "$plist_path" << EOF
@@ -190,11 +95,11 @@ create_launchd_plist() {
     <key>EnvironmentVariables</key>
     <dict>
         <key>SIGNALING_SERVER_URL</key>
-        <string>\${SIGNALING_URL}</string>
+        <string>${signaling_url}</string>
         <key>COCOON_SECRET</key>
-        <string>\${COCOON_SECRET}</string>
+        <string>${secret}</string>
         <key>COCOON_SETUP_TOKEN</key>
-        <string>\${SETUP_TOKEN}</string>
+        <string>${setup_token}</string>
     </dict>
     <key>RunAtLoad</key>
     <true/>
@@ -210,6 +115,10 @@ EOF
 
     return 0
 }
+
+# =============================================================================
+# Main Installation Flow
+# =============================================================================
 
 main() {
     local setup_token="$1"
@@ -228,7 +137,7 @@ main() {
     fi
 
     # Basic JWT structure check
-    token_parts=$(echo "$setup_token" | tr '.' '\n' | wc -l)
+    local token_parts=$(echo "$setup_token" | tr '.' '\n' | wc -l)
     if [ "$token_parts" -ne 3 ]; then
         error "Invalid setup token format (expected JWT)"
     fi
@@ -241,52 +150,38 @@ main() {
     # Detect platform
     local os=$(detect_os)
     local arch=$(detect_arch)
-    local target=$(get_target "$os" "$arch")
+    local target=$(get_target_musl "$os" "$arch")  # Use musl for static linking
 
     info "Detected platform: $target"
 
-    # Determine version
+    # Fetch latest version
     info "Fetching latest version"
-    local version=$(fetch_latest_version)
-    if [ -z "$version" ]; then
-        error "Failed to fetch latest version"
-    fi
+    local version=$(fetch_latest_version "$REPO")
+    [ -z "$version" ] && error "Failed to fetch latest version"
 
     info "Installing version: $version"
 
     # Determine install directory
     local install_dir="${INSTALL_DIR:-/usr/local/bin}"
-    mkdir -p "$install_dir"
+    ensure_dir "$install_dir"
 
     info "Install directory: $install_dir"
 
     # Create config and data directories
-    mkdir -p "$CONFIG_DIR"
-    mkdir -p "$DATA_DIR"
+    ensure_dir "$CONFIG_DIR"
+    ensure_dir "$DATA_DIR"
     chmod 700 "$CONFIG_DIR"
     chmod 700 "$DATA_DIR"
 
-    # Construct download URL
+    # Download and install binary
+    local temp_dir=$(create_temp_dir)
     local archive_name="cocoon-${version}-${target}.tar.gz"
-    local download_url="https://github.com/${REPO}/releases/download/${version}/${archive_name}"
 
-    # Create temp directory
-    local temp_dir=$(mktemp -d)
-    trap "rm -rf '$temp_dir'" EXIT
+    download_github_asset "$REPO" "$version" "$archive_name" "$temp_dir/$archive_name"
+    extract_archive "$temp_dir/$archive_name" "$temp_dir"
 
-    # Download archive
-    local archive_path="$temp_dir/$archive_name"
-    download "$download_url" "$archive_path"
-
-    # Extract
-    info "Extracting archive"
-    tar -xzf "$archive_path" -C "$temp_dir"
-
-    # Install binary
     local binary_path="$temp_dir/$BINARY_NAME"
-    if [ ! -f "$binary_path" ]; then
-        error "Binary not found in archive"
-    fi
+    [ ! -f "$binary_path" ] && error "Binary not found in archive"
 
     chmod +x "$binary_path"
     mv "$binary_path" "$install_dir/$BINARY_NAME"
@@ -297,10 +192,8 @@ main() {
     info "Generating cryptographic secret"
     local secret=$(generate_secret)
 
-    # Determine cocoon name
+    # Determine configuration
     local cocoon_name="${COCOON_NAME:-$(hostname)}"
-
-    # Determine signaling URL
     local signaling_url="${SIGNALING_URL:-wss://signal.adi.the-ihor.com/ws}"
 
     # Create config file
@@ -332,21 +225,15 @@ EOF
             linux)
                 if create_systemd_service "$install_dir"; then
                     info "Created systemd service"
-
-                    # Enable and start
                     systemctl enable cocoon
                     systemctl start cocoon
-
                     success "Cocoon service started"
                 fi
                 ;;
             darwin)
-                if create_launchd_plist "$install_dir"; then
+                if create_launchd_plist "$install_dir" "$signaling_url" "$secret" "$setup_token"; then
                     info "Created launchd plist"
-
-                    # Load and start
                     launchctl load /Library/LaunchDaemons/com.adi.cocoon.plist
-
                     success "Cocoon service started"
                 fi
                 ;;
@@ -365,10 +252,10 @@ EOF
     printf "  Server:   ${CYAN}%s${NC}\n" "$signaling_url"
     echo ""
 
-    # Show service status
+    # Show service status commands
     case "$os" in
         linux)
-            if command -v systemctl >/dev/null 2>&1; then
+            if check_command systemctl; then
                 echo "Check status:"
                 printf "  ${CYAN}systemctl status cocoon${NC}\n"
                 printf "  ${CYAN}journalctl -u cocoon -f${NC}\n"

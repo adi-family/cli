@@ -20,29 +20,29 @@
 
 set -e
 
+# Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Load .env.local if exists (export only valid KEY=value lines)
+# Load .env.local if exists
 if [ -f "$PROJECT_DIR/.env.local" ]; then
     while IFS= read -r line || [ -n "$line" ]; do
-        # Skip comments and empty lines
         [[ -z "$line" || "$line" =~ ^# ]] && continue
-        # Extract key (everything before first =)
         key="${line%%=*}"
-        # Extract value (everything after first =)
         value="${line#*=}"
-        # Remove surrounding quotes from value
         value="${value%\"}"
         value="${value#\"}"
         value="${value%\'}"
         value="${value#\'}"
-        # Export if key looks valid
         if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
             export "$key=$value"
         fi
     done < "$PROJECT_DIR/.env.local"
 fi
+
+# Load libraries
+source "$SCRIPT_DIR/lib/log.sh"
+source "$SCRIPT_DIR/lib/common.sh"
 
 # Configuration
 COOLIFY_URL="${COOLIFY_URL:-http://in.the-ihor.com}"
@@ -51,7 +51,7 @@ API_BASE="$COOLIFY_URL/api/v1"
 ALL_SERVICES="auth platform signaling web analytics-ingestion analytics registry"
 
 # -----------------------------------------------------------------------------
-# Service Configuration (functions for bash 3.2 compatibility)
+# Service Configuration
 # -----------------------------------------------------------------------------
 
 service_uuid() {
@@ -81,30 +81,7 @@ service_name() {
 }
 
 # -----------------------------------------------------------------------------
-# Colors
-# -----------------------------------------------------------------------------
-
-supports_color() {
-    [ -n "$FORCE_COLOR" ] && return 0
-    [ -t 1 ] && return 0
-    return 1
-}
-
-if supports_color; then
-    RED='\033[0;31m'
-    GREEN='\033[0;32m'
-    YELLOW='\033[0;33m'
-    BLUE='\033[0;34m'
-    CYAN='\033[0;36m'
-    BOLD='\033[1m'
-    DIM='\033[2m'
-    NC='\033[0m'
-else
-    RED='' GREEN='' YELLOW='' BLUE='' CYAN='' BOLD='' DIM='' NC=''
-fi
-
-# -----------------------------------------------------------------------------
-# Helpers
+# API Helpers
 # -----------------------------------------------------------------------------
 
 check_api_key() {
@@ -167,22 +144,14 @@ cmd_status() {
     echo "────────────────────────────────────────────────────────"
 
     for service in $ALL_SERVICES; do
-        local uuid
-        uuid=$(service_uuid "$service")
-        local name
-        name=$(service_name "$service")
+        local uuid=$(service_uuid "$service")
+        local name=$(service_name "$service")
 
-        # Get application status
-        local app_info
-        app_info=$(api_call GET "/applications/$uuid" 2>/dev/null)
+        local app_info=$(api_call GET "/applications/$uuid" 2>/dev/null)
+        local status=$(echo "$app_info" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
 
-        local status
-        status=$(echo "$app_info" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
-
-        local color
-        color=$(status_color "$status")
-        local icon
-        icon=$(status_icon "$status")
+        local color=$(status_color "$status")
+        local icon=$(status_icon "$status")
 
         printf "%-12s %-20s ${color}%s %s${NC}\n" "$service" "$name" "$icon" "$status"
     done
@@ -204,8 +173,7 @@ cmd_deploy() {
     if [ "$service" = "all" ]; then
         services_to_deploy="$ALL_SERVICES"
     else
-        local uuid
-        uuid=$(service_uuid "$service")
+        local uuid=$(service_uuid "$service")
         if [ -z "$uuid" ]; then
             echo -e "${RED}Error: Unknown service '$service'${NC}"
             echo "Available: $ALL_SERVICES"
@@ -225,32 +193,25 @@ cmd_deploy() {
     local deployment_info=""
 
     for svc in $services_to_deploy; do
-        local uuid
-        uuid=$(service_uuid "$svc")
-        local name
-        name=$(service_name "$svc")
+        local uuid=$(service_uuid "$svc")
+        local name=$(service_name "$svc")
 
         echo -ne "  ${CYAN}$name${NC}: Triggering deploy... "
 
-        local result
-        result=$(api_call GET "/deploy?uuid=$uuid$force_param" 2>/dev/null)
-
-        local deploy_uuid
-        deploy_uuid=$(echo "$result" | jq -r '.deployments[0].deployment_uuid // empty' 2>/dev/null)
+        local result=$(api_call GET "/deploy?uuid=$uuid$force_param" 2>/dev/null)
+        local deploy_uuid=$(echo "$result" | jq -r '.deployments[0].deployment_uuid // empty' 2>/dev/null)
 
         if [ -n "$deploy_uuid" ]; then
             echo -e "${GREEN}Started${NC} ($deploy_uuid)"
             deployment_info="$deployment_info $svc:$deploy_uuid"
         else
-            local error
-            error=$(echo "$result" | jq -r '.message // .error // "Unknown error"' 2>/dev/null)
+            local error=$(echo "$result" | jq -r '.message // .error // "Unknown error"' 2>/dev/null)
             echo -e "${RED}Failed${NC}: $error"
         fi
     done
 
     echo ""
 
-    # Watch deployments
     if [ -n "$deployment_info" ]; then
         echo -e "${BOLD}Watching deployment progress...${NC}"
         echo -e "${DIM}Press Ctrl+C to stop watching${NC}"
@@ -270,19 +231,13 @@ watch_deployments() {
         for item in "$@"; do
             local svc="${item%%:*}"
             local deploy_uuid="${item#*:}"
-            local name
-            name=$(service_name "$svc")
+            local name=$(service_name "$svc")
 
-            local deploy_info
-            deploy_info=$(api_call GET "/deployments/$deploy_uuid" 2>/dev/null)
+            local deploy_info=$(api_call GET "/deployments/$deploy_uuid" 2>/dev/null)
+            local status=$(echo "$deploy_info" | jq -r '.status // "unknown"' 2>/dev/null)
 
-            local status
-            status=$(echo "$deploy_info" | jq -r '.status // "unknown"' 2>/dev/null)
-
-            local color
-            color=$(status_color "$status")
-            local icon
-            icon=$(status_icon "$status")
+            local color=$(status_color "$status")
+            local icon=$(status_icon "$status")
 
             output="$output  $name: $color$icon $status$NC\n"
 
@@ -293,7 +248,6 @@ watch_deployments() {
             esac
         done
 
-        # Clear and print status
         echo -ne "\033[${#@}A\033[J" 2>/dev/null || true
         echo -e "$output"
 
@@ -315,32 +269,26 @@ cmd_watch() {
         exit 1
     fi
 
-    local uuid
-    uuid=$(service_uuid "$service")
+    local uuid=$(service_uuid "$service")
     if [ -z "$uuid" ]; then
         echo -e "${RED}Error: Unknown service '$service'${NC}"
         exit 1
     fi
 
-    local name
-    name=$(service_name "$service")
+    local name=$(service_name "$service")
 
     echo -e "${BOLD}Watching $name deployments...${NC}"
     echo -e "${DIM}Press Ctrl+C to stop${NC}"
     echo ""
 
     while true; do
-        local deployments
-        deployments=$(api_call GET "/applications/$uuid/deployments?take=1" 2>/dev/null)
+        local deployments=$(api_call GET "/applications/$uuid/deployments?take=1" 2>/dev/null)
 
-        local status commit
-        status=$(echo "$deployments" | jq -r '.[0].status // "none"' 2>/dev/null)
-        commit=$(echo "$deployments" | jq -r '.[0].commit // "none"' 2>/dev/null | head -c 7)
+        local status=$(echo "$deployments" | jq -r '.[0].status // "none"' 2>/dev/null)
+        local commit=$(echo "$deployments" | jq -r '.[0].commit // "none"' 2>/dev/null | head -c 7)
 
-        local color
-        color=$(status_color "$status")
-        local icon
-        icon=$(status_icon "$status")
+        local color=$(status_color "$status")
+        local icon=$(status_icon "$status")
 
         printf "\r  ${color}%s %-15s${NC} commit: %s   " "$icon" "$status" "$commit"
 
@@ -365,22 +313,16 @@ cmd_logs() {
         exit 1
     fi
 
-    local uuid
-    uuid=$(service_uuid "$service")
+    local uuid=$(service_uuid "$service")
     if [ -z "$uuid" ]; then
         echo -e "${RED}Error: Unknown service '$service'${NC}"
         exit 1
     fi
 
-    local name
-    name=$(service_name "$service")
+    local name=$(service_name "$service")
 
-    # Get latest deployment
-    local deployments
-    deployments=$(api_call GET "/applications/$uuid/deployments?take=1" 2>/dev/null)
-
-    local deploy_uuid
-    deploy_uuid=$(echo "$deployments" | jq -r '.[0].deployment_uuid // empty' 2>/dev/null)
+    local deployments=$(api_call GET "/applications/$uuid/deployments?take=1" 2>/dev/null)
+    local deploy_uuid=$(echo "$deployments" | jq -r '.[0].deployment_uuid // empty' 2>/dev/null)
 
     if [ -z "$deploy_uuid" ]; then
         echo -e "${RED}No deployments found for $name${NC}"
@@ -391,9 +333,7 @@ cmd_logs() {
     echo -e "${DIM}Deployment: $deploy_uuid${NC}"
     echo ""
 
-    local deploy_info
-    deploy_info=$(api_call GET "/deployments/$deploy_uuid" 2>/dev/null)
-
+    local deploy_info=$(api_call GET "/deployments/$deploy_uuid" 2>/dev/null)
     echo "$deploy_info" | jq -r '.logs // "No logs available"' 2>/dev/null
 }
 
@@ -408,32 +348,26 @@ cmd_list() {
         exit 1
     fi
 
-    local uuid
-    uuid=$(service_uuid "$service")
+    local uuid=$(service_uuid "$service")
     if [ -z "$uuid" ]; then
         echo -e "${RED}Error: Unknown service '$service'${NC}"
         exit 1
     fi
 
-    local name
-    name=$(service_name "$service")
+    local name=$(service_name "$service")
 
     echo -e "${BOLD}Recent deployments for $name${NC}"
     echo ""
 
-    local deployments
-    deployments=$(api_call GET "/applications/$uuid/deployments?take=$take" 2>/dev/null)
+    local deployments=$(api_call GET "/applications/$uuid/deployments?take=$take" 2>/dev/null)
 
     printf "%-12s %-15s %s\n" "STATUS" "COMMIT" "CREATED"
     echo "────────────────────────────────────────────────"
 
     echo "$deployments" | jq -r '.[] | [.status, .commit[0:7], .created_at] | @tsv' 2>/dev/null | while IFS=$'\t' read -r status commit created; do
-        local color
-        color=$(status_color "$status")
-        local icon
-        icon=$(status_icon "$status")
+        local color=$(status_color "$status")
+        local icon=$(status_icon "$status")
 
-        # Format timestamp
         if [ -n "$created" ] && [ "$created" != "null" ]; then
             created=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${created%%.*}" "+%m/%d %H:%M" 2>/dev/null || echo "$created")
         fi
