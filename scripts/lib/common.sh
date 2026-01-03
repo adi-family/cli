@@ -423,9 +423,10 @@ deploy_docker_image() {
 
     info "Image not found in registry, building..."
 
-    # Build image with both tags
-    info "Building Docker image..."
-    docker build -f "$dockerfile" \
+    # Build image with both tags (for linux/amd64 platform)
+    info "Building Docker image for linux/amd64..."
+    docker build --platform linux/amd64 \
+        -f "$dockerfile" \
         -t "$image_tag" \
         -t "$latest_tag" \
         "$build_context"
