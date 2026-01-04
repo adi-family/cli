@@ -4,6 +4,8 @@ exclude = [
     "crates/lib-flowmap-core",
     "crates/lib-flowmap-parser",
     "apps/flowmap-api",
+    "crates/adi-analytics-api",
+    "crates/adi-analytics-ingestion",
 ]
 members = [
     # CLI manager (submodule)
@@ -56,8 +58,6 @@ members = [
 
     # Analytics
     "crates/lib-analytics-core",
-    "crates/adi-analytics-ingestion",
-    "crates/adi-analytics-api",
 
     # Debug app (submodule)
     "crates/debug-metal-shader",
