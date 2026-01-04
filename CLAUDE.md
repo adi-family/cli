@@ -215,12 +215,74 @@ Analytics ingestion service needs:
 
 ## Apps
 - `apps/infra-service-web` - Web UI for ADI (Next.js + Tailwind CSS)
-- `apps/infra-service-auth` - Auth service deployment (docker-compose + adi-auth submodule)
-- `apps/infra-service-platform-backend` - Platform API deployment
-- `apps/infra-service-signaling` - Signaling server deployment
-- `apps/infra-service-analytics-ingestion` - Analytics ingestion service deployment
-- `apps/infra-service-analytics` - Analytics API deployment
-- `apps/infra-service-registry` - Plugin registry deployment
+- `apps/flowmap-api` - FlowMap HTTP API server for code flow visualization
+
+## Production Release Images
+All production services are built using **cross-compilation** for 10-20x faster builds than Docker.
+
+### Architecture
+**Fast Build Pipeline:**
+1. Cross-compile Rust binaries natively on macOS to Linux (x86_64-unknown-linux-musl)
+2. Copy pre-built binaries into minimal Alpine containers (~5MB vs 1GB+)
+3. Push to registry
+
+**Services:**
+- `adi-analytics-api` - Analytics API (metrics, dashboards)
+- `adi-analytics-ingestion` - Analytics event ingestion service
+- `adi-auth` - Authentication service (email + TOTP)
+- `adi-platform-api` - Unified Platform API
+- `tarminal-signaling-server` - WebSocket signaling server
+- `adi-plugin-registry` - Plugin registry HTTP server
+- `flowmap-api` - Code flow visualization API
+- `cocoon-manager` - Cocoon orchestration API
+
+Each release directory contains:
+- `Dockerfile` - Minimal Alpine image (copies pre-built binary)
+- `docker-compose.yml` - Production deployment with Traefik labels
+- `.env.example` - Environment variable template
+- `README.md` - Service documentation
+
+### Setup (one-time)
+```bash
+# 1. Install musl target for static Linux binaries
+rustup target add x86_64-unknown-linux-musl
+
+# 2. Install musl-cross toolchain (macOS) - REQUIRED
+brew install filosottile/musl-cross/musl-cross
+```
+
+**Why musl-cross is required:**
+- Provides `x86_64-linux-musl-gcc` linker
+- Needed for Rust crates with C dependencies (like ring, boring-ssl, etc.)
+- Without it, builds will fail with "tool not found" errors
+
+**Note:** The `.cargo/config.toml` file configures the linker automatically.
+
+### Build Release Images
+```bash
+# Build Linux binaries (native speed, persistent Cargo cache)
+./scripts/build-linux.sh all                    # Build all services
+./scripts/build-linux.sh adi-auth adi-platform  # Build specific services
+
+# Build Docker images + push (optional)
+./scripts/release-fast.sh all                   # Build all
+./scripts/release-fast.sh all --push            # Build + push to registry
+./scripts/release-fast.sh adi-auth --tag v1.0.0 # Build with custom tag
+```
+
+### Performance Benefits
+- ⚡ **10-20x faster**: Native build vs Docker emulation
+- 💾 **Persistent cache**: Cargo cache survives across builds
+- 📦 **Smaller images**: 5MB Alpine vs 1GB+ multi-stage
+- 🔄 **Parallel builds**: Build all services concurrently
+
+### Deploy to Production
+All services use Traefik for routing at `https://adi.the-ihor.com/api/*`:
+```bash
+cd release/adi.the-ihor.com/adi-auth
+cp .env.example .env  # Configure environment
+docker-compose up -d  # Deploy with Traefik
+```
 
 ## Setup
 ```bash
@@ -306,7 +368,7 @@ For faster iteration on specific services:
 cd crates/tarminal-signaling-server && cargo run
 
 # Terminal/pane 2: Auth service
-cd crates/adi-auth && cargo run -p adi-auth-http
+cd crates/adi-auth && DATABASE_URL=postgres://postgres:postgres@localhost/adi_auth cargo run -p adi-auth-http
 
 # Terminal/pane 3: Web UI
 cd apps/infra-service-web && npm run dev
@@ -329,6 +391,7 @@ SMTP_PORT=1025
 
 ### Configuration (.env.local)
 Key variables:
+- `DATABASE_URL` - PostgreSQL connection for auth (e.g., postgres://postgres:postgres@localhost/adi_auth)
 - `JWT_SECRET` - Auth token signing (min 32 chars)
 - `HMAC_SALT` - Device ID derivation for cocoon
 - `SMTP_*` - Email settings (optional for local dev)
