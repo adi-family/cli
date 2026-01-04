@@ -430,17 +430,29 @@ deploy_docker_image() {
 
     # Build Linux binaries first (new cross-compilation approach)
     info "Building Linux binaries via cross-compilation..."
+
+    # Find project root by traversing up from build_context
     local project_root
-    project_root="$(cd "$build_context" && pwd)"
-    if [ -f "$project_root/scripts/build-linux.sh" ]; then
-        "$project_root/scripts/build-linux.sh" "$image_name" || {
-            error "Failed to build Linux binaries for $image_name"
-            return 1
-        }
-    else
-        error "build-linux.sh not found at $project_root/scripts/build-linux.sh"
+    local current_dir
+    current_dir="$(cd "$build_context" && pwd)"
+
+    while [ "$current_dir" != "/" ]; do
+        if [ -f "$current_dir/scripts/build-linux.sh" ]; then
+            project_root="$current_dir"
+            break
+        fi
+        current_dir="$(cd "$current_dir/.." && pwd)"
+    done
+
+    if [ -z "$project_root" ]; then
+        error "Could not find project root (scripts/build-linux.sh not found)"
         return 1
     fi
+
+    "$project_root/scripts/build-linux.sh" "$image_name" || {
+        error "Failed to build Linux binaries for $image_name"
+        return 1
+    }
 
     # Build image with both tags (for linux/amd64 platform)
     info "Building Docker image for linux/amd64..."
