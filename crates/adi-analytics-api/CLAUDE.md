@@ -29,6 +29,9 @@ adi-analytics-api, rust, axum, timescaledb, analytics, metrics
 
 ## API Endpoints
 
+### Health
+- `GET /health` - Health check endpoint (returns `{"status": "ok"}`)
+
 ### Overview
 - `GET /api/analytics/overview` - Dashboard summary (DAU/WAU/MAU, tasks, cocoons, integrations)
 
