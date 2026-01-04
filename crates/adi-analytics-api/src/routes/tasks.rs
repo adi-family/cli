@@ -1,13 +1,35 @@
 use crate::models::{TaskStats, TaskStatsOverview, TimeRangeParams};
 use axum::{extract::{Query, State}, http::StatusCode, Json};
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
+use chrono::NaiveDate;
+
+#[derive(FromRow)]
+struct TaskStatsRow {
+    day: NaiveDate,
+    created: i64,
+    started: i64,
+    completed: i64,
+    failed: i64,
+    cancelled: i64,
+    avg_duration_ms: Option<f64>,
+    p95_duration_ms: Option<f64>,
+}
+
+#[derive(FromRow)]
+struct TaskStatsOverviewRow {
+    total_created: Option<i64>,
+    total_completed: Option<i64>,
+    total_failed: Option<i64>,
+    total_cancelled: Option<i64>,
+    avg_duration_ms: Option<f64>,
+}
 
 /// Get task statistics by day
 pub async fn get_task_stats_daily(
     Query(params): Query<TimeRangeParams>,
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<TaskStats>>, StatusCode> {
-    let rows = sqlx::query!(
+    let rows = sqlx::query_as::<_, TaskStatsRow>(
         r#"
         SELECT
             day,
@@ -22,9 +44,9 @@ pub async fn get_task_stats_daily(
         WHERE day >= $1 AND day <= $2
         ORDER BY day DESC
         "#,
-        params.start_date,
-        params.end_date,
     )
+    .bind(params.start_date)
+    .bind(params.end_date)
     .fetch_all(&pool)
     .await
     .map_err(|e| {
@@ -43,7 +65,7 @@ pub async fn get_task_stats_daily(
             };
 
             TaskStats {
-                day: row.day,
+                day: row.day.and_hms_opt(0, 0, 0).unwrap().and_utc(),
                 created: row.created,
                 started: row.started,
                 completed: row.completed,
@@ -64,7 +86,7 @@ pub async fn get_task_stats_overview(
     Query(params): Query<TimeRangeParams>,
     State(pool): State<PgPool>,
 ) -> Result<Json<TaskStatsOverview>, StatusCode> {
-    let row = sqlx::query!(
+    let row = sqlx::query_as::<_, TaskStatsOverviewRow>(
         r#"
         SELECT
             SUM(created)::BIGINT as total_created,
@@ -75,9 +97,9 @@ pub async fn get_task_stats_overview(
         FROM analytics_task_stats_daily
         WHERE day >= $1 AND day <= $2
         "#,
-        params.start_date,
-        params.end_date,
     )
+    .bind(params.start_date)
+    .bind(params.end_date)
     .fetch_one(&pool)
     .await
     .map_err(|e| {

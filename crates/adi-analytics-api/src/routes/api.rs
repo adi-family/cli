@@ -1,13 +1,29 @@
 use crate::models::{EndpointLatency, TimeRangeParams};
 use axum::{extract::{Query, State}, http::StatusCode, Json};
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
+use chrono::{DateTime, Utc};
+
+#[derive(FromRow)]
+struct EndpointLatencyRow {
+    hour: DateTime<Utc>,
+    service: String,
+    endpoint: Option<String>,
+    method: Option<String>,
+    request_count: i64,
+    avg_duration_ms: Option<f64>,
+    p50_duration_ms: Option<f64>,
+    p95_duration_ms: Option<f64>,
+    p99_duration_ms: Option<f64>,
+    error_4xx_count: Option<i64>,
+    error_5xx_count: Option<i64>,
+}
 
 /// Get API endpoint latency statistics
 pub async fn get_endpoint_latency(
     Query(params): Query<TimeRangeParams>,
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<EndpointLatency>>, StatusCode> {
-    let rows = sqlx::query!(
+    let rows = sqlx::query_as::<_, EndpointLatencyRow>(
         r#"
         SELECT
             hour,
@@ -26,9 +42,9 @@ pub async fn get_endpoint_latency(
         ORDER BY hour DESC, p99_duration_ms DESC
         LIMIT 1000
         "#,
-        params.start_date,
-        params.end_date,
     )
+    .bind(params.start_date)
+    .bind(params.end_date)
     .fetch_all(&pool)
     .await
     .map_err(|e| {
@@ -60,7 +76,7 @@ pub async fn get_endpoint_latency(
 pub async fn get_slowest_endpoints(
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<EndpointLatency>>, StatusCode> {
-    let rows = sqlx::query!(
+    let rows = sqlx::query_as::<_, EndpointLatencyRow>(
         r#"
         SELECT
             hour,
@@ -78,7 +94,7 @@ pub async fn get_slowest_endpoints(
         WHERE hour >= NOW() - INTERVAL '24 hours'
         ORDER BY p99_duration_ms DESC
         LIMIT 10
-        "#
+        "#,
     )
     .fetch_all(&pool)
     .await

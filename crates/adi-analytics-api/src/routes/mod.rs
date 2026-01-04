@@ -3,11 +3,17 @@ pub mod overview;
 pub mod tasks;
 pub mod users;
 
-use axum::{routing::get, Router};
+use axum::{response::IntoResponse, routing::get, Json, Router};
 use sqlx::PgPool;
+
+async fn health_check() -> impl IntoResponse {
+    Json(serde_json::json!({ "status": "ok" }))
+}
 
 pub fn create_router(pool: PgPool) -> Router {
     Router::new()
+        // Health check
+        .route("/health", get(health_check))
         // Overview
         .route("/api/analytics/overview", get(overview::get_overview))
         // Users

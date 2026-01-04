@@ -1,6 +1,14 @@
 use crate::models::OverviewStats;
 use axum::{extract::State, http::StatusCode, Json};
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
+
+#[derive(FromRow)]
+struct TaskStatsRow {
+    total_tasks: Option<i64>,
+    tasks_today: Option<i64>,
+    total_completed: Option<i64>,
+    total_failed: Option<i64>,
+}
 
 /// Get overview statistics (dashboard summary)
 pub async fn get_overview(
@@ -68,7 +76,7 @@ pub async fn get_overview(
     })?;
 
     // Task stats
-    let task_row = sqlx::query!(
+    let task_row = sqlx::query_as::<_, TaskStatsRow>(
         r#"
         SELECT
             SUM(created)::BIGINT as total_tasks,
@@ -76,7 +84,7 @@ pub async fn get_overview(
             SUM(completed)::BIGINT as total_completed,
             SUM(failed)::BIGINT as total_failed
         FROM analytics_task_stats_daily
-        "#
+        "#,
     )
     .fetch_one(&pool)
     .await
