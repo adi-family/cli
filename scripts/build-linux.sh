@@ -60,11 +60,20 @@ build_service() {
 
     info "Building $service (linux/amd64)"
 
-    # Check if crate has its own workspace (has Cargo.toml with [workspace])
+    # Check if crate is standalone (has [workspace] or is excluded from root workspace)
     local crate_dir="$PROJECT_ROOT/$crate_path"
-    local has_workspace=false
+    local is_standalone=false
+
+    # Check if crate has its own [workspace] section
     if [[ -f "$crate_dir/Cargo.toml" ]] && grep -q '^\[workspace\]' "$crate_dir/Cargo.toml"; then
-        has_workspace=true
+        is_standalone=true
+    fi
+
+    # Check if crate is excluded from root workspace
+    if [[ -f "$PROJECT_ROOT/Cargo.toml" ]] && grep -A 10 '^\[workspace\]' "$PROJECT_ROOT/Cargo.toml" | grep -q "\"$crate_path\""; then
+        if grep -A 10 'exclude = \[' "$PROJECT_ROOT/Cargo.toml" | grep -q "\"$crate_path\""; then
+            is_standalone=true
+        fi
     fi
 
     # Build all binaries for this service
@@ -76,8 +85,8 @@ build_service() {
         export CC_x86_64_unknown_linux_musl=x86_64-linux-musl-gcc
         export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-musl-gcc
 
-        if [[ "$has_workspace" == "true" ]]; then
-            # Standalone workspace: build from crate directory
+        if [[ "$is_standalone" == "true" ]]; then
+            # Standalone crate: build from crate directory
             cd "$crate_dir"
             cargo build --release --target x86_64-unknown-linux-musl --bin "$binary"
         else
@@ -97,8 +106,8 @@ build_service() {
     local release_dir="$PROJECT_ROOT/release/adi.the-ihor.com/$service"
     if [[ -d "$release_dir" ]]; then
         for binary in "${BINS[@]}"; do
-            if [[ "$has_workspace" == "true" ]]; then
-                # Standalone workspace: binary is in crate's target dir
+            if [[ "$is_standalone" == "true" ]]; then
+                # Standalone crate: binary is in crate's target dir
                 cp "$crate_dir/target/x86_64-unknown-linux-musl/release/$binary" "$release_dir/"
             else
                 # Workspace member: binary is in workspace root target dir
