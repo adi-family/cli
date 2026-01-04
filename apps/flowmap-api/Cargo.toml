@@ -22,3 +22,6 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = "2.0"
 walkdir = "2.5"
+
+# Enable vendored OpenSSL for cross-compilation
+openssl = { version = "0.10", features = ["vendored"] }
