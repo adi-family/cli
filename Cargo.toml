@@ -108,6 +108,7 @@ members = [
     "crates/lib-typespec-api",
 
     # Core plugins
+    "crates/adi-embed-plugin",
     "crates/adi-indexer-plugin",
     "crates/adi-tasks-plugin",
     "crates/adi-knowledgebase-plugin",
