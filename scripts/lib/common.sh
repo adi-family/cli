@@ -396,15 +396,16 @@ docker_image_exists() {
 }
 
 # Build and push Docker image with version and latest tags
-# Usage: deploy_docker_image <registry> <image_name> <version> [dockerfile] [build_context]
+# Usage: deploy_docker_image <registry> <image_name> <version> [dockerfile] [build_context] [force]
 # Example: deploy_docker_image "registry.example.com" "my-app" "1.2.3"
-# Example: deploy_docker_image "registry.example.com" "my-app" "1.2.3" "Dockerfile" "."
+# Example: deploy_docker_image "registry.example.com" "my-app" "1.2.3" "Dockerfile" "." "force"
 deploy_docker_image() {
     local registry="$1"
     local image_name="$2"
     local version="$3"
     local dockerfile="${4:-Dockerfile}"
     local build_context="${5:-.}"
+    local force="${6:-}"
 
     require_value "$registry" "Registry is required"
     require_value "$image_name" "Image name is required"
@@ -414,14 +415,32 @@ deploy_docker_image() {
     local image_tag="$registry/$image_name:$version"
     local latest_tag="$registry/$image_name:latest"
 
-    # Check if image already exists
-    if docker_image_exists "$image_tag"; then
+    # Check if image already exists (unless force is set)
+    if [ "$force" != "force" ] && docker_image_exists "$image_tag"; then
         success "Image already exists in registry: $image_tag"
-        warn "Skipping build"
+        warn "Skipping build (use --force to rebuild)"
         return 0
     fi
 
-    info "Image not found in registry, building..."
+    if [ "$force" = "force" ]; then
+        info "Force rebuild enabled, building..."
+    else
+        info "Image not found in registry, building..."
+    fi
+
+    # Build Linux binaries first (new cross-compilation approach)
+    info "Building Linux binaries via cross-compilation..."
+    local project_root
+    project_root="$(cd "$build_context" && pwd)"
+    if [ -f "$project_root/scripts/build-linux.sh" ]; then
+        "$project_root/scripts/build-linux.sh" "$image_name" || {
+            error "Failed to build Linux binaries for $image_name"
+            return 1
+        }
+    else
+        error "build-linux.sh not found at $project_root/scripts/build-linux.sh"
+        return 1
+    fi
 
     # Build image with both tags (for linux/amd64 platform)
     info "Building Docker image for linux/amd64..."
