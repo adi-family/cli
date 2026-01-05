@@ -52,6 +52,11 @@ CHECKS PERFORMED:
     - Binary section matches actual library file
     - Version format (semver)
     - Service declarations in [[provides]]
+    - CLI configuration in [cli] (if present):
+      - command: required, lowercase alphanumeric with hyphens
+      - description: required, min 10 chars
+      - aliases: optional, must be array format
+    - Cross-check: [cli] should have matching .cli service
     - Platform compatibility
     - Min host version compatibility
 EOF
@@ -320,6 +325,73 @@ type = "'"$detected_type"'"
                     success "  Service: $svc_id"
                 fi
             done
+        fi
+    fi
+
+    # Check [cli] section (optional - for plugins that provide CLI commands)
+    section "Checking CLI configuration"
+
+    if has_toml_section "$manifest" "cli"; then
+        success "[cli] section present"
+
+        # Extract cli values from [cli] section
+        local cli_command cli_description
+
+        cli_command=$(sed -n '/^\[cli\]/,/^\[/p' "$manifest" | grep "^command" | sed 's/^[^=]*=//' | xargs | sed 's/^"\(.*\)"$/\1/' || true)
+        cli_description=$(sed -n '/^\[cli\]/,/^\[/p' "$manifest" | grep "^description" | sed 's/^[^=]*=//' | xargs | sed 's/^"\(.*\)"$/\1/' || true)
+
+        # Check command (required if [cli] exists)
+        if [[ -z "$cli_command" ]]; then
+            error "[cli] section missing required field: command"
+        elif [[ ! "$cli_command" =~ ^[a-z][a-z0-9-]*$ ]]; then
+            error "Invalid CLI command name: '$cli_command' (must be lowercase alphanumeric with hyphens)"
+        else
+            success "cli.command: $cli_command"
+        fi
+
+        # Check description (required if [cli] exists)
+        if [[ -z "$cli_description" ]]; then
+            error "[cli] section missing required field: description"
+        elif [[ ${#cli_description} -lt 10 ]]; then
+            warn "CLI description is very short (${#cli_description} chars)"
+        else
+            success "cli.description: ${cli_description:0:50}..."
+        fi
+
+        # Check aliases format if present
+        local cli_aliases_line
+        cli_aliases_line=$(sed -n '/^\[cli\]/,/^\[/p' "$manifest" | grep "^aliases" || true)
+        if [[ -n "$cli_aliases_line" ]]; then
+            # Basic check - should be array format
+            if [[ "$cli_aliases_line" =~ \[.*\] ]]; then
+                success "cli.aliases: present"
+            else
+                error "cli.aliases should be an array (e.g., aliases = [\"t\"])"
+            fi
+        fi
+
+        # Cross-check: if [cli] exists, should have .cli service in [[provides]]
+        if has_toml_array_section "$manifest" "provides"; then
+            local has_cli_service
+            has_cli_service=$(grep -E 'id.*=.*".*\.cli"' "$manifest" || true)
+            if [[ -z "$has_cli_service" ]]; then
+                warn "[cli] section exists but no .cli service in [[provides]]"
+                warn "Add: [[provides]] with id = \"${plugin_id}.cli\""
+            fi
+        fi
+    else
+        # No [cli] section - check if plugin provides .cli service (inconsistency)
+        if has_toml_array_section "$manifest" "provides"; then
+            local has_cli_service
+            has_cli_service=$(grep -E 'id.*=.*".*\.cli"' "$manifest" || true)
+            if [[ -n "$has_cli_service" ]]; then
+                warn "Plugin provides .cli service but has no [cli] section"
+                warn "Add [cli] section to register top-level command"
+            else
+                info "No [cli] section (plugin has no CLI command)"
+            fi
+        else
+            info "No [cli] section (plugin has no CLI command)"
         fi
     fi
 
