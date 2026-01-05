@@ -548,6 +548,58 @@ dependencies = [
 ]
 
 [[package]]
+name = "adi-linter-cli"
+version = "0.8.4"
+dependencies = [
+ "adi-linter-core",
+ "anyhow",
+ "clap",
+ "console",
+ "lib-cli-common",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "adi-linter-core"
+version = "0.8.4"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures",
+ "glob",
+ "globset",
+ "hex",
+ "ignore",
+ "num_cpus",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tokio",
+ "toml",
+ "tracing",
+ "walkdir",
+]
+
+[[package]]
+name = "adi-linter-plugin"
+version = "0.8.8"
+dependencies = [
+ "abi_stable",
+ "adi-linter-core",
+ "lib-plugin-abi",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "adi-plugin-registry"
 version = "0.8.4"
 dependencies = [

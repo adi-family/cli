@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 license = "BSL-1.0"
 
+[workspace]
+
 [[bin]]
 name = "adi-analytics-api"
 path = "src/main.rs"

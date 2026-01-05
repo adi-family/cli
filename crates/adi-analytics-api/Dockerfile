@@ -1,26 +1,21 @@
-FROM rust:1.85-alpine AS builder
-
-# Install build dependencies
-RUN apk add --no-cache musl-dev
+FROM rust:alpine AS builder
 
 WORKDIR /build
 
-# Copy analytics core library
-COPY crates/lib-analytics-core ./crates/lib-analytics-core
+# Copy dependency first (at same level as service for relative path to work)
+COPY lib-analytics-core ./lib-analytics-core
 
 # Copy analytics API
-COPY crates/adi-analytics-api ./crates/adi-analytics-api
+COPY adi-analytics-api ./adi-analytics-api
 
-# Build
-WORKDIR /build/crates/adi-analytics-api
-RUN cargo build --release
+WORKDIR /build/adi-analytics-api
+RUN apk add --no-cache musl-dev && cargo build --release
 
-# Runtime image
 FROM alpine:latest
 
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates curl
 
-COPY --from=builder /build/crates/adi-analytics-api/target/release/adi-analytics-api /usr/local/bin/
+COPY --from=builder /build/adi-analytics-api/target/release/adi-analytics-api /usr/local/bin/
 
 EXPOSE 8093
 

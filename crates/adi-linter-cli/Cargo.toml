@@ -1,0 +1,22 @@
+[package]
+name = "adi-linter-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "CLI tool for ADI Linter - language-agnostic code linting"
+
+[[bin]]
+name = "adi-linter"
+path = "src/main.rs"
+
+[dependencies]
+adi-linter-core = { path = "../adi-linter-core" }
+lib-cli-common = { path = "../lib-cli-common" }
+anyhow.workspace = true
+clap = { workspace = true, features = ["derive"] }
+console.workspace = true
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+tracing.workspace = true

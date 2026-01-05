@@ -1,0 +1,50 @@
+# Build artifacts
+target/
+**/target/
+
+# Git
+.git/
+.gitignore
+.gitmodules
+**/.git/
+
+# Node
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Documentation
+*.md
+!CLAUDE.md
+!README.md
+
+# Release artifacts
+release/
+**/release/
+
+# Test artifacts
+coverage/
+.nyc_output/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Temp files
+*.tmp
+*.log
+*.cache

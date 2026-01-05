@@ -1,8 +1,9 @@
 use lib_analytics_core::EnrichedEvent;
 use sqlx::{PgPool, Postgres, QueryBuilder};
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 /// Database writer for analytics events
+#[derive(Clone)]
 pub struct EventWriter {
     db_pool: PgPool,
 }
