@@ -73,6 +73,7 @@ members = [
     "crates/lib-client-openai",
     "crates/lib-client-ollama",
     "crates/lib-client-openrouter",
+    "crates/lib-client-uzu",
     "crates/lib-client-google-auth",
     "crates/lib-client-gemini",
     "crates/lib-client-linear",
@@ -162,6 +163,7 @@ lib-client-anthropic = { path = "crates/lib-client-anthropic" }
 lib-client-openai = { path = "crates/lib-client-openai" }
 lib-client-ollama = { path = "crates/lib-client-ollama" }
 lib-client-openrouter = { path = "crates/lib-client-openrouter" }
+lib-client-uzu = { path = "crates/lib-client-uzu" }
 lib-client-google-auth = { path = "crates/lib-client-google-auth" }
 lib-client-gemini = { path = "crates/lib-client-gemini" }
 lib-client-linear = { path = "crates/lib-client-linear" }
