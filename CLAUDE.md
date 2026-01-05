@@ -51,6 +51,7 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/lib-iced-ui` - Reusable iced UI components
 - `crates/lib-client-github` - GitHub API client library
 - `crates/lib-client-openrouter` - OpenRouter API client library
+- `crates/lib-client-uzu` - Uzu inference engine client library for Apple Silicon
 - `crates/lib-tarminal-sync` - Client-agnostic sync protocol for Tarminal
 - `crates/tarminal-signaling-server` - WebSocket signaling server for device pairing
 - `crates/adi-platform-api` - Unified Platform API (tasks, integrations, orchestration)

@@ -178,3 +178,6 @@
 [submodule "release/adi.the-ihor.com"]
 	path = release/adi.the-ihor.com
 	url = git@github.com:adi-family/adi.the-ihor.com.git
+[submodule "crates/lib-client-uzu"]
+	path = crates/lib-client-uzu
+	url = https://github.com/adi-family/lib-client-uzu.git
