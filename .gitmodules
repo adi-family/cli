@@ -181,3 +181,6 @@
 [submodule "crates/lib-client-uzu"]
 	path = crates/lib-client-uzu
 	url = https://github.com/adi-family/lib-client-uzu.git
+[submodule "crates/adi-llm-uzu-plugin"]
+	path = crates/adi-llm-uzu-plugin
+	url = https://github.com/adi-family/adi-llm-uzu-plugin.git

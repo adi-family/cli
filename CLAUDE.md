@@ -51,7 +51,6 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/lib-iced-ui` - Reusable iced UI components
 - `crates/lib-client-github` - GitHub API client library
 - `crates/lib-client-openrouter` - OpenRouter API client library
-- `crates/lib-client-uzu` - Uzu inference engine client library for Apple Silicon
 - `crates/lib-tarminal-sync` - Client-agnostic sync protocol for Tarminal
 - `crates/tarminal-signaling-server` - WebSocket signaling server for device pairing
 - `crates/adi-platform-api` - Unified Platform API (tasks, integrations, orchestration)
@@ -213,6 +212,20 @@ Analytics ingestion service needs:
 - Provides isolated execution environment for running commands remotely
 - Replaces file-based execution with real-time WebSocket communication
 - Used by adi-executor to run tasks in Docker containers with live command streaming
+
+## Uzu LLM Plugin (Apple Silicon only)
+- `crates/adi-llm-uzu-plugin` - Local LLM inference plugin for Apple Silicon
+- `crates/lib-client-uzu` - Uzu inference engine client library (dependency)
+- **Distribution**: Pre-built binaries via plugin registry
+- **Installation**: `adi plugin install adi.llm.uzu`
+- **Performance**: ~35 tokens/sec on M2 (Llama-3.2-1B)
+- **Requirements**: macOS with Apple Silicon (M1/M2/M3+)
+- **Build Requirements** (for developers only):
+  - Metal Toolchain: `xcodebuild -downloadComponent MetalToolchain`
+  - Excluded from default workspace builds
+- **Usage**: `adi llm-uzu load <model> && adi llm-uzu generate <model> <prompt>`
+- **Alternative to**: Ollama for maximum performance on Apple Silicon
+- **Privacy**: 100% local inference, no API calls
 
 ## Apps
 - `apps/infra-service-web` - Web UI for ADI (Next.js + Tailwind CSS)
