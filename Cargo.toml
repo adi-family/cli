@@ -19,6 +19,7 @@ members = [
     "crates/lib-migrations",
     "crates/lib-typespec-api",
     "crates/lib-task-store",
+    "crates/lib-i18n-core",
 
     # Indexer components (flat submodules)
     "crates/lib-embed",
@@ -123,6 +124,9 @@ members = [
     "crates/adi-agent-loop-plugin",
     "crates/adi-linter-plugin",
 
+    # Translation plugins
+    "crates/adi-cli-lang-en",
+
 ]
 
 # FlowMap is standalone (not in workspace) - build with:
@@ -208,7 +212,7 @@ thiserror = "2"
 anyhow = "1.0"
 
 # Async runtime
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.49", features = ["full"] }
 async-trait = "0.1"
 
 # Serialization
@@ -217,7 +221,7 @@ serde_json = "1.0"
 toml = "0.8"
 
 # CLI
-clap = { version = "4.0", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
 indicatif = "0.17"
 console = "0.15"
 dialoguer = "0.11"
@@ -233,7 +237,7 @@ zip = "0.6"
 # File system
 dirs = "5"
 directories = "5.0"
-walkdir = "2.4"
+walkdir = "2.5"
 ignore = "0.4"
 notify = { version = "6.1", features = ["serde"] }
 fs2 = "0.4"
@@ -278,10 +282,10 @@ tree-sitter-zig = "1.1"
 # Storage
 rusqlite = { version = "0.31", features = ["bundled"] }
 memmap2 = "0.9"
-bytemuck = { version = "1.14", features = ["derive"] }
+bytemuck = { version = "1.24", features = ["derive"] }
 
 # Vector search
-usearch = "2.8"
+usearch = "2.23"
 
 # Embedding
 fastembed = "4"
@@ -296,7 +300,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Misc
-uuid = { version = "1.0", features = ["v4", "serde"] }
+uuid = { version = "1.19", features = ["v4", "serde"] }
 sha2 = "0.10"
 hex = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
