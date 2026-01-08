@@ -100,17 +100,17 @@ members = [
 
     # Indexer language plugins
     "crates/lib-indexer-lang-abi",
-    "crates/adi-lang-rust/plugin",
-    "crates/adi-lang-python/plugin",
-    "crates/adi-lang-typescript/plugin",
-    "crates/adi-lang-cpp/plugin",
-    "crates/adi-lang-go/plugin",
-    "crates/adi-lang-java/plugin",
-    "crates/adi-lang-csharp/plugin",
-    "crates/adi-lang-ruby/plugin",
-    "crates/adi-lang-php/plugin",
-    "crates/adi-lang-swift/plugin",
-    "crates/adi-lang-lua/plugin",
+    "crates/adi-lang/rust/plugin",
+    "crates/adi-lang/python/plugin",
+    "crates/adi-lang/typescript/plugin",
+    "crates/adi-lang/cpp/plugin",
+    "crates/adi-lang/go/plugin",
+    "crates/adi-lang/java/plugin",
+    "crates/adi-lang/csharp/plugin",
+    "crates/adi-lang/ruby/plugin",
+    "crates/adi-lang/php/plugin",
+    "crates/adi-lang/swift/plugin",
+    "crates/adi-lang/lua/plugin",
 
     # TypeSpec API generator
     "crates/lib-typespec-api",

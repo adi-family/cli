@@ -52,17 +52,17 @@ get_plugin_crate() {
         indexer|adi-indexer) echo "crates/adi-indexer-plugin" ;;
         knowledgebase|adi-knowledgebase) echo "crates/adi-knowledgebase-plugin" ;;
         tasks|adi-tasks) echo "crates/adi-tasks-plugin" ;;
-        lang-cpp|adi-lang-cpp) echo "crates/adi-lang-cpp" ;;
-        lang-csharp|adi-lang-csharp) echo "crates/adi-lang-csharp" ;;
-        lang-go|adi-lang-go) echo "crates/adi-lang-go" ;;
-        lang-java|adi-lang-java) echo "crates/adi-lang-java" ;;
-        lang-lua|adi-lang-lua) echo "crates/adi-lang-lua" ;;
-        lang-php|adi-lang-php) echo "crates/adi-lang-php" ;;
-        lang-python|adi-lang-python) echo "crates/adi-lang-python" ;;
-        lang-ruby|adi-lang-ruby) echo "crates/adi-lang-ruby" ;;
-        lang-rust|adi-lang-rust) echo "crates/adi-lang-rust" ;;
-        lang-swift|adi-lang-swift) echo "crates/adi-lang-swift" ;;
-        lang-typescript|adi-lang-typescript) echo "crates/adi-lang-typescript" ;;
+        lang-cpp|adi-lang-cpp) echo "crates/adi-lang/cpp" ;;
+        lang-csharp|adi-lang-csharp) echo "crates/adi-lang/csharp" ;;
+        lang-go|adi-lang-go) echo "crates/adi-lang/go" ;;
+        lang-java|adi-lang-java) echo "crates/adi-lang/java" ;;
+        lang-lua|adi-lang-lua) echo "crates/adi-lang/lua" ;;
+        lang-php|adi-lang-php) echo "crates/adi-lang/php" ;;
+        lang-python|adi-lang-python) echo "crates/adi-lang/python" ;;
+        lang-ruby|adi-lang-ruby) echo "crates/adi-lang/ruby" ;;
+        lang-rust|adi-lang-rust) echo "crates/adi-lang/rust" ;;
+        lang-swift|adi-lang-swift) echo "crates/adi-lang/swift" ;;
+        lang-typescript|adi-lang-typescript) echo "crates/adi-lang/typescript" ;;
         embed|adi-embed) echo "crates/adi-embed-plugin" ;;
         *) echo "" ;;
     esac

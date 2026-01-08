@@ -66,6 +66,10 @@ main() {
         for plugin_spec in "${PLUGINS[@]}"; do
             IFS=':' read -r crate_name _ _ _ <<< "$plugin_spec"
             local manifest="$ROOT_DIR/crates/$crate_name/plugin.toml"
+            # Handle new adi-lang structure
+            case "$crate_name" in
+                adi-lang-*) manifest="$ROOT_DIR/crates/adi-lang/${crate_name#adi-lang-}/plugin/plugin.toml" ;;
+            esac
             if [ -f "$manifest" ]; then
                 sed -i '' "s/^version = \"$current_version\"/version = \"$version\"/" "$manifest"
             fi
@@ -107,9 +111,15 @@ main() {
             continue
         fi
 
+        # Map crate name to directory path
+        local crate_dir="$ROOT_DIR/crates/$crate_name"
+        case "$crate_name" in
+            adi-lang-*) crate_dir="$ROOT_DIR/crates/adi-lang/${crate_name#adi-lang-}/plugin" ;;
+        esac
+
         # Check if crate exists
-        if [ ! -d "$ROOT_DIR/crates/$crate_name" ]; then
-            warn "Skipping $crate_name (not found)"
+        if [ ! -d "$crate_dir" ]; then
+            warn "Skipping $crate_name (not found at $crate_dir)"
             continue
         fi
 
@@ -125,7 +135,7 @@ main() {
         # Package
         local lib_name="lib${crate_name//-/_}.$lib_ext"
         local lib_path="$ROOT_DIR/target/release/$lib_name"
-        local manifest_path="$ROOT_DIR/crates/$crate_name/plugin.toml"
+        local manifest_path="$crate_dir/plugin.toml"
 
         if [ ! -f "$lib_path" ]; then
             warn "Library not found: $lib_path"
