@@ -46,9 +46,8 @@ members = [
     "crates/adi-knowledgebase-http",
 
     # Agent Loop components
-    "crates/adi-agent-loop-core",
-    "crates/adi-agent-loop-cli",
-    "crates/adi-agent-loop-http",
+    "crates/adi-agent-loop/core",
+    "crates/adi-agent-loop/http",
 
     # Tarminal components (flat submodules)
     "crates/lib-misc-color",
@@ -121,12 +120,19 @@ members = [
     "crates/adi-indexer-plugin",
     "crates/adi-tasks-plugin",
     "crates/adi-knowledgebase-plugin",
-    "crates/adi-agent-loop-plugin",
+    "crates/adi-agent-loop/plugin",
     "crates/adi-linter-plugin",
 
     # Translation plugins
-    "crates/adi-cli-lang-en",
-
+    "crates/adi-cli/plugins/en-US",
+    "crates/adi-cli/plugins/zh-CN",
+    "crates/adi-cli/plugins/uk-UA",
+    "crates/adi-cli/plugins/es-ES",
+    "crates/adi-cli/plugins/fr-FR",
+    "crates/adi-cli/plugins/de-DE",
+    "crates/adi-cli/plugins/ja-JP",
+    "crates/adi-cli/plugins/ko-KR",
+    "crates/adi-cli/plugins/ru-RU",
 ]
 
 # FlowMap is standalone (not in workspace) - build with:
@@ -146,7 +152,7 @@ authors = ["ADI Team"]
 adi-indexer-core = { path = "crates/adi-indexer-core" }
 adi-tasks-core = { path = "crates/adi-tasks-core" }
 adi-knowledgebase-core = { path = "crates/adi-knowledgebase-core" }
-adi-agent-loop-core = { path = "crates/adi-agent-loop-core" }
+adi-agent-loop-core = { path = "crates/adi-agent-loop/core" }
 adi-auth-core = { path = "crates/adi-auth-core" }
 adi-linter-core = { path = "crates/adi-linter-core" }
 

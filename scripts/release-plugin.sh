@@ -48,7 +48,7 @@ get_plugin_crate() {
     local name="$1"
     case "$name" in
         cocoon) echo "crates/cocoon" ;;
-        agent-loop|adi-agent-loop) echo "crates/adi-agent-loop-plugin" ;;
+        agent-loop|adi-agent-loop) echo "crates/adi-agent-loop/plugin" ;;
         indexer|adi-indexer) echo "crates/adi-indexer-plugin" ;;
         knowledgebase|adi-knowledgebase) echo "crates/adi-knowledgebase-plugin" ;;
         tasks|adi-tasks) echo "crates/adi-tasks-plugin" ;;

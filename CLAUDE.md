@@ -5,9 +5,6 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - Build all components: `cargo build --workspace`
 - License: BSL-1.0
 
-## Resources
-- Icons: https://phosphoricons.com
-
 ## Bash Script Libraries
 - Located in `scripts/lib/` with reusable utilities
 - `common.sh` provides requirement checking functions:
@@ -19,8 +16,37 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - See `scripts/lib/README.md` for full documentation
 
 ## Code Guidelines
-- NEVER use emojis in code - use Phosphor icons from https://phosphoricons.com instead
-- All icons must be Phosphor unicode glyphs rendered with ICON_FONT
+- For translations and internationalization, prefer Fluent (https://projectfluent.org/)
+- Translation plugin system: See `docs/i18n-translation-plugin-system.md` for architecture and implementation guide
+- Translation plugins follow naming pattern: `[plugin-id].[language-code]` (e.g., `adi.tasks.en-US`, `adi.tasks.zh-CN`)
+
+## Internationalization (i18n)
+
+### Status
+- ✅ Phase 1: Core infrastructure (`lib-i18n-core`) - Complete
+- ✅ Phase 2: English translation plugin (`adi-cli-lang-en`) - Complete
+- ✅ Phase 3: Integration into `adi-cli` - Complete (96+ messages converted)
+- ⏳ Phase 4: Testing & documentation - Pending
+
+### Implementation Progress
+See `NEXT_STEPS_I18N.md` for detailed status and remaining work.
+
+### Architecture
+- **lib-i18n-core**: Core library with Fluent integration, service discovery, and global `t!()` macro
+- **Translation plugins**: Dynamic plugins that provide `.ftl` message files
+  - `adi-cli-lang-en`: English translations (~100 messages across 7 domains)
+  - Future: `adi-cli-lang-zh-CN`, `adi-cli-lang-uk-UA`, etc.
+- **Service-based discovery**: Plugins register translation services, discovered at runtime
+
+### Message Domains
+1. Self-update (11 messages) - Update checking and installation
+2. Shell completions (7 messages) - Completion initialization
+3. Plugin management (25 messages) - Install, update, uninstall
+4. Search (5 messages) - Registry search
+5. Services (3 messages) - Service listing
+6. Run commands (8 messages) - Plugin execution
+7. External commands (9 messages) - Dynamic command dispatch
+8. Common (9 messages) - Shared UI elements
 
 ## Submodules
 - `crates/adi-cli` - Component installer/manager
@@ -36,9 +62,9 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - `crates/adi-knowledgebase-core` - Knowledgebase core library (graph DB + embeddings)
 - `crates/adi-knowledgebase-cli` - Knowledgebase CLI
 - `crates/adi-knowledgebase-http` - Knowledgebase HTTP server
-- `crates/adi-agent-loop-core` - Agent loop core library (autonomous LLM agents)
-- `crates/adi-agent-loop-cli` - Agent loop CLI
-- `crates/adi-agent-loop-http` - Agent loop HTTP server
+- `crates/adi-agent-loop/core` - Agent loop core library (autonomous LLM agents)
+- `crates/adi-agent-loop/http` - Agent loop HTTP server
+- `crates/adi-agent-loop/plugin` - Agent loop plugin (includes CLI functionality)
 - `crates/adi-executor` - Docker-based task execution service
 - `crates/cocoon` - Containerized worker with signaling server connectivity for remote command execution
 - `crates/cocoon-manager` - REST API for on-demand cocoon container orchestration
