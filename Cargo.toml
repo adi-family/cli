@@ -33,8 +33,8 @@ members = [
     "crates/adi-tasks-http",
 
     # Linter components
-    "crates/adi-linter-core",
-    "crates/adi-linter-cli",
+    "crates/adi-linter/core",
+    "crates/adi-linter/cli",
 
     # Auth components
     "crates/adi-auth-core",
@@ -100,17 +100,17 @@ members = [
 
     # Indexer language plugins
     "crates/lib-indexer-lang-abi",
-    "crates/adi-lang-rust",
-    "crates/adi-lang-python",
-    "crates/adi-lang-typescript",
-    "crates/adi-lang-cpp",
-    "crates/adi-lang-go",
-    "crates/adi-lang-java",
-    "crates/adi-lang-csharp",
-    "crates/adi-lang-ruby",
-    "crates/adi-lang-php",
-    "crates/adi-lang-swift",
-    "crates/adi-lang-lua",
+    "crates/adi-lang-rust/plugin",
+    "crates/adi-lang-python/plugin",
+    "crates/adi-lang-typescript/plugin",
+    "crates/adi-lang-cpp/plugin",
+    "crates/adi-lang-go/plugin",
+    "crates/adi-lang-java/plugin",
+    "crates/adi-lang-csharp/plugin",
+    "crates/adi-lang-ruby/plugin",
+    "crates/adi-lang-php/plugin",
+    "crates/adi-lang-swift/plugin",
+    "crates/adi-lang-lua/plugin",
 
     # TypeSpec API generator
     "crates/lib-typespec-api",
@@ -121,7 +121,7 @@ members = [
     "crates/adi-tasks-plugin",
     "crates/adi-knowledgebase-plugin",
     "crates/adi-agent-loop/plugin",
-    "crates/adi-linter-plugin",
+    "crates/adi-linter/plugin",
 
     # Translation plugins
     "crates/adi-cli/plugins/en-US",
@@ -154,7 +154,7 @@ adi-tasks-core = { path = "crates/adi-tasks-core" }
 adi-knowledgebase-core = { path = "crates/adi-knowledgebase-core" }
 adi-agent-loop-core = { path = "crates/adi-agent-loop/core" }
 adi-auth-core = { path = "crates/adi-auth-core" }
-adi-linter-core = { path = "crates/adi-linter-core" }
+adi-linter-core = { path = "crates/adi-linter/core" }
 
 # Libraries (flat submodules)
 lib-misc-color = { path = "crates/lib-misc-color" }
