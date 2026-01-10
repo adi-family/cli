@@ -139,3 +139,49 @@ pub struct OverviewStats {
     pub active_cocoons: i64,
     pub total_integrations: i64,
 }
+
+// ===== Internal Row Types for Queries =====
+
+#[derive(FromRow)]
+pub(crate) struct EndpointLatencyRow {
+    pub hour: DateTime<Utc>,
+    pub service: String,
+    pub endpoint: Option<String>,
+    pub method: Option<String>,
+    pub request_count: i64,
+    pub avg_duration_ms: Option<f64>,
+    pub p50_duration_ms: Option<f64>,
+    pub p95_duration_ms: Option<f64>,
+    pub p99_duration_ms: Option<f64>,
+    pub error_4xx_count: Option<i64>,
+    pub error_5xx_count: Option<i64>,
+}
+
+#[derive(FromRow)]
+pub(crate) struct TaskStatsRow {
+    pub day: chrono::NaiveDate,
+    pub created: i64,
+    pub started: i64,
+    pub completed: i64,
+    pub failed: i64,
+    pub cancelled: i64,
+    pub avg_duration_ms: Option<f64>,
+    pub p95_duration_ms: Option<f64>,
+}
+
+#[derive(FromRow)]
+pub(crate) struct TaskStatsOverviewRow {
+    pub total_created: Option<i64>,
+    pub total_completed: Option<i64>,
+    pub total_failed: Option<i64>,
+    pub total_cancelled: Option<i64>,
+    pub avg_duration_ms: Option<f64>,
+}
+
+#[derive(FromRow)]
+pub(crate) struct OverviewTaskStatsRow {
+    pub total_tasks: Option<i64>,
+    pub tasks_today: Option<i64>,
+    pub total_completed: Option<i64>,
+    pub total_failed: Option<i64>,
+}

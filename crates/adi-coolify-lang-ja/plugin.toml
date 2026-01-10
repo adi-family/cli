@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.coolify.ja-JP"
+name = "ADI Coolify - 日本語"
+version = "0.8.4"
+type = "translation"
+author = "ADI Team"
+description = "Japanese translations for ADI Coolify plugin"
+min_host_version = "0.8.0"
+
+[translation]
+translates = "adi.coolify"
+language = "ja-JP"
+language_name = "日本語"
+namespace = "coolify"
+
+[[provides]]
+id = "adi.i18n.coolify.ja-JP"
+version = "1.0.0"
+description = "Japanese translations for coolify plugin"
+
+[binary]
+name = "adi_coolify_lang_ja"

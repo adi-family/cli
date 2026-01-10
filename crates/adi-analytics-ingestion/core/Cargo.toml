@@ -1,0 +1,20 @@
+[package]
+name = "adi-analytics-ingestion-core"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Core library for ADI Analytics Ingestion - event writer"
+
+[dependencies]
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+
+# Analytics core (for event types)
+lib-analytics-core = { path = "../../lib-analytics-core" }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging
+tracing = "0.1"

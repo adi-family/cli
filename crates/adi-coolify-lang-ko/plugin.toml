@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.coolify.ko-KR"
+name = "ADI Coolify - 한국어"
+version = "0.8.4"
+type = "translation"
+author = "ADI Team"
+description = "Korean translations for ADI Coolify plugin"
+min_host_version = "0.8.0"
+
+[translation]
+translates = "adi.coolify"
+language = "ko-KR"
+language_name = "한국어"
+namespace = "coolify"
+
+[[provides]]
+id = "adi.i18n.coolify.ko-KR"
+version = "1.0.0"
+description = "Korean translations for coolify plugin"
+
+[binary]
+name = "adi_coolify_lang_ko"

@@ -48,6 +48,29 @@ See `NEXT_STEPS_I18N.md` for detailed status and remaining work.
 7. External commands (9 messages) - Dynamic command dispatch
 8. Common (9 messages) - Shared UI elements
 
+## Multi-Crate Component Architecture
+Several components follow a standard multi-crate structure within a single directory:
+
+| Subdirectory | Purpose | Crate Type |
+|--------------|---------|------------|
+| `core/` | Business logic, types, traits | Library (`lib`) |
+| `http/` | REST API server (axum-based) | Binary |
+| `plugin/` | adi CLI plugin | Dynamic library (`cdylib`) |
+| `cli/` | Standalone CLI (optional) | Binary |
+
+**Components using this pattern:**
+- `adi-agent-loop` (core, http, plugin) - Autonomous LLM agents with tool use
+- `adi-tasks` (core, cli, http, plugin) - Task management
+- `adi-indexer` (core, cli, http, plugin) - Code indexing
+- `adi-knowledgebase` (core, cli, http) - Graph DB + embeddings
+
+**Naming convention:**
+- Core: `adi-{component}-core` (e.g., `adi-agent-loop-core`)
+- HTTP: `adi-{component}-http` (e.g., `adi-agent-loop-http`)
+- Plugin: `adi-{component}-plugin` (e.g., `adi-agent-loop-plugin`)
+
+**Dependencies flow:** `plugin` → `core` ← `http` (both plugin and http depend on core)
+
 ## Submodules
 - `crates/adi-cli` - Component installer/manager
 - `crates/lib-embed` - Shared embedding library

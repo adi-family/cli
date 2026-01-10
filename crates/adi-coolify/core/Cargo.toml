@@ -1,0 +1,20 @@
+[package]
+name = "adi-coolify-core"
+version = "0.8.4"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "Core library for ADI Coolify - Coolify API client and deployment management"
+
+[dependencies]
+thiserror = "2"
+tokio = { version = "1.49", features = ["full"] }
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+reqwest = { version = "0.12", features = ["json"] }
+url = "2.5"
+
+[dev-dependencies]
+tokio-test = "0.4"

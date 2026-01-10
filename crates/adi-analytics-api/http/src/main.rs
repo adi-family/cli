@@ -1,4 +1,3 @@
-mod models;
 mod routes;
 
 use axum::http::{header, Method};

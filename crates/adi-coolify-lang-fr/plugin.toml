@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.coolify.fr-FR"
+name = "ADI Coolify - Français"
+version = "0.8.4"
+type = "translation"
+author = "ADI Team"
+description = "French translations for ADI Coolify plugin"
+min_host_version = "0.8.0"
+
+[translation]
+translates = "adi.coolify"
+language = "fr-FR"
+language_name = "Français"
+namespace = "coolify"
+
+[[provides]]
+id = "adi.i18n.coolify.fr-FR"
+version = "1.0.0"
+description = "French translations for coolify plugin"
+
+[binary]
+name = "adi_coolify_lang_fr"

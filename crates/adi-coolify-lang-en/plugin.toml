@@ -1,0 +1,25 @@
+[plugin]
+id = "adi.coolify.en-US"
+name = "ADI Coolify - English"
+version = "0.8.4"
+type = "translation"
+author = "ADI Team"
+description = "English translations for ADI Coolify plugin"
+min_host_version = "0.8.0"
+
+[translation]
+translates = "adi.coolify"
+language = "en-US"
+language_name = "English (United States)"
+namespace = "coolify"
+
+[[provides]]
+id = "adi.i18n.coolify.en-US"
+version = "1.0.0"
+description = "English translations for coolify plugin"
+
+[tags]
+categories = ["i18n", "translation"]
+
+[binary]
+name = "adi_coolify_lang_en"

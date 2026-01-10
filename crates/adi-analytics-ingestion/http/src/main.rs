@@ -1,5 +1,4 @@
-mod worker;
-
+use adi_analytics_ingestion_core::EventWriter;
 use axum::{
     extract::State,
     http::StatusCode,
@@ -11,7 +10,6 @@ use lib_analytics_core::EnrichedEvent;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use worker::EventWriter;
 
 #[derive(Clone)]
 struct AppState {
