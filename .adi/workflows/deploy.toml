@@ -1,0 +1,100 @@
+# ADI Coolify Deployment Workflow
+# Wraps scripts/deploy.sh functionality into an interactive workflow
+
+[workflow]
+name = "deploy"
+description = "Deploy services to Coolify"
+
+[[inputs]]
+name = "action"
+type = "select"
+prompt = "What do you want to do?"
+options = [
+    "status - Check all services",
+    "deploy - Deploy a service",
+    "logs - View deployment logs",
+    "watch - Watch deployment progress",
+    "list - List recent deployments"
+]
+default = "status - Check all services"
+
+[[inputs]]
+name = "service"
+type = "select"
+prompt = "Select service"
+options = [
+    "all",
+    "auth",
+    "platform",
+    "signaling",
+    "web",
+    "analytics-ingestion",
+    "analytics",
+    "registry"
+]
+default = "all"
+if = "{{ action | starts_with('deploy') }}"
+
+[[inputs]]
+name = "force_rebuild"
+type = "confirm"
+prompt = "Force rebuild (no cache)?"
+default = false
+if = "{{ action | starts_with('deploy') }}"
+
+[[inputs]]
+name = "logs_service"
+type = "select"
+prompt = "Select service for logs"
+options = [
+    "auth",
+    "platform",
+    "signaling",
+    "web",
+    "analytics-ingestion",
+    "analytics",
+    "registry"
+]
+if = "{{ action | starts_with('logs') or action | starts_with('watch') or action | starts_with('list') }}"
+
+[[inputs]]
+name = "list_count"
+type = "input"
+prompt = "Number of deployments to show"
+default = "5"
+if = "{{ action | starts_with('list') }}"
+
+[[steps]]
+name = "Run deploy command"
+run = """
+# Prelude variables and functions are automatically available
+
+ACTION="{{ action | split(' ') | first }}"
+
+info "Deploy action: $ACTION"
+
+case "$ACTION" in
+    status)
+        "$WORKFLOWS_DIR/deploy.sh" status
+        ;;
+    deploy)
+        SERVICE="{{ service }}"
+        FORCE="{{ force_rebuild }}"
+        if [ "$FORCE" = "true" ]; then
+            "$WORKFLOWS_DIR/deploy.sh" deploy "$SERVICE" --force
+        else
+            "$WORKFLOWS_DIR/deploy.sh" deploy "$SERVICE"
+        fi
+        ;;
+    logs)
+        "$WORKFLOWS_DIR/deploy.sh" logs "{{ logs_service }}"
+        ;;
+    watch)
+        "$WORKFLOWS_DIR/deploy.sh" watch "{{ logs_service }}"
+        ;;
+    list)
+        "$WORKFLOWS_DIR/deploy.sh" list "{{ logs_service }}" "{{ list_count }}"
+        ;;
+esac
+"""
+env = { COOLIFY_API_KEY = "{{ env.COOLIFY_API_KEY }}" }

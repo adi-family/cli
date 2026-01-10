@@ -1,0 +1,67 @@
+# ADI Submodule Commit Workflow
+# Wraps scripts/commit-submodule.sh for committing submodule changes
+
+[workflow]
+name = "commit-submodule"
+description = "Commit changes in a submodule with AI-generated messages"
+
+[[inputs]]
+name = "submodule"
+type = "select"
+prompt = "Select submodule"
+options = [
+    "crates/adi-cli",
+    "crates/lib-embed",
+    "crates/lib-cli-common",
+    "crates/lib-migrations",
+    "crates/adi-indexer",
+    "crates/adi-tasks",
+    "crates/adi-knowledgebase",
+    "crates/adi-agent-loop",
+    "crates/adi-workflow",
+    "crates/cocoon",
+    "crates/cocoon-manager",
+    "crates/tarminal-signaling-server",
+    "crates/adi-auth",
+    "crates/adi-platform-api",
+    "crates/adi-analytics-api",
+    "crates/adi-analytics-ingestion",
+    "crates/adi-plugin-registry-http",
+    "apps/infra-service-web",
+    "apps/flowmap-api"
+]
+
+[[inputs]]
+name = "push_changes"
+type = "confirm"
+prompt = "Push changes after commit?"
+default = false
+
+[[inputs]]
+name = "skip_verify"
+type = "confirm"
+prompt = "Skip safety verification?"
+default = false
+
+[[steps]]
+name = "Commit submodule"
+run = """
+# Prelude variables and functions are automatically available
+
+SUBMODULE="{{ submodule }}"
+PUSH="{{ push_changes }}"
+SKIP="{{ skip_verify }}"
+
+info "Committing submodule: $SUBMODULE"
+info "Git branch: $GIT_BRANCH"
+
+ARGS="$SUBMODULE"
+if [ "$PUSH" = "true" ]; then
+    ARGS="$ARGS --push"
+fi
+if [ "$SKIP" = "true" ]; then
+    ARGS="$ARGS --no-verify"
+fi
+
+"$WORKFLOWS_DIR/commit-submodule.sh" $ARGS
+"""

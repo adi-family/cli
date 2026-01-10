@@ -1,18 +1,38 @@
 #!/bin/bash
 # Release a single plugin to the ADI plugin registry
-# Usage: ./scripts/release-plugin.sh <plugin-name> [--no-push]
-# Example: ./scripts/release-plugin.sh cocoon
-# Example: ./scripts/release-plugin.sh cocoon --no-push
+# Usage: adi workflow release-plugin
+# Example: adi workflow release-plugin
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-# Load libraries
-source "$SCRIPT_DIR/lib/log.sh"
-source "$SCRIPT_DIR/lib/platform.sh"
-source "$SCRIPT_DIR/lib/common.sh"
+# When run via `adi workflow`, prelude is auto-injected.
+# When run directly, use minimal fallback.
+if [[ -z "${_ADI_PRELUDE_LOADED:-}" ]]; then
+    _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_ROOT="$(cd "$_SCRIPT_DIR/../.." && pwd)"
+    WORKFLOWS_DIR="$_SCRIPT_DIR"
+    CWD="$PWD"
+    # Colors
+    RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' CYAN='\033[0;36m' BOLD='\033[1m' DIM='\033[2m' NC='\033[0m'
+    # Logging
+    log() { echo -e "${BLUE:-\033[0;34m}[log]${NC} $1"; }
+    info() { printf "${CYAN}info${NC} %s\n" "$1"; }
+    success() { printf "${GREEN}done${NC} %s\n" "$1"; }
+    warn() { printf "${YELLOW}warn${NC} %s\n" "$1"; }
+    error() { printf "${RED}error${NC} %s\n" "$1" >&2; exit 1; }
+    # TTY
+    has_tty() { [[ -t 0 ]] && [[ -t 1 ]]; }
+    in_multiplexer() { [[ -n "$TMUX" ]] || [[ "$TERM" == screen* ]]; }
+    supports_color() { [[ -t 1 ]]; }
+    # Utils
+    ensure_dir() { mkdir -p "$1"; }
+    check_command() { command -v "$1" >/dev/null 2>&1; }
+    ensure_command() { check_command "$1" || error "$1 not found${2:+. Install: $2}"; }
+    require_file() { [[ -f "$1" ]] || error "${2:-File not found: $1}"; }
+    require_dir() { [[ -d "$1" ]] || error "${2:-Directory not found: $1}"; }
+    require_value() { [[ -n "$1" ]] || error "${2:-Value required}"; echo "$1"; }
+    require_env() { [[ -n "${!1}" ]] || error "Environment variable $1 not set"; echo "${!1}"; }
+fi
 
 # Configuration
 REGISTRY_URL="${ADI_REGISTRY_URL:-https://adi-plugin-registry.the-ihor.com}"
@@ -52,6 +72,9 @@ get_plugin_crate() {
         indexer|adi-indexer) echo "crates/adi-indexer/plugin" ;;
         knowledgebase|adi-knowledgebase) echo "crates/adi-knowledgebase/plugin" ;;
         tasks|adi-tasks) echo "crates/adi-tasks/plugin" ;;
+        workflow|adi-workflow) echo "crates/adi-workflow/plugin" ;;
+        coolify|adi-coolify) echo "crates/adi-coolify/plugin" ;;
+        linter|adi-linter) echo "crates/adi-linter/plugin" ;;
         lang-cpp|adi-lang-cpp) echo "crates/adi-lang/cpp" ;;
         lang-csharp|adi-lang-csharp) echo "crates/adi-lang/csharp" ;;
         lang-go|adi-lang-go) echo "crates/adi-lang/go" ;;
@@ -225,9 +248,9 @@ main() {
 
     # Lint plugin before building
     info "Linting plugin..."
-    if ! "$SCRIPT_DIR/lint-plugin.sh" "$PROJECT_ROOT/$crate_dir"; then
+    if ! "$WORKFLOWS_DIR/lint-plugin.sh" "$PROJECT_ROOT/$crate_dir"; then
         error "Plugin lint failed. Fix errors before publishing."
-        warn "Run with --fix to auto-fix: $SCRIPT_DIR/lint-plugin.sh --fix $crate_dir"
+        warn "Run with --fix to auto-fix: $WORKFLOWS_DIR/lint-plugin.sh --fix $crate_dir"
     fi
     success "Lint passed"
 

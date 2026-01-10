@@ -1,0 +1,67 @@
+# ADI Plugin Release Workflow
+# Wraps scripts/release-plugin.sh functionality into an interactive workflow
+
+[workflow]
+name = "release-plugin"
+description = "Build and publish a plugin to the registry"
+
+[[inputs]]
+name = "plugin"
+type = "select"
+prompt = "Select plugin to release"
+options = [
+    "cocoon",
+    "agent-loop",
+    "indexer",
+    "knowledgebase",
+    "tasks",
+    "workflow",
+    "coolify",
+    "linter",
+    "embed",
+    "lang-rust",
+    "lang-python",
+    "lang-typescript",
+    "lang-cpp",
+    "lang-go",
+    "lang-java",
+    "lang-csharp",
+    "lang-ruby",
+    "lang-php",
+    "lang-swift",
+    "lang-lua"
+]
+
+[[inputs]]
+name = "registry_target"
+type = "select"
+prompt = "Target registry"
+options = [
+    "production - adi-plugin-registry.the-ihor.com",
+    "local - localhost:8019",
+    "dry-run - Build only, no publish"
+]
+default = "production - adi-plugin-registry.the-ihor.com"
+
+[[steps]]
+name = "Release plugin"
+run = """
+# Prelude variables and functions are automatically available
+
+PLUGIN="{{ plugin }}"
+TARGET="{{ registry_target | split(' ') | first }}"
+
+info "Releasing plugin: $PLUGIN to $TARGET"
+
+case "$TARGET" in
+    production)
+        "$WORKFLOWS_DIR/release-plugin.sh" "$PLUGIN"
+        ;;
+    local)
+        "$WORKFLOWS_DIR/release-plugin.sh" "$PLUGIN" --local
+        ;;
+    dry-run)
+        "$WORKFLOWS_DIR/release-plugin.sh" "$PLUGIN" --no-push
+        ;;
+esac
+"""

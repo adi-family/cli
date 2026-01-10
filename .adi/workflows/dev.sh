@@ -2,7 +2,10 @@
 # =============================================================================
 # ADI Local Development Helper
 # =============================================================================
-# Usage: ./scripts/dev.sh <command>
+# Usage: adi workflow dev
+#
+# When run through `adi workflow`, all prelude functions and variables
+# are automatically available (info, success, spinner_start, $PROJECT_ROOT, etc.)
 #
 # Commands:
 #   up          Start all services
@@ -19,15 +22,38 @@
 
 set -e
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-PID_DIR="$PROJECT_DIR/.dev"
-LOG_DIR="$PROJECT_DIR/.dev/logs"
+# When run via `adi workflow`, prelude is auto-injected.
+# When run directly, use minimal fallback.
+if [[ -z "${_ADI_PRELUDE_LOADED:-}" ]]; then
+    _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_ROOT="$(cd "$_SCRIPT_DIR/../.." && pwd)"
+    WORKFLOWS_DIR="$_SCRIPT_DIR"
+    CWD="$PWD"
+    # Colors
+    RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' CYAN='\033[0;36m' BOLD='\033[1m' DIM='\033[2m' NC='\033[0m'
+    # Logging
+    log() { echo -e "${BLUE:-\033[0;34m}[log]${NC} $1"; }
+    info() { printf "${CYAN}info${NC} %s\n" "$1"; }
+    success() { printf "${GREEN}done${NC} %s\n" "$1"; }
+    warn() { printf "${YELLOW}warn${NC} %s\n" "$1"; }
+    error() { printf "${RED}error${NC} %s\n" "$1" >&2; exit 1; }
+    # TTY
+    has_tty() { [[ -t 0 ]] && [[ -t 1 ]]; }
+    in_multiplexer() { [[ -n "$TMUX" ]] || [[ "$TERM" == screen* ]]; }
+    supports_color() { [[ -t 1 ]]; }
+    # Utils
+    ensure_dir() { mkdir -p "$1"; }
+    check_command() { command -v "$1" >/dev/null 2>&1; }
+    ensure_command() { check_command "$1" || error "$1 not found${2:+. Install: $2}"; }
+    require_file() { [[ -f "$1" ]] || error "${2:-File not found: $1}"; }
+    require_dir() { [[ -d "$1" ]] || error "${2:-Directory not found: $1}"; }
+    require_value() { [[ -n "$1" ]] || error "${2:-Value required}"; echo "$1"; }
+    require_env() { [[ -n "${!1}" ]] || error "Environment variable $1 not set"; echo "${!1}"; }
+fi
 
-# Load libraries
-source "$SCRIPT_DIR/lib/log.sh"
-source "$SCRIPT_DIR/lib/common.sh"
+# Local directories
+PID_DIR="$PROJECT_ROOT/.dev"
+LOG_DIR="$PROJECT_ROOT/.dev/logs"
 
 # All services
 ALL_SERVICES="signaling auth platform web flowmap analytics-ingestion analytics cocoon registry cocoon-manager"
@@ -159,7 +185,7 @@ start_service() {
         return 0
     fi
 
-    local service_dir="$PROJECT_DIR/$dir"
+    local service_dir="$PROJECT_ROOT/$dir"
     [ ! -d "$service_dir" ] && error "Service directory not found: $service_dir"
 
     local lf
@@ -177,11 +203,11 @@ start_service() {
             ;;
         registry)
             # Registry service needs REGISTRY_DATA_DIR from .env.local
-            if [ -f "$PROJECT_DIR/.env.local" ]; then
+            if [ -f "$PROJECT_ROOT/.env.local" ]; then
                 # shellcheck disable=SC1091
-                source "$PROJECT_DIR/.env.local" 2>/dev/null || true
+                source "$PROJECT_ROOT/.env.local" 2>/dev/null || true
             fi
-            local data_dir="${REGISTRY_DATA_DIR:-$PROJECT_DIR/.dev/registry-data}"
+            local data_dir="${REGISTRY_DATA_DIR:-$PROJECT_ROOT/.dev/registry-data}"
             ensure_dir "$data_dir"
             env_cmd="$env_cmd REGISTRY_DATA_DIR=$data_dir"
             ;;
@@ -198,9 +224,9 @@ start_service() {
             ;;
         platform)
             # Platform service needs DATABASE_URL, JWT_SECRET from .env.local
-            if [ -f "$PROJECT_DIR/.env.local" ]; then
+            if [ -f "$PROJECT_ROOT/.env.local" ]; then
                 # shellcheck disable=SC1091
-                source "$PROJECT_DIR/.env.local" 2>/dev/null || true
+                source "$PROJECT_ROOT/.env.local" 2>/dev/null || true
                 [ -n "$JWT_SECRET" ] && env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
             fi
             # Use platform-specific database if set, otherwise default
@@ -214,9 +240,9 @@ start_service() {
             ;;
         auth)
             # Auth service needs JWT_SECRET and SMTP config from .env.local
-            if [ -f "$PROJECT_DIR/.env.local" ]; then
+            if [ -f "$PROJECT_ROOT/.env.local" ]; then
                 # shellcheck disable=SC1091
-                source "$PROJECT_DIR/.env.local" 2>/dev/null || true
+                source "$PROJECT_ROOT/.env.local" 2>/dev/null || true
                 [ -n "$JWT_SECRET" ] && env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
                 # Load SMTP configuration
                 [ -n "$SMTP_HOST" ] && env_cmd="$env_cmd SMTP_HOST=$SMTP_HOST"
@@ -232,7 +258,7 @@ start_service() {
             # Cocoon manager needs database, signaling URL, and Docker config
             local signaling_port
             signaling_port=$(get_port "signaling")
-            local db_dir="$PROJECT_DIR/.dev/cocoon-manager-data"
+            local db_dir="$PROJECT_ROOT/.dev/cocoon-manager-data"
             ensure_dir "$db_dir"
             env_cmd="$env_cmd DATABASE_URL=sqlite:$db_dir/cocoon-manager.db"
             env_cmd="$env_cmd SIGNALING_SERVER_URL=ws://localhost:$signaling_port/ws"
@@ -475,7 +501,7 @@ cmd_shell() {
     dir=$(service_dir "$service")
     [ -z "$dir" ] && error "Unknown service: $service"
 
-    local svc_dir="$PROJECT_DIR/$dir"
+    local svc_dir="$PROJECT_ROOT/$dir"
     log "Opening shell in $svc_dir"
     cd "$svc_dir" && exec "${SHELL:-bash}"
 }

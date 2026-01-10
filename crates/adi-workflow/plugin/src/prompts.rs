@@ -139,8 +139,7 @@ fn prompt_multi_select(input: &Input) -> Result<serde_json::Value, String> {
     // Determine default selections
     let defaults: Vec<bool> = if let Some(default_val) = &input.default {
         if let Some(arr) = default_val.as_array() {
-            let default_strings: Vec<&str> =
-                arr.iter().filter_map(|v| v.as_str()).collect();
+            let default_strings: Vec<&str> = arr.iter().filter_map(|v| v.as_str()).collect();
             options
                 .iter()
                 .map(|o| default_strings.contains(&o.as_str()))

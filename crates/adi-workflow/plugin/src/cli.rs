@@ -2,7 +2,7 @@
 
 use crate::discovery::{discover_workflows, find_workflow};
 use crate::executor::execute_steps;
-use crate::parser::{load_workflow, WorkflowScope};
+use crate::parser::{WorkflowScope, load_workflow};
 use crate::prompts::collect_inputs;
 use serde_json::json;
 use std::path::PathBuf;
@@ -97,8 +97,7 @@ fn cmd_show(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {
     }
 
     let name = args[0];
-    let path = find_workflow(cwd, name)
-        .ok_or_else(|| format!("Workflow '{}' not found", name))?;
+    let path = find_workflow(cwd, name).ok_or_else(|| format!("Workflow '{}' not found", name))?;
 
     let workflow = load_workflow(&path)?;
 
@@ -147,8 +146,7 @@ fn cmd_show(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {
 }
 
 fn cmd_run(cwd: &PathBuf, name: &str) -> Result<String, String> {
-    let path = find_workflow(cwd, name)
-        .ok_or_else(|| format!("Workflow '{}' not found", name))?;
+    let path = find_workflow(cwd, name).ok_or_else(|| format!("Workflow '{}' not found", name))?;
 
     let workflow = load_workflow(&path)?;
 

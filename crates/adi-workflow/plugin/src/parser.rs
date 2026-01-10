@@ -68,8 +68,8 @@ pub fn parse_workflow(content: &str) -> Result<WorkflowFile, String> {
 
 /// Load and parse a workflow file from path
 pub fn load_workflow(path: &Path) -> Result<WorkflowFile, String> {
-    let content =
-        std::fs::read_to_string(path).map_err(|e| format!("Failed to read workflow file: {}", e))?;
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| format!("Failed to read workflow file: {}", e))?;
     parse_workflow(&content)
 }
 

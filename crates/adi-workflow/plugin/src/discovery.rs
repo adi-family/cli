@@ -4,7 +4,7 @@
 //! 1. ./.adi/workflows/ (local, highest priority)
 //! 2. ~/.adi/workflows/ (global, fallback)
 
-use crate::parser::{load_workflow, WorkflowScope, WorkflowSummary};
+use crate::parser::{WorkflowScope, WorkflowSummary, load_workflow};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 

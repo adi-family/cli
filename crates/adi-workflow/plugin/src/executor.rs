@@ -1,6 +1,7 @@
 //! Shell command execution
 
 use crate::parser::Step;
+use crate::prelude::get_prelude;
 use crate::template::{create_env, render, render_env_vars};
 use minijinja::Environment;
 use std::collections::HashMap;
@@ -18,7 +19,11 @@ pub fn execute_steps(
         // Check condition if present
         if let Some(condition) = &step.condition {
             if !evaluate_condition(&env, condition, variables)? {
-                println!("  Skipping step {}: {} (condition not met)", i + 1, step.name);
+                println!(
+                    "  Skipping step {}: {} (condition not met)",
+                    i + 1,
+                    step.name
+                );
                 continue;
             }
         }
@@ -54,7 +59,7 @@ fn evaluate_condition(
     Ok(result == "true")
 }
 
-/// Execute a single shell command
+/// Execute a single shell command with bundled prelude
 fn execute_command(
     command: &str,
     env_vars: Option<&HashMap<String, String>>,
@@ -62,7 +67,7 @@ fn execute_command(
     let shell = if cfg!(target_os = "windows") {
         "cmd"
     } else {
-        "sh"
+        "bash"
     };
 
     let shell_arg = if cfg!(target_os = "windows") {
@@ -71,8 +76,11 @@ fn execute_command(
         "-c"
     };
 
+    // Inject the prelude before the command
+    let full_command = format!("{}\n{}", get_prelude(), command);
+
     let mut cmd = Command::new(shell);
-    cmd.arg(shell_arg).arg(command);
+    cmd.arg(shell_arg).arg(&full_command);
 
     // Add custom environment variables
     if let Some(env) = env_vars {
@@ -90,7 +98,9 @@ fn execute_command(
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
-    let mut child = cmd.spawn().map_err(|e| format!("Failed to spawn command: {}", e))?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to spawn command: {}", e))?;
 
     // Stream stdout
     if let Some(stdout) = child.stdout.take() {
@@ -112,7 +122,9 @@ fn execute_command(
         }
     }
 
-    let status = child.wait().map_err(|e| format!("Failed to wait for command: {}", e))?;
+    let status = child
+        .wait()
+        .map_err(|e| format!("Failed to wait for command: {}", e))?;
 
     if !status.success() {
         return Err(format!(

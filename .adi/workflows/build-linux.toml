@@ -1,0 +1,39 @@
+# ADI Linux Build Workflow
+# Wraps scripts/build-linux.sh for cross-compiling to Linux
+
+[workflow]
+name = "build-linux"
+description = "Cross-compile services for Linux (Docker deployment)"
+
+[[inputs]]
+name = "services"
+type = "multi-select"
+prompt = "Select services to build (empty for all)"
+options = [
+    "adi-auth",
+    "adi-platform-api",
+    "adi-analytics-api",
+    "adi-analytics-ingestion",
+    "tarminal-signaling-server",
+    "adi-plugin-registry",
+    "flowmap-api",
+    "cocoon-manager"
+]
+
+[[steps]]
+name = "Build Linux binaries"
+run = """
+# Prelude variables and functions are automatically available
+
+SERVICES="{{ services | join(' ') }}"
+
+if [ -z "$SERVICES" ]; then
+    info "Building all services for $PLATFORM..."
+    "$WORKFLOWS_DIR/build-linux.sh"
+else
+    info "Building: $SERVICES"
+    "$WORKFLOWS_DIR/build-linux.sh" $SERVICES
+fi
+
+success "Linux build complete"
+"""

@@ -5,10 +5,7 @@
 # Commits changes in a submodule with AI-generated commit messages,
 # then updates the parent repo reference.
 #
-# Usage:
-#   ./scripts/commit-submodule.sh <submodule-path>
-#   ./scripts/commit-submodule.sh crates/adi-cli
-#   ./scripts/commit-submodule.sh apps/infra-service-web
+# Usage: adi workflow commit-submodule
 #
 # Features:
 #   - AI-generated commit messages via Claude
@@ -19,13 +16,37 @@
 
 set -e
 
-# Get script directory and root
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# When run via `adi workflow`, prelude is auto-injected.
+# When run directly, use minimal fallback.
+if [[ -z "${_ADI_PRELUDE_LOADED:-}" ]]; then
+    _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_ROOT="$(cd "$_SCRIPT_DIR/../.." && pwd)"
+    WORKFLOWS_DIR="$_SCRIPT_DIR"
+    CWD="$PWD"
+    # Colors
+    RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' CYAN='\033[0;36m' BOLD='\033[1m' DIM='\033[2m' NC='\033[0m'
+    # Logging
+    log() { echo -e "${BLUE:-\033[0;34m}[log]${NC} $1"; }
+    info() { printf "${CYAN}info${NC} %s\n" "$1"; }
+    success() { printf "${GREEN}done${NC} %s\n" "$1"; }
+    warn() { printf "${YELLOW}warn${NC} %s\n" "$1"; }
+    error() { printf "${RED}error${NC} %s\n" "$1" >&2; exit 1; }
+    # TTY
+    has_tty() { [[ -t 0 ]] && [[ -t 1 ]]; }
+    in_multiplexer() { [[ -n "$TMUX" ]] || [[ "$TERM" == screen* ]]; }
+    supports_color() { [[ -t 1 ]]; }
+    # Utils
+    ensure_dir() { mkdir -p "$1"; }
+    check_command() { command -v "$1" >/dev/null 2>&1; }
+    ensure_command() { check_command "$1" || error "$1 not found${2:+. Install: $2}"; }
+    require_file() { [[ -f "$1" ]] || error "${2:-File not found: $1}"; }
+    require_dir() { [[ -d "$1" ]] || error "${2:-Directory not found: $1}"; }
+    require_value() { [[ -n "$1" ]] || error "${2:-Value required}"; echo "$1"; }
+    require_env() { [[ -n "${!1}" ]] || error "Environment variable $1 not set"; echo "${!1}"; }
+fi
 
-# Load libraries
-source "$SCRIPT_DIR/lib/log.sh"
-source "$SCRIPT_DIR/lib/common.sh"
+# Alias for compatibility
+ROOT_DIR="$PROJECT_ROOT"
 
 # =============================================================================
 # Functions

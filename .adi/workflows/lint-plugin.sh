@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 # Plugin Linter - validates plugin structure before publishing
-# Usage: ./scripts/lint-plugin.sh <plugin-name|plugin-path>
+# Usage: adi workflow lint-plugin <plugin-name|plugin-path>
 set -uo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# When run via `adi workflow`, prelude is auto-injected.
+# When run directly, use minimal fallback.
+if [[ -z "${_ADI_PRELUDE_LOADED:-}" ]]; then
+    _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_ROOT="$(cd "$_SCRIPT_DIR/../.." && pwd)"
+    WORKFLOWS_DIR="$_SCRIPT_DIR"
+fi
 
-# Colors
+# Colors (override prelude for custom linter output)
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -19,6 +24,7 @@ BOLD='\033[1m'
 ERRORS=0
 WARNINGS=0
 
+# Override logging for linter-specific output
 error() { echo -e "${RED}ERROR:${NC} $*"; ((ERRORS++)); }
 warn() { echo -e "${YELLOW}WARN:${NC} $*"; ((WARNINGS++)); }
 info() { echo -e "${BLUE}INFO:${NC} $*"; }

@@ -1,0 +1,61 @@
+# ADI Bulk Plugin Release Workflow
+# Wraps scripts/release-plugins.sh for releasing multiple plugins
+
+[workflow]
+name = "release-plugins"
+description = "Release all core plugins to the registry"
+
+[[inputs]]
+name = "version"
+type = "input"
+prompt = "Release version (leave empty for current)"
+default = ""
+
+[[inputs]]
+name = "specific_plugin"
+type = "select"
+prompt = "Release specific plugin? (or all)"
+options = [
+    "all",
+    "adi-tasks-plugin",
+    "adi-agent-loop-plugin",
+    "adi-indexer-plugin",
+    "adi-knowledgebase-plugin",
+    "adi-lang-rust",
+    "adi-lang-python",
+    "adi-lang-typescript",
+    "adi-lang-cpp",
+    "adi-lang-go",
+    "adi-lang-java",
+    "adi-lang-csharp",
+    "adi-lang-ruby",
+    "adi-lang-php",
+    "adi-lang-swift",
+    "adi-lang-lua"
+]
+default = "all"
+
+[[steps]]
+name = "Release plugins"
+run = """
+# Prelude variables and functions are automatically available
+
+VERSION="{{ version }}"
+PLUGIN="{{ specific_plugin }}"
+
+info "Releasing plugins (version: ${VERSION:-current}, plugin: $PLUGIN)"
+
+if [ "$PLUGIN" = "all" ]; then
+    if [ -n "$VERSION" ]; then
+        "$WORKFLOWS_DIR/release-plugins.sh" "$VERSION"
+    else
+        "$WORKFLOWS_DIR/release-plugins.sh"
+    fi
+else
+    if [ -n "$VERSION" ]; then
+        "$WORKFLOWS_DIR/release-plugins.sh" "$VERSION" "$PLUGIN"
+    else
+        "$WORKFLOWS_DIR/release-plugins.sh" "" "$PLUGIN"
+    fi
+fi
+"""

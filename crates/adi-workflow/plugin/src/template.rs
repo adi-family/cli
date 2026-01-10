@@ -8,8 +8,20 @@ pub fn create_env() -> Environment<'static> {
     let mut env = Environment::new();
 
     // Add built-in globals
-    env.add_global("cwd", std::env::current_dir().unwrap_or_default().to_string_lossy().to_string());
-    env.add_global("home", dirs::home_dir().unwrap_or_default().to_string_lossy().to_string());
+    env.add_global(
+        "cwd",
+        std::env::current_dir()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string(),
+    );
+    env.add_global(
+        "home",
+        dirs::home_dir()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string(),
+    );
     env.add_global("date", chrono_date());
 
     env
@@ -18,7 +30,9 @@ pub fn create_env() -> Environment<'static> {
 fn chrono_date() -> String {
     // Simple date format without chrono dependency
     let now = std::time::SystemTime::now();
-    let duration = now.duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
+    let duration = now
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
     let secs = duration.as_secs();
 
     // Basic date calculation
