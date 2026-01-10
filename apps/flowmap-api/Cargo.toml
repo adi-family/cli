@@ -10,8 +10,8 @@ name = "flowmap-api"
 path = "src/main.rs"
 
 [dependencies]
-lib-flowmap-core = { path = "../../crates/lib-flowmap-core" }
-lib-flowmap-parser = { path = "../../crates/lib-flowmap-parser" }
+lib-flowmap-core = { path = "../../crates/lib/lib-flowmap-core" }
+lib-flowmap-parser = { path = "../../crates/lib/lib-flowmap-parser" }
 
 axum = { version = "0.8", features = ["json"] }
 tokio = { version = "1.43", features = ["full"] }

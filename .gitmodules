@@ -4,8 +4,8 @@
 [submodule "crates/debug-metal-shader"]
 	path = crates/debug-metal-shader
 	url = https://github.com/adi-family/debug-metal-shader.git
-[submodule "crates/lib-embed"]
-	path = crates/lib-embed
+[submodule "crates/lib/lib-embed"]
+	path = crates/lib/lib-embed
 	url = https://github.com/adi-family/lib-embed.git
 [submodule "crates/adi-indexer-core"]
 	path = crates/adi-indexer-core
@@ -25,29 +25,29 @@
 [submodule "crates/adi-tasks-http"]
 	path = crates/adi-tasks-http
 	url = https://github.com/adi-family/adi-tasks-http.git
-[submodule "crates/lib-animation"]
-	path = crates/lib-animation
+[submodule "crates/lib/lib-animation"]
+	path = crates/lib/lib-animation
 	url = https://github.com/adi-family/lib-animation.git
-[submodule "crates/lib-syntax-highlight"]
-	path = crates/lib-syntax-highlight
+[submodule "crates/lib/lib-syntax-highlight"]
+	path = crates/lib/lib-syntax-highlight
 	url = https://github.com/adi-family/lib-syntax-highlight.git
-[submodule "crates/lib-json-tree"]
-	path = crates/lib-json-tree
+[submodule "crates/lib/lib-json-tree"]
+	path = crates/lib/lib-json-tree
 	url = https://github.com/adi-family/lib-json-tree.git
-[submodule "crates/lib-terminal-theme"]
-	path = crates/lib-terminal-theme
+[submodule "crates/lib/lib-terminal-theme"]
+	path = crates/lib/lib-terminal-theme
 	url = https://github.com/adi-family/lib-terminal-theme.git
-[submodule "crates/lib-terminal-grid"]
-	path = crates/lib-terminal-grid
+[submodule "crates/lib/lib-terminal-grid"]
+	path = crates/lib/lib-terminal-grid
 	url = https://github.com/adi-family/lib-terminal-grid.git
-[submodule "crates/lib-iced-ui"]
-	path = crates/lib-iced-ui
+[submodule "crates/lib/lib-iced-ui"]
+	path = crates/lib/lib-iced-ui
 	url = https://github.com/adi-family/lib-iced-ui.git
-[submodule "crates/lib-cli-common"]
-	path = crates/lib-cli-common
+[submodule "crates/lib/lib-cli-common"]
+	path = crates/lib/lib-cli-common
 	url = https://github.com/adi-family/lib-cli-common.git
-[submodule "crates/lib-migrations"]
-	path = crates/lib-migrations
+[submodule "crates/lib/lib-migrations"]
+	path = crates/lib/lib-migrations
 	url = https://github.com/adi-family/lib-migrations.git
 [submodule "crates/adi-plugin-registry-http"]
 	path = crates/adi-plugin-registry-http
@@ -79,20 +79,20 @@
 [submodule "crates/adi-tasks-plugin"]
 	path = crates/adi-tasks-plugin
 	url = https://github.com/adi-family/adi-tasks-plugin.git
-[submodule "crates/lib-plugin-abi"]
-	path = crates/lib-plugin-abi
+[submodule "crates/lib/lib-plugin-abi"]
+	path = crates/lib/lib-plugin-abi
 	url = https://github.com/adi-family/lib-plugin-abi.git
-[submodule "crates/lib-plugin-host"]
-	path = crates/lib-plugin-host
+[submodule "crates/lib/lib-plugin-host"]
+	path = crates/lib/lib-plugin-host
 	url = https://github.com/adi-family/lib-plugin-host.git
-[submodule "crates/lib-plugin-manifest"]
-	path = crates/lib-plugin-manifest
+[submodule "crates/lib/lib-plugin-manifest"]
+	path = crates/lib/lib-plugin-manifest
 	url = https://github.com/adi-family/lib-plugin-manifest.git
-[submodule "crates/lib-plugin-registry"]
-	path = crates/lib-plugin-registry
+[submodule "crates/lib/lib-plugin-registry"]
+	path = crates/lib/lib-plugin-registry
 	url = https://github.com/adi-family/lib-plugin-registry.git
-[submodule "crates/lib-plugin-verify"]
-	path = crates/lib-plugin-verify
+[submodule "crates/lib/lib-plugin-verify"]
+	path = crates/lib/lib-plugin-verify
 	url = https://github.com/adi-family/lib-plugin-verify.git
 [submodule "crates/tool-generate-heartbit"]
 	path = crates/tool-generate-heartbit
@@ -106,17 +106,12 @@
 [submodule "crates/cocoon"]
 	path = crates/cocoon
 	url = git@github.com:adi-family/cocoon.git
-[submodule "crates/lib-misc-color"]
-	path = crates/lib-misc-color
+[submodule "crates/lib/lib-misc-color"]
+	path = crates/lib/lib-misc-color
 	url = https://github.com/adi-family/lib-misc-color.git
-[submodule "crates/lib-client-github"]
-	path = crates/lib-client-github
-	url = git@github.com:adi-family/lib-client-github.git
-[submodule "crates/lib-client-openrouter"]
-	path = crates/lib-client-openrouter
-	url = https://github.com/adi-family/lib-client-openrouter.git
-[submodule "crates/lib-indexer-lang-abi"]
-	path = crates/lib-indexer-lang-abi
+
+[submodule "crates/lib/lib-indexer-lang-abi"]
+	path = crates/lib/lib-indexer-lang-abi
 	url = https://github.com/adi-family/lib-indexer-lang-abi.git
 [submodule "crates/adi-lang-rust"]
 	path = crates/adi-lang-rust
@@ -163,11 +158,11 @@
 [submodule "apps/infra-service-signaling"]
 	path = apps/infra-service-signaling
 	url = https://github.com/adi-family/infra-service-signaling.git
-[submodule "crates/lib-tarminal-sync"]
-	path = crates/lib-tarminal-sync
+[submodule "crates/lib/lib-tarminal-sync"]
+	path = crates/lib/lib-tarminal-sync
 	url = git@github.com:adi-family/lib-tarminal-sync.git
-[submodule "crates/lib-typespec-api"]
-	path = crates/lib-typespec-api
+[submodule "crates/lib/lib-typespec-api"]
+	path = crates/lib/lib-typespec-api
 	url = https://github.com/adi-family/lib-typespec-api.git
 [submodule "crates/cocoon-manager"]
 	path = crates/cocoon-manager
@@ -175,9 +170,7 @@
 [submodule "release/adi.the-ihor.com"]
 	path = release/adi.the-ihor.com
 	url = git@github.com:adi-family/adi.the-ihor.com.git
-[submodule "crates/lib-client-uzu"]
-	path = crates/lib-client-uzu
-	url = https://github.com/adi-family/lib-client-uzu.git
+
 [submodule "crates/adi-llm-uzu-plugin"]
 	path = crates/adi-llm-uzu-plugin
 	url = https://github.com/adi-family/adi-llm-uzu-plugin.git

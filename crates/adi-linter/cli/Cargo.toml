@@ -12,7 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 adi-linter-core = { path = "../core" }
-lib-cli-common = { path = "../../lib-cli-common" }
+lib-cli-common = { path = "../../lib/lib-cli-common" }
 anyhow.workspace = true
 clap = { workspace = true, features = ["derive"] }
 console.workspace = true

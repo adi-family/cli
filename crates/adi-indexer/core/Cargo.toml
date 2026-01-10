@@ -14,14 +14,14 @@ fastembed = ["lib-embed/fastembed"]
 
 [dependencies]
 # Internal
-lib-embed = { path = "../../lib-embed" }
-lib-cli-common = { path = "../../lib-cli-common" }
-lib-migrations = { path = "../../lib-migrations" }
+lib-embed = { path = "../../lib/lib-embed" }
+lib-cli-common = { path = "../../lib/lib-cli-common" }
+lib-migrations = { path = "../../lib/lib-migrations" }
 
 # Plugin system
-lib-plugin-abi = { path = "../../lib-plugin-abi" }
-lib-plugin-host = { path = "../../lib-plugin-host" }
-lib-indexer-lang-abi = { path = "../../lib-indexer-lang-abi" }
+lib-plugin-abi = { path = "../../lib/lib-plugin-abi" }
+lib-plugin-host = { path = "../../lib/lib-plugin-host" }
+lib-indexer-lang-abi = { path = "../../lib/lib-indexer-lang-abi" }
 libloading = "0.8"
 
 # Error handling

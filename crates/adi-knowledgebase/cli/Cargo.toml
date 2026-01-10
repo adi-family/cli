@@ -12,7 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 adi-knowledgebase-core = { path = "../core" }
-lib-cli-common = { path = "../../lib-cli-common" }
+lib-cli-common = { path = "../../lib/lib-cli-common" }
 clap = { workspace = true, features = ["derive"] }
 tokio = { workspace = true, features = ["full"] }
 anyhow.workspace = true

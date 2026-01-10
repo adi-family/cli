@@ -13,7 +13,7 @@ path = "src/main.rs"
 adi-analytics-ingestion-core = { path = "../core" }
 
 # Analytics core (for event types)
-lib-analytics-core = { path = "../../lib-analytics-core" }
+lib-analytics-core = { path = "../../lib/lib-analytics-core" }
 
 # Web framework
 axum = "0.8"

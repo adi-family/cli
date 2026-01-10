@@ -13,9 +13,9 @@ fastembed = ["lib-embed/fastembed"]
 
 [dependencies]
 # Internal
-lib-embed = { path = "../../lib-embed" }
-lib-plugin-host = { path = "../../lib-plugin-host" }
-lib-migrations = { path = "../../lib-migrations" }
+lib-embed = { path = "../../lib/lib-embed" }
+lib-plugin-host = { path = "../../lib/lib-plugin-host" }
+lib-migrations = { path = "../../lib/lib-migrations" }
 
 # Error handling
 thiserror.workspace = true

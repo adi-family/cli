@@ -10,7 +10,7 @@ description = "ADI Knowledgebase plugin providing MCP tools for knowledge graph 
 crate-type = ["cdylib"]
 
 [dependencies]
-lib-plugin-abi = { path = "../../lib-plugin-abi" }
+lib-plugin-abi = { path = "../../lib/lib-plugin-abi" }
 adi-knowledgebase-core = { path = "../core" }
 abi_stable.workspace = true
 serde = { workspace = true, features = ["derive"] }

@@ -1,0 +1,50 @@
+[package]
+name = "lib-analytics-core"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+
+[[bin]]
+name = "analytics-migrate"
+path = "src/bin/migrate.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.49", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP client (use rustls for musl cross-compilation)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1.19", features = ["serde", "v4"] }
+
+# Logging
+tracing = "0.1"
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+
+# Migrations (for binary only)
+lib-migrations-core = { git = "https://github.com/adi-family/lib-migrations-core.git", optional = true }
+lib-migrations-sql = { git = "https://github.com/adi-family/lib-migrations-sql.git", optional = true }
+
+# Environment (for binary only)
+dotenvy = { version = "0.15", optional = true }
+
+[features]
+default = []
+migrate = ["lib-migrations-core", "lib-migrations-sql", "dotenvy"]
+
+[dev-dependencies]
+tokio-test = "0.4"

@@ -1,28 +1,34 @@
 [workspace]
 resolver = "2"
 exclude = [
-    "crates/lib-flowmap-core",
-    "crates/lib-flowmap-parser",
+    "crates/lib/lib-flowmap-core",
+    "crates/lib/lib-flowmap-parser",
     "apps/flowmap-api",
     "crates/adi-analytics-api",
     "crates/adi-analytics-ingestion",
     # Apple Silicon only - requires Metal Toolchain
-    "crates/lib-client/uzu",
+    "crates/lib/lib-client/uzu",
     "crates/adi-llm-uzu-plugin",
+    # Nested workspaces (submodules with their own workspace roots)
+    "crates/adi-executor",
+    "crates/cocoon",
+    "crates/cocoon-manager",
+    "crates/adi-plugin-registry-http",
+    "crates/tarminal-signaling-server",
 ]
 members = [
     # CLI manager (submodule)
     "crates/adi-cli",
 
     # Shared libraries
-    "crates/lib-cli-common",
-    "crates/lib-migrations",
-    "crates/lib-typespec-api",
-    "crates/lib-task-store",
-    "crates/lib-i18n-core",
+    "crates/lib/lib-cli-common",
+    "crates/lib/lib-migrations",
+    "crates/lib/lib-typespec-api",
+    "crates/lib/lib-task-store",
+    "crates/lib/lib-i18n-core",
 
     # Indexer components (flat submodules)
-    "crates/lib-embed",
+    "crates/lib/lib-embed",
     "crates/adi-indexer/core",
     "crates/adi-indexer/cli",
     "crates/adi-indexer/http",
@@ -50,56 +56,50 @@ members = [
     "crates/adi-agent-loop/http",
 
     # Tarminal components (flat submodules)
-    "crates/lib-misc-color",
-    "crates/lib-animation",
-    "crates/lib-syntax-highlight",
-    "crates/lib-terminal-theme",
-    "crates/lib-json-tree",
-    "crates/lib-terminal-grid",
-    "crates/lib-iced-ui",
-    "crates/lib-tarminal-sync",
-
-    # Executor service
-    "crates/adi-executor",
-    "crates/cocoon",
-    "crates/cocoon-manager",
+    "crates/lib/lib-misc-color",
+    "crates/lib/lib-animation",
+    "crates/lib/lib-syntax-highlight",
+    "crates/lib/lib-terminal-theme",
+    "crates/lib/lib-json-tree",
+    "crates/lib/lib-terminal-grid",
+    "crates/lib/lib-iced-ui",
+    "crates/lib/lib-tarminal-sync",
 
     # Analytics
-    "crates/lib-analytics-core",
+    "crates/lib/lib-analytics-core",
 
     # Debug app (submodule)
     "crates/debug-metal-shader",
     "crates/tool-generate-heartbit",
 
     # API clients
-    "crates/lib-client/github",
-    "crates/lib-client/anthropic",
-    "crates/lib-client/openai",
-    "crates/lib-client/ollama",
-    "crates/lib-client/openrouter",
-    "crates/lib-client/google-auth",
-    "crates/lib-client/gemini",
-    "crates/lib-client/linear",
-    "crates/lib-client/gitlab",
-    "crates/lib-client/jira",
-    "crates/lib-client/slack",
-    "crates/lib-client/confluence",
-    "crates/lib-client/google-sheets",
-    "crates/lib-client/google-drive",
-    "crates/lib-client/google-docs",
-    "crates/lib-client/asana",
-    "crates/lib-client/trello",
+    "crates/lib/lib-client/github",
+    "crates/lib/lib-client/anthropic",
+    "crates/lib/lib-client/openai",
+    "crates/lib/lib-client/ollama",
+    "crates/lib/lib-client/openrouter",
+    "crates/lib/lib-client/google-auth",
+    "crates/lib/lib-client/gemini",
+    "crates/lib/lib-client/linear",
+    "crates/lib/lib-client/gitlab",
+    "crates/lib/lib-client/jira",
+    "crates/lib/lib-client/slack",
+    "crates/lib/lib-client/confluence",
+    "crates/lib/lib-client/google-sheets",
+    "crates/lib/lib-client/google-drive",
+    "crates/lib/lib-client/google-docs",
+    "crates/lib/lib-client/asana",
+    "crates/lib/lib-client/trello",
 
     # Plugin system
-    "crates/lib-plugin-abi",
-    "crates/lib-plugin-manifest",
-    "crates/lib-plugin-verify",
-    "crates/lib-plugin-registry",
-    "crates/lib-plugin-host",
-    "crates/adi-plugin-registry-http",
+    "crates/lib/lib-plugin-abi",
+    "crates/lib/lib-plugin-manifest",
+    "crates/lib/lib-plugin-verify",
+    "crates/lib/lib-plugin-registry",
+    "crates/lib/lib-plugin-host",
 
     # Indexer language plugins
-    "crates/lib-indexer-lang-abi",
+    "crates/lib/lib-indexer-lang-abi",
     "crates/adi-lang/rust/plugin",
     "crates/adi-lang/python/plugin",
     "crates/adi-lang/typescript/plugin",
@@ -113,7 +113,7 @@ members = [
     "crates/adi-lang/lua/plugin",
 
     # TypeSpec API generator
-    "crates/lib-typespec-api",
+    "crates/lib/lib-typespec-api",
 
     # Core plugins
     "crates/adi-embed-plugin",
@@ -122,7 +122,7 @@ members = [
     "crates/adi-knowledgebase/plugin",
     "crates/adi-agent-loop/plugin",
     "crates/adi-linter/plugin",
-    "crates/adi-coolify-plugin",
+    "crates/adi-coolify/plugin",
     "crates/adi-workflow/plugin",
 
     # Workflow translation plugins
@@ -137,15 +137,15 @@ members = [
     "crates/adi-workflow/langs/ru",
 
     # Coolify translation plugins
-    "crates/adi-coolify-lang-en",
-    "crates/adi-coolify-lang-uk",
-    "crates/adi-coolify-lang-zh",
-    "crates/adi-coolify-lang-es",
-    "crates/adi-coolify-lang-fr",
-    "crates/adi-coolify-lang-de",
-    "crates/adi-coolify-lang-ja",
-    "crates/adi-coolify-lang-ko",
-    "crates/adi-coolify-lang-ru",
+    "crates/adi-coolify/lang/en",
+    "crates/adi-coolify/lang/uk",
+    "crates/adi-coolify/lang/zh",
+    "crates/adi-coolify/lang/es",
+    "crates/adi-coolify/lang/fr",
+    "crates/adi-coolify/lang/de",
+    "crates/adi-coolify/lang/ja",
+    "crates/adi-coolify/lang/ko",
+    "crates/adi-coolify/lang/ru",
 
     # Translation plugins
     "crates/adi-cli/plugins/en-US",
@@ -181,48 +181,48 @@ adi-auth-core = { path = "crates/adi-auth-core" }
 adi-linter-core = { path = "crates/adi-linter/core" }
 
 # Libraries (flat submodules)
-lib-misc-color = { path = "crates/lib-misc-color" }
-lib-animation = { path = "crates/lib-animation" }
-lib-syntax-highlight = { path = "crates/lib-syntax-highlight" }
-lib-terminal-theme = { path = "crates/lib-terminal-theme" }
-lib-json-tree = { path = "crates/lib-json-tree" }
-lib-terminal-grid = { path = "crates/lib-terminal-grid" }
-lib-iced-ui = { path = "crates/lib-iced-ui" }
-lib-tarminal-sync = { path = "crates/lib-tarminal-sync" }
-lib-embed = { path = "crates/lib-embed" }
-lib-cli-common = { path = "crates/lib-cli-common" }
-lib-migrations = { path = "crates/lib-migrations" }
-lib-task-store = { path = "crates/lib-task-store" }
-lib-analytics-core = { path = "crates/lib-analytics-core" }
+lib-misc-color = { path = "crates/lib/lib-misc-color" }
+lib-animation = { path = "crates/lib/lib-animation" }
+lib-syntax-highlight = { path = "crates/lib/lib-syntax-highlight" }
+lib-terminal-theme = { path = "crates/lib/lib-terminal-theme" }
+lib-json-tree = { path = "crates/lib/lib-json-tree" }
+lib-terminal-grid = { path = "crates/lib/lib-terminal-grid" }
+lib-iced-ui = { path = "crates/lib/lib-iced-ui" }
+lib-tarminal-sync = { path = "crates/lib/lib-tarminal-sync" }
+lib-embed = { path = "crates/lib/lib-embed" }
+lib-cli-common = { path = "crates/lib/lib-cli-common" }
+lib-migrations = { path = "crates/lib/lib-migrations" }
+lib-task-store = { path = "crates/lib/lib-task-store" }
+lib-analytics-core = { path = "crates/lib/lib-analytics-core" }
 
 # API clients
-lib-client-github = { path = "crates/lib-client/github" }
-lib-client-anthropic = { path = "crates/lib-client/anthropic" }
-lib-client-openai = { path = "crates/lib-client/openai" }
-lib-client-ollama = { path = "crates/lib-client/ollama" }
-lib-client-openrouter = { path = "crates/lib-client/openrouter" }
-lib-client-google-auth = { path = "crates/lib-client/google-auth" }
-lib-client-gemini = { path = "crates/lib-client/gemini" }
-lib-client-linear = { path = "crates/lib-client/linear" }
-lib-client-gitlab = { path = "crates/lib-client/gitlab" }
-lib-client-jira = { path = "crates/lib-client/jira" }
-lib-client-slack = { path = "crates/lib-client/slack" }
-lib-client-confluence = { path = "crates/lib-client/confluence" }
-lib-client-google-sheets = { path = "crates/lib-client/google-sheets" }
-lib-client-google-drive = { path = "crates/lib-client/google-drive" }
-lib-client-google-docs = { path = "crates/lib-client/google-docs" }
-lib-client-asana = { path = "crates/lib-client/asana" }
-lib-client-trello = { path = "crates/lib-client/trello" }
+lib-client-github = { path = "crates/lib/lib-client/github" }
+lib-client-anthropic = { path = "crates/lib/lib-client/anthropic" }
+lib-client-openai = { path = "crates/lib/lib-client/openai" }
+lib-client-ollama = { path = "crates/lib/lib-client/ollama" }
+lib-client-openrouter = { path = "crates/lib/lib-client/openrouter" }
+lib-client-google-auth = { path = "crates/lib/lib-client/google-auth" }
+lib-client-gemini = { path = "crates/lib/lib-client/gemini" }
+lib-client-linear = { path = "crates/lib/lib-client/linear" }
+lib-client-gitlab = { path = "crates/lib/lib-client/gitlab" }
+lib-client-jira = { path = "crates/lib/lib-client/jira" }
+lib-client-slack = { path = "crates/lib/lib-client/slack" }
+lib-client-confluence = { path = "crates/lib/lib-client/confluence" }
+lib-client-google-sheets = { path = "crates/lib/lib-client/google-sheets" }
+lib-client-google-drive = { path = "crates/lib/lib-client/google-drive" }
+lib-client-google-docs = { path = "crates/lib/lib-client/google-docs" }
+lib-client-asana = { path = "crates/lib/lib-client/asana" }
+lib-client-trello = { path = "crates/lib/lib-client/trello" }
 
 # Plugin system
-lib-plugin-abi = { path = "crates/lib-plugin-abi" }
-lib-plugin-manifest = { path = "crates/lib-plugin-manifest" }
-lib-plugin-verify = { path = "crates/lib-plugin-verify" }
-lib-plugin-registry = { path = "crates/lib-plugin-registry" }
-lib-plugin-host = { path = "crates/lib-plugin-host" }
+lib-plugin-abi = { path = "crates/lib/lib-plugin-abi" }
+lib-plugin-manifest = { path = "crates/lib/lib-plugin-manifest" }
+lib-plugin-verify = { path = "crates/lib/lib-plugin-verify" }
+lib-plugin-registry = { path = "crates/lib/lib-plugin-registry" }
+lib-plugin-host = { path = "crates/lib/lib-plugin-host" }
 
 # Indexer language plugins
-lib-indexer-lang-abi = { path = "crates/lib-indexer-lang-abi" }
+lib-indexer-lang-abi = { path = "crates/lib/lib-indexer-lang-abi" }
 
 # ABI stability for plugins
 abi_stable = "0.11"
