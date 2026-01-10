@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.workflow.ru-RU"
+name = "ADI Workflow - Русский"
+version = "1.0.0"
+type = "translation"
+author = "ADI Team"
+description = "Русские переводы для ADI Workflow"
+min_host_version = "0.8.0"
+
+[translation]
+translates = "adi.workflow"
+language = "ru-RU"
+language_name = "Русский"
+namespace = "workflow"
+
+[[provides]]
+id = "adi.i18n.workflow.ru-RU"
+version = "1.0.0"
+description = "Russian translations for workflow"
+
+[binary]
+name = "adi_workflow_lang_ru"

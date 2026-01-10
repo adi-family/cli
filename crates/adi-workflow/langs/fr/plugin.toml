@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.workflow.fr-FR"
+name = "ADI Workflow - Français"
+version = "1.0.0"
+type = "translation"
+author = "ADI Team"
+description = "Traductions françaises pour ADI Workflow"
+min_host_version = "0.8.0"
+
+[translation]
+translates = "adi.workflow"
+language = "fr-FR"
+language_name = "Français"
+namespace = "workflow"
+
+[[provides]]
+id = "adi.i18n.workflow.fr-FR"
+version = "1.0.0"
+description = "French translations for workflow"
+
+[binary]
+name = "adi_workflow_lang_fr"

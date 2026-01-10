@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.workflow.uk-UA"
+name = "ADI Workflow - Українська"
+version = "1.0.0"
+type = "translation"
+author = "ADI Team"
+description = "Українські переклади для ADI Workflow"
+min_host_version = "0.8.0"
+
+[translation]
+translates = "adi.workflow"
+language = "uk-UA"
+language_name = "Українська"
+namespace = "workflow"
+
+[[provides]]
+id = "adi.i18n.workflow.uk-UA"
+version = "1.0.0"
+description = "Ukrainian translations for workflow"
+
+[binary]
+name = "adi_workflow_lang_uk"

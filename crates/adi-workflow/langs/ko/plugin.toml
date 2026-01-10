@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.workflow.ko-KR"
+name = "ADI Workflow - 한국어"
+version = "1.0.0"
+type = "translation"
+author = "ADI Team"
+description = "ADI Workflow 한국어 번역"
+min_host_version = "0.8.0"
+
+[translation]
+translates = "adi.workflow"
+language = "ko-KR"
+language_name = "한국어"
+namespace = "workflow"
+
+[[provides]]
+id = "adi.i18n.workflow.ko-KR"
+version = "1.0.0"
+description = "Korean translations for workflow"
+
+[binary]
+name = "adi_workflow_lang_ko"

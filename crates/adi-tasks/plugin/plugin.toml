@@ -1,0 +1,24 @@
+[plugin]
+id = "adi.tasks"
+name = "ADI Tasks"
+version = "0.8.8"
+type = "core"
+author = "ADI Team"
+description = "Task management with dependency tracking and DAG visualization"
+min_host_version = "0.8.0"
+
+[cli]
+command = "tasks"
+description = "Task management - dependency graphs and task tracking"
+aliases = ["t"]
+
+[[provides]]
+id = "adi.tasks.cli"
+version = "1.0.0"
+description = "CLI commands for task management"
+
+[tags]
+categories = ["tasks", "project-management", "workflow"]
+
+[binary]
+name = "adi_tasks_plugin"

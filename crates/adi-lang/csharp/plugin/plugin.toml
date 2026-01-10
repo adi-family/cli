@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.lang.csharp"
+name = "C# Language Support"
+version = "0.1.0"
+type = "lang"
+author = "ADI Team"
+description = "Language support for C# with tree-sitter parsing"
+min_host_version = "0.8.0"
+
+[[provides]]
+id = "adi.indexer.lang"
+version = "1.0.0"
+
+[binary]
+name = "adi_lang_csharp"
+
+[language]
+id = "csharp"
+extensions = ["cs"]
+
+[tags]
+categories = ["language", "csharp", "dotnet", "parsing"]

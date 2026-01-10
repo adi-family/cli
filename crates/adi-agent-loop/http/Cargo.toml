@@ -1,0 +1,23 @@
+[package]
+name = "adi-agent-loop-http"
+version = "0.8.3"
+edition = "2021"
+license-file = "LICENSE"
+authors = ["ADI Team"]
+description = "HTTP server for ADI Agent Loop - REST API for agent capabilities"
+
+[[bin]]
+name = "adi-agent-http"
+path = "src/main.rs"
+
+[dependencies]
+adi-agent-loop-core = { path = "../core" }
+tokio = { version = "1.49", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"

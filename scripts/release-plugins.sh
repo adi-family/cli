@@ -45,7 +45,7 @@ PLUGINS=(
 main() {
     # Get current version from first plugin's plugin.toml
     local current_version
-    current_version=$(grep '^version' "$ROOT_DIR/crates/adi-tasks-plugin/plugin.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+    current_version=$(grep '^version' "$ROOT_DIR/crates/adi-tasks/plugin/plugin.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
     info "Current version: v$current_version"
 
     # Get version from argument or prompt
@@ -69,6 +69,8 @@ main() {
             # Handle new adi-lang structure
             case "$crate_name" in
                 adi-lang-*) manifest="$ROOT_DIR/crates/adi-lang/${crate_name#adi-lang-}/plugin/plugin.toml" ;;
+                adi-knowledgebase-plugin) manifest="$ROOT_DIR/crates/adi-knowledgebase/plugin/plugin.toml" ;;
+                adi-tasks-plugin) manifest="$ROOT_DIR/crates/adi-tasks/plugin/plugin.toml" ;;
             esac
             if [ -f "$manifest" ]; then
                 sed -i '' "s/^version = \"$current_version\"/version = \"$version\"/" "$manifest"
@@ -115,6 +117,8 @@ main() {
         local crate_dir="$ROOT_DIR/crates/$crate_name"
         case "$crate_name" in
             adi-lang-*) crate_dir="$ROOT_DIR/crates/adi-lang/${crate_name#adi-lang-}/plugin" ;;
+            adi-knowledgebase-plugin) crate_dir="$ROOT_DIR/crates/adi-knowledgebase/plugin" ;;
+            adi-tasks-plugin) crate_dir="$ROOT_DIR/crates/adi-tasks/plugin" ;;
         esac
 
         # Check if crate exists

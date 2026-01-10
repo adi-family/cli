@@ -1,0 +1,64 @@
+[package]
+name = "adi-indexer-core"
+version = "0.8.4"
+edition = "2021"
+license-file = "LICENSE"
+description = "Core indexer library for ADI - parsing, storage, search"
+authors = ["ADI Team"]
+
+[features]
+default = []
+# Enable local fastembed for the deprecated `open()` method
+# This adds ~20MB to binary size. Use open_with_plugins() instead.
+fastembed = ["lib-embed/fastembed"]
+
+[dependencies]
+# Internal
+lib-embed = { path = "../../lib-embed" }
+lib-cli-common = { path = "../../lib-cli-common" }
+lib-migrations = { path = "../../lib-migrations" }
+
+# Plugin system
+lib-plugin-abi = { path = "../../lib-plugin-abi" }
+lib-plugin-host = { path = "../../lib-plugin-host" }
+lib-indexer-lang-abi = { path = "../../lib-indexer-lang-abi" }
+libloading = "0.8"
+
+# Error handling
+thiserror = "2"
+anyhow = "1.0"
+
+# Async
+tokio = { version = "1.49", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Tree-sitter (core only - grammars loaded via plugins)
+tree-sitter = "0.25"
+
+# Storage
+rusqlite = { version = "0.31", features = ["bundled"] }
+memmap2 = "0.9"
+bytemuck = { version = "1.24", features = ["derive"] }
+
+# Vector search
+usearch = "2.23"
+
+# Logging
+tracing = "0.1"
+
+# Misc
+uuid = { version = "1.19", features = ["v4", "serde"] }
+walkdir = "2.5"
+ignore = "0.4"
+notify = { version = "6.1", features = ["serde"] }
+fs2 = "0.4"
+sha2 = "0.10"
+hex = "0.4"
+directories = "5.0"
+
+[dev-dependencies]
+tempfile = "3.24"

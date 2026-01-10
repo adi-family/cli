@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.workflow.ja-JP"
+name = "ADI Workflow - 日本語"
+version = "1.0.0"
+type = "translation"
+author = "ADI Team"
+description = "ADI Workflow の日本語翻訳"
+min_host_version = "0.8.0"
+
+[translation]
+translates = "adi.workflow"
+language = "ja-JP"
+language_name = "日本語"
+namespace = "workflow"
+
+[[provides]]
+id = "adi.i18n.workflow.ja-JP"
+version = "1.0.0"
+description = "Japanese translations for workflow"
+
+[binary]
+name = "adi_workflow_lang_ja"

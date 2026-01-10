@@ -7,7 +7,7 @@ description = "Flow parser for TypeScript/JavaScript/Python/Java codebases"
 
 [dependencies]
 lib-flowmap-core = { path = "../lib-flowmap-core" }
-lib-client-anthropic = { path = "../lib-client-anthropic" }
+lib-client-anthropic = { path = "../lib-client/anthropic" }
 tree-sitter = "0.25"
 tree-sitter-typescript = "0.23"
 tree-sitter-python = "0.23"

@@ -1,0 +1,47 @@
+[package]
+name = "adi-knowledgebase-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Core knowledgebase library for ADI - graph DB, embedding storage, semantic search"
+
+[features]
+default = []
+# Enable local fastembed for standalone usage (~20MB)
+fastembed = ["lib-embed/fastembed"]
+
+[dependencies]
+# Internal
+lib-embed = { path = "../../lib-embed" }
+lib-plugin-host = { path = "../../lib-plugin-host" }
+lib-migrations = { path = "../../lib-migrations" }
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# Async
+tokio = { workspace = true, features = ["full"] }
+async-trait.workspace = true
+
+# Serialization
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+# Storage
+rusqlite.workspace = true
+
+# Vector search
+usearch.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Misc
+uuid.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+
+[dev-dependencies]
+tempfile = "3.24"

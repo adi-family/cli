@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.workflow.zh-CN"
+name = "ADI Workflow - 简体中文"
+version = "1.0.0"
+type = "translation"
+author = "ADI Team"
+description = "ADI Workflow 简体中文翻译"
+min_host_version = "0.8.0"
+
+[translation]
+translates = "adi.workflow"
+language = "zh-CN"
+language_name = "简体中文"
+namespace = "workflow"
+
+[[provides]]
+id = "adi.i18n.workflow.zh-CN"
+version = "1.0.0"
+description = "Chinese translations for workflow"
+
+[binary]
+name = "adi_workflow_lang_zh"

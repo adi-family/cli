@@ -1,0 +1,24 @@
+[plugin]
+id = "adi.workflow"
+name = "ADI Workflow"
+version = "0.1.0"
+type = "core"
+author = "ADI Team"
+description = "Run workflows defined in TOML files with interactive prompts"
+min_host_version = "0.8.0"
+
+[cli]
+command = "workflow"
+description = "Run workflows defined in TOML files"
+aliases = ["wf"]
+
+[[provides]]
+id = "adi.workflow.cli"
+version = "1.0.0"
+description = "CLI commands for workflow execution"
+
+[tags]
+categories = ["workflow", "automation", "scripting"]
+
+[binary]
+name = "adi_workflow_plugin"

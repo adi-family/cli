@@ -53,15 +53,15 @@ See `NEXT_STEPS_I18N.md` for detailed status and remaining work.
 - `crates/lib-embed` - Shared embedding library
 - `crates/lib-cli-common` - Common CLI utilities
 - `crates/lib-migrations` - Database migration framework
-- `crates/adi-indexer-core` - Code indexer core library
-- `crates/adi-indexer-cli` - Code indexer CLI
-- `crates/adi-indexer-http` - Code indexer HTTP server
-- `crates/adi-tasks-core` - Task management core library
-- `crates/adi-tasks-cli` - Task management CLI
-- `crates/adi-tasks-http` - Task management HTTP server
-- `crates/adi-knowledgebase-core` - Knowledgebase core library (graph DB + embeddings)
-- `crates/adi-knowledgebase-cli` - Knowledgebase CLI
-- `crates/adi-knowledgebase-http` - Knowledgebase HTTP server
+- `crates/adi-indexer/core` - Code indexer core library
+- `crates/adi-indexer/cli` - Code indexer CLI
+- `crates/adi-indexer/http` - Code indexer HTTP server
+- `crates/adi-tasks/core` - Task management core library
+- `crates/adi-tasks/cli` - Task management CLI
+- `crates/adi-tasks/http` - Task management HTTP server
+- `crates/adi-knowledgebase/core` - Knowledgebase core library (graph DB + embeddings)
+- `crates/adi-knowledgebase/cli` - Knowledgebase CLI
+- `crates/adi-knowledgebase/http` - Knowledgebase HTTP server
 - `crates/adi-agent-loop/core` - Agent loop core library (autonomous LLM agents)
 - `crates/adi-agent-loop/http` - Agent loop HTTP server
 - `crates/adi-agent-loop/plugin` - Agent loop plugin (includes CLI functionality)
@@ -498,12 +498,8 @@ Each submodule is an independent repo that can be developed standalone:
 - lib-embed: `../lib-embed`
 - lib-cli-common: `../lib-cli-common`
 - lib-migrations: `../lib-migrations`
-- adi-indexer-core: `../adi-indexer-core`
-- adi-indexer-cli: `../adi-indexer-cli`
-- adi-indexer-http: `../adi-indexer-http`
-- adi-tasks-core: `../adi-tasks-core`
-- adi-tasks-cli: `../adi-tasks-cli`
-- adi-tasks-http: `../adi-tasks-http`
+- adi-indexer: `../adi-indexer` (contains core, cli, http, plugin)
+- adi-tasks: `../adi-tasks` (contains core, cli, http, plugin)
 - lib-misc-color: `../lib-misc-color`
 - lib-animation: `../lib-animation`
 - lib-syntax-highlight: `../lib-syntax-highlight`

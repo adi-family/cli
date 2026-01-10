@@ -1,0 +1,22 @@
+[package]
+name = "adi-tasks-cli"
+version = "0.8.3"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "CLI tool for ADI Tasks - task management with dependency graphs"
+
+[[bin]]
+name = "adi-tasks-cli"
+path = "src/main.rs"
+
+[dependencies]
+adi-tasks-core = { path = "../core" }
+lib-cli-common = { path = "../../lib-cli-common" }
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+console = "0.15"
+tokio = { version = "1.49", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"

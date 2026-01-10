@@ -1,0 +1,42 @@
+[package]
+name = "adi-linter-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Core library for ADI Linter - language-agnostic linting with external/plugin/command rules"
+
+[dependencies]
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# Async runtime
+tokio = { workspace = true, features = ["full", "process"] }
+async-trait.workspace = true
+futures.workspace = true
+
+# Serialization
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+toml.workspace = true
+
+# File system
+walkdir.workspace = true
+ignore.workspace = true
+glob.workspace = true
+
+# Pattern matching
+globset = "0.4"
+regex.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Misc
+sha2.workspace = true
+hex.workspace = true
+num_cpus = "1.17"
+
+[dev-dependencies]
+tempfile = "3"

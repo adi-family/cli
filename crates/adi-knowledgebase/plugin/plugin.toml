@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.knowledgebase"
+name = "ADI Knowledgebase"
+version = "0.8.3"
+type = "core"
+author = "ADI Team"
+description = "Knowledge graph with semantic embeddings for context retrieval"
+min_host_version = "0.8.0"
+
+[[provides]]
+id = "adi.mcp.tools"
+version = "1.0.0"
+
+[[provides]]
+id = "adi.mcp.resources"
+version = "1.0.0"
+
+[tags]
+categories = ["knowledgebase", "embeddings", "graph", "rag"]
+
+[binary]
+name = "adi_knowledgebase_plugin"

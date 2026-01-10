@@ -1,0 +1,29 @@
+[plugin]
+id = "adi.indexer"
+name = "ADI Indexer"
+version = "0.8.10"
+type = "core"
+author = "ADI Team"
+description = "Code indexer with semantic search, symbol analysis, and dead code detection"
+min_host_version = "0.8.0"
+
+[compatibility]
+depends_on = ["adi.embed"]
+
+[[requires]]
+id = "adi.embed"
+version = "0.1.0"
+
+[[provides]]
+id = "adi.mcp.tools"
+version = "1.0.0"
+
+[[provides]]
+id = "adi.mcp.resources"
+version = "1.0.0"
+
+[tags]
+categories = ["indexer", "code-search", "analysis"]
+
+[binary]
+name = "adi_indexer_plugin"

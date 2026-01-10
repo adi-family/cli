@@ -7,7 +7,7 @@ exclude = [
     "crates/adi-analytics-api",
     "crates/adi-analytics-ingestion",
     # Apple Silicon only - requires Metal Toolchain
-    "crates/lib-client-uzu",
+    "crates/lib-client/uzu",
     "crates/adi-llm-uzu-plugin",
 ]
 members = [
@@ -23,14 +23,14 @@ members = [
 
     # Indexer components (flat submodules)
     "crates/lib-embed",
-    "crates/adi-indexer-core",
-    "crates/adi-indexer-cli",
-    "crates/adi-indexer-http",
+    "crates/adi-indexer/core",
+    "crates/adi-indexer/cli",
+    "crates/adi-indexer/http",
 
-    # Tasks components (flat submodules)
-    "crates/adi-tasks-core",
-    "crates/adi-tasks-cli",
-    "crates/adi-tasks-http",
+    # Tasks components
+    "crates/adi-tasks/core",
+    "crates/adi-tasks/cli",
+    "crates/adi-tasks/http",
 
     # Linter components
     "crates/adi-linter/core",
@@ -41,9 +41,9 @@ members = [
     "crates/adi-auth-http",
 
     # Knowledgebase components
-    "crates/adi-knowledgebase-core",
-    "crates/adi-knowledgebase-cli",
-    "crates/adi-knowledgebase-http",
+    "crates/adi-knowledgebase/core",
+    "crates/adi-knowledgebase/cli",
+    "crates/adi-knowledgebase/http",
 
     # Agent Loop components
     "crates/adi-agent-loop/core",
@@ -72,23 +72,23 @@ members = [
     "crates/tool-generate-heartbit",
 
     # API clients
-    "crates/lib-client-github",
-    "crates/lib-client-anthropic",
-    "crates/lib-client-openai",
-    "crates/lib-client-ollama",
-    "crates/lib-client-openrouter",
-    "crates/lib-client-google-auth",
-    "crates/lib-client-gemini",
-    "crates/lib-client-linear",
-    "crates/lib-client-gitlab",
-    "crates/lib-client-jira",
-    "crates/lib-client-slack",
-    "crates/lib-client-confluence",
-    "crates/lib-client-google-sheets",
-    "crates/lib-client-google-drive",
-    "crates/lib-client-google-docs",
-    "crates/lib-client-asana",
-    "crates/lib-client-trello",
+    "crates/lib-client/github",
+    "crates/lib-client/anthropic",
+    "crates/lib-client/openai",
+    "crates/lib-client/ollama",
+    "crates/lib-client/openrouter",
+    "crates/lib-client/google-auth",
+    "crates/lib-client/gemini",
+    "crates/lib-client/linear",
+    "crates/lib-client/gitlab",
+    "crates/lib-client/jira",
+    "crates/lib-client/slack",
+    "crates/lib-client/confluence",
+    "crates/lib-client/google-sheets",
+    "crates/lib-client/google-drive",
+    "crates/lib-client/google-docs",
+    "crates/lib-client/asana",
+    "crates/lib-client/trello",
 
     # Plugin system
     "crates/lib-plugin-abi",
@@ -117,11 +117,35 @@ members = [
 
     # Core plugins
     "crates/adi-embed-plugin",
-    "crates/adi-indexer-plugin",
-    "crates/adi-tasks-plugin",
-    "crates/adi-knowledgebase-plugin",
+    "crates/adi-indexer/plugin",
+    "crates/adi-tasks/plugin",
+    "crates/adi-knowledgebase/plugin",
     "crates/adi-agent-loop/plugin",
     "crates/adi-linter/plugin",
+    "crates/adi-coolify-plugin",
+    "crates/adi-workflow/plugin",
+
+    # Workflow translation plugins
+    "crates/adi-workflow/langs/en",
+    "crates/adi-workflow/langs/uk",
+    "crates/adi-workflow/langs/zh",
+    "crates/adi-workflow/langs/es",
+    "crates/adi-workflow/langs/fr",
+    "crates/adi-workflow/langs/de",
+    "crates/adi-workflow/langs/ja",
+    "crates/adi-workflow/langs/ko",
+    "crates/adi-workflow/langs/ru",
+
+    # Coolify translation plugins
+    "crates/adi-coolify-lang-en",
+    "crates/adi-coolify-lang-uk",
+    "crates/adi-coolify-lang-zh",
+    "crates/adi-coolify-lang-es",
+    "crates/adi-coolify-lang-fr",
+    "crates/adi-coolify-lang-de",
+    "crates/adi-coolify-lang-ja",
+    "crates/adi-coolify-lang-ko",
+    "crates/adi-coolify-lang-ru",
 
     # Translation plugins
     "crates/adi-cli/plugins/en-US",
@@ -149,9 +173,9 @@ authors = ["ADI Team"]
 
 [workspace.dependencies]
 # Core crates (from submodules)
-adi-indexer-core = { path = "crates/adi-indexer-core" }
-adi-tasks-core = { path = "crates/adi-tasks-core" }
-adi-knowledgebase-core = { path = "crates/adi-knowledgebase-core" }
+adi-indexer-core = { path = "crates/adi-indexer/core" }
+adi-tasks-core = { path = "crates/adi-tasks/core" }
+adi-knowledgebase-core = { path = "crates/adi-knowledgebase/core" }
 adi-agent-loop-core = { path = "crates/adi-agent-loop/core" }
 adi-auth-core = { path = "crates/adi-auth-core" }
 adi-linter-core = { path = "crates/adi-linter/core" }
@@ -172,23 +196,23 @@ lib-task-store = { path = "crates/lib-task-store" }
 lib-analytics-core = { path = "crates/lib-analytics-core" }
 
 # API clients
-lib-client-github = { path = "crates/lib-client-github" }
-lib-client-anthropic = { path = "crates/lib-client-anthropic" }
-lib-client-openai = { path = "crates/lib-client-openai" }
-lib-client-ollama = { path = "crates/lib-client-ollama" }
-lib-client-openrouter = { path = "crates/lib-client-openrouter" }
-lib-client-google-auth = { path = "crates/lib-client-google-auth" }
-lib-client-gemini = { path = "crates/lib-client-gemini" }
-lib-client-linear = { path = "crates/lib-client-linear" }
-lib-client-gitlab = { path = "crates/lib-client-gitlab" }
-lib-client-jira = { path = "crates/lib-client-jira" }
-lib-client-slack = { path = "crates/lib-client-slack" }
-lib-client-confluence = { path = "crates/lib-client-confluence" }
-lib-client-google-sheets = { path = "crates/lib-client-google-sheets" }
-lib-client-google-drive = { path = "crates/lib-client-google-drive" }
-lib-client-google-docs = { path = "crates/lib-client-google-docs" }
-lib-client-asana = { path = "crates/lib-client-asana" }
-lib-client-trello = { path = "crates/lib-client-trello" }
+lib-client-github = { path = "crates/lib-client/github" }
+lib-client-anthropic = { path = "crates/lib-client/anthropic" }
+lib-client-openai = { path = "crates/lib-client/openai" }
+lib-client-ollama = { path = "crates/lib-client/ollama" }
+lib-client-openrouter = { path = "crates/lib-client/openrouter" }
+lib-client-google-auth = { path = "crates/lib-client/google-auth" }
+lib-client-gemini = { path = "crates/lib-client/gemini" }
+lib-client-linear = { path = "crates/lib-client/linear" }
+lib-client-gitlab = { path = "crates/lib-client/gitlab" }
+lib-client-jira = { path = "crates/lib-client/jira" }
+lib-client-slack = { path = "crates/lib-client/slack" }
+lib-client-confluence = { path = "crates/lib-client/confluence" }
+lib-client-google-sheets = { path = "crates/lib-client/google-sheets" }
+lib-client-google-drive = { path = "crates/lib-client/google-drive" }
+lib-client-google-docs = { path = "crates/lib-client/google-docs" }
+lib-client-asana = { path = "crates/lib-client/asana" }
+lib-client-trello = { path = "crates/lib-client/trello" }
 
 # Plugin system
 lib-plugin-abi = { path = "crates/lib-plugin-abi" }

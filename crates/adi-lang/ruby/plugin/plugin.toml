@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.lang.ruby"
+name = "Ruby Language Support"
+version = "0.1.0"
+type = "lang"
+author = "ADI Team"
+description = "Language support for Ruby with tree-sitter parsing"
+min_host_version = "0.8.0"
+
+[[provides]]
+id = "adi.indexer.lang"
+version = "1.0.0"
+
+[binary]
+name = "adi_lang_ruby"
+
+[language]
+id = "ruby"
+extensions = ["rb", "rake", "gemspec"]
+
+[tags]
+categories = ["language", "ruby", "parsing"]
