@@ -1,5 +1,5 @@
 use reqwest::header::HeaderMap;
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{Deserialize, de::DeserializeOwned};
 use std::sync::Arc;
 use tracing::{debug, warn};
 
@@ -162,7 +162,10 @@ impl Client {
             data: Vec<Task>,
         }
 
-        let url = format!("{}/projects/{}/tasks?opt_fields=name,notes,completed,due_on,assignee,created_at,modified_at,permalink_url", self.base_url, project_gid);
+        let url = format!(
+            "{}/projects/{}/tasks?opt_fields=name,notes,completed,due_on,assignee,created_at,modified_at,permalink_url",
+            self.base_url, project_gid
+        );
 
         let mut headers = HeaderMap::new();
         self.auth.apply(&mut headers).await?;
@@ -176,7 +179,10 @@ impl Client {
         } else {
             let status = response.status().as_u16();
             let body = response.text().await.unwrap_or_default();
-            Err(Error::Api { status, message: body })
+            Err(Error::Api {
+                status,
+                message: body,
+            })
         }
     }
 
@@ -201,7 +207,10 @@ impl Client {
         } else {
             let status = response.status().as_u16();
             let body = response.text().await.unwrap_or_default();
-            Err(Error::Api { status, message: body })
+            Err(Error::Api {
+                status,
+                message: body,
+            })
         }
     }
 
@@ -226,12 +235,19 @@ impl Client {
         } else {
             let status = response.status().as_u16();
             let body = response.text().await.unwrap_or_default();
-            Err(Error::Api { status, message: body })
+            Err(Error::Api {
+                status,
+                message: body,
+            })
         }
     }
 
     /// Add task to a project.
-    pub async fn add_task_to_project(&self, task_gid: &str, input: AddToProjectInput) -> Result<()> {
+    pub async fn add_task_to_project(
+        &self,
+        task_gid: &str,
+        input: AddToProjectInput,
+    ) -> Result<()> {
         let url = format!("{}/tasks/{}/addProject", self.base_url, task_gid);
 
         let mut headers = HeaderMap::new();
@@ -251,7 +267,10 @@ impl Client {
         } else {
             let status = response.status().as_u16();
             let body = response.text().await.unwrap_or_default();
-            Err(Error::Api { status, message: body })
+            Err(Error::Api {
+                status,
+                message: body,
+            })
         }
     }
 

@@ -19,8 +19,8 @@ impl TokenManager {
     }
 
     pub fn from_env() -> Self {
-        let secret = std::env::var("JWT_SECRET")
-            .expect("JWT_SECRET environment variable is required");
+        let secret =
+            std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable is required");
 
         let expiry_hours = std::env::var("JWT_EXPIRY_HOURS")
             .ok()

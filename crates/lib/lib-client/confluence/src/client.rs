@@ -93,12 +93,7 @@ impl Client {
         let mut headers = HeaderMap::new();
         self.auth.apply(&mut headers).await?;
 
-        let response = self
-            .http
-            .delete(&url)
-            .headers(headers)
-            .send()
-            .await?;
+        let response = self.http.delete(&url).headers(headers).send().await?;
 
         let status = response.status();
         if status.is_success() {
@@ -234,7 +229,11 @@ impl Client {
     }
 
     /// Get pages in a space.
-    pub async fn get_space_content(&self, space_key: &str, limit: Option<u32>) -> Result<SearchResult> {
+    pub async fn get_space_content(
+        &self,
+        space_key: &str,
+        limit: Option<u32>,
+    ) -> Result<SearchResult> {
         let limit = limit.unwrap_or(25);
         self.get(&format!(
             "/content?spaceKey={}&limit={}&expand=body.storage,version",

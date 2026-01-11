@@ -203,24 +203,19 @@ fn cmd_run(args: &[&str], options: &serde_json::Value) -> Result<String, String>
         .get("yes")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
-    let file_path = options
-        .get("file")
-        .and_then(|v| v.as_str());
-    let system_prompt = options
-        .get("system-prompt")
-        .and_then(|v| v.as_str());
+    let file_path = options.get("file").and_then(|v| v.as_str());
+    let system_prompt = options.get("system-prompt").and_then(|v| v.as_str());
 
     // Read task from file if specified, otherwise use provided task
     let task_content = if let Some(path) = file_path {
-        std::fs::read_to_string(path)
-            .map_err(|e| format!("Failed to read file {}: {}", path, e))?
+        std::fs::read_to_string(path).map_err(|e| format!("Failed to read file {}: {}", path, e))?
     } else {
         task.to_string()
     };
 
     // Run the agent using tokio runtime
-    let rt = tokio::runtime::Runtime::new()
-        .map_err(|e| format!("Failed to create runtime: {}", e))?;
+    let rt =
+        tokio::runtime::Runtime::new().map_err(|e| format!("Failed to create runtime: {}", e))?;
 
     let result = rt.block_on(async {
         let config = LoopConfig {
@@ -271,10 +266,7 @@ impl ApprovalHandler for InteractiveApprover {
         tool_call: &ToolCall,
         rule: Option<&PermissionRule>,
     ) -> adi_agent_loop_core::Result<ApprovalDecision> {
-        eprintln!(
-            "\n{} Agent wants to run:",
-            style("?").yellow().bold()
-        );
+        eprintln!("\n{} Agent wants to run:", style("?").yellow().bold());
 
         eprintln!(
             "  {}: {}",

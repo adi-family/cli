@@ -218,7 +218,9 @@ impl Client {
             transitions: Vec<Transition>,
         }
 
-        let resp: Response = self.get(&format!("/issue/{}/transitions", issue_key)).await?;
+        let resp: Response = self
+            .get(&format!("/issue/{}/transitions", issue_key))
+            .await?;
         Ok(resp.transitions)
     }
 

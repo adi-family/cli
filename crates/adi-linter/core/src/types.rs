@@ -258,7 +258,13 @@ pub struct Location {
 
 impl Location {
     /// Create a new location.
-    pub fn new(file: PathBuf, start_line: u32, start_col: u32, end_line: u32, end_col: u32) -> Self {
+    pub fn new(
+        file: PathBuf,
+        start_line: u32,
+        start_col: u32,
+        end_line: u32,
+        end_col: u32,
+    ) -> Self {
         Self {
             file,
             start_line,
@@ -337,7 +343,12 @@ impl Fix {
     }
 
     /// Create a simple single-edit fix.
-    pub fn simple(description: impl Into<String>, file: PathBuf, range: Range, new_text: impl Into<String>) -> Self {
+    pub fn simple(
+        description: impl Into<String>,
+        file: PathBuf,
+        range: Range,
+        new_text: impl Into<String>,
+    ) -> Self {
         Self {
             description: description.into(),
             edits: vec![TextEdit {
@@ -486,7 +497,11 @@ mod tests {
         let diag = Diagnostic::with_categories(
             "memory-leak",
             "test-linter",
-            vec![Category::Security, Category::Performance, Category::Correctness],
+            vec![
+                Category::Security,
+                Category::Performance,
+                Category::Correctness,
+            ],
             Severity::Error,
             "Potential memory leak detected",
             Location::line(PathBuf::from("test.rs"), 10),

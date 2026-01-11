@@ -1,0 +1,42 @@
+# ADI Linter Configuration
+
+[linter]
+parallel = true
+fail_fast = false
+timeout = 30
+
+[autofix]
+enabled = true
+max_iterations = 10
+
+# Category configuration
+[categories]
+security = { enabled = true, fail_on = "warning" }
+correctness = { enabled = true }
+error-handling = { enabled = true }
+architecture = { enabled = true }
+performance = { enabled = true }
+code-quality = { enabled = true }
+best-practices = { enabled = true }
+testing = { enabled = true }
+documentation = { enabled = false }
+naming = { enabled = true }
+style = { enabled = true, priority = 50 }
+
+# Example command linter
+# [[rules.command]]
+# id = "no-todo"
+# category = "code-quality"
+# type = "regex-forbid"
+# pattern = "TODO|FIXME"
+# message = "Unresolved TODO comment"
+# glob = "**/*.rs"
+# severity = "warning"
+
+# Example external linter
+# [[rules.exec]]
+# id = "shellcheck"
+# category = "correctness"
+# exec = "shellcheck -f json {file}"
+# glob = "**/*.sh"
+# output = "json"

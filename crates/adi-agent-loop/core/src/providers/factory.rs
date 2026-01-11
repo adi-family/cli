@@ -29,10 +29,7 @@ pub enum ProviderConfig {
     },
 
     /// Ollama local provider
-    Ollama {
-        host: Option<String>,
-        model: String,
-    },
+    Ollama { host: Option<String>, model: String },
 
     /// Mock provider for testing
     Mock { responses: Vec<Message> },
@@ -92,6 +89,8 @@ pub fn create_provider(config: ProviderConfig) -> Result<Arc<dyn LlmProvider>> {
             api_key, model, site_name,
         )?)),
         ProviderConfig::Ollama { host, model } => Ok(Arc::new(OllamaProvider::new(host, model)?)),
-        ProviderConfig::Mock { responses } => Ok(Arc::new(MockLlmProvider::with_responses(responses))),
+        ProviderConfig::Mock { responses } => {
+            Ok(Arc::new(MockLlmProvider::with_responses(responses)))
+        }
     }
 }

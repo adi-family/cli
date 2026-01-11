@@ -167,7 +167,10 @@ impl Client {
         content: Vec<u8>,
         mime_type: &str,
     ) -> Result<File> {
-        let url = format!("{}{}?uploadType=multipart&fields=*", UPLOAD_BASE_URL, "/files");
+        let url = format!(
+            "{}{}?uploadType=multipart&fields=*",
+            UPLOAD_BASE_URL, "/files"
+        );
         debug!("Drive API upload: POST {}", url);
 
         let mut headers = HeaderMap::new();
@@ -177,15 +180,20 @@ impl Client {
         let form = reqwest::multipart::Form::new()
             .part(
                 "metadata",
-                reqwest::multipart::Part::text(metadata_json)
-                    .mime_str("application/json")?,
+                reqwest::multipart::Part::text(metadata_json).mime_str("application/json")?,
             )
             .part(
                 "file",
                 reqwest::multipart::Part::bytes(content).mime_str(mime_type)?,
             );
 
-        let response = self.http.post(&url).headers(headers).multipart(form).send().await?;
+        let response = self
+            .http
+            .post(&url)
+            .headers(headers)
+            .multipart(form)
+            .send()
+            .await?;
         self.handle_response(response).await
     }
 
@@ -292,9 +300,7 @@ mod tests {
 
     #[test]
     fn test_builder() {
-        let client = Client::builder()
-            .auth(ApiKeyAuth::new("test-key"))
-            .build();
+        let client = Client::builder().auth(ApiKeyAuth::new("test-key")).build();
         assert_eq!(client.base_url, DEFAULT_BASE_URL);
     }
 }

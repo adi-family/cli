@@ -89,7 +89,11 @@ impl TextObject {
 #[serde(untagged)]
 pub enum ContextElement {
     Text(TextObject),
-    Image { type_: String, image_url: String, alt_text: String },
+    Image {
+        type_: String,
+        image_url: String,
+        alt_text: String,
+    },
 }
 
 /// Block element.

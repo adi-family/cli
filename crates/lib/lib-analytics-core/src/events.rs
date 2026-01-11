@@ -30,10 +30,7 @@ pub enum AnalyticsEvent {
     },
 
     /// Session validation
-    AuthSessionValidated {
-        user_id: Uuid,
-        valid: bool,
-    },
+    AuthSessionValidated { user_id: Uuid, valid: bool },
 
     // ===== Task Events =====
     /// Task created
@@ -195,16 +192,10 @@ pub enum AnalyticsEvent {
     },
 
     /// Project updated
-    ProjectUpdated {
-        project_id: Uuid,
-        user_id: Uuid,
-    },
+    ProjectUpdated { project_id: Uuid, user_id: Uuid },
 
     /// Project deleted
-    ProjectDeleted {
-        project_id: Uuid,
-        user_id: Uuid,
-    },
+    ProjectDeleted { project_id: Uuid, user_id: Uuid },
 
     // ===== API Request Events =====
     /// API request made
@@ -215,6 +206,31 @@ pub enum AnalyticsEvent {
         status_code: u16,
         duration_ms: i64,
         user_id: Option<Uuid>,
+    },
+
+    // ===== API Proxy Events =====
+    /// LLM API proxy request completed
+    ProxyRequest {
+        proxy_token_id: Uuid,
+        user_id: Uuid,
+        request_id: String,
+        upstream_request_id: Option<String>,
+        requested_model: Option<String>,
+        actual_model: Option<String>,
+        provider_type: String,
+        key_mode: String,
+        endpoint: String,
+        input_tokens: Option<i32>,
+        output_tokens: Option<i32>,
+        total_tokens: Option<i32>,
+        reported_cost_usd: Option<f64>,
+        latency_ms: i32,
+        ttft_ms: Option<i32>,
+        is_streaming: bool,
+        status: String,
+        status_code: Option<i32>,
+        error_type: Option<String>,
+        error_message: Option<String>,
     },
 
     // ===== Database Query Events =====
@@ -268,6 +284,7 @@ impl AnalyticsEvent {
             AnalyticsEvent::ProjectUpdated { .. } => "project_updated",
             AnalyticsEvent::ProjectDeleted { .. } => "project_deleted",
             AnalyticsEvent::ApiRequest { .. } => "api_request",
+            AnalyticsEvent::ProxyRequest { .. } => "proxy_request",
             AnalyticsEvent::DatabaseQuery { .. } => "database_query",
             AnalyticsEvent::ApplicationError { .. } => "application_error",
         }
@@ -311,6 +328,7 @@ impl AnalyticsEvent {
             AnalyticsEvent::ProjectUpdated { user_id, .. } => Some(*user_id),
             AnalyticsEvent::ProjectDeleted { user_id, .. } => Some(*user_id),
             AnalyticsEvent::ApiRequest { user_id, .. } => *user_id,
+            AnalyticsEvent::ProxyRequest { user_id, .. } => Some(*user_id),
             AnalyticsEvent::ApplicationError { user_id, .. } => *user_id,
             _ => None,
         }

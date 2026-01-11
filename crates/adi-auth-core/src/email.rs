@@ -70,8 +70,13 @@ If you didn't request this code, you can safely ignore this email."#,
         let from = format!("{} <{}>", config.from_name, config.from_email);
 
         let email = Message::builder()
-            .from(from.parse().map_err(|e| Error::EmailError(format!("{}", e)))?)
-            .to(to_email.parse().map_err(|e| Error::EmailError(format!("{}", e)))?)
+            .from(
+                from.parse()
+                    .map_err(|e| Error::EmailError(format!("{}", e)))?,
+            )
+            .to(to_email
+                .parse()
+                .map_err(|e| Error::EmailError(format!("{}", e)))?)
             .subject(subject)
             .header(ContentType::TEXT_PLAIN)
             .body(body.to_string())

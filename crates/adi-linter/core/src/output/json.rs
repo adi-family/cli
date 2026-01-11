@@ -81,13 +81,21 @@ impl JsonOutput {
     pub fn from_result(result: &LintResult) -> Self {
         Self {
             version: "1.0",
-            diagnostics: result.diagnostics.iter().map(JsonDiagnostic::from).collect(),
+            diagnostics: result
+                .diagnostics
+                .iter()
+                .map(JsonDiagnostic::from)
+                .collect(),
             summary: JsonSummary::from_result(result),
-            errors: result.errors.iter().map(|e| JsonError {
-                linter_id: e.linter_id.clone(),
-                file: e.file.as_ref().map(|p| p.to_string_lossy().to_string()),
-                message: e.message.clone(),
-            }).collect(),
+            errors: result
+                .errors
+                .iter()
+                .map(|e| JsonError {
+                    linter_id: e.linter_id.clone(),
+                    file: e.file.as_ref().map(|p| p.to_string_lossy().to_string()),
+                    message: e.message.clone(),
+                })
+                .collect(),
         }
     }
 }
@@ -122,7 +130,11 @@ impl From<&Diagnostic> for JsonDiagnostic {
         Self {
             rule_id: diag.rule_id.clone(),
             linter_id: diag.linter_id.clone(),
-            categories: diag.categories.iter().map(|c| c.display_name().to_string()).collect(),
+            categories: diag
+                .categories
+                .iter()
+                .map(|c| c.display_name().to_string())
+                .collect(),
             severity: format!("{:?}", diag.severity).to_lowercase(),
             message: diag.message.clone(),
             location: JsonLocation {
@@ -134,7 +146,11 @@ impl From<&Diagnostic> for JsonDiagnostic {
             },
             fixable: diag.is_fixable(),
             fix_description: diag.fix.as_ref().map(|f| f.description.clone()),
-            tags: diag.tags.iter().map(|t| format!("{:?}", t).to_lowercase()).collect(),
+            tags: diag
+                .tags
+                .iter()
+                .map(|t| format!("{:?}", t).to_lowercase())
+                .collect(),
         }
     }
 }
@@ -213,16 +229,14 @@ mod tests {
     use std::time::Duration;
 
     fn create_test_result() -> LintResult {
-        let diagnostics = vec![
-            Diagnostic::new(
-                "no-todo",
-                "test-linter",
-                Category::CodeQuality,
-                Severity::Warning,
-                "Found TODO comment",
-                Location::new(PathBuf::from("src/main.rs"), 10, 5, 10, 20),
-            ),
-        ];
+        let diagnostics = vec![Diagnostic::new(
+            "no-todo",
+            "test-linter",
+            Category::CodeQuality,
+            Severity::Warning,
+            "Found TODO comment",
+            Location::new(PathBuf::from("src/main.rs"), 10, 5, 10, 20),
+        )];
 
         let mut by_severity = HashMap::new();
         by_severity.insert(Severity::Warning, 1);

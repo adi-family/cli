@@ -120,7 +120,10 @@ impl CoolifyClient {
             })?
             .iter()
             .map(|d| {
-                let status_str = d.get("status").and_then(|s| s.as_str()).unwrap_or("unknown");
+                let status_str = d
+                    .get("status")
+                    .and_then(|s| s.as_str())
+                    .unwrap_or("unknown");
                 let commit = d
                     .get("commit")
                     .and_then(|c| c.as_str())

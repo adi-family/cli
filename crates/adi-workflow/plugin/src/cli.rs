@@ -2,8 +2,9 @@
 
 use crate::discovery::{discover_workflows, find_workflow};
 use crate::executor::execute_steps;
-use crate::parser::{WorkflowScope, load_workflow};
+use crate::parser::{load_workflow, WorkflowScope};
 use crate::prompts::collect_inputs;
+use dialoguer::{theme::ColorfulTheme, Select};
 use serde_json::json;
 use std::path::PathBuf;
 
@@ -37,8 +38,8 @@ pub fn run_command(context_json: &str) -> Result<String, String> {
         "list" => cmd_list(&cwd),
         "show" => cmd_show(&cwd, &cmd_args),
         "" => {
-            // Default to help
-            Ok(help_text())
+            // No subcommand - show interactive workflow selector
+            cmd_select_and_run(&cwd)
         }
         workflow_name => {
             // Run a workflow by name
@@ -89,6 +90,49 @@ fn cmd_list(cwd: &PathBuf) -> Result<String, String> {
     }
 
     Ok(output.trim_end().to_string())
+}
+
+/// Interactive workflow selector - shown when `adi workflow` is called without arguments
+fn cmd_select_and_run(cwd: &PathBuf) -> Result<String, String> {
+    let workflows = discover_workflows(cwd);
+
+    if workflows.is_empty() {
+        return Ok("No workflows found.\n\nCreate workflows at:\n  ./.adi/workflows/<name>.toml  (local)\n  ~/.adi/workflows/<name>.toml  (global)".to_string());
+    }
+
+    // Check if we're in an interactive terminal
+    if !atty::is(atty::Stream::Stdin) {
+        // Non-interactive: show help text
+        return Ok(help_text());
+    }
+
+    // Build selection items with descriptions
+    let items: Vec<String> = workflows
+        .iter()
+        .map(|w| {
+            let scope = match w.scope {
+                WorkflowScope::Local => "[local]",
+                WorkflowScope::Global => "[global]",
+            };
+            match &w.description {
+                Some(desc) => format!("{} {} - {}", w.name, scope, desc),
+                None => format!("{} {}", w.name, scope),
+            }
+        })
+        .collect();
+
+    println!("Select a workflow to run:\n");
+
+    let selection = Select::with_theme(&ColorfulTheme::default())
+        .items(&items)
+        .default(0)
+        .interact()
+        .map_err(|e| format!("Selection cancelled: {}", e))?;
+
+    let selected_workflow = &workflows[selection];
+    println!();
+
+    cmd_run(cwd, &selected_workflow.name)
 }
 
 fn cmd_show(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {

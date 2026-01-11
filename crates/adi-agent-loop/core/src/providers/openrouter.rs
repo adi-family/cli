@@ -34,7 +34,8 @@ impl LlmProvider for OpenRouterProvider {
         _config: &LlmConfig,
     ) -> Result<LlmResponse> {
         Err(AgentError::OpenRouterError(
-            "OpenRouter provider not yet fully implemented. See providers/openrouter.rs TODO".to_string(),
+            "OpenRouter provider not yet fully implemented. See providers/openrouter.rs TODO"
+                .to_string(),
         ))
     }
 

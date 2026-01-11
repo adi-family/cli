@@ -1,0 +1,65 @@
+# ADI Service Release Workflow
+# Build Linux binaries, Docker images, and optionally push to registry
+
+[workflow]
+name = "release"
+description = "Build and release service images (cross-compile + Docker)"
+
+[[inputs]]
+name = "services"
+type = "multi-select"
+prompt = "Select services to release (empty for all)"
+options = [
+    "adi-auth",
+    "adi-platform-api",
+    "adi-analytics-api",
+    "adi-analytics-ingestion",
+    "tarminal-signaling-server",
+    "adi-plugin-registry",
+    "flowmap-api",
+    "cocoon-manager",
+    "llm-proxy"
+]
+
+[[inputs]]
+name = "push"
+type = "confirm"
+prompt = "Push images to registry?"
+default = false
+
+[[inputs]]
+name = "tag"
+type = "input"
+prompt = "Image tag (leave empty for 'latest')"
+default = ""
+
+[[steps]]
+name = "Release services"
+run = """
+SERVICES="{{ services | join(' ') }}"
+PUSH="{{ push }}"
+TAG="{{ tag }}"
+
+# Build args
+ARGS=""
+
+if [ -n "$SERVICES" ]; then
+    ARGS="$SERVICES"
+else
+    ARGS="all"
+fi
+
+if [ "$PUSH" = "true" ]; then
+    ARGS="$ARGS --push"
+fi
+
+if [ -n "$TAG" ]; then
+    ARGS="$ARGS --tag $TAG"
+fi
+
+info "Releasing: $ARGS"
+
+"$WORKFLOWS_DIR/release.sh" $ARGS
+
+success "Release complete!"
+"""

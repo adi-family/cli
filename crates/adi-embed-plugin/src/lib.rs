@@ -59,8 +59,7 @@ extern "C" fn plugin_info() -> PluginInfo {
 }
 
 fn get_cache_dir() -> Option<std::path::PathBuf> {
-    directories::ProjectDirs::from("com", "adi", "adi")
-        .map(|dirs| dirs.cache_dir().join("models"))
+    directories::ProjectDirs::from("com", "adi", "adi").map(|dirs| dirs.cache_dir().join("models"))
 }
 
 extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
@@ -177,7 +176,10 @@ fn handle_embed(args: &str) -> RResult<RString, ServiceError> {
     let embedder = match EMBEDDER.get() {
         Some(e) => e,
         None => {
-            return RResult::RErr(ServiceError::new(-1, "Embedder not initialized".to_string()));
+            return RResult::RErr(ServiceError::new(
+                -1,
+                "Embedder not initialized".to_string(),
+            ));
         }
     };
 
@@ -224,7 +226,9 @@ extern "C" fn embed_list_methods(_handle: *const c_void) -> RVec<ServiceMethod> 
             .with_returns_schema(r#"{"dimensions": u32}"#),
         ServiceMethod::new("model_info")
             .with_description("Get model information")
-            .with_returns_schema(r#"{"model_name": "string", "dimensions": u32, "provider": "string"}"#),
+            .with_returns_schema(
+                r#"{"model_name": "string", "dimensions": u32, "provider": "string"}"#,
+            ),
     ]
     .into_iter()
     .collect()

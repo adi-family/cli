@@ -18,19 +18,27 @@ const METADATA_JSON: &str = r#"{
 const SERVICE_ID: &str = "adi.i18n.coolify.ru-RU";
 
 extern "C" fn plugin_info() -> PluginInfo {
-    PluginInfo::new("adi.coolify.ru-RU", "ADI Coolify - Русский", "0.8.4", "translation")
-        .with_author("ADI Team")
-        .with_description("Russian translations for ADI Coolify plugin")
-        .with_min_host_version("0.8.0")
+    PluginInfo::new(
+        "adi.coolify.ru-RU",
+        "ADI Coolify - Русский",
+        "0.8.4",
+        "translation",
+    )
+    .with_author("ADI Team")
+    .with_description("Russian translations for ADI Coolify plugin")
+    .with_min_host_version("0.8.0")
 }
 
 extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
     unsafe {
         let host = (*ctx).host();
 
-        let descriptor =
-            ServiceDescriptor::new(SERVICE_ID, ServiceVersion::new(1, 0, 0), "adi.coolify.ru-RU")
-                .with_description("Russian translations for ADI Coolify");
+        let descriptor = ServiceDescriptor::new(
+            SERVICE_ID,
+            ServiceVersion::new(1, 0, 0),
+            "adi.coolify.ru-RU",
+        )
+        .with_description("Russian translations for ADI Coolify");
 
         let handle = ServiceHandle::new(
             SERVICE_ID,
@@ -59,7 +67,9 @@ extern "C" fn service_invoke(
     match method.as_str() {
         "get_messages" => RResult::ROk(RString::from(MESSAGES_FTL)),
         "get_metadata" => RResult::ROk(RString::from(METADATA_JSON)),
-        _ => RResult::RErr(lib_plugin_abi::ServiceError::method_not_found(method.as_str())),
+        _ => RResult::RErr(lib_plugin_abi::ServiceError::method_not_found(
+            method.as_str(),
+        )),
     }
 }
 

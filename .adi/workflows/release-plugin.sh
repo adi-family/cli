@@ -34,6 +34,35 @@ if [[ -z "${_ADI_PRELUDE_LOADED:-}" ]]; then
     require_env() { [[ -n "${!1}" ]] || error "Environment variable $1 not set"; echo "${!1}"; }
 fi
 
+# Platform detection
+get_platform() {
+    local os arch
+    os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    arch=$(uname -m)
+
+    case "$os" in
+        darwin) os="darwin" ;;  # Keep as darwin to match CLI expectations
+        linux) os="linux" ;;
+        mingw*|msys*|cygwin*) os="windows" ;;
+    esac
+
+    case "$arch" in
+        x86_64|amd64) arch="x86_64" ;;
+        arm64|aarch64) arch="aarch64" ;;
+    esac
+
+    echo "${os}-${arch}"
+}
+
+get_lib_extension() {
+    local platform="$1"
+    case "$platform" in
+        darwin-*) echo "dylib" ;;
+        windows-*) echo "dll" ;;
+        *) echo "so" ;;
+    esac
+}
+
 # Configuration
 REGISTRY_URL="${ADI_REGISTRY_URL:-https://adi-plugin-registry.the-ihor.com}"
 
@@ -75,6 +104,7 @@ get_plugin_crate() {
         workflow|adi-workflow) echo "crates/adi-workflow/plugin" ;;
         coolify|adi-coolify) echo "crates/adi-coolify/plugin" ;;
         linter|adi-linter) echo "crates/adi-linter/plugin" ;;
+        llm-extract|adi-llm-extract) echo "crates/adi-llm-extract-plugin" ;;
         lang-cpp|adi-lang-cpp) echo "crates/adi-lang/cpp" ;;
         lang-csharp|adi-lang-csharp) echo "crates/adi-lang/csharp" ;;
         lang-go|adi-lang-go) echo "crates/adi-lang/go" ;;

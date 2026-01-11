@@ -244,12 +244,7 @@ impl PrettyFormatter {
                 self.severity_color(Severity::Warning)
             )?;
             for err in &result.errors {
-                writeln!(
-                    w,
-                    "  - {}: {}",
-                    err.linter_id,
-                    err.message
-                )?;
+                writeln!(w, "  - {}: {}", err.linter_id, err.message)?;
             }
         }
 

@@ -270,8 +270,14 @@ type = "'"$detected_type"'"
     fi
 
     if [[ -z "$found_lib" ]]; then
-        error "No library file found for binary name '$binary_name'"
-        error "Expected one of: ${variants[*]}"
+        # Check if this is a source directory (has Cargo.toml) - binary will be built during release
+        if [[ -f "$plugin_dir/Cargo.toml" ]]; then
+            info "Binary not built yet (will be built during release): $binary_name"
+            info "Expected: ${variants[*]}"
+        else
+            error "No library file found for binary name '$binary_name'"
+            error "Expected one of: ${variants[*]}"
+        fi
 
         # Check what libraries actually exist
         local existing_libs

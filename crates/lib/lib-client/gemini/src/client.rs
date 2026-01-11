@@ -144,8 +144,7 @@ impl Client {
     /// Get a specific model.
     pub async fn get_model(&self, model: &str) -> Result<Model> {
         let path = format!("/models/{}", model);
-        self.request(reqwest::Method::GET, &path, None::<&()>)
-            .await
+        self.request(reqwest::Method::GET, &path, None::<&()>).await
     }
 }
 

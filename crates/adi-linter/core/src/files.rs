@@ -284,9 +284,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
         create_test_files(dir.path());
 
-        let iter = FileIterator::new(dir.path())
-            .pattern("**/*.rs")
-            .unwrap();
+        let iter = FileIterator::new(dir.path()).pattern("**/*.rs").unwrap();
         let files: Vec<_> = iter.iter().collect();
 
         // Should find 3 .rs files

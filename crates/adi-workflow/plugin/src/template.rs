@@ -24,7 +24,27 @@ pub fn create_env() -> Environment<'static> {
     );
     env.add_global("date", chrono_date());
 
+    // Add custom filters for condition evaluation
+    env.add_filter("starts_with", filter_starts_with);
+    env.add_filter("ends_with", filter_ends_with);
+    env.add_filter("contains", filter_contains);
+
     env
+}
+
+/// Filter: checks if string starts with prefix
+fn filter_starts_with(value: &str, prefix: &str) -> bool {
+    value.starts_with(prefix)
+}
+
+/// Filter: checks if string ends with suffix
+fn filter_ends_with(value: &str, suffix: &str) -> bool {
+    value.ends_with(suffix)
+}
+
+/// Filter: checks if string contains substring
+fn filter_contains(value: &str, substring: &str) -> bool {
+    value.contains(substring)
 }
 
 fn chrono_date() -> String {

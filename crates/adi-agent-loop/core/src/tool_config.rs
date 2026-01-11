@@ -160,7 +160,10 @@ mod tests {
     #[test]
     fn test_tool_config_set() {
         let mut set = ToolConfigSet::new();
-        set.add("tool1", ToolConfig::new().with_permission(PermissionLevel::Auto));
+        set.add(
+            "tool1",
+            ToolConfig::new().with_permission(PermissionLevel::Auto),
+        );
         set.add("tool2", ToolConfig::new().disabled());
 
         assert!(set.get("tool1").is_some());

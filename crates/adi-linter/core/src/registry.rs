@@ -147,10 +147,7 @@ impl LinterRegistry {
 
         for linter in self.active_linters() {
             let priority = self.effective_priority(linter.as_ref());
-            groups
-                .entry(priority)
-                .or_default()
-                .push(Arc::clone(linter));
+            groups.entry(priority).or_default().push(Arc::clone(linter));
         }
 
         groups
@@ -158,7 +155,9 @@ impl LinterRegistry {
 
     /// Group by category, then by priority within each category.
     /// A linter with multiple categories appears in each category group.
-    pub fn by_category_and_priority(&self) -> HashMap<Category, BTreeMap<u32, Vec<Arc<dyn Linter>>>> {
+    pub fn by_category_and_priority(
+        &self,
+    ) -> HashMap<Category, BTreeMap<u32, Vec<Arc<dyn Linter>>>> {
         let mut result: HashMap<Category, BTreeMap<u32, Vec<Arc<dyn Linter>>>> = HashMap::new();
 
         for linter in self.active_linters() {
@@ -180,9 +179,7 @@ impl LinterRegistry {
 
     /// Get linters that match a specific file.
     pub fn for_file(&self, path: &Path) -> Vec<&Arc<dyn Linter>> {
-        self.active_linters()
-            .filter(|l| l.matches(path))
-            .collect()
+        self.active_linters().filter(|l| l.matches(path)).collect()
     }
 
     /// Get linter by ID.
@@ -363,7 +360,10 @@ mod tests {
         }
 
         // Override style category priority
-        registry.configure_category(Category::Style, CategoryConfig::enabled().with_priority(999));
+        registry.configure_category(
+            Category::Style,
+            CategoryConfig::enabled().with_priority(999),
+        );
 
         {
             let linter = registry.get("style").unwrap();

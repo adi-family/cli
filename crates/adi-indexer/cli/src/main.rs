@@ -727,7 +727,9 @@ async fn find_dead_code(
     exclude_ffi: bool,
     format: &str,
 ) -> Result<()> {
-    use adi_indexer_core::analyzer::{AnalysisConfig, AnalysisMode, DeadCodeAnalyzer, ReportFormat};
+    use adi_indexer_core::analyzer::{
+        AnalysisConfig, AnalysisMode, DeadCodeAnalyzer, ReportFormat,
+    };
 
     let analysis_mode = match mode {
         "strict" => AnalysisMode::Strict,

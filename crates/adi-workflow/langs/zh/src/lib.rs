@@ -33,9 +33,12 @@ extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
     unsafe {
         let host = (*ctx).host();
 
-        let descriptor =
-            ServiceDescriptor::new(SERVICE_ID, ServiceVersion::new(1, 0, 0), "adi.workflow.zh-CN")
-                .with_description("Chinese translations for ADI Workflow");
+        let descriptor = ServiceDescriptor::new(
+            SERVICE_ID,
+            ServiceVersion::new(1, 0, 0),
+            "adi.workflow.zh-CN",
+        )
+        .with_description("Chinese translations for ADI Workflow");
 
         let handle = ServiceHandle::new(
             SERVICE_ID,
@@ -44,10 +47,7 @@ extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
         );
 
         if let Err(code) = host.register_svc(descriptor, handle) {
-            host.error(&format!(
-                "Failed to register translation service: {}",
-                code
-            ));
+            host.error(&format!("Failed to register translation service: {}", code));
             return code;
         }
 

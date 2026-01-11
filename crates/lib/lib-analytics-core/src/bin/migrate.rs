@@ -56,7 +56,10 @@ async fn main() -> anyhow::Result<()> {
         }
         "dry-run" => {
             let plan = engine.dry_run().await?;
-            println!("Dry Run - Would execute {} migrations:", plan.migrations.len());
+            println!(
+                "Dry Run - Would execute {} migrations:",
+                plan.migrations.len()
+            );
             for migration in plan.migrations {
                 println!("  - {} ({})", migration.name, migration.version);
             }

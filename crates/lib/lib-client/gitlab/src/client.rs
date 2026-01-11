@@ -153,8 +153,11 @@ impl Client {
         let state_param = state
             .map(|s| format!("?state={:?}", s).to_lowercase())
             .unwrap_or_default();
-        self.get(&format!("/projects/{}/merge_requests{}", encoded, state_param))
-            .await
+        self.get(&format!(
+            "/projects/{}/merge_requests{}",
+            encoded, state_param
+        ))
+        .await
     }
 
     /// Get a merge request by IID.
@@ -282,9 +285,6 @@ mod tests {
         let client = Client::builder()
             .auth(PrivateTokenAuth::new("test"))
             .build();
-        assert_eq!(
-            client.encode_project("group/project"),
-            "group%2Fproject"
-        );
+        assert_eq!(client.encode_project("group/project"), "group%2Fproject");
     }
 }

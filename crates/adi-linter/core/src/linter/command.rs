@@ -20,28 +20,15 @@ pub enum CommandType {
         fix: Option<RegexFix>,
     },
     /// Error if regex does NOT match.
-    RegexRequire {
-        pattern: String,
-        message: String,
-    },
+    RegexRequire { pattern: String, message: String },
     /// Error if line exceeds max length.
-    MaxLineLength {
-        max: usize,
-    },
+    MaxLineLength { max: usize },
     /// Error if file exceeds max size.
-    MaxFileSize {
-        max: usize,
-    },
+    MaxFileSize { max: usize },
     /// Error if text is found.
-    Contains {
-        text: String,
-        message: String,
-    },
+    Contains { text: String, message: String },
     /// Error if text is NOT found.
-    NotContains {
-        text: String,
-        message: String,
-    },
+    NotContains { text: String, message: String },
 }
 
 /// Regex-based fix configuration.
@@ -116,15 +103,10 @@ impl CommandLinter {
         match command {
             CommandType::RegexForbid { pattern, fix, .. } => {
                 let main = Regex::new(pattern)?;
-                let fix_rx = fix
-                    .as_ref()
-                    .map(|f| Regex::new(&f.pattern))
-                    .transpose()?;
+                let fix_rx = fix.as_ref().map(|f| Regex::new(&f.pattern)).transpose()?;
                 Ok((Some(main), fix_rx))
             }
-            CommandType::RegexRequire { pattern, .. } => {
-                Ok((Some(Regex::new(pattern)?), None))
-            }
+            CommandType::RegexRequire { pattern, .. } => Ok((Some(Regex::new(pattern)?), None)),
             _ => Ok((None, None)),
         }
     }
@@ -384,11 +366,7 @@ impl CommandLinter {
                 &self.config.id,
                 self.config.categories.clone(),
                 self.severity,
-                format!(
-                    "File exceeds {} bytes ({} bytes)",
-                    max,
-                    ctx.content.len()
-                ),
+                format!("File exceeds {} bytes ({} bytes)", max, ctx.content.len()),
                 Location::file(ctx.file.clone()),
             )]
         } else {

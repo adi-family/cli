@@ -46,6 +46,7 @@ PLUGINS=(
     "adi-agent-loop-plugin:adi.agent-loop:ADI Agent Loop:core"
     "adi-indexer-plugin:adi.indexer:ADI Indexer:core"
     "adi-knowledgebase-plugin:adi.knowledgebase:ADI Knowledgebase:core"
+    "adi-linter-plugin:adi.linter:ADI Linter:core"
     # Language plugins
     "adi-lang-rust:adi.lang.rust:Rust Language Support:language"
     "adi-lang-python:adi.lang.python:Python Language Support:language"
@@ -88,11 +89,12 @@ main() {
         for plugin_spec in "${PLUGINS[@]}"; do
             IFS=':' read -r crate_name _ _ _ <<< "$plugin_spec"
             local manifest="$ROOT_DIR/crates/$crate_name/plugin.toml"
-            # Handle new adi-lang structure
+            # Handle plugin directory structures
             case "$crate_name" in
                 adi-lang-*) manifest="$ROOT_DIR/crates/adi-lang/${crate_name#adi-lang-}/plugin/plugin.toml" ;;
                 adi-knowledgebase-plugin) manifest="$ROOT_DIR/crates/adi-knowledgebase/plugin/plugin.toml" ;;
                 adi-tasks-plugin) manifest="$ROOT_DIR/crates/adi-tasks/plugin/plugin.toml" ;;
+                adi-linter-plugin) manifest="$ROOT_DIR/crates/adi-linter/plugin/plugin.toml" ;;
             esac
             if [ -f "$manifest" ]; then
                 sed -i '' "s/^version = \"$current_version\"/version = \"$version\"/" "$manifest"
@@ -141,6 +143,7 @@ main() {
             adi-lang-*) crate_dir="$ROOT_DIR/crates/adi-lang/${crate_name#adi-lang-}/plugin" ;;
             adi-knowledgebase-plugin) crate_dir="$ROOT_DIR/crates/adi-knowledgebase/plugin" ;;
             adi-tasks-plugin) crate_dir="$ROOT_DIR/crates/adi-tasks/plugin" ;;
+            adi-linter-plugin) crate_dir="$ROOT_DIR/crates/adi-linter/plugin" ;;
         esac
 
         # Check if crate exists

@@ -1,6 +1,6 @@
 [package]
 name = "adi-workflow-plugin"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 license = "BSL-1.0"
 description = "ADI Workflow plugin - run shell workflows defined in TOML files"
@@ -20,3 +20,4 @@ minijinja = "2"
 regex = "1"
 dirs = "5"
 once_cell = "1.21"
+atty = "0.2"

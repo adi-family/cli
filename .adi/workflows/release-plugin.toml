@@ -18,6 +18,7 @@ options = [
     "workflow",
     "coolify",
     "linter",
+    "llm-extract",
     "embed",
     "lang-rust",
     "lang-python",

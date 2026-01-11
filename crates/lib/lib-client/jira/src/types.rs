@@ -186,12 +186,20 @@ pub struct UserRef {
 }
 
 impl CreateIssueInput {
-    pub fn new(project_key: impl Into<String>, summary: impl Into<String>, issue_type: impl Into<String>) -> Self {
+    pub fn new(
+        project_key: impl Into<String>,
+        summary: impl Into<String>,
+        issue_type: impl Into<String>,
+    ) -> Self {
         Self {
             fields: CreateIssueFields {
-                project: ProjectRef { key: project_key.into() },
+                project: ProjectRef {
+                    key: project_key.into(),
+                },
                 summary: summary.into(),
-                issuetype: IssueTypeRef { name: issue_type.into() },
+                issuetype: IssueTypeRef {
+                    name: issue_type.into(),
+                },
                 ..Default::default()
             },
         }
@@ -203,12 +211,16 @@ impl CreateIssueInput {
     }
 
     pub fn priority(mut self, priority: impl Into<String>) -> Self {
-        self.fields.priority = Some(PriorityRef { name: priority.into() });
+        self.fields.priority = Some(PriorityRef {
+            name: priority.into(),
+        });
         self
     }
 
     pub fn assignee(mut self, account_id: impl Into<String>) -> Self {
-        self.fields.assignee = Some(UserRef { account_id: account_id.into() });
+        self.fields.assignee = Some(UserRef {
+            account_id: account_id.into(),
+        });
         self
     }
 
@@ -254,12 +266,16 @@ impl UpdateIssueInput {
     }
 
     pub fn priority(mut self, priority: impl Into<String>) -> Self {
-        self.fields.priority = Some(PriorityRef { name: priority.into() });
+        self.fields.priority = Some(PriorityRef {
+            name: priority.into(),
+        });
         self
     }
 
     pub fn assignee(mut self, account_id: impl Into<String>) -> Self {
-        self.fields.assignee = Some(UserRef { account_id: account_id.into() });
+        self.fields.assignee = Some(UserRef {
+            account_id: account_id.into(),
+        });
         self
     }
 }

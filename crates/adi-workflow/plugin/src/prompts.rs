@@ -1,11 +1,15 @@
 //! Interactive TTY prompts using dialoguer
 
 use crate::parser::{Input, InputType};
+use crate::template;
 use dialoguer::{Confirm, Input as DialoguerInput, MultiSelect, Password, Select};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal};
 
 /// Collect all input values from user via interactive prompts
+///
+/// Inputs are collected incrementally - each input's `if` condition is evaluated
+/// against previously collected values, so inputs can depend on earlier ones.
 pub fn collect_inputs(inputs: &[Input]) -> Result<HashMap<String, serde_json::Value>, String> {
     let mut values = HashMap::new();
 
@@ -14,12 +18,37 @@ pub fn collect_inputs(inputs: &[Input]) -> Result<HashMap<String, serde_json::Va
         return Err("Interactive prompts require a TTY".to_string());
     }
 
+    let env = template::create_env();
+
     for input in inputs {
+        // Check if this input should be shown based on its condition
+        if let Some(condition) = &input.condition {
+            if !evaluate_condition(&env, condition, &values)? {
+                // Condition is false, skip this input
+                continue;
+            }
+        }
+
         let value = prompt_input(input)?;
         values.insert(input.name.clone(), value);
     }
 
     Ok(values)
+}
+
+/// Evaluate a condition template against current values
+///
+/// Returns true if the condition evaluates to a truthy value
+fn evaluate_condition(
+    env: &minijinja::Environment,
+    condition: &str,
+    values: &HashMap<String, serde_json::Value>,
+) -> Result<bool, String> {
+    let rendered = template::render(env, condition, values)?;
+    let trimmed = rendered.trim().to_lowercase();
+
+    // Check for falsy values
+    Ok(!trimmed.is_empty() && trimmed != "false" && trimmed != "0" && trimmed != "none")
 }
 
 /// Prompt for a single input value
@@ -173,4 +202,58 @@ fn prompt_password(input: &Input) -> Result<serde_json::Value, String> {
         .map_err(|e| format!("Prompt error: {}", e))?;
 
     Ok(serde_json::Value::String(value))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_evaluate_condition_truthy() {
+        let env = template::create_env();
+        let mut values = HashMap::new();
+        values.insert(
+            "action".to_string(),
+            serde_json::Value::String("deploy - Deploy a service".to_string()),
+        );
+
+        // Test starts_with filter
+        let result =
+            evaluate_condition(&env, "{{ action | starts_with('deploy') }}", &values).unwrap();
+        assert!(result, "starts_with('deploy') should be true");
+
+        // Test falsy condition
+        let result =
+            evaluate_condition(&env, "{{ action | starts_with('logs') }}", &values).unwrap();
+        assert!(!result, "starts_with('logs') should be false");
+    }
+
+    #[test]
+    fn test_evaluate_condition_or() {
+        let env = template::create_env();
+        let mut values = HashMap::new();
+        values.insert(
+            "action".to_string(),
+            serde_json::Value::String("logs - View logs".to_string()),
+        );
+
+        // Test OR condition
+        let result = evaluate_condition(
+            &env,
+            "{{ action | starts_with('logs') or action | starts_with('watch') }}",
+            &values,
+        )
+        .unwrap();
+        assert!(result, "OR condition should be true for 'logs'");
+    }
+
+    #[test]
+    fn test_evaluate_condition_empty_values() {
+        let env = template::create_env();
+        let values = HashMap::new();
+
+        // Undefined variables should evaluate to falsy
+        let result = evaluate_condition(&env, "{{ undefined_var }}", &values).unwrap();
+        assert!(!result, "undefined var should be falsy");
+    }
 }

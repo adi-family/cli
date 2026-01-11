@@ -31,9 +31,6 @@ impl ApiKeyAuth {
 #[async_trait]
 impl AuthStrategy for ApiKeyAuth {
     fn query_params(&self) -> Vec<(&'static str, String)> {
-        vec![
-            ("key", self.api_key.clone()),
-            ("token", self.token.clone()),
-        ]
+        vec![("key", self.api_key.clone()), ("token", self.token.clone())]
     }
 }

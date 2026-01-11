@@ -254,7 +254,9 @@ mod tests {
         assert_eq!(retrieved.email, "test@example.com");
         assert!(!retrieved.is_expired());
 
-        storage.delete_verification_codes("test@example.com").unwrap();
+        storage
+            .delete_verification_codes("test@example.com")
+            .unwrap();
         let deleted = storage.get_verification_code("test@example.com").unwrap();
         assert!(deleted.is_none());
     }

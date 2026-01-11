@@ -40,7 +40,6 @@ members = [
 
     # Linter components
     "crates/adi-linter/core",
-    "crates/adi-linter/cli",
 
     # Auth components
     "crates/adi-auth-core",
@@ -54,6 +53,10 @@ members = [
     # Agent Loop components
     "crates/adi-agent-loop/core",
     "crates/adi-agent-loop/http",
+
+    # API Proxy components
+    "crates/adi-api-proxy/core",
+    "crates/adi-api-proxy/http",
 
     # Tarminal components (flat submodules)
     "crates/lib/lib-misc-color",
@@ -124,6 +127,8 @@ members = [
     "crates/adi-linter/plugin",
     "crates/adi-coolify/plugin",
     "crates/adi-workflow/plugin",
+    "crates/adi-api-proxy/plugin",
+    "crates/adi-llm-extract-plugin",
 
     # Workflow translation plugins
     "crates/adi-workflow/langs/en",
@@ -179,6 +184,7 @@ adi-knowledgebase-core = { path = "crates/adi-knowledgebase/core" }
 adi-agent-loop-core = { path = "crates/adi-agent-loop/core" }
 adi-auth-core = { path = "crates/adi-auth-core" }
 adi-linter-core = { path = "crates/adi-linter/core" }
+adi-api-proxy-core = { path = "crates/adi-api-proxy/core" }
 
 # Libraries (flat submodules)
 lib-misc-color = { path = "crates/lib/lib-misc-color" }
@@ -324,6 +330,7 @@ fastembed = "4"
 axum = "0.7"
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
+http = "1"
 
 # Logging/tracing
 tracing = "0.1"

@@ -72,7 +72,10 @@ impl Client {
 
         let mut headers = HeaderMap::new();
         self.auth.apply(&mut headers).await?;
-        headers.insert("Content-Type", "application/json; charset=utf-8".parse().unwrap());
+        headers.insert(
+            "Content-Type",
+            "application/json; charset=utf-8".parse().unwrap(),
+        );
 
         let response = self
             .http
@@ -126,9 +129,13 @@ impl Client {
         let slack_resp: SlackResponse<T> = serde_json::from_str(&body)?;
 
         if slack_resp.ok {
-            slack_resp.data.ok_or_else(|| Error::SlackApi("No data returned".to_string()))
+            slack_resp
+                .data
+                .ok_or_else(|| Error::SlackApi("No data returned".to_string()))
         } else {
-            let error = slack_resp.error.unwrap_or_else(|| "unknown_error".to_string());
+            let error = slack_resp
+                .error
+                .unwrap_or_else(|| "unknown_error".to_string());
             warn!("Slack API error: {}", error);
 
             match error.as_str() {
@@ -177,7 +184,9 @@ impl Client {
         struct Response {
             channel: Channel,
         }
-        let resp: Response = self.get("conversations.info", &[("channel", channel_id)]).await?;
+        let resp: Response = self
+            .get("conversations.info", &[("channel", channel_id)])
+            .await?;
         Ok(resp.channel)
     }
 
@@ -237,7 +246,13 @@ impl Client {
             form = form.text("title", t.to_string());
         }
 
-        let response = self.http.post(&url).headers(headers).multipart(form).send().await?;
+        let response = self
+            .http
+            .post(&url)
+            .headers(headers)
+            .multipart(form)
+            .send()
+            .await?;
         self.handle_response(response).await
     }
 

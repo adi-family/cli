@@ -91,7 +91,9 @@ pub struct LintResult {
 impl LintResult {
     /// Check if there are any errors.
     pub fn has_errors(&self) -> bool {
-        self.diagnostics.iter().any(|d| d.severity == Severity::Error)
+        self.diagnostics
+            .iter()
+            .any(|d| d.severity == Severity::Error)
     }
 
     /// Check if there are any warnings or errors.

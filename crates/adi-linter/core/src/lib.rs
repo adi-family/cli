@@ -49,7 +49,7 @@ pub mod types;
 pub use autofix::{AutofixConfig, AutofixEngine, AutofixResult};
 pub use config::LinterConfig;
 pub use files::{FileIterator, FileIteratorBuilder};
-pub use linter::{Linter, LintContext};
+pub use linter::{LintContext, Linter};
 pub use output::{format_to_stdout, format_to_string, OutputFormat};
 pub use registry::{CategoryConfig, LinterRegistry, LinterRegistryBuilder};
 pub use runner::{LintResult, Runner, RunnerConfig};

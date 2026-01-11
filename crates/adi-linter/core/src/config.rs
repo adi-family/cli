@@ -293,28 +293,12 @@ impl CommandRuleConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum CommandTypeConfig {
-    RegexForbid {
-        pattern: String,
-        message: String,
-    },
-    RegexRequire {
-        pattern: String,
-        message: String,
-    },
-    MaxLineLength {
-        max: usize,
-    },
-    MaxFileSize {
-        max: usize,
-    },
-    Contains {
-        text: String,
-        message: String,
-    },
-    NotContains {
-        text: String,
-        message: String,
-    },
+    RegexForbid { pattern: String, message: String },
+    RegexRequire { pattern: String, message: String },
+    MaxLineLength { max: usize },
+    MaxFileSize { max: usize },
+    Contains { text: String, message: String },
+    NotContains { text: String, message: String },
 }
 
 impl CommandTypeConfig {
@@ -594,8 +578,7 @@ severity = "warning"
         let single: GlobPatterns = serde_json::from_str(r#""**/*.rs""#).unwrap();
         assert_eq!(single.to_vec(), vec!["**/*.rs".to_string()]);
 
-        let multiple: GlobPatterns =
-            serde_json::from_str(r#"["**/*.rs", "**/*.ts"]"#).unwrap();
+        let multiple: GlobPatterns = serde_json::from_str(r#"["**/*.rs", "**/*.ts"]"#).unwrap();
         assert_eq!(multiple.to_vec().len(), 2);
     }
 

@@ -37,6 +37,9 @@ pub struct Input {
     pub validation: Option<String>,
     #[serde(default)]
     pub env: Option<String>,
+    /// Conditional expression (Jinja2 template that evaluates to truthy/falsy)
+    #[serde(rename = "if", default)]
+    pub condition: Option<String>,
 }
 
 /// Input types for interactive prompts

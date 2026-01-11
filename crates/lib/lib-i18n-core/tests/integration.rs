@@ -1,4 +1,4 @@
-use lib_i18n_core::{I18n, ServiceDescriptor, ServiceHandle, ServiceRegistry, Result, I18nError};
+use lib_i18n_core::{I18n, I18nError, Result, ServiceDescriptor, ServiceHandle, ServiceRegistry};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -112,7 +112,10 @@ fn test_parametrized_messages() {
     i18n.set_language("en-US").unwrap();
 
     let mut args = HashMap::new();
-    args.insert("name".to_string(), lib_i18n_core::fluent_value_from("Alice"));
+    args.insert(
+        "name".to_string(),
+        lib_i18n_core::fluent_value_from("Alice"),
+    );
     let result = i18n.get_with_args("greeting", args);
 
     assert!(result.contains("Hello"));

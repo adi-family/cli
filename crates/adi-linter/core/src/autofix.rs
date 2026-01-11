@@ -185,11 +185,7 @@ impl<'a> AutofixEngine<'a> {
     }
 
     /// Collect fixable diagnostics sorted by priority.
-    fn collect_fixable(
-        &self,
-        diagnostics: &[Diagnostic],
-        skipped: &[String],
-    ) -> Vec<Diagnostic> {
+    fn collect_fixable(&self, diagnostics: &[Diagnostic], skipped: &[String]) -> Vec<Diagnostic> {
         let mut fixable: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.is_fixable())
@@ -204,8 +200,18 @@ impl<'a> AutofixEngine<'a> {
         // 4. Line number
         fixable.sort_by(|a, b| {
             // Get priority from highest category (multi-category support)
-            let a_priority = a.categories.iter().map(|c| c.default_priority()).max().unwrap_or(500);
-            let b_priority = b.categories.iter().map(|c| c.default_priority()).max().unwrap_or(500);
+            let a_priority = a
+                .categories
+                .iter()
+                .map(|c| c.default_priority())
+                .max()
+                .unwrap_or(500);
+            let b_priority = b
+                .categories
+                .iter()
+                .map(|c| c.default_priority())
+                .max()
+                .unwrap_or(500);
 
             b_priority
                 .cmp(&a_priority)

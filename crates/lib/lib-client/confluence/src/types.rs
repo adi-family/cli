@@ -143,11 +143,17 @@ pub struct Ancestor {
 }
 
 impl CreatePageInput {
-    pub fn new(space_key: impl Into<String>, title: impl Into<String>, body: impl Into<String>) -> Self {
+    pub fn new(
+        space_key: impl Into<String>,
+        title: impl Into<String>,
+        body: impl Into<String>,
+    ) -> Self {
         Self {
             content_type: "page".to_string(),
             title: title.into(),
-            space: SpaceKey { key: space_key.into() },
+            space: SpaceKey {
+                key: space_key.into(),
+            },
             body: Body {
                 storage: Some(Storage::storage(body)),
                 view: None,
@@ -157,7 +163,9 @@ impl CreatePageInput {
     }
 
     pub fn parent(mut self, parent_id: impl Into<String>) -> Self {
-        self.ancestors = Some(vec![Ancestor { id: parent_id.into() }]);
+        self.ancestors = Some(vec![Ancestor {
+            id: parent_id.into(),
+        }]);
         self
     }
 }
@@ -174,11 +182,7 @@ pub struct UpdatePageInput {
 }
 
 impl UpdatePageInput {
-    pub fn new(
-        version: u32,
-        title: impl Into<String>,
-        body: impl Into<String>,
-    ) -> Self {
+    pub fn new(version: u32, title: impl Into<String>, body: impl Into<String>) -> Self {
         Self {
             version: Version {
                 number: version,

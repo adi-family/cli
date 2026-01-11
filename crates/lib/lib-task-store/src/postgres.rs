@@ -198,10 +198,7 @@ impl TaskStore for PostgresTaskStore {
         updates.push(format!("updated_at = ${}", param_num));
 
         if updates.is_empty() {
-            return self
-                .get_task(id)
-                .await?
-                .ok_or(TaskStoreError::NotFound(id));
+            return self.get_task(id).await?.ok_or(TaskStoreError::NotFound(id));
         }
 
         let query_str = format!(

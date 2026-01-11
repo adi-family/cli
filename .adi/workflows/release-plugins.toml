@@ -21,6 +21,8 @@ options = [
     "adi-agent-loop-plugin",
     "adi-indexer-plugin",
     "adi-knowledgebase-plugin",
+    "adi-linter-plugin",
+    "adi-llm-extract-plugin",
     "adi-lang-rust",
     "adi-lang-python",
     "adi-lang-typescript",

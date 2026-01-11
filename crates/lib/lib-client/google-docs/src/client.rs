@@ -139,7 +139,12 @@ impl Client {
     }
 
     /// Insert text at a specific index.
-    pub async fn insert_text(&self, id: &str, index: i32, text: &str) -> Result<BatchUpdateResponse> {
+    pub async fn insert_text(
+        &self,
+        id: &str,
+        index: i32,
+        text: &str,
+    ) -> Result<BatchUpdateResponse> {
         let request = BatchUpdateRequest {
             requests: vec![Request::insert_text(text, index)],
         };
@@ -147,7 +152,12 @@ impl Client {
     }
 
     /// Delete content in a range.
-    pub async fn delete_content(&self, id: &str, start: i32, end: i32) -> Result<BatchUpdateResponse> {
+    pub async fn delete_content(
+        &self,
+        id: &str,
+        start: i32,
+        end: i32,
+    ) -> Result<BatchUpdateResponse> {
         let request = BatchUpdateRequest {
             requests: vec![Request::delete_range(start, end)],
         };
@@ -187,9 +197,7 @@ mod tests {
 
     #[test]
     fn test_builder() {
-        let client = Client::builder()
-            .auth(ApiKeyAuth::new("test-key"))
-            .build();
+        let client = Client::builder().auth(ApiKeyAuth::new("test-key")).build();
         assert_eq!(client.base_url, DEFAULT_BASE_URL);
     }
 }

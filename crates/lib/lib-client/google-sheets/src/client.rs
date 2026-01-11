@@ -119,7 +119,10 @@ impl Client {
     }
 
     /// Create a spreadsheet.
-    pub async fn create_spreadsheet(&self, request: CreateSpreadsheetRequest) -> Result<Spreadsheet> {
+    pub async fn create_spreadsheet(
+        &self,
+        request: CreateSpreadsheetRequest,
+    ) -> Result<Spreadsheet> {
         self.request(reqwest::Method::POST, "/spreadsheets", Some(&request))
             .await
     }
@@ -219,9 +222,7 @@ mod tests {
 
     #[test]
     fn test_builder() {
-        let client = Client::builder()
-            .auth(ApiKeyAuth::new("test-key"))
-            .build();
+        let client = Client::builder().auth(ApiKeyAuth::new("test-key")).build();
         assert_eq!(client.base_url, DEFAULT_BASE_URL);
     }
 }

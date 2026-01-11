@@ -50,7 +50,9 @@ pub mod r#macro;
 
 // Re-export public API
 pub use crate::core::I18n;
-pub use crate::discovery::{ServiceDescriptor, ServiceHandle, ServiceRegistry, TranslationServiceInfo};
+pub use crate::discovery::{
+    ServiceDescriptor, ServiceHandle, ServiceRegistry, TranslationServiceInfo,
+};
 pub use crate::error::{I18nError, Result};
 pub use crate::r#macro::{fluent_value_from, global_instance, init_global};
 

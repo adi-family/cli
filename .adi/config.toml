@@ -1,0 +1,33 @@
+[embedding]
+provider = "fastembed"
+model = "jinaai/jina-embeddings-v2-base-code"
+dimensions = 768
+batch_size = 32
+
+[parser]
+max_file_size = 1048576
+enabled_languages = []
+
+[storage]
+backend = "sqlite"
+
+[index]
+hnsw_m = 16
+hnsw_ef_construction = 200
+hnsw_ef_search = 100
+
+[ignore]
+patterns = [
+    "target",
+    "node_modules",
+    ".git",
+    "__pycache__",
+    "*.pyc",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+    ".adi",
+]
+use_gitignore = true
+use_ignore_file = true

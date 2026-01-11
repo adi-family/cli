@@ -136,10 +136,7 @@ mod tests {
 
         // Test direct lookup (Chinese)
         let mut args = HashMap::new();
-        args.insert(
-            "name".to_string(),
-            fluent_bundle::FluentValue::from("世界"),
-        );
+        args.insert("name".to_string(), fluent_bundle::FluentValue::from("世界"));
         let result = get_message(&bundles, "zh-CN", "en-US", "hello", Some(&args));
         assert!(result.contains("你好"));
 

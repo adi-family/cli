@@ -283,7 +283,13 @@ impl OAuth2Auth {
         let mut token: Token = token_resp.into();
 
         // Preserve refresh token if not returned
-        if token.refresh_token.is_none() || token.refresh_token.as_ref().map(|s| s.is_empty()).unwrap_or(true) {
+        if token.refresh_token.is_none()
+            || token
+                .refresh_token
+                .as_ref()
+                .map(|s| s.is_empty())
+                .unwrap_or(true)
+        {
             token.refresh_token = Some(refresh_token.to_string());
         }
 

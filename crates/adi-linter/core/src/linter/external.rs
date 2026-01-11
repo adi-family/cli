@@ -127,20 +127,14 @@ impl ExternalLinter {
             .stderr(Stdio::piped());
 
         // Handle stdin input mode
-        if matches!(
-            self.external.input_mode,
-            InputMode::Stdin | InputMode::Both
-        ) {
+        if matches!(self.external.input_mode, InputMode::Stdin | InputMode::Both) {
             cmd.stdin(Stdio::piped());
         }
 
         let mut child = cmd.spawn()?;
 
         // Write content to stdin if needed
-        if matches!(
-            self.external.input_mode,
-            InputMode::Stdin | InputMode::Both
-        ) {
+        if matches!(self.external.input_mode, InputMode::Stdin | InputMode::Both) {
             if let Some(mut stdin) = child.stdin.take() {
                 stdin.write_all(ctx.content.as_bytes()).await?;
             }
@@ -191,7 +185,11 @@ impl ExternalLinter {
         Vec::new()
     }
 
-    fn convert_external_diagnostic(&self, ctx: &LintContext, ext: ExternalDiagnostic) -> Diagnostic {
+    fn convert_external_diagnostic(
+        &self,
+        ctx: &LintContext,
+        ext: ExternalDiagnostic,
+    ) -> Diagnostic {
         Diagnostic::with_categories(
             ext.rule_id.unwrap_or_else(|| self.config.id.clone()),
             &self.config.id,

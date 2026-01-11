@@ -8,9 +8,9 @@ pub use search::{ConflictDetector, DuplicateDetector, SearchConfig, SearchEngine
 pub use storage::Storage;
 pub use types::*;
 
-use lib_embed::{Embedder, PluginEmbedder};
 #[cfg(feature = "fastembed")]
 use lib_embed::FastEmbedder;
+use lib_embed::{Embedder, PluginEmbedder};
 use lib_plugin_host::ServiceRegistry;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

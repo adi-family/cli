@@ -9,10 +9,10 @@ use lib_plugin_abi::{
 };
 
 use adi_linter_core::{
-    config::LinterConfig,
-    output::{format_to_string, OutputFormat},
-    runner::{Runner, RunnerConfig},
     AutofixConfig, AutofixEngine,
+    config::LinterConfig,
+    output::{OutputFormat, format_to_string},
+    runner::{Runner, RunnerConfig},
 };
 use once_cell::sync::OnceCell;
 use serde_json::json;
@@ -26,18 +26,21 @@ const SERVICE_CLI: &str = "adi.linter.cli";
 static RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 
 fn get_runtime() -> &'static tokio::runtime::Runtime {
-    RUNTIME.get_or_init(|| {
-        tokio::runtime::Runtime::new().expect("Failed to create tokio runtime")
-    })
+    RUNTIME.get_or_init(|| tokio::runtime::Runtime::new().expect("Failed to create tokio runtime"))
 }
 
 // === Plugin VTable Implementation ===
 
 extern "C" fn plugin_info() -> PluginInfo {
-    PluginInfo::new("adi.linter", "ADI Linter", env!("CARGO_PKG_VERSION"), "core")
-        .with_author("ADI Team")
-        .with_description("Language-agnostic code linting with configurable rules")
-        .with_min_host_version("0.8.0")
+    PluginInfo::new(
+        "adi.linter",
+        "ADI Linter",
+        env!("CARGO_PKG_VERSION"),
+        "core",
+    )
+    .with_author("ADI Team")
+    .with_description("Language-agnostic code linting with configurable rules")
+    .with_min_host_version("0.8.0")
 }
 
 extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
@@ -118,25 +121,244 @@ extern "C" fn cli_invoke(
             }
         }
         "list_commands" => {
-            let commands = json!([
-                {"name": "run", "description": "Run linting on files", "usage": "run [files...] [--format <pretty|json|sarif>] [--fail-on <error|warning|info|hint>]"},
-                {"name": "fix", "description": "Apply auto-fixes", "usage": "fix [files...] [--dry-run] [--interactive] [--max-iterations <n>]"},
-                {"name": "list", "description": "List configured linters", "usage": "list [--format <text|json>]"},
-                {"name": "config", "description": "Show configuration", "usage": "config"},
-                {"name": "init", "description": "Initialize linter configuration", "usage": "init [--force]"}
-            ]);
+            let commands = get_commands_info();
             RResult::ROk(RString::from(
                 serde_json::to_string(&commands).unwrap_or_default(),
+            ))
+        }
+        "llm_extract" => {
+            let info = get_llm_extract_info();
+            RResult::ROk(RString::from(
+                serde_json::to_string_pretty(&info).unwrap_or_default(),
             ))
         }
         _ => RResult::RErr(ServiceError::method_not_found(method.as_str())),
     }
 }
 
+fn get_commands_info() -> serde_json::Value {
+    json!([
+        {
+            "name": "run",
+            "description": "Run linting on files in the current project",
+            "usage": "run [files...] [--format <pretty|json|sarif>] [--fail-on <error|warning|info|hint>]",
+            "examples": [
+                "adi lint run",
+                "adi lint run src/main.rs",
+                "adi lint run --format json",
+                "adi lint run --fail-on warning"
+            ],
+            "options": [
+                {"name": "--format", "type": "string", "choices": ["pretty", "json", "sarif"], "default": "pretty", "description": "Output format"},
+                {"name": "--fail-on", "type": "string", "choices": ["error", "warning", "info", "hint"], "default": "error", "description": "Minimum severity to fail"},
+                {"name": "--sequential", "type": "boolean", "default": false, "description": "Disable parallel execution"}
+            ]
+        },
+        {
+            "name": "fix",
+            "description": "Apply auto-fixes for linting issues",
+            "usage": "fix [files...] [--dry-run] [--interactive] [--max-iterations <n>]",
+            "examples": [
+                "adi lint fix",
+                "adi lint fix --dry-run",
+                "adi lint fix src/ --max-iterations 5"
+            ],
+            "options": [
+                {"name": "--dry-run", "type": "boolean", "default": false, "description": "Show fixes without applying"},
+                {"name": "--interactive", "type": "boolean", "default": false, "description": "Confirm each fix"},
+                {"name": "--max-iterations", "type": "number", "default": 10, "description": "Max fix iterations"}
+            ]
+        },
+        {
+            "name": "list",
+            "description": "List all configured linters and their patterns",
+            "usage": "list [--format <text|json>]",
+            "examples": [
+                "adi lint list",
+                "adi lint list --format json"
+            ],
+            "options": [
+                {"name": "--format", "type": "string", "choices": ["text", "json"], "default": "text"}
+            ]
+        },
+        {
+            "name": "config",
+            "description": "Show current linter configuration file",
+            "usage": "config",
+            "examples": ["adi lint config"]
+        },
+        {
+            "name": "init",
+            "description": "Create default linter configuration in .adi/linter.toml",
+            "usage": "init [--force]",
+            "examples": [
+                "adi lint init",
+                "adi lint init --force"
+            ],
+            "options": [
+                {"name": "--force", "type": "boolean", "default": false, "description": "Overwrite existing config"}
+            ]
+        }
+    ])
+}
+
+fn get_llm_extract_info() -> serde_json::Value {
+    json!({
+        "plugin": {
+            "id": "adi.linter",
+            "name": "ADI Linter",
+            "description": "Language-agnostic code linting with configurable rules, auto-fix support, and multiple output formats",
+            "categories": ["linting", "code-quality", "static-analysis"],
+            "summary": "ADI Linter provides configurable code linting for any language. Define rules in .adi/linter.toml using regex patterns, external tools (shellcheck, eslint), or custom commands. Supports auto-fixing, parallel execution, and SARIF output for CI integration.",
+            "use_cases": [
+                "Enforce code style and patterns across a project",
+                "Run multiple linters with unified output",
+                "Auto-fix common issues",
+                "Generate SARIF reports for CI/CD pipelines",
+                "Custom regex-based rules without external tools"
+            ]
+        },
+        "cli": {
+            "command": "lint",
+            "aliases": ["l"],
+            "usage": "adi lint <command> [options]"
+        },
+        "commands": get_commands_info(),
+        "services": [
+            {
+                "id": "adi.linter.cli",
+                "version": "1.0.0",
+                "description": "CLI commands for code linting"
+            }
+        ],
+        "config": {
+            "file": ".adi/linter.toml",
+            "alternate_file": "linter.toml",
+            "description": "Configuration file for linter rules, categories, and settings",
+            "sections": {
+                "[linter]": {
+                    "description": "Global linter settings",
+                    "options": {
+                        "parallel": {"type": "bool", "default": true, "description": "Run linters in parallel"},
+                        "fail_fast": {"type": "bool", "default": false, "description": "Stop on first error"},
+                        "timeout": {"type": "u64", "default": 30, "description": "Timeout per linter in seconds"},
+                        "max_workers": {"type": "usize", "default": "auto", "description": "Maximum parallel workers"}
+                    }
+                },
+                "[autofix]": {
+                    "description": "Auto-fix settings",
+                    "options": {
+                        "enabled": {"type": "bool", "default": true, "description": "Enable auto-fix"},
+                        "max_iterations": {"type": "usize", "default": 10, "description": "Max fix iterations"},
+                        "interactive": {"type": "bool", "default": false, "description": "Prompt before each fix"}
+                    }
+                },
+                "[categories]": {
+                    "description": "Per-category configuration",
+                    "format": "category_name = { enabled = true, fail_on = \"warning\", priority = 1000 }",
+                    "built_in_categories": [
+                        "security", "correctness", "error-handling", "architecture",
+                        "performance", "code-quality", "best-practices", "testing",
+                        "documentation", "naming", "style"
+                    ]
+                },
+                "[[rules.exec]]": {
+                    "description": "External linter rules (runs subprocess)",
+                    "options": {
+                        "id": {"type": "string", "required": true, "description": "Unique rule ID"},
+                        "exec": {"type": "string", "required": true, "description": "Command template with {file}, {dir}, {basename}, {ext}"},
+                        "category": {"type": "string", "description": "Single category"},
+                        "categories": {"type": "array", "description": "Multiple categories"},
+                        "glob": {"type": "string|array", "description": "File patterns to match"},
+                        "output": {"type": "string", "choices": ["json", "exitcode", "lines"], "default": "json"},
+                        "input": {"type": "string", "choices": ["filepath", "stdin", "both"], "default": "filepath"},
+                        "severity": {"type": "string", "choices": ["hint", "info", "warning", "error"], "default": "warning"},
+                        "timeout": {"type": "u64", "description": "Override global timeout"},
+                        "fix.exec": {"type": "string", "description": "Fix command template"}
+                    }
+                },
+                "[[rules.command]]": {
+                    "description": "Built-in rules (no subprocess)",
+                    "types": {
+                        "regex-forbid": {"required": ["pattern", "message"], "description": "Error if regex matches"},
+                        "regex-require": {"required": ["pattern", "message"], "description": "Error if regex NOT matches"},
+                        "max-line-length": {"required": ["max"], "description": "Error if line exceeds max"},
+                        "max-file-size": {"required": ["max"], "description": "Error if file exceeds max bytes"},
+                        "contains": {"required": ["text", "message"], "description": "Error if text found"},
+                        "not-contains": {"required": ["text", "message"], "description": "Error if text NOT found"}
+                    },
+                    "options": {
+                        "id": {"type": "string", "required": true},
+                        "type": {"type": "string", "required": true},
+                        "pattern": {"type": "string", "description": "Regex pattern"},
+                        "message": {"type": "string", "description": "Error message"},
+                        "category": {"type": "string"},
+                        "glob": {"type": "string|array"},
+                        "severity": {"type": "string", "choices": ["hint", "info", "warning", "error"]},
+                        "fix.pattern": {"type": "string", "description": "Pattern to replace"},
+                        "fix.replacement": {"type": "string", "description": "Replacement text (supports $1, $2)"}
+                    }
+                }
+            },
+            "example": r#"[linter]
+parallel = true
+fail_fast = false
+timeout = 60
+
+[autofix]
+enabled = true
+max_iterations = 10
+
+[categories]
+security = { enabled = true, fail_on = "warning" }
+style = { enabled = true, priority = 50 }
+
+# External linter: shellcheck
+[[rules.exec]]
+id = "shellcheck"
+exec = "shellcheck -f json {file}"
+category = "correctness"
+glob = "**/*.sh"
+output = "json"
+
+# Built-in rule: no TODOs
+[[rules.command]]
+id = "no-todo"
+type = "regex-forbid"
+pattern = "TODO|FIXME"
+message = "Unresolved TODO/FIXME comment"
+category = "code-quality"
+glob = ["**/*.rs", "**/*.ts"]
+severity = "warning"
+
+# Built-in rule: line length
+[[rules.command]]
+id = "max-line"
+type = "max-line-length"
+max = 120
+category = "style"
+glob = "**/*"
+severity = "info"
+
+# Built-in rule with auto-fix
+[[rules.command]]
+id = "no-unwrap"
+type = "regex-forbid"
+pattern = "\\.unwrap\\(\\)"
+message = "Avoid .unwrap(), use ? or proper error handling"
+category = "error-handling"
+glob = "**/*.rs"
+severity = "warning"
+fix = { pattern = "\\.unwrap\\(\\)", replacement = "?" }"#
+        }
+    })
+}
+
 extern "C" fn cli_list_methods(_handle: *const c_void) -> RVec<ServiceMethod> {
     vec![
         ServiceMethod::new("run_command").with_description("Run a CLI command"),
         ServiceMethod::new("list_commands").with_description("List available commands"),
+        ServiceMethod::new("llm_extract").with_description("Get LLM-friendly plugin documentation"),
     ]
     .into_iter()
     .collect()
@@ -222,7 +444,9 @@ fn cmd_run(
     let registry = config.build_registry().map_err(|e| e.to_string())?;
 
     if registry.is_empty() {
-        return Ok("[!] No linters configured. Run `adi lint init` to create a config.".to_string());
+        return Ok(
+            "[!] No linters configured. Run `adi lint init` to create a config.".to_string(),
+        );
     }
 
     let runner_config = RunnerConfig::new(project_path).parallel(parallel);
@@ -290,7 +514,9 @@ fn cmd_fix(
     let registry = config.build_registry().map_err(|e| e.to_string())?;
 
     if registry.is_empty() {
-        return Ok("[!] No linters configured. Run `adi lint init` to create a config.".to_string());
+        return Ok(
+            "[!] No linters configured. Run `adi lint init` to create a config.".to_string(),
+        );
     }
 
     let runner_config = RunnerConfig::new(project_path);
@@ -401,11 +627,7 @@ fn cmd_config(project_path: &PathBuf) -> Result<String, String> {
     if config_path.exists() {
         let content =
             std::fs::read_to_string(&config_path).map_err(|e| format!("Read error: {}", e))?;
-        return Ok(format!(
-            "Config: {}\n\n{}",
-            config_path.display(),
-            content
-        ));
+        return Ok(format!("Config: {}\n\n{}", config_path.display(), content));
     }
 
     let alt_path = project_path.join("linter.toml");

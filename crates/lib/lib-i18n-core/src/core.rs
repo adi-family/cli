@@ -26,7 +26,10 @@ impl std::fmt::Debug for I18n {
             .field("current_language", &self.current_language)
             .field("fallback_language", &self.fallback_language)
             .field("namespace", &self.namespace)
-            .field("bundles", &format!("<{} languages>", self.available_languages().len()))
+            .field(
+                "bundles",
+                &format!("<{} languages>", self.available_languages().len()),
+            )
             .finish()
     }
 }
@@ -34,7 +37,6 @@ impl std::fmt::Debug for I18n {
 // SAFETY: I18n is protected by a Mutex at the global level, so it's safe to send between threads.
 // FluentBundle contains RefCell which is !Send, but the Mutex ensures exclusive access.
 unsafe impl Send for I18n {}
-
 
 impl I18n {
     /// Create a new I18n instance
@@ -80,11 +82,7 @@ impl I18n {
                     );
                 }
                 Err(e) => {
-                    tracing::warn!(
-                        "Failed to load translation for {}: {}",
-                        service.language,
-                        e
-                    );
+                    tracing::warn!("Failed to load translation for {}: {}", service.language, e);
                 }
             }
         }
@@ -108,6 +106,39 @@ impl I18n {
         // Parse Fluent resource
         let resource = FluentResource::try_new(ftl_content).map_err(|e| {
             I18nError::FluentParseError(format!("Failed to parse .ftl for {}: {:?}", language, e))
+        })?;
+
+        // Create language identifier
+        let lang_id: LanguageIdentifier = language
+            .parse()
+            .map_err(|_| I18nError::InvalidLanguageCode(language.to_string()))?;
+
+        // Create FluentBundle
+        let mut bundle = FluentBundle::new(vec![lang_id]);
+        bundle
+            .add_resource(resource)
+            .map_err(|e| I18nError::FluentParseError(format!("Failed to add resource: {:?}", e)))?;
+
+        // Store bundle
+        self.bundles.insert(language.to_string(), bundle);
+
+        Ok(())
+    }
+
+    /// Load embedded FTL content directly without a plugin
+    ///
+    /// This is useful for embedding fallback translations in the binary.
+    ///
+    /// # Arguments
+    /// * `language` - Language code (e.g., "en-US")
+    /// * `ftl_content` - Raw Fluent (.ftl) content
+    pub fn load_embedded(&mut self, language: &str, ftl_content: &str) -> Result<()> {
+        // Parse Fluent resource
+        let resource = FluentResource::try_new(ftl_content.to_string()).map_err(|e| {
+            I18nError::FluentParseError(format!(
+                "Failed to parse embedded .ftl for {}: {:?}",
+                language, e
+            ))
         })?;
 
         // Create language identifier

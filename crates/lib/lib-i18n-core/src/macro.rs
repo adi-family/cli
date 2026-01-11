@@ -94,9 +94,7 @@ mod tests {
     // Mock implementation for testing
     struct MockRegistry;
     impl ServiceRegistry for MockRegistry {
-        fn list_services(
-            &self,
-        ) -> crate::error::Result<Vec<crate::discovery::ServiceDescriptor>> {
+        fn list_services(&self) -> crate::error::Result<Vec<crate::discovery::ServiceDescriptor>> {
             Ok(vec![])
         }
         fn lookup_service(

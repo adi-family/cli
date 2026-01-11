@@ -221,10 +221,7 @@ impl TaskStore for SqliteTaskStore {
         updates.push(format!("updated_at = '{}'", now.to_rfc3339()));
 
         if updates.is_empty() {
-            return self
-                .get_task(id)
-                .await?
-                .ok_or(TaskStoreError::NotFound(id));
+            return self.get_task(id).await?.ok_or(TaskStoreError::NotFound(id));
         }
 
         let query = format!("UPDATE tasks SET {} WHERE id = ?", updates.join(", "));
@@ -234,9 +231,7 @@ impl TaskStore for SqliteTaskStore {
             .execute(&self.pool)
             .await?;
 
-        self.get_task(id)
-            .await?
-            .ok_or(TaskStoreError::NotFound(id))
+        self.get_task(id).await?.ok_or(TaskStoreError::NotFound(id))
     }
 
     async fn delete_task(&self, id: Uuid) -> Result<()> {

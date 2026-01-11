@@ -90,7 +90,9 @@ impl Client {
                 return Err(Error::GraphQL(messages.join("; ")));
             }
 
-            result.data.ok_or_else(|| Error::GraphQL("No data returned".to_string()))
+            result
+                .data
+                .ok_or_else(|| Error::GraphQL("No data returned".to_string()))
         } else {
             let status_code = status.as_u16();
             let body = response.text().await.unwrap_or_default();
@@ -128,8 +130,7 @@ impl Client {
             issue: Issue,
         }
 
-        let request = GraphQLRequest::new(query)
-            .with_variables(serde_json::json!({ "id": id }));
+        let request = GraphQLRequest::new(query).with_variables(serde_json::json!({ "id": id }));
 
         let response: Response = self.query(request).await?;
         Ok(response.issue)
@@ -158,8 +159,8 @@ impl Client {
             issue_create: IssuePayload,
         }
 
-        let request = GraphQLRequest::new(query)
-            .with_variables(serde_json::json!({ "input": input }));
+        let request =
+            GraphQLRequest::new(query).with_variables(serde_json::json!({ "input": input }));
 
         let response: Response = self.query(request).await?;
         response

@@ -335,22 +335,13 @@ mod tests {
         let mut manager = QuotaManager::new();
         manager.set_quota("test_tool", QuotaConfig::per_session(3));
 
-        matches!(
-            manager.check("test_tool"),
-            QuotaCheckResult::Allowed { .. }
-        );
+        matches!(manager.check("test_tool"), QuotaCheckResult::Allowed { .. });
         manager.record("test_tool");
 
-        matches!(
-            manager.check("test_tool"),
-            QuotaCheckResult::Allowed { .. }
-        );
+        matches!(manager.check("test_tool"), QuotaCheckResult::Allowed { .. });
         manager.record("test_tool");
 
-        matches!(
-            manager.check("test_tool"),
-            QuotaCheckResult::Allowed { .. }
-        );
+        matches!(manager.check("test_tool"), QuotaCheckResult::Allowed { .. });
         manager.record("test_tool");
 
         matches!(

@@ -32,7 +32,8 @@ impl LlmProvider for AnthropicProvider {
         _config: &LlmConfig,
     ) -> Result<LlmResponse> {
         Err(AgentError::AnthropicError(
-            "Anthropic provider not yet fully implemented. See providers/anthropic.rs TODO".to_string(),
+            "Anthropic provider not yet fully implemented. See providers/anthropic.rs TODO"
+                .to_string(),
         ))
     }
 

@@ -1,10 +1,10 @@
 use adi_auth_core::{AuthManager, TokenManager, UserId};
 use axum::{
-    Json, Router,
     extract::State,
-    http::{HeaderMap, StatusCode, header},
+    http::{header, HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
+    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;

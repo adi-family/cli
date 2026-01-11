@@ -24,10 +24,7 @@ impl ApiKeyAuth {
 #[async_trait]
 impl AuthStrategy for ApiKeyAuth {
     async fn apply(&self, headers: &mut HeaderMap) -> Result<()> {
-        headers.insert(
-            "Authorization",
-            self.api_key.parse().unwrap(),
-        );
+        headers.insert("Authorization", self.api_key.parse().unwrap());
         Ok(())
     }
 }

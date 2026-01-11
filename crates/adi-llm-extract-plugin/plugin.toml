@@ -1,0 +1,24 @@
+[plugin]
+id = "adi.llm-extract"
+name = "ADI LLM Extract"
+version = "0.1.0"
+type = "core"
+author = "ADI Team"
+description = "Extract LLM-friendly documentation from plugins for AI context files"
+min_host_version = "0.8.0"
+
+[cli]
+command = "llm-extract"
+description = "Extract plugin documentation for LLM consumption"
+aliases = ["llm"]
+
+[[provides]]
+id = "adi.llm-extract.cli"
+version = "1.0.0"
+description = "CLI commands for extracting LLM documentation"
+
+[tags]
+categories = ["documentation", "llm", "tooling"]
+
+[binary]
+name = "adi_llm_extract_plugin"
