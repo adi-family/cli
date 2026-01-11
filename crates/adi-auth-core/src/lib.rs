@@ -15,7 +15,7 @@ pub use token::TokenManager;
 pub use types::{AuthToken, TokenClaims, User, UserId, VerificationCode};
 
 #[cfg(feature = "axum")]
-pub use middleware::{AuthError, AuthUser, OptionalAuthUser};
+pub use middleware::{AdminAuthError, AdminUser, AuthError, AuthUser, OptionalAuthUser};
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

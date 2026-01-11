@@ -1,12 +1,13 @@
-use adi_auth_core::{AuthManager, UserId};
+use adi_auth_core::{AuthManager, TokenManager, UserId};
 use axum::{
+    Json, Router,
     extract::State,
-    http::{header, HeaderMap, StatusCode},
+    http::{HeaderMap, StatusCode, header},
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -16,6 +17,10 @@ use uuid::Uuid;
 
 struct AppState {
     auth: RwLock<Option<AuthManager>>,
+    /// Admin email whitelist (lowercase)
+    admin_emails: HashSet<String>,
+    /// Admin token manager (if ADMIN_JWT_SECRET is set)
+    admin_token_manager: Option<TokenManager>,
 }
 
 #[tokio::main]
@@ -32,17 +37,38 @@ async fn main() {
         .and_then(|p| p.parse().ok())
         .unwrap_or(8090);
 
-    let db_path = std::env::var("AUTH_DB_PATH")
-        .map(PathBuf::from)
-        .ok();
+    let db_path = std::env::var("AUTH_DB_PATH").map(PathBuf::from).ok();
 
     let auth = match db_path {
         Some(path) => AuthManager::open(&path).ok(),
         None => AuthManager::open_global().ok(),
     };
 
+    // Parse admin emails from env (comma-separated, case-insensitive)
+    let admin_emails: HashSet<String> = std::env::var("ADMIN_EMAILS")
+        .unwrap_or_default()
+        .split(',')
+        .map(|s| s.trim().to_lowercase())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    if !admin_emails.is_empty() {
+        tracing::info!("Admin emails configured: {:?}", admin_emails);
+    }
+
+    // Create admin token manager if ADMIN_JWT_SECRET is set
+    let admin_token_manager = std::env::var("ADMIN_JWT_SECRET")
+        .ok()
+        .map(|secret| TokenManager::new(&secret));
+
+    if admin_token_manager.is_some() {
+        tracing::info!("Admin JWT authentication enabled");
+    }
+
     let state = Arc::new(AppState {
         auth: RwLock::new(auth),
+        admin_emails,
+        admin_token_manager,
     });
 
     let app = Router::new()
@@ -127,7 +153,38 @@ async fn verify_code(
     };
 
     match auth.verify_code(&input.email, &input.code) {
-        Ok(token) => (StatusCode::OK, Json(serde_json::json!(token))),
+        Ok(token) => {
+            // Check if user is an admin
+            let is_admin = state.admin_emails.contains(&input.email.to_lowercase());
+
+            // Generate admin token if user is admin and admin auth is configured
+            let admin_token = if is_admin {
+                if let Some(ref admin_manager) = state.admin_token_manager {
+                    // Get the user to generate admin token
+                    if let Ok(Some(user)) = auth.get_user_by_email(&input.email) {
+                        admin_manager
+                            .generate_token(&user)
+                            .ok()
+                            .map(|t| t.access_token)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            let mut response = serde_json::json!(token);
+            if let Some(admin_token) = admin_token {
+                response["admin_token"] = serde_json::json!(admin_token);
+                response["is_admin"] = serde_json::json!(true);
+                tracing::info!("Admin token issued for {}", input.email);
+            }
+
+            (StatusCode::OK, Json(response))
+        }
         Err(adi_auth_core::Error::InvalidCode) => (
             StatusCode::UNAUTHORIZED,
             Json(serde_json::json!({ "error": "Invalid verification code" })),
@@ -162,7 +219,7 @@ async fn get_current_user(
             return (
                 StatusCode::UNAUTHORIZED,
                 Json(serde_json::json!({ "error": "Missing or invalid Authorization header" })),
-            )
+            );
         }
     };
 
@@ -172,13 +229,13 @@ async fn get_current_user(
             return (
                 StatusCode::UNAUTHORIZED,
                 Json(serde_json::json!({ "error": "Token expired" })),
-            )
+            );
         }
         Err(e) => {
             return (
                 StatusCode::UNAUTHORIZED,
                 Json(serde_json::json!({ "error": e.to_string() })),
-            )
+            );
         }
     };
 
@@ -188,7 +245,7 @@ async fn get_current_user(
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": "Invalid user ID in token" })),
-            )
+            );
         }
     };
 
