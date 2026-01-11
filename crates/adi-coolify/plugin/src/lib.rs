@@ -240,7 +240,10 @@ extern "C" fn handle_message(
                     return RResult::ROk(RString::from("ok"));
                 }
             }
-            RResult::RErr(PluginError::new(1, "Failed to set project path".to_string()))
+            RResult::RErr(PluginError::new(
+                1,
+                "Failed to set project path".to_string(),
+            ))
         }
         _ => RResult::RErr(PluginError::new(
             -1,
@@ -475,8 +478,7 @@ fn cmd_config_set(args: &[&str], options: &HashMap<String, String>) -> Result<St
         ));
     }
 
-    let manager = get_config_manager()
-        .ok_or("Config manager not initialized")?;
+    let manager = get_config_manager().ok_or("Config manager not initialized")?;
 
     let is_project = options.contains_key("project") || options.contains_key("p");
     let is_secret = manager.is_secret(key);
@@ -515,7 +517,8 @@ fn cmd_config_set(args: &[&str], options: &HashMap<String, String>) -> Result<St
             .set_user(key, value)
             .map_err(|e| format!("Failed to save config: {}", e))?;
 
-        let config_path = manager.user_config_path()
+        let config_path = manager
+            .user_config_path()
             .ok_or("Could not determine user config directory")?;
 
         Ok(format!(
@@ -661,7 +664,7 @@ fn cmd_watch(args: &[&str]) -> Result<String, String> {
     let label = status_label(status);
 
     Ok(format!(
-        "Watching {} deployments...\n\nLatest deployment:\n  UUID: {}\n  Status: {} {}\n  Commit: {}\n\nNote: For live watching, use: ./scripts/deploy.sh watch {}",
+        "Watching {} deployments...\n\nLatest deployment:\n  UUID: {}\n  Status: {} {}\n  Commit: {}\n\nNote: For live watching, use: adi workflow deploy (select watch)",
         service.name, uuid, icon, label, commit, service.id
     ))
 }

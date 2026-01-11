@@ -57,7 +57,7 @@ watch-uuid = UUID
 watch-status = 状态
 watch-commit = 提交
 watch-no-deployments = 未找到 { $service } 的部署
-watch-live-tip = 注意: 如需实时监视，请使用: ./scripts/deploy.sh watch { $service }
+watch-live-tip = 注意: 如需实时监视，请使用: adi workflow deploy { $service }
 watch-service-required = 需要服务名称。用法: watch <服务>
 
 # 日志

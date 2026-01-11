@@ -360,7 +360,7 @@ LANG=fr-FR adi tasks list
 
 ### 6. Publish
 ```bash
-./scripts/publish-plugin.sh adi-tasks-lang-fr
+adi workflow release-plugin --plugin adi-tasks-lang-fr
 ```
 
 ## Implementation Roadmap

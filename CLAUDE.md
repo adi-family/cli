@@ -5,16 +5,6 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 - Build all components: `cargo build --workspace`
 - License: BSL-1.0
 
-## Bash Script Libraries
-- Located in `scripts/lib/` with reusable utilities
-- `common.sh` provides requirement checking functions:
-  - `require_value <value> [msg]` - Exit if value is empty
-  - `require_env <var_name>` - Exit if env var not set
-  - `require_file <file> [msg]` - Exit if file doesn't exist
-  - `require_dir <dir> [msg]` - Exit if directory doesn't exist
-  - `require_one_of <msg> <val1> <val2> ...` - Exit if all values empty
-- See `scripts/lib/README.md` for full documentation
-
 ## Code Guidelines
 - For translations and internationalization, prefer Fluent (https://projectfluent.org/)
 - Translation plugin system: See `docs/i18n-translation-plugin-system.md` for architecture and implementation guide
@@ -63,6 +53,7 @@ Several components follow a standard multi-crate structure within a single direc
 - `adi-tasks` (core, cli, http, plugin) - Task management
 - `adi-indexer` (core, cli, http, plugin) - Code indexing
 - `adi-knowledgebase` (core, cli, http) - Graph DB + embeddings
+- `adi-api-proxy` (core, http, plugin) - LLM API proxy with BYOK/Platform modes
 
 **Naming convention:**
 - Core: `adi-{component}-core` (e.g., `adi-agent-loop-core`)
@@ -88,6 +79,9 @@ Several components follow a standard multi-crate structure within a single direc
 - `crates/adi-agent-loop/core` - Agent loop core library (autonomous LLM agents)
 - `crates/adi-agent-loop/http` - Agent loop HTTP server
 - `crates/adi-agent-loop/plugin` - Agent loop plugin (includes CLI functionality)
+- `crates/adi-api-proxy/core` - API Proxy core library (BYOK/Platform modes, encryption)
+- `crates/adi-api-proxy/http` - API Proxy HTTP server (OpenAI-compatible proxy)
+- `crates/adi-api-proxy/plugin` - API Proxy CLI plugin
 - `crates/adi-executor` - Docker-based task execution service
 - `crates/cocoon` - Containerized worker with signaling server connectivity for remote command execution
 - `crates/cocoon-manager` - REST API for on-demand cocoon container orchestration
@@ -324,13 +318,13 @@ brew install filosottile/musl-cross/musl-cross
 ### Build Release Images
 ```bash
 # Build Linux binaries (native speed, persistent Cargo cache)
-./scripts/build-linux.sh all                    # Build all services
-./scripts/build-linux.sh adi-auth adi-platform  # Build specific services
+adi workflow build-linux                        # Interactive: select services
+adi workflow build-linux --services adi-auth    # Build specific service
 
 # Build Docker images + push (optional)
-./scripts/release-fast.sh all                   # Build all
-./scripts/release-fast.sh all --push            # Build + push to registry
-./scripts/release-fast.sh adi-auth --tag v1.0.0 # Build with custom tag
+adi workflow release                            # Interactive: select services
+adi workflow release --push                     # Build + push to registry
+adi workflow release --services adi-auth --tag v1.0.0  # Build with custom tag
 ```
 
 ### Performance Benefits
@@ -345,6 +339,62 @@ All services use Traefik for routing at `https://adi.the-ihor.com/api/*`:
 cd release/adi.the-ihor.com/adi-auth
 cp .env.example .env  # Configure environment
 docker-compose up -d  # Deploy with Traefik
+```
+
+## ADI Workflows
+
+Interactive workflows are defined in `.adi/workflows/` directory. Each workflow has a `.toml` config and corresponding `.sh` script.
+
+### Available Workflows
+
+| Workflow | Description | Command |
+|----------|-------------|---------|
+| `build-linux` | Cross-compile services for Linux | `adi workflow build-linux` |
+| `release` | Build + Docker image + push to registry | `adi workflow release` |
+| `deploy` | Deploy services to Coolify | `adi workflow deploy` |
+| `dev` | Local development environment | `adi workflow dev` |
+| `release-plugin` | Build and publish a single plugin | `adi workflow release-plugin` |
+| `release-plugins` | Build and publish multiple plugins | `adi workflow release-plugins` |
+| `commit-submodule` | Commit changes in submodule and parent | `adi workflow commit-submodule` |
+| `lint-plugin` | Lint a plugin before release | `adi workflow lint-plugin` |
+
+### Workflow Structure
+
+Each workflow consists of:
+- `<name>.toml` - Workflow configuration (inputs, steps, conditions)
+- `<name>.sh` - Bash script with actual implementation
+
+### Example: Release Workflow
+```bash
+# Interactive mode - select services
+adi workflow release
+
+# Release specific service
+adi workflow release llm-proxy
+
+# Release and push to registry
+adi workflow release llm-proxy --push
+
+# Release all services with custom tag
+adi workflow release all --push --tag v1.0.0
+```
+
+### Example: Deploy Workflow
+```bash
+# Interactive mode
+adi workflow deploy
+
+# Or with arguments
+adi workflow deploy --action deploy --service auth
+```
+
+### Example: Release Plugin
+```bash
+# Interactive - select plugin and target
+adi workflow release-plugin
+
+# Direct - release specific plugin
+adi workflow release-plugin --plugin agent-loop --registry production
 ```
 
 ## Setup
@@ -366,7 +416,7 @@ cargo build -p adi-indexer-cli    # Build specific package
 ### Quick Start (Docker)
 ```bash
 cp .env.local.example .env.local  # Create config (one time)
-./scripts/dev.sh up               # Start all services
+adi workflow dev                  # Start all services
 ```
 
 ### Services
@@ -379,50 +429,10 @@ cp .env.local.example .env.local  # Create config (one time)
 | FlowMap API | http://localhost:8092 | Code flow visualization |
 | Analytics Ingestion | http://localhost:8094 | Event ingestion (receives from services) |
 | Analytics API | http://localhost:8093 | Metrics, dashboards, aggregates |
+| API Proxy | http://localhost:8024 | LLM API proxy (BYOK/Platform modes) |
 | Cocoon Manager | http://localhost:8020 | Cocoon orchestration API (optional) |
 | Registry | http://localhost:8019 | Plugin registry (local) |
 | Cocoon | (internal) | Worker container (optional) |
-
-### Dev Script (`./scripts/dev.sh`)
-Works in terminal, tmux, screen, and CI/CD pipelines.
-
-**Lifecycle commands:**
-```bash
-./scripts/dev.sh up       # Start all services (creates .env.local if missing)
-./scripts/dev.sh down     # Stop all services
-./scripts/dev.sh restart  # Restart all services
-./scripts/dev.sh status   # Show service status with ports
-```
-
-**Development commands:**
-```bash
-./scripts/dev.sh logs           # Follow all logs (Ctrl+C to stop)
-./scripts/dev.sh logs auth      # Follow specific service logs
-./scripts/dev.sh shell auth     # Open shell in container (bash or sh)
-./scripts/dev.sh build          # Rebuild Docker images
-./scripts/dev.sh rebuild        # Force rebuild + restart (no cache)
-./scripts/dev.sh clean          # Stop + remove volumes (fresh start)
-```
-
-**Utilities:**
-```bash
-./scripts/dev.sh mail     # Start Mailpit for email testing
-./scripts/dev.sh native   # Show native run instructions
-./scripts/dev.sh help     # Show all commands + environment info
-```
-
-### tmux/screen Usage
-The script auto-detects tmux/screen and handles TTY properly:
-- Colors work in all multiplexer terminals
-- `logs` falls back to last 100 lines if no TTY
-- `shell` requires TTY (normal pane has it)
-- `native` shows tip about creating panes
-- `help` shows current environment status
-
-```bash
-# Force colors if needed
-FORCE_COLOR=1 ./scripts/dev.sh status
-```
 
 ### Native Development (No Docker)
 For faster iteration on specific services:
@@ -440,18 +450,6 @@ cd apps/infra-service-web && npm run dev
 cd crates/cocoon && SIGNALING_SERVER_URL=ws://localhost:8080/ws cargo run
 ```
 
-### Email Testing
-Use Mailpit for local email testing:
-```bash
-./scripts/dev.sh mail     # Start Mailpit container
-# SMTP: localhost:1025
-# Web UI: http://localhost:8025
-
-# Add to .env.local:
-SMTP_HOST=host.docker.internal
-SMTP_PORT=1025
-```
-
 ### Configuration (.env.local)
 Key variables:
 - `DATABASE_URL` - PostgreSQL connection for auth (e.g., postgres://postgres:postgres@localhost/adi_auth)
@@ -459,37 +457,6 @@ Key variables:
 - `HMAC_SALT` - Device ID derivation for cocoon
 - `SMTP_*` - Email settings (optional for local dev)
 - `RUST_LOG` - Log level (info, debug, trace)
-
-## Production Deployment
-
-### Deploy Script (`./scripts/deploy.sh`)
-Manages Coolify deployments for production services.
-
-**Requirements:**
-- `COOLIFY_API_KEY` environment variable (get from Coolify → Keys & Tokens → API tokens)
-- `COOLIFY_URL` (default: http://in.the-ihor.com)
-
-**Commands:**
-```bash
-./scripts/deploy.sh status              # Check all services status
-./scripts/deploy.sh deploy web          # Deploy single service
-./scripts/deploy.sh deploy all          # Deploy all services
-./scripts/deploy.sh deploy auth -f      # Force rebuild (no cache)
-./scripts/deploy.sh watch platform      # Watch deployment progress
-./scripts/deploy.sh logs signaling      # View deployment logs
-./scripts/deploy.sh list web 10         # List last 10 deployments
-```
-
-**Services:**
-| Name | Description |
-|------|-------------|
-| auth | Auth API (adi-auth) |
-| platform | Platform API (adi-platform-api) |
-| signaling | Signaling Server (tarminal-signaling-server) |
-| web | Web UI (infra-service-web) |
-| analytics-ingestion | Analytics Ingestion (adi-analytics-ingestion) |
-| analytics | Analytics API (adi-analytics-api) |
-| registry | Plugin Registry (adi-plugin-registry-http) |
 
 ## CLI Usage
 The `adi` CLI provides direct plugin commands for convenience:

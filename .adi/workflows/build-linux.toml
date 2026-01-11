@@ -1,5 +1,5 @@
 # ADI Linux Build Workflow
-# Wraps scripts/build-linux.sh for cross-compiling to Linux
+# Cross-compile services for Linux deployment
 
 [workflow]
 name = "build-linux"
@@ -17,7 +17,8 @@ options = [
     "tarminal-signaling-server",
     "adi-plugin-registry",
     "flowmap-api",
-    "cocoon-manager"
+    "cocoon-manager",
+    "llm-proxy"
 ]
 
 [[steps]]

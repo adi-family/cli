@@ -1,5 +1,5 @@
 # ADI Coolify Deployment Workflow
-# Wraps scripts/deploy.sh functionality into an interactive workflow
+# Interactive wrapper for deploy.sh
 
 [workflow]
 name = "deploy"
@@ -30,7 +30,8 @@ options = [
     "web",
     "analytics-ingestion",
     "analytics",
-    "registry"
+    "registry",
+    "llm-proxy"
 ]
 default = "all"
 if = "{{ action | starts_with('deploy') }}"
@@ -53,7 +54,8 @@ options = [
     "web",
     "analytics-ingestion",
     "analytics",
-    "registry"
+    "registry",
+    "llm-proxy"
 ]
 if = "{{ action | starts_with('logs') or action | starts_with('watch') or action | starts_with('list') }}"
 

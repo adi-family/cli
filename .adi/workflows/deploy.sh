@@ -444,7 +444,8 @@ cmd_help() {
 ADI Coolify Deployment Helper
 
 USAGE:
-    ./scripts/deploy.sh <command> [args]
+    adi workflow deploy
+    .adi/workflows/deploy.sh <command> [args]
 
 COMMANDS:
     status              Show status of all services
@@ -469,12 +470,11 @@ ENVIRONMENT:
     COOLIFY_API_KEY     API token (required)
 
 EXAMPLES:
-    ./scripts/deploy.sh status              # Check all services
-    ./scripts/deploy.sh deploy web          # Deploy web UI
-    ./scripts/deploy.sh deploy all          # Deploy everything
-    ./scripts/deploy.sh deploy auth -f      # Force rebuild auth
-    ./scripts/deploy.sh watch platform      # Watch platform deploy
-    ./scripts/deploy.sh logs signaling      # Show signaling logs
+    adi workflow deploy                     # Interactive mode
+    .adi/workflows/deploy.sh status         # Check all services
+    .adi/workflows/deploy.sh deploy web     # Deploy web UI
+    .adi/workflows/deploy.sh deploy all     # Deploy everything
+    .adi/workflows/deploy.sh deploy auth -f # Force rebuild auth
 EOF
 }
 
@@ -492,7 +492,7 @@ case "${1:-}" in
                 cmd_help ;;
     *)
         echo -e "${RED}Unknown command: $1${NC}"
-        echo "Run './scripts/deploy.sh help' for usage"
+        echo "Run 'adi workflow deploy' or '.adi/workflows/deploy.sh help' for usage"
         exit 1
         ;;
 esac

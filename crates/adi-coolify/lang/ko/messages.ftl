@@ -57,7 +57,7 @@ watch-uuid = UUID
 watch-status = 상태
 watch-commit = 커밋
 watch-no-deployments = { $service }의 배포를 찾을 수 없습니다
-watch-live-tip = 참고: 실시간 모니터링은: ./scripts/deploy.sh watch { $service } 사용
+watch-live-tip = 참고: 실시간 모니터링은: adi workflow deploy { $service } 사용
 watch-service-required = 서비스 이름이 필요합니다. 사용법: watch <서비스>
 
 # 로그

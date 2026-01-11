@@ -358,8 +358,8 @@ cmd_up() {
     echo ""
     cmd_ports
     echo ""
-    log "View logs: ./scripts/dev.sh logs"
-    log "Stop services: ./scripts/dev.sh down"
+    log "View logs: adi workflow dev (select logs)"
+    log "Stop services: adi workflow dev (select down)"
 }
 
 cmd_down() {
@@ -495,7 +495,7 @@ cmd_clean() {
 
 cmd_shell() {
     local service="${1:-}"
-    [ -z "$service" ] && error "Usage: ./scripts/dev.sh shell <service>"
+    [ -z "$service" ] && error "Usage: adi workflow dev (select shell) or .adi/workflows/dev.sh shell <service>"
 
     local dir
     dir=$(service_dir "$service")
@@ -509,7 +509,8 @@ cmd_shell() {
 cmd_help() {
     echo -e "${BOLD}ADI Local Development Helper${NC}"
     echo ""
-    echo "Usage: ./scripts/dev.sh <command> [service...]"
+    echo "Usage: adi workflow dev"
+    echo "       .adi/workflows/dev.sh <command> [service...]"
     echo ""
     echo -e "${BOLD}Commands:${NC}"
     echo "  up [services]     Start services (default: signaling auth web)"
@@ -531,11 +532,11 @@ cmd_help() {
     done
     echo ""
     echo -e "${BOLD}Examples:${NC}"
-    echo "  ./scripts/dev.sh up                  # Start default services"
-    echo "  ./scripts/dev.sh up cocoon           # Start only cocoon"
-    echo "  ./scripts/dev.sh up signaling auth   # Start specific services"
-    echo "  ./scripts/dev.sh logs auth           # Follow auth logs"
-    echo "  ./scripts/dev.sh status              # Show all service status"
+    echo "  adi workflow dev                     # Interactive mode"
+    echo "  .adi/workflows/dev.sh up             # Start default services"
+    echo "  .adi/workflows/dev.sh up cocoon      # Start only cocoon"
+    echo "  .adi/workflows/dev.sh logs auth      # Follow auth logs"
+    echo "  .adi/workflows/dev.sh status         # Show all service status"
     echo ""
     echo -e "${BOLD}Environment:${NC}"
     if in_multiplexer; then
@@ -565,5 +566,5 @@ case "${1:-}" in
     clean)      cmd_clean ;;
     shell)      cmd_shell "$2" ;;
     help|--help|-h|"")  cmd_help ;;
-    *)          error "Unknown command: $1. Run './scripts/dev.sh help' for usage." ;;
+    *)          error "Unknown command: $1. Run 'adi workflow dev' or '.adi/workflows/dev.sh help' for usage." ;;
 esac

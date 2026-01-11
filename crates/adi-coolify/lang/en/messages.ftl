@@ -57,7 +57,7 @@ watch-uuid = UUID
 watch-status = Status
 watch-commit = Commit
 watch-no-deployments = No deployments found for { $service }
-watch-live-tip = Note: For live watching, use: ./scripts/deploy.sh watch { $service }
+watch-live-tip = Note: For live watching, use: adi workflow deploy { $service }
 watch-service-required = Service name required. Usage: watch <service>
 
 # Logs

@@ -57,7 +57,7 @@ watch-uuid = UUID
 watch-status = ステータス
 watch-commit = コミット
 watch-no-deployments = { $service } のデプロイが見つかりません
-watch-live-tip = 注意: ライブ監視には: ./scripts/deploy.sh watch { $service } を使用
+watch-live-tip = 注意: ライブ監視には: adi workflow deploy { $service } を使用
 watch-service-required = サービス名が必要です。使用法: watch <サービス>
 
 # ログ

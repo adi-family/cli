@@ -1,5 +1,5 @@
 # ADI Local Development Workflow
-# Wraps scripts/dev.sh functionality into an interactive workflow
+# Interactive wrapper for dev.sh
 
 [workflow]
 name = "dev"
