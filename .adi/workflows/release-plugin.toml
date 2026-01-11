@@ -9,29 +9,9 @@ description = "Build and publish a plugin to the registry"
 name = "plugin"
 type = "select"
 prompt = "Select plugin to release"
-options = [
-    "cocoon",
-    "agent-loop",
-    "indexer",
-    "knowledgebase",
-    "tasks",
-    "workflow",
-    "coolify",
-    "linter",
-    "llm-extract",
-    "embed",
-    "lang-rust",
-    "lang-python",
-    "lang-typescript",
-    "lang-cpp",
-    "lang-go",
-    "lang-java",
-    "lang-csharp",
-    "lang-ruby",
-    "lang-php",
-    "lang-swift",
-    "lang-lua"
-]
+# Dynamic options: discover plugins from crates/*/plugin directories
+options_source = { type = "plugins" }
+autocomplete = true
 
 [[inputs]]
 name = "registry_target"

@@ -29,8 +29,18 @@ pub struct Input {
     #[serde(rename = "type")]
     pub input_type: InputType,
     pub prompt: String,
+    /// Static options list
     #[serde(default)]
     pub options: Option<Vec<String>>,
+    /// Shell command that outputs options (one per line)
+    #[serde(default)]
+    pub options_cmd: Option<String>,
+    /// Built-in options provider (git-branches, git-tags, plugins, services, directories, files)
+    #[serde(default)]
+    pub options_source: Option<OptionsSource>,
+    /// Enable fuzzy search/autocomplete for select inputs
+    #[serde(default)]
+    pub autocomplete: Option<bool>,
     #[serde(default)]
     pub default: Option<serde_json::Value>,
     #[serde(default)]
@@ -40,6 +50,47 @@ pub struct Input {
     /// Conditional expression (Jinja2 template that evaluates to truthy/falsy)
     #[serde(rename = "if", default)]
     pub condition: Option<String>,
+}
+
+/// Built-in options source providers
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case", tag = "type")]
+pub enum OptionsSource {
+    /// Git branches from current repository
+    GitBranches,
+    /// Git tags from current repository
+    GitTags,
+    /// Git remotes from current repository
+    GitRemotes,
+    /// Plugin directories (crates with plugin.toml)
+    Plugins,
+    /// Services from docker-compose.yml
+    DockerComposeServices {
+        #[serde(default = "default_compose_file")]
+        file: String,
+    },
+    /// Directories matching a glob pattern
+    Directories {
+        path: String,
+        #[serde(default)]
+        pattern: Option<String>,
+    },
+    /// Files matching a glob pattern
+    Files {
+        path: String,
+        #[serde(default)]
+        pattern: Option<String>,
+    },
+    /// Lines from a file
+    LinesFromFile { path: String },
+    /// Cargo workspace members
+    CargoWorkspaceMembers,
+    /// Release services (from release/ directory)
+    ReleaseServices,
+}
+
+fn default_compose_file() -> String {
+    "docker-compose.yml".to_string()
 }
 
 /// Input types for interactive prompts
@@ -118,5 +169,87 @@ run = "cargo build"
         assert_eq!(workflow.workflow.name, "test");
         assert_eq!(workflow.inputs.len(), 1);
         assert_eq!(workflow.steps.len(), 1);
+    }
+
+    #[test]
+    fn test_parse_workflow_with_dynamic_options() {
+        let toml = r#"
+[workflow]
+name = "dynamic-test"
+description = "Test dynamic options"
+
+[[inputs]]
+name = "branch"
+type = "select"
+prompt = "Select branch"
+options_source = { type = "git-branches" }
+autocomplete = true
+
+[[inputs]]
+name = "plugin"
+type = "select"
+prompt = "Select plugin"
+options_cmd = "ls -d crates/*/plugin 2>/dev/null | xargs -I{} basename $(dirname {})"
+
+[[inputs]]
+name = "service"
+type = "select"
+prompt = "Select service"
+options_source = { type = "docker-compose-services", file = "docker-compose.dev.yml" }
+
+[[steps]]
+name = "Run"
+run = "echo {{ branch }} {{ plugin }} {{ service }}"
+"#;
+
+        let workflow = parse_workflow(toml).unwrap();
+        assert_eq!(workflow.workflow.name, "dynamic-test");
+        assert_eq!(workflow.inputs.len(), 3);
+
+        // Check branch input
+        let branch_input = &workflow.inputs[0];
+        assert!(branch_input.options_source.is_some());
+        assert_eq!(branch_input.autocomplete, Some(true));
+
+        // Check plugin input
+        let plugin_input = &workflow.inputs[1];
+        assert!(plugin_input.options_cmd.is_some());
+
+        // Check service input
+        let service_input = &workflow.inputs[2];
+        assert!(service_input.options_source.is_some());
+    }
+
+    #[test]
+    fn test_parse_options_source_variants() {
+        let toml = r#"
+[workflow]
+name = "source-variants"
+
+[[inputs]]
+name = "dir"
+type = "select"
+prompt = "Select directory"
+options_source = { type = "directories", path = "crates", pattern = "adi-*" }
+
+[[inputs]]
+name = "file"
+type = "select"
+prompt = "Select file"
+options_source = { type = "files", path = ".", pattern = "*.toml" }
+
+[[inputs]]
+name = "line"
+type = "select"
+prompt = "Select from file"
+options_source = { type = "lines-from-file", path = ".adi/services.txt" }
+
+[[steps]]
+name = "Done"
+run = "echo done"
+"#;
+
+        let workflow = parse_workflow(toml).unwrap();
+        assert_eq!(workflow.inputs.len(), 3);
     }
 }

@@ -1,8 +1,9 @@
 //! Interactive TTY prompts using dialoguer
 
+use crate::options::resolve_options;
 use crate::parser::{Input, InputType};
 use crate::template;
-use dialoguer::{Confirm, Input as DialoguerInput, MultiSelect, Password, Select};
+use dialoguer::{Confirm, FuzzySelect, Input as DialoguerInput, MultiSelect, Password, Select};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal};
 
@@ -29,7 +30,7 @@ pub fn collect_inputs(inputs: &[Input]) -> Result<HashMap<String, serde_json::Va
             }
         }
 
-        let value = prompt_input(input)?;
+        let value = prompt_input(input, &values)?;
         values.insert(input.name.clone(), value);
     }
 
@@ -52,7 +53,10 @@ fn evaluate_condition(
 }
 
 /// Prompt for a single input value
-fn prompt_input(input: &Input) -> Result<serde_json::Value, String> {
+fn prompt_input(
+    input: &Input,
+    values: &HashMap<String, serde_json::Value>,
+) -> Result<serde_json::Value, String> {
     // Check if value is pre-filled from environment variable
     if let Some(env_var) = &input.env {
         if let Ok(value) = std::env::var(env_var) {
@@ -61,19 +65,20 @@ fn prompt_input(input: &Input) -> Result<serde_json::Value, String> {
     }
 
     match input.input_type {
-        InputType::Select => prompt_select(input),
+        InputType::Select => prompt_select(input, values),
         InputType::Input => prompt_text(input),
         InputType::Confirm => prompt_confirm(input),
-        InputType::MultiSelect => prompt_multi_select(input),
+        InputType::MultiSelect => prompt_multi_select(input, values),
         InputType::Password => prompt_password(input),
     }
 }
 
-fn prompt_select(input: &Input) -> Result<serde_json::Value, String> {
-    let options = input
-        .options
-        .as_ref()
-        .ok_or("Select input requires options")?;
+fn prompt_select(
+    input: &Input,
+    values: &HashMap<String, serde_json::Value>,
+) -> Result<serde_json::Value, String> {
+    // Resolve options dynamically
+    let options = resolve_options(input, values)?;
 
     if options.is_empty() {
         return Err("Select input requires at least one option".to_string());
@@ -86,12 +91,22 @@ fn prompt_select(input: &Input) -> Result<serde_json::Value, String> {
         .and_then(|default_val| options.iter().position(|o| o == default_val))
         .unwrap_or(0);
 
-    let selection = Select::new()
-        .with_prompt(&input.prompt)
-        .items(options)
-        .default(default_index)
-        .interact()
-        .map_err(|e| format!("Prompt error: {}", e))?;
+    // Use fuzzy select if autocomplete is enabled
+    let selection = if input.autocomplete.unwrap_or(false) {
+        FuzzySelect::new()
+            .with_prompt(&input.prompt)
+            .items(&options)
+            .default(default_index)
+            .interact()
+            .map_err(|e| format!("Prompt error: {}", e))?
+    } else {
+        Select::new()
+            .with_prompt(&input.prompt)
+            .items(&options)
+            .default(default_index)
+            .interact()
+            .map_err(|e| format!("Prompt error: {}", e))?
+    };
 
     Ok(serde_json::Value::String(options[selection].clone()))
 }
@@ -155,11 +170,12 @@ fn prompt_confirm(input: &Input) -> Result<serde_json::Value, String> {
     Ok(serde_json::Value::Bool(value))
 }
 
-fn prompt_multi_select(input: &Input) -> Result<serde_json::Value, String> {
-    let options = input
-        .options
-        .as_ref()
-        .ok_or("Multi-select input requires options")?;
+fn prompt_multi_select(
+    input: &Input,
+    values: &HashMap<String, serde_json::Value>,
+) -> Result<serde_json::Value, String> {
+    // Resolve options dynamically
+    let options = resolve_options(input, values)?;
 
     if options.is_empty() {
         return Err("Multi-select input requires at least one option".to_string());
@@ -182,7 +198,7 @@ fn prompt_multi_select(input: &Input) -> Result<serde_json::Value, String> {
 
     let selections = MultiSelect::new()
         .with_prompt(&input.prompt)
-        .items(options)
+        .items(&options)
         .defaults(&defaults)
         .interact()
         .map_err(|e| format!("Prompt error: {}", e))?;

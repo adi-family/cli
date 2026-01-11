@@ -22,18 +22,10 @@ default = "status - Check all services"
 name = "service"
 type = "select"
 prompt = "Select service"
-options = [
-    "all",
-    "auth",
-    "platform",
-    "signaling",
-    "web",
-    "analytics-ingestion",
-    "analytics",
-    "registry",
-    "llm-proxy"
-]
+# Dynamic options: discover services from release/ directory
+options_cmd = "echo 'all' && ls -d release/*/*/Dockerfile 2>/dev/null | xargs -I{} dirname {} | xargs -I{} basename {} | sort -u"
 default = "all"
+autocomplete = true
 if = "{{ action | starts_with('deploy') }}"
 
 [[inputs]]
@@ -47,16 +39,9 @@ if = "{{ action | starts_with('deploy') }}"
 name = "logs_service"
 type = "select"
 prompt = "Select service for logs"
-options = [
-    "auth",
-    "platform",
-    "signaling",
-    "web",
-    "analytics-ingestion",
-    "analytics",
-    "registry",
-    "llm-proxy"
-]
+# Dynamic options: discover services from release/ directory
+options_cmd = "ls -d release/*/*/Dockerfile 2>/dev/null | xargs -I{} dirname {} | xargs -I{} basename {} | sort -u"
+autocomplete = true
 if = "{{ action | starts_with('logs') or action | starts_with('watch') or action | starts_with('list') }}"
 
 [[inputs]]

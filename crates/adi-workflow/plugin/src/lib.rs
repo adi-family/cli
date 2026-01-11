@@ -5,6 +5,7 @@
 mod cli;
 mod discovery;
 mod executor;
+mod options;
 mod parser;
 mod prelude;
 mod prompts;

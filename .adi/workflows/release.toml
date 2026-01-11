@@ -9,17 +9,8 @@ description = "Build and release service images (cross-compile + Docker)"
 name = "services"
 type = "multi-select"
 prompt = "Select services to release (empty for all)"
-options = [
-    "adi-auth",
-    "adi-platform-api",
-    "adi-analytics-api",
-    "adi-analytics-ingestion",
-    "tarminal-signaling-server",
-    "adi-plugin-registry",
-    "flowmap-api",
-    "cocoon-manager",
-    "llm-proxy"
-]
+# Dynamic options: discover services from release/ directory
+options_source = { type = "release-services" }
 
 [[inputs]]
 name = "push"
