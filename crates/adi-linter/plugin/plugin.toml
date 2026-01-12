@@ -1,7 +1,7 @@
 [plugin]
 id = "adi.linter"
 name = "ADI Linter"
-version = "0.8.8"
+version = "0.8.9"
 type = "core"
 author = "ADI Team"
 description = "Code linting with configurable rules and auto-fix support"
