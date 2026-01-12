@@ -1,0 +1,34 @@
+# Example: Maximum line length checker
+# Rename to max-line-length.toml to enable
+
+[rule]
+id = "max-line"
+type = "command"
+category = "style"
+severity = "info"
+
+[rule.command]
+type = "max-line-length"
+max = 120
+
+[rule.glob]
+patterns = [
+    "**/*.rs",
+    "**/*.ts",
+    "**/*.js",
+    "**/*.sh",
+    "**/*.toml",
+    "**/*.json",
+    "**/*.md",
+    "**/*.yaml",
+    "**/*.yml"
+]
+exclude = [
+    "*.min.js",
+    "*.min.css",
+    "package-lock.json",
+    "Cargo.lock",
+    "target/**",
+    "node_modules/**",
+    ".git/**"
+]
