@@ -411,13 +411,43 @@ fn run_cli_command(context_json: &str) -> Result<String, String> {
     let options_value = serde_json::Value::Object(options);
 
     match subcommand {
-        "run" | "" => cmd_run(&cwd, &positional, &options_value),
+        "run" => cmd_run(&cwd, &positional, &options_value),
         "fix" => cmd_fix(&cwd, &positional, &options_value),
         "list" => cmd_list(&cwd, &options_value),
         "config" => cmd_config(&cwd),
         "init" => cmd_init(&cwd, &options_value),
-        _ => Err(format!("Unknown command: {}", subcommand)),
+        "" | "help" | "--help" | "-h" => Ok(get_help()),
+        _ => Err(format!(
+            "Unknown command: {}. Use 'adi lint help' for usage.",
+            subcommand
+        )),
     }
+}
+
+fn get_help() -> String {
+    let mut help = String::new();
+    help.push_str("ADI Linter - Language-agnostic code linting\n\n");
+    help.push_str("USAGE:\n");
+    help.push_str("  adi lint <COMMAND> [OPTIONS]\n\n");
+    help.push_str("COMMANDS:\n");
+    help.push_str("  run     Run linting on files (default command)\n");
+    help.push_str("  fix     Apply auto-fixes for linting issues\n");
+    help.push_str("  list    List all configured linters\n");
+    help.push_str("  config  Show current linter configuration\n");
+    help.push_str("  init    Create default linter configuration\n");
+    help.push_str("  help    Show this help message\n\n");
+    help.push_str("OPTIONS:\n");
+    help.push_str("  --format <pretty|json|sarif>  Output format (default: pretty)\n");
+    help.push_str(
+        "  --fail-on <level>             Minimum severity to fail (error|warning|info|hint)\n",
+    );
+    help.push_str("  --sequential                  Disable parallel execution\n\n");
+    help.push_str("EXAMPLES:\n");
+    help.push_str("  adi lint run                  # Lint all files in project\n");
+    help.push_str("  adi lint run src/main.rs      # Lint specific file\n");
+    help.push_str("  adi lint fix --dry-run        # Preview fixes without applying\n");
+    help.push_str("  adi lint init                 # Create config in .adi/linters/\n");
+    help
 }
 
 // === Command Implementations ===
