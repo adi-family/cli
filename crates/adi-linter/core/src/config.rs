@@ -1,4 +1,9 @@
 //! Configuration loading and parsing.
+//!
+//! Configuration is loaded from `.adi/linters/` directory:
+//! - `config.toml` - Global linter settings and category configuration
+//! - `<rule-name>.toml` - Individual rule files (one per linter rule)
+//! - `<rule-name>.toml.example` - Example files (ignored)
 
 use crate::linter::command::{CommandLinter, CommandType, RegexFix};
 use crate::linter::external::{ExternalLinter, ExternalLinterConfig};
@@ -410,31 +415,298 @@ impl PriorityValue {
     }
 }
 
+// === New Format: Individual Rule Files ===
+
+/// Global linter configuration (from config.toml in linters directory).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct GlobalLinterConfig {
+    #[serde(default)]
+    pub linter: GlobalConfig,
+    #[serde(default)]
+    pub autofix: AutofixConfig,
+    #[serde(default)]
+    pub categories: HashMap<String, CategoryConfigFile>,
+}
+
+/// Individual rule file configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IndividualRuleConfig {
+    pub rule: RuleDefinition,
+}
+
+/// Rule definition within an individual rule file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuleDefinition {
+    /// Rule ID.
+    pub id: String,
+    /// Rule type: "exec" or "command".
+    #[serde(rename = "type")]
+    pub rule_type: RuleType,
+    /// Single category.
+    #[serde(default)]
+    pub category: Option<Category>,
+    /// Multiple categories.
+    #[serde(default)]
+    pub categories: Vec<Category>,
+    /// Severity.
+    #[serde(default)]
+    pub severity: Severity,
+    /// Priority override.
+    #[serde(default)]
+    pub priority: Option<PriorityValue>,
+    /// Glob configuration.
+    #[serde(default)]
+    pub glob: GlobConfig,
+    /// Command configuration (for command type).
+    #[serde(default)]
+    pub command: Option<CommandConfig>,
+    /// Exec configuration (for exec type).
+    #[serde(default)]
+    pub exec: Option<ExecConfig>,
+    /// Fix configuration.
+    #[serde(default)]
+    pub fix: Option<FixConfig>,
+    /// Scope (for command type).
+    #[serde(default)]
+    pub scope: LintScope,
+}
+
+/// Rule type enum.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum RuleType {
+    Exec,
+    Command,
+}
+
+/// Glob configuration for rule files.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct GlobConfig {
+    #[serde(default)]
+    pub patterns: Vec<String>,
+    #[serde(default)]
+    pub exclude: Vec<String>,
+}
+
+impl GlobConfig {
+    pub fn to_patterns(&self) -> Vec<String> {
+        if self.patterns.is_empty() {
+            vec!["**/*".to_string()]
+        } else {
+            self.patterns.clone()
+        }
+    }
+}
+
+/// Command configuration for rule files.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "kebab-case")]
+pub enum CommandConfig {
+    RegexForbid { pattern: String, message: String },
+    RegexRequire { pattern: String, message: String },
+    MaxLineLength { max: usize },
+    MaxFileSize { max: usize },
+    Contains { text: String, message: String },
+    NotContains { text: String, message: String },
+}
+
+/// Exec configuration for rule files.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecConfig {
+    pub command: String,
+    #[serde(default)]
+    pub output: OutputMode,
+    #[serde(default)]
+    pub input: InputMode,
+    #[serde(default = "default_timeout")]
+    pub timeout: u64,
+    #[serde(default)]
+    pub message: Option<String>,
+}
+
+/// Fix configuration for rule files.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum FixConfig {
+    /// Regex-based fix (for command rules).
+    Regex {
+        pattern: String,
+        replacement: String,
+    },
+    /// Exec-based fix (for exec rules).
+    Exec { command: String },
+}
+
+/// Enum for parsed rule files.
+pub enum LinterRuleFile {
+    Exec(ExternalRuleConfig),
+    Command(CommandRuleConfig),
+}
+
+impl IndividualRuleConfig {
+    /// Convert to internal rule representation.
+    pub fn into_rule(self) -> anyhow::Result<LinterRuleFile> {
+        let rule = self.rule;
+
+        match rule.rule_type {
+            RuleType::Exec => {
+                let exec = rule.exec.ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Rule '{}' is type 'exec' but missing [rule.exec] section",
+                        rule.id
+                    )
+                })?;
+
+                Ok(LinterRuleFile::Exec(ExternalRuleConfig {
+                    id: rule.id,
+                    category: rule.category,
+                    categories: rule.categories,
+                    exec: exec.command,
+                    glob: GlobPatterns::Multiple(rule.glob.to_patterns()),
+                    priority: rule.priority,
+                    input: exec.input,
+                    output: exec.output,
+                    timeout: exec.timeout,
+                    severity: rule.severity,
+                    message: exec.message,
+                    fix: match rule.fix {
+                        Some(FixConfig::Exec { command }) => {
+                            Some(ExternalFixConfig { exec: command })
+                        }
+                        _ => None,
+                    },
+                }))
+            }
+            RuleType::Command => {
+                let cmd = rule.command.ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Rule '{}' is type 'command' but missing [rule.command] section",
+                        rule.id
+                    )
+                })?;
+
+                let command_type = match cmd {
+                    CommandConfig::RegexForbid { pattern, message } => {
+                        CommandTypeConfig::RegexForbid { pattern, message }
+                    }
+                    CommandConfig::RegexRequire { pattern, message } => {
+                        CommandTypeConfig::RegexRequire { pattern, message }
+                    }
+                    CommandConfig::MaxLineLength { max } => {
+                        CommandTypeConfig::MaxLineLength { max }
+                    }
+                    CommandConfig::MaxFileSize { max } => CommandTypeConfig::MaxFileSize { max },
+                    CommandConfig::Contains { text, message } => {
+                        CommandTypeConfig::Contains { text, message }
+                    }
+                    CommandConfig::NotContains { text, message } => {
+                        CommandTypeConfig::NotContains { text, message }
+                    }
+                };
+
+                let fix = match rule.fix {
+                    Some(FixConfig::Regex {
+                        pattern,
+                        replacement,
+                    }) => Some(CommandFixConfig {
+                        pattern,
+                        replacement,
+                    }),
+                    _ => None,
+                };
+
+                Ok(LinterRuleFile::Command(CommandRuleConfig {
+                    id: rule.id,
+                    category: rule.category,
+                    categories: rule.categories,
+                    command: command_type,
+                    glob: GlobPatterns::Multiple(rule.glob.to_patterns()),
+                    priority: rule.priority,
+                    severity: rule.severity,
+                    scope: rule.scope,
+                    fix,
+                }))
+            }
+        }
+    }
+}
+
 impl LinterConfig {
-    /// Load configuration from a file.
-    pub fn load(path: &Path) -> anyhow::Result<Self> {
-        let content = std::fs::read_to_string(path)?;
-        let config: Self = toml::from_str(&content)?;
+    /// Load configuration from project directory.
+    ///
+    /// Looks for `.adi/linters/` directory with `config.toml` and individual rule files.
+    pub fn load_from_project(project_path: &Path) -> anyhow::Result<Self> {
+        let linters_dir = project_path.join(".adi").join("linters");
+        if linters_dir.exists() && linters_dir.is_dir() {
+            return Self::load_from_linters_dir(&linters_dir);
+        }
+
+        // Return defaults if no linters directory
+        Ok(Self::default())
+    }
+
+    /// Load configuration from a linters directory.
+    ///
+    /// Reads `config.toml` for global settings and individual `.toml` files for rules.
+    fn load_from_linters_dir(linters_dir: &Path) -> anyhow::Result<Self> {
+        let mut config = Self::default();
+
+        // Load global config from config.toml
+        let config_path = linters_dir.join("config.toml");
+        if config_path.exists() {
+            let content = std::fs::read_to_string(&config_path)?;
+            let global_config: GlobalLinterConfig = toml::from_str(&content)?;
+            config.linter = global_config.linter;
+            config.autofix = global_config.autofix;
+            config.categories = global_config.categories;
+        }
+
+        // Load individual rule files
+        for entry in std::fs::read_dir(linters_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            // Skip non-toml files, config.toml, and .example files
+            if !path.is_file() {
+                continue;
+            }
+            let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if file_name == "config.toml"
+                || !file_name.ends_with(".toml")
+                || file_name.ends_with(".example")
+            {
+                continue;
+            }
+
+            // Load the rule file
+            match Self::load_rule_file(&path) {
+                Ok(rule) => match rule {
+                    LinterRuleFile::Exec(exec_rule) => {
+                        config.rules.exec.push(exec_rule);
+                    }
+                    LinterRuleFile::Command(cmd_rule) => {
+                        config.rules.command.push(cmd_rule);
+                    }
+                },
+                Err(e) => {
+                    // Log warning but continue loading other rules
+                    eprintln!(
+                        "Warning: Failed to load linter rule from {}: {}",
+                        path.display(),
+                        e
+                    );
+                }
+            }
+        }
+
         Ok(config)
     }
 
-    /// Load configuration from project directory.
-    /// Looks for `.adi/linter.toml` or `linter.toml`.
-    pub fn load_from_project(project_path: &Path) -> anyhow::Result<Self> {
-        // Try .adi/linter.toml first
-        let adi_config = project_path.join(".adi").join("linter.toml");
-        if adi_config.exists() {
-            return Self::load(&adi_config);
-        }
-
-        // Try linter.toml in project root
-        let root_config = project_path.join("linter.toml");
-        if root_config.exists() {
-            return Self::load(&root_config);
-        }
-
-        // Return defaults
-        Ok(Self::default())
+    /// Load a single rule file.
+    fn load_rule_file(path: &Path) -> anyhow::Result<LinterRuleFile> {
+        let content = std::fs::read_to_string(path)?;
+        let rule_config: IndividualRuleConfig = toml::from_str(&content)?;
+        rule_config.into_rule()
     }
 
     /// Build a LinterRegistry from this configuration.
@@ -544,33 +816,87 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_config() {
+    fn test_parse_global_config() {
         let toml = r#"
 [linter]
 parallel = true
 fail_fast = false
 timeout = 60
 
+[autofix]
+enabled = true
+max_iterations = 5
+
 [categories]
 security = { enabled = true, fail_on = "warning" }
 style = false
-
-[[rules.command]]
-id = "no-todo"
-category = "code-quality"
-type = "regex-forbid"
-pattern = "TODO"
-message = "Found TODO"
-glob = "**/*.rs"
-severity = "warning"
 "#;
 
-        let config: LinterConfig = toml::from_str(toml).unwrap();
+        let config: GlobalLinterConfig = toml::from_str(toml).unwrap();
 
         assert!(config.linter.parallel);
         assert_eq!(config.linter.timeout, 60);
-        assert_eq!(config.rules.command.len(), 1);
-        assert_eq!(config.rules.command[0].id, "no-todo");
+        assert_eq!(config.autofix.max_iterations, 5);
+    }
+
+    #[test]
+    fn test_parse_command_rule() {
+        let toml = r#"
+[rule]
+id = "no-todo"
+type = "command"
+category = "code-quality"
+severity = "warning"
+
+[rule.command]
+type = "regex-forbid"
+pattern = "TODO|FIXME"
+message = "Found TODO"
+
+[rule.glob]
+patterns = ["**/*.rs", "**/*.ts"]
+"#;
+
+        let rule_config: IndividualRuleConfig = toml::from_str(toml).unwrap();
+        let rule = rule_config.into_rule().unwrap();
+
+        match rule {
+            LinterRuleFile::Command(cmd) => {
+                assert_eq!(cmd.id, "no-todo");
+                assert_eq!(cmd.glob.to_vec().len(), 2);
+            }
+            _ => panic!("Expected command rule"),
+        }
+    }
+
+    #[test]
+    fn test_parse_exec_rule() {
+        let toml = r#"
+[rule]
+id = "shellcheck"
+type = "exec"
+category = "correctness"
+severity = "warning"
+
+[rule.exec]
+command = "shellcheck -f json {file}"
+output = "json"
+timeout = 30
+
+[rule.glob]
+patterns = ["**/*.sh"]
+"#;
+
+        let rule_config: IndividualRuleConfig = toml::from_str(toml).unwrap();
+        let rule = rule_config.into_rule().unwrap();
+
+        match rule {
+            LinterRuleFile::Exec(exec) => {
+                assert_eq!(exec.id, "shellcheck");
+                assert_eq!(exec.exec, "shellcheck -f json {file}");
+            }
+            _ => panic!("Expected exec rule"),
+        }
     }
 
     #[test]

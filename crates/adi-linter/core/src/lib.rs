@@ -50,7 +50,7 @@ pub use autofix::{AutofixConfig, AutofixEngine, AutofixResult};
 pub use config::LinterConfig;
 pub use files::{FileIterator, FileIteratorBuilder};
 pub use linter::{LintContext, Linter};
-pub use output::{format_to_stdout, format_to_string, OutputFormat};
+pub use output::{OutputFormat, format_to_stdout, format_to_string};
 pub use registry::{CategoryConfig, LinterRegistry, LinterRegistryBuilder};
 pub use runner::{LintResult, Runner, RunnerConfig};
 pub use types::{Category, Diagnostic, Fix, Location, Range, Severity, TextEdit};
@@ -92,19 +92,37 @@ mod tests {
         // Create a test file
         fs::write(dir.path().join("test.rs"), "// TODO: fix this").unwrap();
 
-        // Create a config
-        let config_content = r#"
-[[rules.command]]
+        // Create linters directory and config
+        let linters_dir = dir.path().join(".adi").join("linters");
+        fs::create_dir_all(&linters_dir).unwrap();
+
+        // Write global config
+        let global_config = r#"
+[linter]
+parallel = true
+
+[categories]
+code-quality = { enabled = true }
+"#;
+        fs::write(linters_dir.join("config.toml"), global_config).unwrap();
+
+        // Write rule file
+        let rule_content = r#"
+[rule]
 id = "no-todo"
+type = "command"
 category = "code-quality"
+severity = "warning"
+
+[rule.command]
 type = "regex-forbid"
 pattern = "TODO"
 message = "Found TODO"
-glob = "**/*.rs"
-severity = "warning"
+
+[rule.glob]
+patterns = ["**/*.rs"]
 "#;
-        fs::create_dir_all(dir.path().join(".adi")).unwrap();
-        fs::write(dir.path().join(".adi/linter.toml"), config_content).unwrap();
+        fs::write(linters_dir.join("no-todo.toml"), rule_content).unwrap();
 
         // Run linting
         let result = lint(dir.path()).await.unwrap();

@@ -189,7 +189,7 @@ fn get_commands_info() -> serde_json::Value {
         },
         {
             "name": "init",
-            "description": "Create default linter configuration in .adi/linter.toml",
+            "description": "Create default linter configuration in .adi/linters/",
             "usage": "init [--force]",
             "examples": [
                 "adi lint init",
@@ -209,7 +209,7 @@ fn get_llm_extract_info() -> serde_json::Value {
             "name": "ADI Linter",
             "description": "Language-agnostic code linting with configurable rules, auto-fix support, and multiple output formats",
             "categories": ["linting", "code-quality", "static-analysis"],
-            "summary": "ADI Linter provides configurable code linting for any language. Define rules in .adi/linter.toml using regex patterns, external tools (shellcheck, eslint), or custom commands. Supports auto-fixing, parallel execution, and SARIF output for CI integration.",
+            "summary": "ADI Linter provides configurable code linting for any language. Define rules in .adi/linters/ using individual rule files with regex patterns, external tools (shellcheck, eslint), or custom commands. Supports auto-fixing, parallel execution, and SARIF output for CI integration.",
             "use_cases": [
                 "Enforce code style and patterns across a project",
                 "Run multiple linters with unified output",
@@ -232,9 +232,9 @@ fn get_llm_extract_info() -> serde_json::Value {
             }
         ],
         "config": {
-            "file": ".adi/linter.toml",
-            "alternate_file": "linter.toml",
-            "description": "Configuration file for linter rules, categories, and settings",
+            "directory": ".adi/linters/",
+            "config_file": "config.toml",
+            "description": "Configuration directory for linter rules. Global settings in config.toml, individual rules in separate .toml files.",
             "sections": {
                 "[linter]": {
                     "description": "Global linter settings",
@@ -622,22 +622,59 @@ fn cmd_list(project_path: &PathBuf, options: &serde_json::Value) -> Result<Strin
 }
 
 fn cmd_config(project_path: &PathBuf) -> Result<String, String> {
-    let config_path = project_path.join(".adi").join("linter.toml");
+    let linters_dir = project_path.join(".adi").join("linters");
 
+    if !linters_dir.exists() {
+        return Ok("[!] No config found. Run `adi lint init` to create one.".to_string());
+    }
+
+    let mut output = format!("Linters directory: {}\n\n", linters_dir.display());
+
+    // Show config.toml
+    let config_path = linters_dir.join("config.toml");
     if config_path.exists() {
         let content =
             std::fs::read_to_string(&config_path).map_err(|e| format!("Read error: {}", e))?;
-        return Ok(format!("Config: {}\n\n{}", config_path.display(), content));
+        output.push_str("=== config.toml ===\n");
+        output.push_str(&content);
+        output.push_str("\n");
     }
 
-    let alt_path = project_path.join("linter.toml");
-    if alt_path.exists() {
-        let content =
-            std::fs::read_to_string(&alt_path).map_err(|e| format!("Read error: {}", e))?;
-        return Ok(format!("Config: {}\n\n{}", alt_path.display(), content));
+    // List rule files
+    let entries: Vec<_> = std::fs::read_dir(&linters_dir)
+        .map_err(|e| format!("Read dir error: {}", e))?
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let name = e.file_name().to_string_lossy().to_string();
+            name.ends_with(".toml") && name != "config.toml" && !name.ends_with(".example")
+        })
+        .collect();
+
+    if !entries.is_empty() {
+        output.push_str("=== Active Rules ===\n");
+        for entry in entries {
+            output.push_str(&format!("  - {}\n", entry.file_name().to_string_lossy()));
+        }
     }
 
-    Ok("[!] No config found. Run `adi lint init` to create one.".to_string())
+    // List example files
+    let examples: Vec<_> = std::fs::read_dir(&linters_dir)
+        .map_err(|e| format!("Read dir error: {}", e))?
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let name = e.file_name().to_string_lossy().to_string();
+            name.ends_with(".toml.example")
+        })
+        .collect();
+
+    if !examples.is_empty() {
+        output.push_str("\n=== Example Rules (rename to enable) ===\n");
+        for entry in examples {
+            output.push_str(&format!("  - {}\n", entry.file_name().to_string_lossy()));
+        }
+    }
+
+    Ok(output.trim_end().to_string())
 }
 
 fn cmd_init(project_path: &PathBuf, options: &serde_json::Value) -> Result<String, String> {
@@ -646,19 +683,21 @@ fn cmd_init(project_path: &PathBuf, options: &serde_json::Value) -> Result<Strin
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
 
-    let config_dir = project_path.join(".adi");
-    let config_path = config_dir.join("linter.toml");
+    let linters_dir = project_path.join(".adi").join("linters");
+    let config_path = linters_dir.join("config.toml");
 
     if config_path.exists() && !force {
         return Ok(format!(
             "[!] Config already exists at {}\n  Use --force to overwrite",
-            config_path.display()
+            linters_dir.display()
         ));
     }
 
-    std::fs::create_dir_all(&config_dir).map_err(|e| format!("Create dir error: {}", e))?;
+    std::fs::create_dir_all(&linters_dir).map_err(|e| format!("Create dir error: {}", e))?;
 
-    let default_config = r#"# ADI Linter Configuration
+    // Write config.toml
+    let config_content = r#"# ADI Linter Global Configuration
+# Individual linter rules are defined in separate .toml files in this directory
 
 [linter]
 parallel = true
@@ -682,30 +721,80 @@ testing = { enabled = true }
 documentation = { enabled = false }
 naming = { enabled = true }
 style = { enabled = true, priority = 50 }
-
-# Example command linter
-# [[rules.command]]
-# id = "no-todo"
-# category = "code-quality"
-# type = "regex-forbid"
-# pattern = "TODO|FIXME"
-# message = "Unresolved TODO comment"
-# glob = "**/*.rs"
-# severity = "warning"
-
-# Example external linter
-# [[rules.exec]]
-# id = "shellcheck"
-# category = "correctness"
-# exec = "shellcheck -f json {file}"
-# glob = "**/*.sh"
-# output = "json"
 "#;
 
-    std::fs::write(&config_path, default_config).map_err(|e| format!("Write error: {}", e))?;
+    std::fs::write(&config_path, config_content).map_err(|e| format!("Write error: {}", e))?;
+
+    // Write example rule files
+    let no_todo_example = r#"# Example: Regex-based TODO finder
+# Rename to no-todo.toml to enable
+
+[rule]
+id = "no-todo"
+type = "command"
+category = "code-quality"
+severity = "warning"
+
+[rule.command]
+type = "regex-forbid"
+pattern = "TODO|FIXME"
+message = "Unresolved TODO comment"
+
+[rule.glob]
+patterns = ["**/*.rs", "**/*.ts", "**/*.js"]
+"#;
+
+    let shellcheck_example = r#"# Example: ShellCheck external linter
+# Rename to shellcheck.toml to enable
+# Requires: shellcheck installed (brew install shellcheck)
+
+[rule]
+id = "shellcheck"
+type = "exec"
+category = "correctness"
+severity = "warning"
+
+[rule.exec]
+command = "shellcheck -f json {file}"
+output = "json"
+timeout = 30
+
+[rule.glob]
+patterns = ["**/*.sh", "**/*.bash"]
+"#;
+
+    let max_line_example = r#"# Example: Maximum line length checker
+# Rename to max-line-length.toml to enable
+
+[rule]
+id = "max-line"
+type = "command"
+category = "style"
+severity = "info"
+
+[rule.command]
+type = "max-line-length"
+max = 120
+
+[rule.glob]
+patterns = ["**/*"]
+"#;
+
+    std::fs::write(linters_dir.join("no-todo.toml.example"), no_todo_example)
+        .map_err(|e| format!("Write error: {}", e))?;
+    std::fs::write(
+        linters_dir.join("shellcheck.toml.example"),
+        shellcheck_example,
+    )
+    .map_err(|e| format!("Write error: {}", e))?;
+    std::fs::write(
+        linters_dir.join("max-line-length.toml.example"),
+        max_line_example,
+    )
+    .map_err(|e| format!("Write error: {}", e))?;
 
     Ok(format!(
-        "[+] Created {}\n  Edit the file to add your linting rules.",
-        config_path.display()
+        "[+] Created {}\n\n  Files created:\n    - config.toml (global settings)\n    - no-todo.toml.example\n    - shellcheck.toml.example\n    - max-line-length.toml.example\n\n  Rename .example files to .toml to enable rules.",
+        linters_dir.display()
     ))
 }

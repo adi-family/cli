@@ -1,0 +1,16 @@
+# Example: Regex-based TODO finder
+# Rename to no-todo.toml to enable
+
+[rule]
+id = "no-todo"
+type = "command"
+category = "code-quality"
+severity = "warning"
+
+[rule.command]
+type = "regex-forbid"
+pattern = "TODO|FIXME"
+message = "Unresolved TODO comment"
+
+[rule.glob]
+patterns = ["**/*.rs", "**/*.ts", "**/*.js"]
