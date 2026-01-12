@@ -40,6 +40,41 @@ ROOT_DIR="$PROJECT_ROOT"
 # Configuration
 REGISTRY_URL=$(require_value "${ADI_REGISTRY_URL:-https://adi-plugin-registry.the-ihor.com}" "ADI_REGISTRY_URL not set")
 
+# Bump semantic version
+# Usage: bump_version <version> <bump_type>
+# bump_type: patch, minor, major
+bump_version() {
+    local version="$1"
+    local bump_type="$2"
+    
+    # Parse version components
+    local major minor patch
+    IFS='.' read -r major minor patch <<< "$version"
+    
+    # Remove any pre-release suffix for bumping
+    patch="${patch%%-*}"
+    
+    case "$bump_type" in
+        patch)
+            patch=$((patch + 1))
+            ;;
+        minor)
+            minor=$((minor + 1))
+            patch=0
+            ;;
+        major)
+            major=$((major + 1))
+            minor=0
+            patch=0
+            ;;
+        *)
+            error "Unknown bump type: $bump_type. Use patch, minor, or major."
+            ;;
+    esac
+    
+    echo "${major}.${minor}.${patch}"
+}
+
 # Core plugins
 PLUGINS=(
     "adi-tasks-plugin:adi.tasks:ADI Tasks:core"
@@ -66,25 +101,52 @@ PLUGINS=(
 # =============================================================================
 
 main() {
+    local bump_type=""
+    local specific_plugin=""
+    
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --bump)
+                bump_type="$2"
+                shift 2
+                ;;
+            --plugin)
+                specific_plugin="$2"
+                shift 2
+                ;;
+            -h|--help)
+                echo "Usage: $0 [OPTIONS]"
+                echo ""
+                echo "OPTIONS:"
+                echo "    --bump <type>      Version bump type: patch, minor, major"
+                echo "    --plugin <name>    Release specific plugin only"
+                echo "    -h, --help         Show this help"
+                exit 0
+                ;;
+            *)
+                # Legacy positional args support
+                if [ -z "$specific_plugin" ] && [ "$1" != "" ]; then
+                    specific_plugin="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
     # Get current version from first plugin's plugin.toml
     local current_version
     current_version=$(grep '^version' "$ROOT_DIR/crates/adi-tasks/plugin/plugin.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
     info "Current version: v$current_version"
 
-    # Get version from argument or prompt
-    local version="${1:-}"
-    local specific_plugin="${2:-}"
+    local version="$current_version"
 
-    if [ -z "$version" ]; then
-        read -p "Enter new version (or press Enter for v$current_version): " version
-        version="${version:-$current_version}"
-    fi
-
-    # Remove 'v' prefix if present
-    version=$(normalize_version "$version")
-
-    # Update plugin.toml files if version changed
-    if [ "$version" != "$current_version" ]; then
+    # Apply version bump if requested
+    if [ -n "$bump_type" ]; then
+        version=$(bump_version "$current_version" "$bump_type")
+        info "Bumping version: $current_version -> $version ($bump_type)"
+        
+        # Update plugin.toml files
         info "Updating plugin.toml files to v$version..."
         for plugin_spec in "${PLUGINS[@]}"; do
             IFS=':' read -r crate_name _ _ _ <<< "$plugin_spec"

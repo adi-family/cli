@@ -438,10 +438,17 @@ type = "'"$detected_type"'"
     # Check Cargo.toml version matches
     section "Checking version consistency"
     local cargo_toml="$plugin_dir/Cargo.toml"
+    # If plugin.toml is at root but Cargo.toml is in plugin/ subdir, check there
+    if [[ ! -f "$cargo_toml" ]] && [[ -f "$plugin_dir/plugin/Cargo.toml" ]]; then
+        cargo_toml="$plugin_dir/plugin/Cargo.toml"
+    fi
     if [[ -f "$cargo_toml" ]]; then
         local cargo_version
         cargo_version=$(get_toml_value "$cargo_toml" "version")
-        if [[ "$cargo_version" != "$plugin_version" ]]; then
+        # Skip workspace version references
+        if [[ "$cargo_version" == "version.workspace" ]] || [[ -z "$cargo_version" ]]; then
+            info "Cargo.toml uses workspace version, skipping check"
+        elif [[ "$cargo_version" != "$plugin_version" ]]; then
             error "Version mismatch: plugin.toml ($plugin_version) != Cargo.toml ($cargo_version)"
             if [[ "$fix_mode" == "true" ]]; then
                 info "FIX: Updating Cargo.toml version to $plugin_version"

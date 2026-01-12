@@ -14,6 +14,18 @@ options_source = { type = "plugins" }
 autocomplete = true
 
 [[inputs]]
+name = "version_bump"
+type = "select"
+prompt = "Version bump type"
+options = [
+    "same - Keep current version",
+    "patch - Bug fixes (0.0.x)",
+    "minor - New features (0.x.0)",
+    "major - Breaking changes (x.0.0)"
+]
+default = "same - Keep current version"
+
+[[inputs]]
 name = "registry_target"
 type = "select"
 prompt = "Target registry"
@@ -31,18 +43,24 @@ run = """
 
 PLUGIN="{{ plugin }}"
 TARGET="{{ registry_target | split(' ') | first }}"
+BUMP="{{ version_bump | split(' ') | first }}"
 
-info "Releasing plugin: $PLUGIN to $TARGET"
+info "Releasing plugin: $PLUGIN to $TARGET (version bump: $BUMP)"
+
+BUMP_FLAG=""
+if [ "$BUMP" != "same" ]; then
+    BUMP_FLAG="--bump $BUMP"
+fi
 
 case "$TARGET" in
     production)
-        "$WORKFLOWS_DIR/release-plugin.sh" "$PLUGIN"
+        "$WORKFLOWS_DIR/release-plugin.sh" "$PLUGIN" $BUMP_FLAG
         ;;
     local)
-        "$WORKFLOWS_DIR/release-plugin.sh" "$PLUGIN" --local
+        "$WORKFLOWS_DIR/release-plugin.sh" "$PLUGIN" --local $BUMP_FLAG
         ;;
     dry-run)
-        "$WORKFLOWS_DIR/release-plugin.sh" "$PLUGIN" --no-push
+        "$WORKFLOWS_DIR/release-plugin.sh" "$PLUGIN" --no-push $BUMP_FLAG
         ;;
 esac
 """

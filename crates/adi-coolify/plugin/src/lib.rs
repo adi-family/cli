@@ -664,7 +664,7 @@ fn cmd_watch(args: &[&str]) -> Result<String, String> {
     let label = status_label(status);
 
     Ok(format!(
-        "Watching {} deployments...\n\nLatest deployment:\n  UUID: {}\n  Status: {} {}\n  Commit: {}\n\nNote: For live watching, use: adi workflow deploy (select watch)",
+        "Watching {} deployments...\n\nLatest deployment:\n  UUID: {}\n  Status: {} {}\n  Commit: {}\n\nNote: For live watching, use: adi workflow deploy (select watch)\nService ID: {}",
         service.name, uuid, icon, label, commit, service.id
     ))
 }

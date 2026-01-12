@@ -9,10 +9,10 @@ use lib_plugin_abi::{
 };
 
 use adi_linter_core::{
-    AutofixConfig, AutofixEngine,
     config::LinterConfig,
-    output::{OutputFormat, format_to_string},
+    output::{format_to_string, OutputFormat},
     runner::{Runner, RunnerConfig},
+    AutofixConfig, AutofixEngine,
 };
 use once_cell::sync::OnceCell;
 use serde_json::json;

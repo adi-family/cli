@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 lib-plugin-abi = { path = "../../lib/lib-plugin-abi" }
-adi-knowledgebase-core = { path = "../core" }
+adi-knowledgebase-core = { path = "../core", features = ["fastembed"] }
 abi_stable.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

@@ -6,10 +6,16 @@ name = "release-plugins"
 description = "Release all core plugins to the registry"
 
 [[inputs]]
-name = "version"
-type = "input"
-prompt = "Release version (leave empty for current)"
-default = ""
+name = "version_bump"
+type = "select"
+prompt = "Version bump type"
+options = [
+    "same - Keep current version",
+    "patch - Bug fixes (0.0.x)",
+    "minor - New features (0.x.0)",
+    "major - Breaking changes (x.0.0)"
+]
+default = "same - Keep current version"
 
 [[inputs]]
 name = "specific_plugin"
@@ -42,22 +48,19 @@ name = "Release plugins"
 run = """
 # Prelude variables and functions are automatically available
 
-VERSION="{{ version }}"
+BUMP="{{ version_bump | split(' ') | first }}"
 PLUGIN="{{ specific_plugin }}"
 
-info "Releasing plugins (version: ${VERSION:-current}, plugin: $PLUGIN)"
+info "Releasing plugins (bump: $BUMP, plugin: $PLUGIN)"
+
+BUMP_FLAG=""
+if [ "$BUMP" != "same" ]; then
+    BUMP_FLAG="--bump $BUMP"
+fi
 
 if [ "$PLUGIN" = "all" ]; then
-    if [ -n "$VERSION" ]; then
-        "$WORKFLOWS_DIR/release-plugins.sh" "$VERSION"
-    else
-        "$WORKFLOWS_DIR/release-plugins.sh"
-    fi
+    "$WORKFLOWS_DIR/release-plugins.sh" $BUMP_FLAG
 else
-    if [ -n "$VERSION" ]; then
-        "$WORKFLOWS_DIR/release-plugins.sh" "$VERSION" "$PLUGIN"
-    else
-        "$WORKFLOWS_DIR/release-plugins.sh" "" "$PLUGIN"
-    fi
+    "$WORKFLOWS_DIR/release-plugins.sh" --plugin "$PLUGIN" $BUMP_FLAG
 fi
 """

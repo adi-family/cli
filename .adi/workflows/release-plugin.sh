@@ -75,15 +75,19 @@ Release a single plugin to the ADI plugin registry.
 OPTIONS:
     --no-push           Build only, skip publishing
     --local             Push to local registry (localhost:8019)
+    --bump <type>       Version bump type: patch, minor, major
     -h, --help          Show this help
 
 PLUGINS:
     cocoon              Containerized worker with PTY support
 
 EXAMPLES:
-    $0 cocoon           # Build and publish to production
-    $0 cocoon --no-push # Build only (dry-run)
-    $0 cocoon --local   # Build and publish to local registry
+    $0 cocoon                   # Build and publish (current version)
+    $0 cocoon --bump patch      # Bump patch version and publish
+    $0 cocoon --bump minor      # Bump minor version and publish
+    $0 cocoon --bump major      # Bump major version and publish
+    $0 cocoon --no-push         # Build only (dry-run)
+    $0 cocoon --local           # Build and publish to local registry
 
 INSTALL:
     After publishing, install with:
@@ -105,17 +109,17 @@ get_plugin_crate() {
         coolify|adi-coolify) echo "crates/adi-coolify/plugin" ;;
         linter|adi-linter) echo "crates/adi-linter/plugin" ;;
         llm-extract|adi-llm-extract) echo "crates/adi-llm-extract-plugin" ;;
-        lang-cpp|adi-lang-cpp) echo "crates/adi-lang/cpp" ;;
-        lang-csharp|adi-lang-csharp) echo "crates/adi-lang/csharp" ;;
-        lang-go|adi-lang-go) echo "crates/adi-lang/go" ;;
-        lang-java|adi-lang-java) echo "crates/adi-lang/java" ;;
-        lang-lua|adi-lang-lua) echo "crates/adi-lang/lua" ;;
-        lang-php|adi-lang-php) echo "crates/adi-lang/php" ;;
-        lang-python|adi-lang-python) echo "crates/adi-lang/python" ;;
-        lang-ruby|adi-lang-ruby) echo "crates/adi-lang/ruby" ;;
-        lang-rust|adi-lang-rust) echo "crates/adi-lang/rust" ;;
-        lang-swift|adi-lang-swift) echo "crates/adi-lang/swift" ;;
-        lang-typescript|adi-lang-typescript) echo "crates/adi-lang/typescript" ;;
+        lang-cpp|adi-lang-cpp) echo "crates/adi-lang/cpp/plugin" ;;
+        lang-csharp|adi-lang-csharp) echo "crates/adi-lang/csharp/plugin" ;;
+        lang-go|adi-lang-go) echo "crates/adi-lang/go/plugin" ;;
+        lang-java|adi-lang-java) echo "crates/adi-lang/java/plugin" ;;
+        lang-lua|adi-lang-lua) echo "crates/adi-lang/lua/plugin" ;;
+        lang-php|adi-lang-php) echo "crates/adi-lang/php/plugin" ;;
+        lang-python|adi-lang-python) echo "crates/adi-lang/python/plugin" ;;
+        lang-ruby|adi-lang-ruby) echo "crates/adi-lang/ruby/plugin" ;;
+        lang-rust|adi-lang-rust) echo "crates/adi-lang/rust/plugin" ;;
+        lang-swift|adi-lang-swift) echo "crates/adi-lang/swift/plugin" ;;
+        lang-typescript|adi-lang-typescript) echo "crates/adi-lang/typescript/plugin" ;;
         embed|adi-embed) echo "crates/adi-embed-plugin" ;;
         *) echo "" ;;
     esac
@@ -130,6 +134,51 @@ PLUGIN_NAME=""
 PLUGIN_DESC=""
 PLUGIN_AUTHOR=""
 PLUGIN_TYPE=""
+
+# Bump semantic version
+# Usage: bump_version <version> <bump_type>
+# bump_type: patch, minor, major
+bump_version() {
+    local version="$1"
+    local bump_type="$2"
+    
+    # Parse version components
+    local major minor patch
+    IFS='.' read -r major minor patch <<< "$version"
+    
+    # Remove any pre-release suffix for bumping
+    patch="${patch%%-*}"
+    
+    case "$bump_type" in
+        patch)
+            patch=$((patch + 1))
+            ;;
+        minor)
+            minor=$((minor + 1))
+            patch=0
+            ;;
+        major)
+            major=$((major + 1))
+            minor=0
+            patch=0
+            ;;
+        *)
+            error "Unknown bump type: $bump_type. Use patch, minor, or major."
+            ;;
+    esac
+    
+    echo "${major}.${minor}.${patch}"
+}
+
+# Update version in plugin.toml
+update_plugin_version() {
+    local plugin_toml="$1"
+    local old_version="$2"
+    local new_version="$3"
+    
+    sed -i '' "s/^version = \"$old_version\"/version = \"$new_version\"/" "$plugin_toml"
+    success "Updated version: $old_version -> $new_version"
+}
 
 build_plugin() {
     local plugin_name="$1"
@@ -157,12 +206,25 @@ build_plugin() {
     info "Building library (no standalone binary)..."
 
     # Get package name from Cargo.toml (may differ from plugin ID)
+    # Handle case where plugin.toml is at root but Cargo.toml is in plugin/ subdir
     local cargo_toml="$PROJECT_ROOT/$crate_dir/Cargo.toml"
+    if [[ ! -f "$cargo_toml" ]] || grep -q '^\[workspace\]' "$cargo_toml" 2>/dev/null; then
+        if [[ -f "$PROJECT_ROOT/$crate_dir/plugin/Cargo.toml" ]]; then
+            cargo_toml="$PROJECT_ROOT/$crate_dir/plugin/Cargo.toml"
+        fi
+    fi
     local package_name
     package_name=$(grep '^name = ' "$cargo_toml" | head -1 | sed 's/name = "\(.*\)"/\1/')
 
     # Build ONLY the library (not the binary)
-    cargo build --release -p "$package_name" --lib
+    # If crate has its own workspace, build from there
+    local build_dir="$PROJECT_ROOT"
+    local target_dir="$PROJECT_ROOT/target"
+    if grep -q '^\[workspace\]' "$PROJECT_ROOT/$crate_dir/Cargo.toml" 2>/dev/null; then
+        build_dir="$PROJECT_ROOT/$crate_dir"
+        target_dir="$PROJECT_ROOT/$crate_dir/target"
+    fi
+    (cd "$build_dir" && cargo build --release -p "$package_name" --lib)
 
     # Find the built library
     PLUGIN_PLATFORM=$(get_platform)
@@ -170,7 +232,7 @@ build_plugin() {
     lib_ext=$(get_lib_extension "$PLUGIN_PLATFORM")
 
     local lib_name="lib${package_name//-/_}"
-    local lib_path="$PROJECT_ROOT/target/release/${lib_name}.${lib_ext}"
+    local lib_path="$target_dir/release/${lib_name}.${lib_ext}"
 
     require_file "$lib_path" "Library not found: $lib_path"
 
@@ -236,6 +298,7 @@ main() {
     local plugin_name=""
     local push=true
     local registry="$REGISTRY_URL"
+    local bump_type=""
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -250,6 +313,10 @@ main() {
             --local)
                 registry="http://localhost:8019"
                 shift
+                ;;
+            --bump)
+                bump_type="$2"
+                shift 2
                 ;;
             *)
                 if [ -z "$plugin_name" ]; then
@@ -275,6 +342,21 @@ main() {
     fi
 
     require_dir "$PROJECT_ROOT/$crate_dir" "Plugin crate not found: $crate_dir"
+
+    # Handle version bump if requested
+    if [ -n "$bump_type" ]; then
+        local plugin_toml="$PROJECT_ROOT/$crate_dir/plugin.toml"
+        require_file "$plugin_toml" "plugin.toml not found in $crate_dir"
+        
+        local current_version
+        current_version=$(sed -n '/^\[plugin\]/,/^\[/{/^version = /p;}' "$plugin_toml" | sed 's/version = "\(.*\)"/\1/' | tr -d '\n')
+        
+        local new_version
+        new_version=$(bump_version "$current_version" "$bump_type")
+        
+        info "Bumping version: $current_version -> $new_version ($bump_type)"
+        update_plugin_version "$plugin_toml" "$current_version" "$new_version"
+    fi
 
     # Lint plugin before building
     info "Linting plugin..."
