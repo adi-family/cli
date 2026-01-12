@@ -174,3 +174,12 @@
 [submodule "crates/adi-llm-uzu-plugin"]
 	path = crates/adi-llm-uzu-plugin
 	url = https://github.com/adi-family/adi-llm-uzu-plugin.git
+[submodule "crates/adi-analytics-api"]
+	path = crates/adi-analytics-api
+	url = https://github.com/adi-family/adi-analytics-api.git
+[submodule "crates/adi-analytics-ingestion"]
+	path = crates/adi-analytics-ingestion
+	url = https://github.com/adi-family/adi-analytics-ingestion.git
+[submodule "crates/lib/lib-analytics-core"]
+	path = crates/lib/lib-analytics-core
+	url = git@github.com:adi-family/lib-analytics-core.git
