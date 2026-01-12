@@ -1,0 +1,45 @@
+# ADI Plugin Linter Workflow
+# Validates plugin structure before publishing
+
+[workflow]
+name = "lint-plugin"
+description = "Lint and validate a plugin before release"
+
+[[inputs]]
+name = "plugin"
+type = "select"
+prompt = "Select plugin to lint"
+options_source = { type = "plugins" }
+autocomplete = true
+
+[[inputs]]
+name = "mode"
+type = "select"
+prompt = "Lint mode"
+options = [
+    "check - Report issues only",
+    "fix - Attempt to fix common issues",
+    "strict - Treat warnings as errors"
+]
+default = "check - Report issues only"
+
+[[steps]]
+name = "Lint plugin"
+run = """
+PLUGIN="{{ plugin }}"
+MODE="{{ mode | split(' ') | first }}"
+
+info "Linting plugin: $PLUGIN (mode: $MODE)"
+
+case "$MODE" in
+    check)
+        "$WORKFLOWS_DIR/lint-plugin.sh" "$PLUGIN"
+        ;;
+    fix)
+        "$WORKFLOWS_DIR/lint-plugin.sh" --fix "$PLUGIN"
+        ;;
+    strict)
+        "$WORKFLOWS_DIR/lint-plugin.sh" --strict "$PLUGIN"
+        ;;
+esac
+"""
