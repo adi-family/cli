@@ -56,9 +56,9 @@ PID_DIR="$PROJECT_ROOT/.dev"
 LOG_DIR="$PROJECT_ROOT/.dev/logs"
 
 # All services
-ALL_SERVICES="signaling auth platform web flowmap analytics-ingestion analytics cocoon registry cocoon-manager"
+ALL_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy cocoon registry cocoon-manager"
 # Default services to start (cocoon, registry, cocoon-manager are optional)
-DEFAULT_SERVICES="signaling auth platform web flowmap analytics-ingestion analytics"
+DEFAULT_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy"
 
 # -----------------------------------------------------------------------------
 # Service Configuration (functions for bash 3.2 compatibility)
@@ -66,6 +66,8 @@ DEFAULT_SERVICES="signaling auth platform web flowmap analytics-ingestion analyt
 
 service_dir() {
     case "$1" in
+        postgres)    echo "docker" ;;
+        timescaledb) echo "docker" ;;
         signaling) echo "crates/tarminal-signaling-server" ;;
         auth)      echo "crates/adi-auth" ;;
         platform)  echo "crates/adi-platform-api" ;;
@@ -73,6 +75,7 @@ service_dir() {
         flowmap)   echo "apps/flowmap-api" ;;
         analytics-ingestion) echo "crates/adi-analytics-ingestion" ;;
         analytics) echo "crates/adi-analytics-api" ;;
+        llm-proxy) echo "crates/adi-api-proxy/http" ;;
         cocoon)    echo "crates/cocoon" ;;
         registry)  echo "crates/adi-plugin-registry-http" ;;
         cocoon-manager) echo "crates/cocoon-manager" ;;
@@ -82,6 +85,8 @@ service_dir() {
 
 service_cmd() {
     case "$1" in
+        postgres)    echo "docker" ;;
+        timescaledb) echo "docker" ;;
         signaling) echo "cargo run" ;;
         auth)      echo "cargo run -p adi-auth-http" ;;
         platform)  echo "cargo run --bin adi-platform-api" ;;
@@ -89,6 +94,7 @@ service_cmd() {
         flowmap)   echo "cargo run --release" ;;
         analytics-ingestion) echo "cargo run" ;;
         analytics) echo "cargo run" ;;
+        llm-proxy) echo "cargo run --bin adi-api-proxy" ;;
         cocoon)    echo "cargo run --features standalone" ;;
         registry)  echo "cargo run" ;;
         cocoon-manager) echo "cargo run" ;;
@@ -98,6 +104,8 @@ service_cmd() {
 
 service_port_name() {
     case "$1" in
+        postgres)    echo "adi-postgres" ;;
+        timescaledb) echo "adi-timescaledb" ;;
         signaling) echo "adi-signaling" ;;
         auth)      echo "adi-auth" ;;
         platform)  echo "adi-platform" ;;
@@ -105,6 +113,7 @@ service_port_name() {
         flowmap)   echo "adi-flowmap" ;;
         analytics-ingestion) echo "adi-analytics-ingestion" ;;
         analytics) echo "adi-analytics" ;;
+        llm-proxy) echo "adi-llm-proxy" ;;
         cocoon)    echo "adi-cocoon" ;;
         registry)  echo "adi-registry" ;;
         cocoon-manager) echo "adi-cocoon-manager" ;;
@@ -114,6 +123,8 @@ service_port_name() {
 
 service_description() {
     case "$1" in
+        postgres)    echo "PostgreSQL database (auth, platform, llm-proxy)" ;;
+        timescaledb) echo "TimescaleDB (analytics)" ;;
         signaling) echo "WebSocket relay for sync" ;;
         auth)      echo "Authentication API" ;;
         platform)  echo "Platform API (tasks, integrations)" ;;
@@ -121,6 +132,7 @@ service_description() {
         flowmap)   echo "Code flow visualization API" ;;
         analytics-ingestion) echo "Analytics event ingestion (writes)" ;;
         analytics) echo "Analytics API (metrics, dashboards)" ;;
+        llm-proxy) echo "LLM API proxy (BYOK/Platform modes)" ;;
         cocoon)    echo "Worker container" ;;
         registry)  echo "Plugin registry (local)" ;;
         cocoon-manager) echo "Cocoon orchestration API" ;;
@@ -155,6 +167,15 @@ log_file() {
 
 is_running() {
     local service="$1"
+    local dir
+    dir=$(service_dir "$service")
+
+    # Handle docker services
+    if [ "$dir" = "docker" ]; then
+        is_docker_running "$service"
+        return $?
+    fi
+
     local pf
     pf=$(pid_file "$service")
     if [ -f "$pf" ]; then
@@ -169,6 +190,76 @@ is_running() {
     return 1
 }
 
+# -----------------------------------------------------------------------------
+# Docker Service Management
+# -----------------------------------------------------------------------------
+
+is_docker_running() {
+    local service="$1"
+    local container_name="adi-$service"
+    docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${container_name}$"
+}
+
+start_docker_service() {
+    local service="$1"
+    local container_name="adi-$service"
+    local port
+    port=$(get_port "$service")
+
+    if is_docker_running "$service"; then
+        warn "$service is already running"
+        return 0
+    fi
+
+    log "Starting $service on port $port..."
+
+    # Get ports for docker-compose
+    local postgres_port
+    postgres_port=$(get_port "postgres")
+    local timescaledb_port
+    timescaledb_port=$(get_port "timescaledb")
+
+    # Start specific service via docker-compose
+    POSTGRES_PORT="$postgres_port" TIMESCALEDB_PORT="$timescaledb_port" \
+        docker compose -f "$PROJECT_ROOT/docker-compose.dev.yml" up -d "$service" >> "$(log_file "$service")" 2>&1
+
+    # Wait for container to be healthy
+    local timeout=60
+    local elapsed=0
+    while ! is_docker_running "$service"; do
+        if [ $elapsed -ge $timeout ]; then
+            error "$service timed out after ${timeout}s. Check logs: $(log_file "$service")"
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+
+    # Wait for port to be listening
+    while ! nc -z localhost "$port" 2>/dev/null; do
+        if [ $elapsed -ge $timeout ]; then
+            error "$service port not ready after ${timeout}s. Check logs: $(log_file "$service")"
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+
+    success "$service started (container: $container_name, port: $port)"
+}
+
+stop_docker_service() {
+    local service="$1"
+    local container_name="adi-$service"
+
+    if ! is_docker_running "$service"; then
+        warn "$service is not running"
+        return 0
+    fi
+
+    log "Stopping $service..."
+    docker stop "$container_name" >> "$(log_file "$service")" 2>&1 || true
+    success "$service stopped"
+}
+
 start_service() {
     local service="$1"
     local dir
@@ -179,6 +270,12 @@ start_service() {
     port=$(get_port "$service")
 
     [ -z "$dir" ] && error "Unknown service: $service"
+
+    # Handle docker services separately
+    if [ "$dir" = "docker" ]; then
+        start_docker_service "$service"
+        return $?
+    fi
 
     if is_running "$service"; then
         warn "$service is already running"
@@ -211,6 +308,16 @@ start_service() {
             ensure_dir "$data_dir"
             env_cmd="$env_cmd REGISTRY_DATA_DIR=$data_dir"
             ;;
+        analytics-ingestion|analytics)
+            # Analytics services use TimescaleDB
+            local tsdb_port
+            tsdb_port=$(get_port "timescaledb")
+            if [ -n "$ANALYTICS_DATABASE_URL" ]; then
+                env_cmd="$env_cmd DATABASE_URL=$ANALYTICS_DATABASE_URL"
+            else
+                env_cmd="$env_cmd DATABASE_URL=postgres://adi:adi@localhost:$tsdb_port/adi_analytics"
+            fi
+            ;;
         web)
             local auth_port
             auth_port=$(get_port "auth")
@@ -224,26 +331,29 @@ start_service() {
             ;;
         platform)
             # Platform service needs DATABASE_URL, JWT_SECRET from .env.local
+            local pg_port
+            pg_port=$(get_port "postgres")
             if [ -f "$PROJECT_ROOT/.env.local" ]; then
                 # shellcheck disable=SC1091
                 source "$PROJECT_ROOT/.env.local" 2>/dev/null || true
                 [ -n "$JWT_SECRET" ] && env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
             fi
-            # Use platform-specific database if set, otherwise default
+            # Use platform-specific database if set, otherwise use docker postgres
             if [ -n "$PLATFORM_DATABASE_URL" ]; then
                 env_cmd="$env_cmd DATABASE_URL=$PLATFORM_DATABASE_URL"
-            elif [ -n "$DATABASE_URL" ]; then
-                env_cmd="$env_cmd DATABASE_URL=$DATABASE_URL"
             else
-                env_cmd="$env_cmd DATABASE_URL=postgres://adi:adi@localhost:5432/adi_platform"
+                env_cmd="$env_cmd DATABASE_URL=postgres://adi:adi@localhost:$pg_port/adi_platform"
             fi
             ;;
         auth)
-            # Auth service needs JWT_SECRET and SMTP config from .env.local
+            # Auth service needs DATABASE_URL, JWT_SECRET, ADMIN_EMAILS and SMTP config from .env.local
+            local pg_port
+            pg_port=$(get_port "postgres")
             if [ -f "$PROJECT_ROOT/.env.local" ]; then
                 # shellcheck disable=SC1091
                 source "$PROJECT_ROOT/.env.local" 2>/dev/null || true
                 [ -n "$JWT_SECRET" ] && env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
+                [ -n "$ADMIN_EMAILS" ] && env_cmd="$env_cmd ADMIN_EMAILS=$ADMIN_EMAILS"
                 # Load SMTP configuration
                 [ -n "$SMTP_HOST" ] && env_cmd="$env_cmd SMTP_HOST=$SMTP_HOST"
                 [ -n "$SMTP_PORT" ] && env_cmd="$env_cmd SMTP_PORT=$SMTP_PORT"
@@ -252,6 +362,12 @@ start_service() {
                 [ -n "$SMTP_FROM_EMAIL" ] && env_cmd="$env_cmd SMTP_FROM_EMAIL=$SMTP_FROM_EMAIL"
                 [ -n "$SMTP_FROM_NAME" ] && env_cmd="$env_cmd SMTP_FROM_NAME='$SMTP_FROM_NAME'"
                 [ -n "$SMTP_TLS" ] && env_cmd="$env_cmd SMTP_TLS=$SMTP_TLS"
+            fi
+            # Use auth-specific database if set, otherwise use docker postgres
+            if [ -n "$AUTH_DATABASE_URL" ]; then
+                env_cmd="$env_cmd DATABASE_URL=$AUTH_DATABASE_URL"
+            else
+                env_cmd="$env_cmd DATABASE_URL=postgres://adi:adi@localhost:$pg_port/adi_auth"
             fi
             ;;
         cocoon-manager)
@@ -265,6 +381,28 @@ start_service() {
             env_cmd="$env_cmd COCOON_IMAGE=ghcr.io/adi-family/cocoon:latest"
             env_cmd="$env_cmd MAX_COCOONS=100"
             env_cmd="$env_cmd BIND_ADDRESS=0.0.0.0:$port"
+            ;;
+        llm-proxy)
+            # LLM Proxy needs database, JWT secret, encryption key, and analytics URL
+            local pg_port
+            pg_port=$(get_port "postgres")
+            if [ -f "$PROJECT_ROOT/.env.local" ]; then
+                # shellcheck disable=SC1091
+                source "$PROJECT_ROOT/.env.local" 2>/dev/null || true
+                [ -n "$JWT_SECRET" ] && env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
+                [ -n "$ADMIN_JWT_SECRET" ] && env_cmd="$env_cmd ADMIN_JWT_SECRET=$ADMIN_JWT_SECRET"
+                [ -n "$ENCRYPTION_KEY" ] && env_cmd="$env_cmd ENCRYPTION_KEY=$ENCRYPTION_KEY"
+            fi
+            # Use llm-proxy-specific database if set, otherwise use docker postgres
+            if [ -n "$LLM_PROXY_DATABASE_URL" ]; then
+                env_cmd="$env_cmd DATABASE_URL=$LLM_PROXY_DATABASE_URL"
+            else
+                env_cmd="$env_cmd DATABASE_URL=postgres://adi:adi@localhost:$pg_port/adi_llm_proxy"
+            fi
+            # Set analytics URL to local analytics-ingestion service
+            local analytics_port
+            analytics_port=$(get_port "analytics-ingestion")
+            env_cmd="$env_cmd ANALYTICS_URL=http://localhost:$analytics_port"
             ;;
     esac
 
@@ -301,6 +439,15 @@ start_service() {
 
 stop_service() {
     local service="$1"
+    local dir
+    dir=$(service_dir "$service")
+
+    # Handle docker services separately
+    if [ "$dir" = "docker" ]; then
+        stop_docker_service "$service"
+        return $?
+    fi
+
     local pf
     pf=$(pid_file "$service")
 
@@ -433,22 +580,27 @@ cmd_status() {
 
     echo -e "${BOLD}Service Status${NC}"
     echo ""
-    printf "  %-12s %-10s %-8s %s\n" "SERVICE" "STATUS" "PORT" "PID"
-    printf "  %-12s %-10s %-8s %s\n" "-------" "------" "----" "---"
+    printf "  %-18s %-10s %-8s %s\n" "SERVICE" "STATUS" "PORT" "PID/CONTAINER"
+    printf "  %-18s %-10s %-8s %s\n" "------------------" "------" "----" "-------------"
 
     for service in $ALL_SERVICES; do
-        local status pid port
+        local status pid port dir
         port=$(get_port "$service")
+        dir=$(service_dir "$service")
 
         if is_running "$service"; then
-            pid=$(cat "$(pid_file "$service")")
+            if [ "$dir" = "docker" ]; then
+                pid="adi-$service"
+            else
+                pid=$(cat "$(pid_file "$service")")
+            fi
             status="${GREEN}running${NC}"
         else
             pid="-"
             status="${DIM}stopped${NC}"
         fi
 
-        printf "  %-12s %-18b %-8s %s\n" "$service" "$status" "$port" "$pid"
+        printf "  %-18s %-18b %-8s %s\n" "$service" "$status" "$port" "$pid"
     done
     echo ""
 }
@@ -457,6 +609,10 @@ cmd_ports() {
     echo -e "${BOLD}Service Ports${NC}"
     echo ""
 
+    local postgres_port
+    postgres_port=$(get_port "postgres")
+    local timescaledb_port
+    timescaledb_port=$(get_port "timescaledb")
     local signaling_port
     signaling_port=$(get_port "signaling")
     local auth_port
@@ -467,19 +623,36 @@ cmd_ports() {
     web_port=$(get_port "web")
     local flowmap_port
     flowmap_port=$(get_port "flowmap")
+    local analytics_ingestion_port
+    analytics_ingestion_port=$(get_port "analytics-ingestion")
+    local analytics_port
+    analytics_port=$(get_port "analytics")
+    local llm_proxy_port
+    llm_proxy_port=$(get_port "llm-proxy")
     local cocoon_port
     cocoon_port=$(get_port "cocoon")
+    local registry_port
+    registry_port=$(get_port "registry")
     local manager_port
     manager_port=$(get_port "cocoon-manager")
 
-    echo -e "  ${CYAN}Web UI:${NC}           http://localhost:$web_port"
-    echo -e "  ${CYAN}FlowMap UI:${NC}       http://localhost:$web_port/flowmap"
-    echo -e "  ${CYAN}Auth API:${NC}         http://localhost:$auth_port"
-    echo -e "  ${CYAN}Platform API:${NC}     http://localhost:$platform_port"
-    echo -e "  ${CYAN}FlowMap API:${NC}      http://localhost:$flowmap_port"
-    echo -e "  ${CYAN}Cocoon Manager:${NC}   http://localhost:$manager_port"
-    echo -e "  ${CYAN}Signaling:${NC}        ws://localhost:$signaling_port/ws"
-    echo -e "  ${CYAN}Cocoon:${NC}           (internal, port $cocoon_port)"
+    echo -e "  ${BOLD}Databases:${NC}"
+    echo -e "  ${CYAN}PostgreSQL:${NC}          localhost:$postgres_port (auth, platform, llm-proxy)"
+    echo -e "  ${CYAN}TimescaleDB:${NC}         localhost:$timescaledb_port (analytics)"
+    echo ""
+    echo -e "  ${BOLD}Services:${NC}"
+    echo -e "  ${CYAN}Web UI:${NC}              http://localhost:$web_port"
+    echo -e "  ${CYAN}FlowMap UI:${NC}          http://localhost:$web_port/flowmap"
+    echo -e "  ${CYAN}Auth API:${NC}            http://localhost:$auth_port"
+    echo -e "  ${CYAN}Platform API:${NC}        http://localhost:$platform_port"
+    echo -e "  ${CYAN}FlowMap API:${NC}         http://localhost:$flowmap_port"
+    echo -e "  ${CYAN}Analytics Ingestion:${NC} http://localhost:$analytics_ingestion_port"
+    echo -e "  ${CYAN}Analytics API:${NC}       http://localhost:$analytics_port"
+    echo -e "  ${CYAN}LLM Proxy:${NC}           http://localhost:$llm_proxy_port"
+    echo -e "  ${CYAN}Registry:${NC}            http://localhost:$registry_port"
+    echo -e "  ${CYAN}Cocoon Manager:${NC}      http://localhost:$manager_port"
+    echo -e "  ${CYAN}Signaling:${NC}           ws://localhost:$signaling_port/ws"
+    echo -e "  ${CYAN}Cocoon:${NC}              (internal, port $cocoon_port)"
     echo ""
 }
 

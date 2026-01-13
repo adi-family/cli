@@ -129,6 +129,7 @@ members = [
     "crates/adi-workflow/plugin",
     "crates/adi-api-proxy/plugin",
     "crates/adi-llm-extract-plugin",
+    "crates/lib/lib-typespec-api/plugin",
 
     # Workflow translation plugins
     "crates/adi-workflow/langs/en",

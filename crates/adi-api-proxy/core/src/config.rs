@@ -16,9 +16,6 @@ pub struct Config {
     pub database_max_connections: u32,
     /// JWT secret for platform token validation (shared with adi-auth)
     pub jwt_secret: String,
-    /// Admin JWT secret for platform key management (optional)
-    /// If not set, admin routes return 503 Service Unavailable
-    pub admin_jwt_secret: Option<String>,
     /// 32-byte hex-encoded encryption key for API keys
     pub encryption_key: String,
     /// Analytics ingestion service URL (default: http://localhost:8094)
@@ -42,7 +39,6 @@ impl Config {
                 .parse()
                 .context("Invalid DATABASE_MAX_CONNECTIONS")?,
             jwt_secret: env::var("JWT_SECRET").context("JWT_SECRET is required")?,
-            admin_jwt_secret: env::var("ADMIN_JWT_SECRET").ok(),
             encryption_key: env::var("ENCRYPTION_KEY")
                 .context("ENCRYPTION_KEY is required (64-char hex)")?,
             analytics_url: env::var("ANALYTICS_URL")

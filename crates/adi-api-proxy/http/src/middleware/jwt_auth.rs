@@ -22,6 +22,9 @@ pub struct Claims {
     pub exp: i64,
     /// Issued at timestamp
     pub iat: i64,
+    /// Admin flag
+    #[serde(default)]
+    pub is_admin: bool,
 }
 
 /// Authenticated user extracted from JWT.
@@ -106,10 +109,10 @@ fn extract_token(parts: &Parts) -> Option<String> {
     None
 }
 
-/// Admin user extractor - validates against ADMIN_JWT_SECRET.
+/// Admin user extractor - validates is_admin claim from JWT.
 ///
 /// Use for admin-only routes (e.g., platform key management).
-/// Requires `ADMIN_JWT_SECRET` environment variable.
+/// Admin status is determined by ADMIN_EMAILS in adi-auth service.
 #[derive(Debug, Clone)]
 pub struct AdminUser {
     /// User ID
@@ -143,23 +146,21 @@ where
         Box::pin(async move {
             let app_state = AppState::from_ref(state);
 
-            // Get admin secret - if not configured, admin routes are disabled
-            let admin_secret = app_state
-                .config
-                .admin_jwt_secret
-                .as_ref()
-                .ok_or(ApiError::Forbidden("Admin auth not configured".into()))?;
-
             // Extract token from Authorization header or cookie
             let token = extract_token(parts).ok_or(ApiError::Unauthorized)?;
 
-            // Decode and validate JWT with admin secret
+            // Decode and validate JWT
             let token_data = decode::<Claims>(
                 &token,
-                &DecodingKey::from_secret(admin_secret.as_bytes()),
+                &DecodingKey::from_secret(app_state.config.jwt_secret.as_bytes()),
                 &Validation::default(),
             )
-            .map_err(|_| ApiError::Forbidden("Invalid admin token".into()))?;
+            .map_err(|_| ApiError::Unauthorized)?;
+
+            // Check is_admin claim
+            if !token_data.claims.is_admin {
+                return Err(ApiError::Forbidden("Admin access required".into()));
+            }
 
             Ok(AdminUser {
                 id: token_data.claims.sub,

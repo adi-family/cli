@@ -109,6 +109,7 @@ get_plugin_crate() {
         coolify|adi-coolify) echo "crates/adi-coolify/plugin" ;;
         linter|adi-linter) echo "crates/adi-linter/plugin" ;;
         llm-extract|adi-llm-extract) echo "crates/adi-llm-extract-plugin" ;;
+        tsp-gen|typespec) echo "crates/lib/lib-typespec-api/plugin" ;;
         lang-cpp|adi-lang-cpp) echo "crates/adi-lang/cpp/plugin" ;;
         lang-csharp|adi-lang-csharp) echo "crates/adi-lang/csharp/plugin" ;;
         lang-go|adi-lang-go) echo "crates/adi-lang/go/plugin" ;;

@@ -62,15 +62,27 @@ impl PrettyFormatter {
     }
 
     fn reset(&self) -> &'static str {
-        if self.config.colors { "\x1b[0m" } else { "" }
+        if self.config.colors {
+            "\x1b[0m"
+        } else {
+            ""
+        }
     }
 
     fn bold(&self) -> &'static str {
-        if self.config.colors { "\x1b[1m" } else { "" }
+        if self.config.colors {
+            "\x1b[1m"
+        } else {
+            ""
+        }
     }
 
     fn dim(&self) -> &'static str {
-        if self.config.colors { "\x1b[2m" } else { "" }
+        if self.config.colors {
+            "\x1b[2m"
+        } else {
+            ""
+        }
     }
 
     fn format_diagnostic<W: Write>(&self, diag: &Diagnostic, w: &mut W) -> anyhow::Result<()> {

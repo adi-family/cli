@@ -1,0 +1,43 @@
+# ADI Local Development Databases
+# Ports are managed via ports-manager (see dev.sh)
+# Usage: docker-compose -f docker-compose.dev.yml up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: adi-postgres
+    environment:
+      POSTGRES_USER: adi
+      POSTGRES_PASSWORD: adi
+      POSTGRES_DB: adi
+    ports:
+      - "${POSTGRES_PORT:-8027}:5432"
+    volumes:
+      - adi-postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adi"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: adi-timescaledb
+    environment:
+      POSTGRES_USER: adi
+      POSTGRES_PASSWORD: adi
+      POSTGRES_DB: adi_analytics
+    ports:
+      - "${TIMESCALEDB_PORT:-8028}:5432"
+    volumes:
+      - adi-timescaledb-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adi"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  adi-postgres-data:
+  adi-timescaledb-data:

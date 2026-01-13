@@ -300,11 +300,9 @@ mod tests {
         let iter = FileIterator::new(dir.path());
         let files: Vec<_> = iter.iter().collect();
 
-        assert!(
-            !files
-                .iter()
-                .any(|f| f.to_string_lossy().contains("node_modules"))
-        );
+        assert!(!files
+            .iter()
+            .any(|f| f.to_string_lossy().contains("node_modules")));
     }
 
     #[test]

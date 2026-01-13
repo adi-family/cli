@@ -413,26 +413,61 @@ cargo build -p adi-indexer-cli    # Build specific package
 
 ## Local Development
 
-### Quick Start (Docker)
+### Prerequisites
+1. **Nginx reverse proxy** - Located at `~/projects/docker-compose.yaml`
+   ```bash
+   cd ~/projects && docker-compose up -d nginx
+   ```
+2. **Add to /etc/hosts**: `127.0.0.1 adi.local`
+3. **Nginx config**: `~/projects/.config/nginx/sites-enabled/adi.local`
+   - Reload after changes: `docker exec nakit_yok_nginx nginx -s reload`
+
+### Quick Start
 ```bash
 cp .env.local.example .env.local  # Create config (one time)
-adi workflow dev                  # Start all services
+adi workflow dev                  # Interactive: start services
+.adi/workflows/dev.sh up          # Non-interactive: start default services
+.adi/workflows/dev.sh status      # Check service status
+.adi/workflows/dev.sh restart web # Restart specific service
 ```
 
-### Services
+### Web UI Environment (apps/infra-service-web/.env.local)
+```bash
+NEXT_PUBLIC_SIGNALING_URL=ws://adi.local/api/signaling/ws
+NEXT_PUBLIC_PLATFORM_API_URL=http://adi.local/api/platform
+NEXT_PUBLIC_PROXY_API_URL=http://adi.local/api/llm-proxy
+AUTH_API_URL=http://adi.local/api/auth
+```
+
+### Local URLs (via nginx at http://adi.local)
+| Path | Service | Port | Description |
+|------|---------|------|-------------|
+| `/` | Web UI | 8013 | Next.js frontend |
+| `/api/auth/*` | Auth API | 8012 | Authentication (email + TOTP) |
+| `/api/platform/*` | Platform API | 8015 | Tasks, projects, integrations |
+| `/api/flowmap/*` | FlowMap API | 8017 | Code flow visualization |
+| `/api/analytics/*` | Analytics API | 8023 | Metrics, dashboards, aggregates |
+| `/api/analytics-ingestion/*` | Analytics Ingestion | 8022 | Event ingestion |
+| `/api/llm-proxy/*` | LLM Proxy | 8029 | LLM API proxy (BYOK/Platform) |
+| `/api/signaling/*` | Signaling | 8011 | WebSocket relay for sync |
+| `/api/registry/*` | Registry | 8019 | Plugin registry (optional) |
+| `/api/cocoon/*` | Cocoon Manager | 8020 | Cocoon orchestration (optional) |
+
+### Direct Service Ports
 | Service | URL | Description |
 |---------|-----|-------------|
+| PostgreSQL | localhost:8027 | Auth, Platform, LLM Proxy databases |
+| TimescaleDB | localhost:8028 | Analytics database |
 | Web UI | http://localhost:8013 | Next.js frontend |
-| Auth API | http://localhost:8090 | Authentication (email + TOTP) |
-| Platform API | http://localhost:8091 | Tasks, projects, integrations |
+| Auth API | http://localhost:8012 | Authentication (email + TOTP) |
+| Platform API | http://localhost:8015 | Tasks, projects, integrations |
+| FlowMap API | http://localhost:8017 | Code flow visualization |
 | Signaling | ws://localhost:8011/ws | WebSocket relay for sync |
-| FlowMap API | http://localhost:8092 | Code flow visualization |
-| Analytics Ingestion | http://localhost:8094 | Event ingestion (receives from services) |
-| Analytics API | http://localhost:8093 | Metrics, dashboards, aggregates |
-| API Proxy | http://localhost:8024 | LLM API proxy (BYOK/Platform modes) |
-| Cocoon Manager | http://localhost:8020 | Cocoon orchestration API (optional) |
-| Registry | http://localhost:8019 | Plugin registry (local) |
-| Cocoon | (internal) | Worker container (optional) |
+| Analytics Ingestion | http://localhost:8022 | Event ingestion |
+| Analytics API | http://localhost:8023 | Metrics, dashboards, aggregates |
+| LLM Proxy | http://localhost:8029 | LLM API proxy (BYOK/Platform) |
+| Cocoon Manager | http://localhost:8020 | Cocoon orchestration (optional) |
+| Registry | http://localhost:8019 | Plugin registry (optional) |
 
 ### Native Development (No Docker)
 For faster iteration on specific services:
