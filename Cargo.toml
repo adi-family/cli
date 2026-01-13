@@ -15,8 +15,6 @@ exclude = [
     "crates/cocoon-manager",
     "crates/adi-plugin-registry-http",
     "crates/tarminal-signaling-server",
-    # WASM-only crate (different compilation target)
-    "crates/webgl-editor",
 ]
 members = [
     # CLI manager (submodule)
