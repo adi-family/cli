@@ -22,10 +22,8 @@ default = "status - Check all services"
 name = "service"
 type = "select"
 prompt = "Select service"
-# Dynamic options: discover services from release/ directory
-options_cmd = "echo 'all' && ls -d release/*/*/Dockerfile 2>/dev/null | xargs -I{} dirname {} | xargs -I{} basename {} | sort -u"
+options = ["all", "auth", "platform", "signaling", "web", "analytics-ingestion", "analytics", "registry"]
 default = "all"
-autocomplete = true
 if = "{{ action | starts_with('deploy') }}"
 
 [[inputs]]
@@ -38,10 +36,8 @@ if = "{{ action | starts_with('deploy') }}"
 [[inputs]]
 name = "logs_service"
 type = "select"
-prompt = "Select service for logs"
-# Dynamic options: discover services from release/ directory
-options_cmd = "ls -d release/*/*/Dockerfile 2>/dev/null | xargs -I{} dirname {} | xargs -I{} basename {} | sort -u"
-autocomplete = true
+prompt = "Select service"
+options = ["auth", "platform", "signaling", "web", "analytics-ingestion", "analytics", "registry"]
 if = "{{ action | starts_with('logs') or action | starts_with('watch') or action | starts_with('list') }}"
 
 [[inputs]]
@@ -54,11 +50,7 @@ if = "{{ action | starts_with('list') }}"
 [[steps]]
 name = "Run deploy command"
 run = """
-# Prelude variables and functions are automatically available
-
 ACTION="{{ action | split(' ') | first }}"
-
-info "Deploy action: $ACTION"
 
 case "$ACTION" in
     status)
