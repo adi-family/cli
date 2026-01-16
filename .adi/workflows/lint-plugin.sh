@@ -543,20 +543,49 @@ if [[ -z "$PLUGIN" ]]; then
     usage
 fi
 
-# Resolve plugin path
-PLUGIN_DIR=""
-if [[ -d "$PLUGIN" ]]; then
-    PLUGIN_DIR="$PLUGIN"
-elif [[ -d "$PROJECT_ROOT/crates/$PLUGIN" ]]; then
-    PLUGIN_DIR="$PROJECT_ROOT/crates/$PLUGIN"
-elif [[ -d "$PROJECT_ROOT/crates/adi-$PLUGIN" ]]; then
-    PLUGIN_DIR="$PROJECT_ROOT/crates/adi-$PLUGIN"
-else
+# Resolve plugin path - supports plugin ID (e.g., "adi.workflow") or directory path
+resolve_plugin_dir() {
+    local plugin="$1"
+    
+    # If it's already a directory path
+    if [[ -d "$plugin" ]]; then
+        echo "$plugin"
+        return
+    fi
+    
+    # Try to find by plugin ID in plugin.toml files
+    local found_path=""
+    local plugin_id=""
+    while IFS= read -r f; do
+        plugin_id=$(grep -m1 '^id = ' "$f" 2>/dev/null | sed 's/id = "//;s/"//')
+        if [[ "$plugin_id" == "$plugin" ]]; then
+            found_path=$(dirname "$f")
+            break
+        fi
+    done < <(find "$PROJECT_ROOT/crates" -name 'plugin.toml' -type f 2>/dev/null)
+    
+    if [[ -n "$found_path" ]]; then
+        echo "$found_path"
+        return
+    fi
+    
+    # Fallback to directory-based resolution
+    if [[ -d "$PROJECT_ROOT/crates/$plugin" ]]; then
+        echo "$PROJECT_ROOT/crates/$plugin"
+    elif [[ -d "$PROJECT_ROOT/crates/adi-$plugin" ]]; then
+        echo "$PROJECT_ROOT/crates/adi-$plugin"
+    fi
+}
+
+PLUGIN_DIR=$(resolve_plugin_dir "$PLUGIN")
+
+if [[ -z "$PLUGIN_DIR" ]]; then
     error "Plugin not found: $PLUGIN"
     echo "Tried:"
-    echo "  - $PLUGIN"
-    echo "  - $PROJECT_ROOT/crates/$PLUGIN"
-    echo "  - $PROJECT_ROOT/crates/adi-$PLUGIN"
+    echo "  - Direct path: $PLUGIN"
+    echo "  - Plugin ID lookup in plugin.toml files"
+    echo "  - Directory: $PROJECT_ROOT/crates/$PLUGIN"
+    echo "  - Directory: $PROJECT_ROOT/crates/adi-$PLUGIN"
     exit 1
 fi
 

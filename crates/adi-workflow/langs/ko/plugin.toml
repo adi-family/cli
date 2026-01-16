@@ -19,4 +19,4 @@ version = "1.0.0"
 description = "Korean translations for workflow"
 
 [binary]
-name = "adi_workflow_lang_ko"
+name = "plugin"

@@ -25,4 +25,4 @@ description = "CLI commands for Coolify deployment management"
 categories = ["deployment", "devops", "coolify", "infrastructure"]
 
 [binary]
-name = "adi_coolify_plugin"
+name = "plugin"

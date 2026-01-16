@@ -19,4 +19,4 @@ version = "1.0.0"
 description = "Japanese translations for coolify plugin"
 
 [binary]
-name = "adi_coolify_lang_ja"
+name = "plugin"

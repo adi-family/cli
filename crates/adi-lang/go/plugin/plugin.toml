@@ -12,7 +12,7 @@ id = "adi.indexer.lang"
 version = "1.0.0"
 
 [binary]
-name = "adi_lang_go"
+name = "plugin"
 
 [language]
 id = "go"

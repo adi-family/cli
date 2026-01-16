@@ -190,7 +190,31 @@ main() {
 
     cd "$ROOT_DIR"
 
-    # Build and package plugins
+    # If specific plugin is requested and it's a plugin ID (not in PLUGINS array),
+    # use release-plugin.sh directly which handles dynamic lookup
+    if [ -n "$specific_plugin" ]; then
+        local found=false
+        for plugin_spec in "${PLUGINS[@]}"; do
+            IFS=':' read -r crate_name plugin_id _ _ <<< "$plugin_spec"
+            if [ "$crate_name" == "$specific_plugin" ] || [ "$plugin_id" == "$specific_plugin" ]; then
+                found=true
+                break
+            fi
+        done
+        
+        if [ "$found" = false ]; then
+            # Plugin not in hardcoded list, delegate to release-plugin.sh
+            info "Plugin '$specific_plugin' not in default list, using dynamic lookup..."
+            local bump_args=""
+            if [ -n "$bump_type" ]; then
+                bump_args="--bump $bump_type"
+            fi
+            "$WORKFLOWS_DIR/release-plugin.sh" "$specific_plugin" $bump_args
+            exit $?
+        fi
+    fi
+
+    # Build and package plugins from hardcoded list
     for plugin_spec in "${PLUGINS[@]}"; do
         IFS=':' read -r crate_name plugin_id plugin_name plugin_type <<< "$plugin_spec"
 

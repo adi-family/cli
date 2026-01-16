@@ -4,7 +4,7 @@ use crate::discovery::{discover_workflows, find_workflow};
 use crate::executor::execute_steps;
 use crate::parser::{load_workflow, WorkflowScope};
 use crate::prompts::collect_inputs;
-use dialoguer::{theme::ColorfulTheme, Select};
+use dialoguer::{theme::ColorfulTheme, FuzzySelect};
 use serde_json::json;
 use std::path::PathBuf;
 
@@ -121,9 +121,9 @@ fn cmd_select_and_run(cwd: &PathBuf) -> Result<String, String> {
         })
         .collect();
 
-    println!("Select a workflow to run:\n");
+    println!("Select a workflow to run (type to search):\n");
 
-    let selection = Select::with_theme(&ColorfulTheme::default())
+    let selection = FuzzySelect::with_theme(&ColorfulTheme::default())
         .items(&items)
         .default(0)
         .interact()

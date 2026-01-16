@@ -21,4 +21,4 @@ description = "CLI commands for agent loop"
 categories = ["agent", "llm", "automation", "workflow"]
 
 [binary]
-name = "adi_agent_loop_plugin"
+name = "plugin"

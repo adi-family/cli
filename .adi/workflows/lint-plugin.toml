@@ -9,7 +9,12 @@ description = "Lint and validate a plugin before release"
 name = "plugin"
 type = "select"
 prompt = "Select plugin to lint"
-options_source = { type = "plugins" }
+# Dynamically discovers all plugins from plugin.toml files
+options_cmd = """
+find crates -name 'plugin.toml' -type f 2>/dev/null | while read f; do
+    grep -m1 '^id = ' "$f" 2>/dev/null | sed 's/id = "//;s/"//'
+done | sort -u
+"""
 autocomplete = true
 
 [[inputs]]

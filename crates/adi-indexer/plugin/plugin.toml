@@ -26,4 +26,4 @@ version = "1.0.0"
 categories = ["indexer", "code-search", "analysis"]
 
 [binary]
-name = "adi_indexer_plugin"
+name = "plugin"

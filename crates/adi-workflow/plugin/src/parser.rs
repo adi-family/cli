@@ -62,8 +62,6 @@ pub enum OptionsSource {
     GitTags,
     /// Git remotes from current repository
     GitRemotes,
-    /// Plugin directories (crates with plugin.toml)
-    Plugins,
     /// Services from docker-compose.yml
     DockerComposeServices {
         #[serde(default = "default_compose_file")]
@@ -85,8 +83,6 @@ pub enum OptionsSource {
     LinesFromFile { path: String },
     /// Cargo workspace members
     CargoWorkspaceMembers,
-    /// Release services (from release/ directory)
-    ReleaseServices,
 }
 
 fn default_compose_file() -> String {
@@ -186,10 +182,10 @@ options_source = { type = "git-branches" }
 autocomplete = true
 
 [[inputs]]
-name = "plugin"
+name = "dir"
 type = "select"
-prompt = "Select plugin"
-options_cmd = "ls -d crates/*/plugin 2>/dev/null | xargs -I{} basename $(dirname {})"
+prompt = "Select directory"
+options_source = { type = "directories", path = "crates" }
 
 [[inputs]]
 name = "service"
@@ -199,7 +195,7 @@ options_source = { type = "docker-compose-services", file = "docker-compose.dev.
 
 [[steps]]
 name = "Run"
-run = "echo {{ branch }} {{ plugin }} {{ service }}"
+run = "echo {{ branch }} {{ dir }} {{ service }}"
 "#;
 
         let workflow = parse_workflow(toml).unwrap();
@@ -211,9 +207,9 @@ run = "echo {{ branch }} {{ plugin }} {{ service }}"
         assert!(branch_input.options_source.is_some());
         assert_eq!(branch_input.autocomplete, Some(true));
 
-        // Check plugin input
-        let plugin_input = &workflow.inputs[1];
-        assert!(plugin_input.options_cmd.is_some());
+        // Check dir input
+        let dir_input = &workflow.inputs[1];
+        assert!(dir_input.options_source.is_some());
 
         // Check service input
         let service_input = &workflow.inputs[2];

@@ -81,6 +81,14 @@ prompt = "Select environment"
 options = ["staging", "production"]
 default = "staging"
 
+[[inputs]]
+name = "plugin"
+type = "select"
+prompt = "Select plugin"
+# Dynamic options from plugin.toml files
+options_source = { type = "plugins", filter = "core", format = "{id}" }
+autocomplete = true
+
 [[steps]]
 name = "Build"
 run = """
@@ -92,6 +100,33 @@ spinner_stop "success"
 """
 if = "{{ env }} == 'production'"  # Optional condition
 env = { API_KEY = "{{ api_key }}" }  # Optional env vars
+```
+
+## Dynamic Options Sources
+
+### Shell command (most flexible)
+```toml
+# Run any shell command - one option per line
+options_cmd = "find crates -name 'plugin.toml' | xargs grep '^id' | cut -d'\"' -f2"
+options_cmd = "ls -1 services/"
+options_cmd = "cat .adi/plugins.txt"
+```
+
+### Built-in sources
+```toml
+# Git
+options_source = { type = "git-branches" }
+options_source = { type = "git-tags" }
+options_source = { type = "git-remotes" }
+
+# Filesystem
+options_source = { type = "directories", path = "crates", pattern = "adi-*" }
+options_source = { type = "files", path = ".", pattern = "*.toml" }
+options_source = { type = "lines-from-file", path = ".adi/services.txt" }
+
+# Cargo/Docker
+options_source = { type = "cargo-workspace-members" }
+options_source = { type = "docker-compose-services", file = "docker-compose.yml" }
 ```
 
 ## Templating

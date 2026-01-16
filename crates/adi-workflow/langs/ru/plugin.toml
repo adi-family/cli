@@ -19,4 +19,4 @@ version = "1.0.0"
 description = "Russian translations for workflow"
 
 [binary]
-name = "adi_workflow_lang_ru"
+name = "plugin"

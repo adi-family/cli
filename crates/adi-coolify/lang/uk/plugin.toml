@@ -22,4 +22,4 @@ description = "Ukrainian translations for coolify plugin"
 categories = ["i18n", "translation"]
 
 [binary]
-name = "adi_coolify_lang_uk"
+name = "plugin"

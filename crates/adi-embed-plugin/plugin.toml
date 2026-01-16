@@ -12,7 +12,7 @@ id = "adi.embed"
 version = "1.0.0"
 
 [binary]
-name = "adi_embed_plugin"
+name = "plugin"
 
 [tags]
 categories = ["embedding", "ml", "onnx", "fastembed"]

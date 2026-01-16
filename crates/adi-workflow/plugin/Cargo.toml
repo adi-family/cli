@@ -1,6 +1,6 @@
 [package]
 name = "adi-workflow-plugin"
-version = "0.1.2"
+version = "0.1.6"
 edition = "2021"
 license = "BSL-1.0"
 description = "ADI Workflow plugin - run shell workflows defined in TOML files"

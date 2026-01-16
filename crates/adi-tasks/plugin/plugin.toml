@@ -21,4 +21,4 @@ description = "CLI commands for task management"
 categories = ["tasks", "project-management", "workflow"]
 
 [binary]
-name = "adi_tasks_plugin"
+name = "plugin"

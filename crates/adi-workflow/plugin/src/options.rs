@@ -74,13 +74,11 @@ fn resolve_from_source(source: &OptionsSource) -> Result<Vec<String>, String> {
         OptionsSource::GitBranches => get_git_branches(),
         OptionsSource::GitTags => get_git_tags(),
         OptionsSource::GitRemotes => get_git_remotes(),
-        OptionsSource::Plugins => get_plugins(),
         OptionsSource::DockerComposeServices { file } => get_docker_compose_services(file),
         OptionsSource::Directories { path, pattern } => get_directories(path, pattern.as_deref()),
         OptionsSource::Files { path, pattern } => get_files(path, pattern.as_deref()),
         OptionsSource::LinesFromFile { path } => get_lines_from_file(path),
         OptionsSource::CargoWorkspaceMembers => get_cargo_workspace_members(),
-        OptionsSource::ReleaseServices => get_release_services(),
     }
 }
 
@@ -157,39 +155,6 @@ fn get_git_remotes() -> Result<Vec<String>, String> {
     }
 
     Ok(remotes)
-}
-
-/// Get plugin directories (crates containing plugin.toml)
-fn get_plugins() -> Result<Vec<String>, String> {
-    let mut plugins = Vec::new();
-
-    // Look for plugin.toml files in crates/
-    // Supports: crates/foo/plugin.toml and crates/foo/plugin/plugin.toml
-    if let Ok(entries) = std::fs::read_dir("crates") {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                // Check for plugin.toml directly in the crate
-                let plugin_toml = path.join("plugin.toml");
-                // Check for plugin.toml in a plugin/ subdirectory
-                let plugin_subdir_toml = path.join("plugin").join("plugin.toml");
-
-                if plugin_toml.exists() || plugin_subdir_toml.exists() {
-                    if let Some(name) = path.file_name() {
-                        plugins.push(name.to_string_lossy().to_string());
-                    }
-                }
-            }
-        }
-    }
-
-    plugins.sort();
-
-    if plugins.is_empty() {
-        return Err("No plugins found in crates/".to_string());
-    }
-
-    Ok(plugins)
 }
 
 /// Get services from docker-compose.yml
@@ -432,64 +397,6 @@ fn get_cargo_workspace_members() -> Result<Vec<String>, String> {
 
     members.sort();
     Ok(members)
-}
-
-/// Get release services from release/ directory
-fn get_release_services() -> Result<Vec<String>, String> {
-    let release_dir = Path::new("release");
-
-    if !release_dir.exists() {
-        return Err("No release/ directory found".to_string());
-    }
-
-    let mut services = Vec::new();
-
-    // Look for subdirectories that contain Dockerfile
-    for entry in
-        std::fs::read_dir(release_dir).map_err(|e| format!("Failed to read release/: {}", e))?
-    {
-        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
-        let path = entry.path();
-
-        if path.is_dir() {
-            // Check if this directory or any subdirectory has a Dockerfile
-            let has_dockerfile = path.join("Dockerfile").exists()
-                || std::fs::read_dir(&path)
-                    .ok()
-                    .map(|entries| {
-                        entries
-                            .flatten()
-                            .any(|e| e.path().is_dir() && e.path().join("Dockerfile").exists())
-                    })
-                    .unwrap_or(false);
-
-            if has_dockerfile {
-                if let Some(name) = path.file_name() {
-                    services.push(name.to_string_lossy().to_string());
-                }
-            }
-
-            // Also check for nested services (e.g., release/domain.com/service/)
-            if let Ok(subentries) = std::fs::read_dir(&path) {
-                for subentry in subentries.flatten() {
-                    if subentry.path().is_dir() && subentry.path().join("Dockerfile").exists() {
-                        if let Some(name) = subentry.path().file_name() {
-                            services.push(name.to_string_lossy().to_string());
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    services.sort();
-    services.dedup();
-
-    if services.is_empty() {
-        return Err("No services found in release/ directory".to_string());
-    }
-
-    Ok(services)
 }
 
 #[cfg(test)]

@@ -21,4 +21,4 @@ description = "CLI commands for code linting"
 categories = ["linting", "code-quality", "static-analysis"]
 
 [binary]
-name = "adi_linter_plugin"
+name = "plugin"

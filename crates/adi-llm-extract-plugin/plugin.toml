@@ -21,4 +21,4 @@ description = "CLI commands for extracting LLM documentation"
 categories = ["documentation", "llm", "tooling"]
 
 [binary]
-name = "adi_llm_extract_plugin"
+name = "plugin"

@@ -1,7 +1,7 @@
 [plugin]
 id = "adi.workflow"
 name = "ADI Workflow"
-version = "0.1.2"
+version = "0.1.6"
 type = "core"
 author = "ADI Team"
 description = "Run workflows defined in TOML files with interactive prompts"
@@ -21,4 +21,4 @@ description = "CLI commands for workflow execution"
 categories = ["workflow", "automation", "scripting"]
 
 [binary]
-name = "adi_workflow_plugin"
+name = "plugin"

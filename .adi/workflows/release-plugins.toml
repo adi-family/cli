@@ -21,26 +21,13 @@ default = "same - Keep current version"
 name = "specific_plugin"
 type = "select"
 prompt = "Release specific plugin? (or all)"
-options = [
-    "all",
-    "adi-tasks-plugin",
-    "adi-agent-loop-plugin",
-    "adi-indexer-plugin",
-    "adi-knowledgebase-plugin",
-    "adi-linter-plugin",
-    "adi-llm-extract-plugin",
-    "adi-lang-rust",
-    "adi-lang-python",
-    "adi-lang-typescript",
-    "adi-lang-cpp",
-    "adi-lang-go",
-    "adi-lang-java",
-    "adi-lang-csharp",
-    "adi-lang-ruby",
-    "adi-lang-php",
-    "adi-lang-swift",
-    "adi-lang-lua"
-]
+# First option is "all", then dynamically discovered plugins from plugin.toml
+options_cmd = """
+echo 'all'
+find crates -name 'plugin.toml' -type f 2>/dev/null | while read f; do
+    grep -m1 '^id = ' "$f" 2>/dev/null | sed 's/id = "//;s/"//'
+done | sort -u
+"""
 default = "all"
 
 [[steps]]

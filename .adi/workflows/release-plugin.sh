@@ -80,6 +80,19 @@ OPTIONS:
 
 PLUGINS:
     cocoon              Containerized worker with PTY support
+    agent-loop          Autonomous LLM agent loop
+    indexer             Code indexer
+    knowledgebase       Knowledge base with graph DB
+    tasks               Task management
+    workflow            Workflow automation
+    coolify             Coolify deployment integration
+    linter              Code linter
+    api-proxy           LLM API proxy (BYOK/Platform)
+    llm-extract         LLM extraction utilities
+    llm-uzu             Local LLM inference (Apple Silicon)
+    embed               Embedding utilities
+    lang-*              Language plugins (rust, python, typescript, etc.)
+    cli-lang-en         CLI English translations
 
 EXAMPLES:
     $0 cocoon                   # Build and publish (current version)
@@ -96,9 +109,29 @@ EOF
     exit 0
 }
 
-# Get crate directory for plugin
+# Get crate directory for plugin by searching for plugin.toml with matching ID
 get_plugin_crate() {
     local name="$1"
+    
+    # First, try to find by plugin ID (e.g., "adi.workflow")
+    local found_path=""
+    local plugin_id=""
+    while IFS= read -r f; do
+        plugin_id=$(grep -m1 '^id = ' "$f" 2>/dev/null | sed 's/id = "//;s/"//')
+        if [[ "$plugin_id" == "$name" ]]; then
+            # Return the directory containing plugin.toml, relative to PROJECT_ROOT
+            found_path=$(dirname "$f" | sed "s|^$PROJECT_ROOT/||")
+            break
+        fi
+    done < <(find "$PROJECT_ROOT/crates" -name 'plugin.toml' -type f 2>/dev/null)
+    
+    if [[ -n "$found_path" ]]; then
+        echo "$found_path"
+        return
+    fi
+    
+    # Fallback to legacy short names for backward compatibility
+    name="${name%-plugin}"
     case "$name" in
         cocoon) echo "crates/cocoon" ;;
         agent-loop|adi-agent-loop) echo "crates/adi-agent-loop/plugin" ;;
@@ -108,7 +141,9 @@ get_plugin_crate() {
         workflow|adi-workflow) echo "crates/adi-workflow/plugin" ;;
         coolify|adi-coolify) echo "crates/adi-coolify/plugin" ;;
         linter|adi-linter) echo "crates/adi-linter/plugin" ;;
+        api-proxy|adi-api-proxy) echo "crates/adi-api-proxy/plugin" ;;
         llm-extract|adi-llm-extract) echo "crates/adi-llm-extract-plugin" ;;
+        llm-uzu|adi-llm-uzu) echo "crates/adi-llm-uzu-plugin" ;;
         tsp-gen|typespec) echo "crates/lib/lib-typespec-api/plugin" ;;
         lang-cpp|adi-lang-cpp) echo "crates/adi-lang/cpp/plugin" ;;
         lang-csharp|adi-lang-csharp) echo "crates/adi-lang/csharp/plugin" ;;
@@ -122,6 +157,7 @@ get_plugin_crate() {
         lang-swift|adi-lang-swift) echo "crates/adi-lang/swift/plugin" ;;
         lang-typescript|adi-lang-typescript) echo "crates/adi-lang/typescript/plugin" ;;
         embed|adi-embed) echo "crates/adi-embed-plugin" ;;
+        cli-lang-en|adi-cli-lang-en) echo "crates/adi-cli-lang-en" ;;
         *) echo "" ;;
     esac
 }
@@ -171,14 +207,40 @@ bump_version() {
     echo "${major}.${minor}.${patch}"
 }
 
-# Update version in plugin.toml
+# Update version in plugin.toml and Cargo.toml
 update_plugin_version() {
     local plugin_toml="$1"
     local old_version="$2"
     local new_version="$3"
     
+    # Update plugin.toml
     sed -i '' "s/^version = \"$old_version\"/version = \"$new_version\"/" "$plugin_toml"
-    success "Updated version: $old_version -> $new_version"
+    success "Updated plugin.toml: $old_version -> $new_version"
+    
+    # Update Cargo.toml (same directory or plugin/ subdir)
+    local plugin_dir
+    plugin_dir=$(dirname "$plugin_toml")
+    local cargo_toml="$plugin_dir/Cargo.toml"
+    
+    # Check if Cargo.toml is in plugin/ subdir
+    if [[ ! -f "$cargo_toml" ]] || grep -q '^\[workspace\]' "$cargo_toml" 2>/dev/null; then
+        if [[ -f "$plugin_dir/plugin/Cargo.toml" ]]; then
+            cargo_toml="$plugin_dir/plugin/Cargo.toml"
+        fi
+    fi
+    
+    if [[ -f "$cargo_toml" ]]; then
+        # Check if version is workspace-managed
+        local cargo_version
+        cargo_version=$(grep '^version = ' "$cargo_toml" | head -1 | sed 's/version = "\(.*\)"/\1/')
+        
+        if [[ "$cargo_version" == "version.workspace" ]] || [[ -z "$cargo_version" ]]; then
+            info "Cargo.toml uses workspace version, skipping"
+        else
+            sed -i '' "s/^version = \"$cargo_version\"/version = \"$new_version\"/" "$cargo_toml"
+            success "Updated Cargo.toml: $cargo_version -> $new_version"
+        fi
+    fi
 }
 
 build_plugin() {
@@ -331,7 +393,7 @@ main() {
     done
 
     if [ -z "$plugin_name" ]; then
-        error "Plugin name required. Available: cocoon"
+        error "Plugin name required. Run with --help to see available plugins."
     fi
 
     # Get crate directory
@@ -339,7 +401,7 @@ main() {
     crate_dir=$(get_plugin_crate "$plugin_name")
 
     if [ -z "$crate_dir" ]; then
-        error "Unknown plugin: $plugin_name. Available: cocoon"
+        error "Unknown plugin: $plugin_name. Run with --help to see available plugins."
     fi
 
     require_dir "$PROJECT_ROOT/$crate_dir" "Plugin crate not found: $crate_dir"
