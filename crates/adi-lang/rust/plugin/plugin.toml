@@ -1,7 +1,7 @@
 [plugin]
 id = "adi.lang.rust"
 name = "Rust Language Support"
-version = "0.1.0"
+version = "0.8.9"
 type = "lang"
 author = "ADI Team"
 description = "Language support for Rust with tree-sitter parsing"
@@ -12,7 +12,7 @@ id = "adi.indexer.lang"
 version = "1.0.0"
 
 [binary]
-name = "adi_lang_rust"
+name = "plugin"
 
 [language]
 id = "rust"

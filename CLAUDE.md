@@ -99,6 +99,7 @@ Several components follow a standard multi-crate structure within a single direc
 - `crates/adi-platform-api` - Unified Platform API (tasks, integrations, orchestration)
 - `crates/lib-analytics-core` - Analytics event tracking and persistence library
 - `crates/adi-analytics-api` - Analytics API (metrics, dashboards, aggregates)
+- `crates/adi-balance-api` - Balance and transaction tracking service
 - `crates/debug-metal-shader` - Metal shader debug app
 
 ## FlowMap (Standalone)
@@ -449,6 +450,7 @@ AUTH_API_URL=http://adi.local/api/auth
 | `/api/analytics/*` | Analytics API | 8023 | Metrics, dashboards, aggregates |
 | `/api/analytics-ingestion/*` | Analytics Ingestion | 8022 | Event ingestion |
 | `/api/llm-proxy/*` | LLM Proxy | 8029 | LLM API proxy (BYOK/Platform) |
+| `/api/balance/*` | Balance API | 8030 | Balance and transaction tracking |
 | `/api/signaling/*` | Signaling | 8011 | WebSocket relay for sync |
 | `/api/registry/*` | Registry | 8019 | Plugin registry (optional) |
 | `/api/cocoon/*` | Cocoon Manager | 8020 | Cocoon orchestration (optional) |
@@ -466,6 +468,7 @@ AUTH_API_URL=http://adi.local/api/auth
 | Analytics Ingestion | http://localhost:8022 | Event ingestion |
 | Analytics API | http://localhost:8023 | Metrics, dashboards, aggregates |
 | LLM Proxy | http://localhost:8029 | LLM API proxy (BYOK/Platform) |
+| Balance API | http://localhost:8030 | Balance and transaction tracking |
 | Cocoon Manager | http://localhost:8020 | Cocoon orchestration (optional) |
 | Registry | http://localhost:8019 | Plugin registry (optional) |
 

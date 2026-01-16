@@ -1,6 +1,6 @@
 [package]
 name = "adi-lang-rust"
-version = "0.1.0"
+version = "0.8.9"
 edition = "2021"
 license = "MIT"
 description = "Rust language support plugin for ADI indexer"

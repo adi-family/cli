@@ -56,8 +56,8 @@ PID_DIR="$PROJECT_ROOT/.dev"
 LOG_DIR="$PROJECT_ROOT/.dev/logs"
 
 # All services
-ALL_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy cocoon registry cocoon-manager"
-# Default services to start (cocoon, registry, cocoon-manager are optional)
+ALL_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy balance cocoon registry cocoon-manager"
+# Default services to start (balance, cocoon, registry, cocoon-manager are optional)
 DEFAULT_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy"
 
 # -----------------------------------------------------------------------------
@@ -76,6 +76,7 @@ service_dir() {
         analytics-ingestion) echo "crates/adi-analytics-ingestion" ;;
         analytics) echo "crates/adi-analytics-api" ;;
         llm-proxy) echo "crates/adi-api-proxy/http" ;;
+        balance)   echo "crates/adi-balance-api" ;;
         cocoon)    echo "crates/cocoon" ;;
         registry)  echo "crates/adi-plugin-registry-http" ;;
         cocoon-manager) echo "crates/cocoon-manager" ;;
@@ -95,6 +96,7 @@ service_cmd() {
         analytics-ingestion) echo "cargo run" ;;
         analytics) echo "cargo run" ;;
         llm-proxy) echo "cargo run --bin adi-api-proxy" ;;
+        balance)   echo "cargo run --bin adi-balance-api" ;;
         cocoon)    echo "cargo run --features standalone" ;;
         registry)  echo "cargo run" ;;
         cocoon-manager) echo "cargo run" ;;
@@ -114,6 +116,7 @@ service_port_name() {
         analytics-ingestion) echo "adi-analytics-ingestion" ;;
         analytics) echo "adi-analytics" ;;
         llm-proxy) echo "adi-llm-proxy" ;;
+        balance)   echo "adi-balance" ;;
         cocoon)    echo "adi-cocoon" ;;
         registry)  echo "adi-registry" ;;
         cocoon-manager) echo "adi-cocoon-manager" ;;
@@ -123,7 +126,7 @@ service_port_name() {
 
 service_description() {
     case "$1" in
-        postgres)    echo "PostgreSQL database (auth, platform, llm-proxy)" ;;
+        postgres)    echo "PostgreSQL database (auth, platform, llm-proxy, balance)" ;;
         timescaledb) echo "TimescaleDB (analytics)" ;;
         signaling) echo "WebSocket relay for sync" ;;
         auth)      echo "Authentication API" ;;
@@ -133,6 +136,7 @@ service_description() {
         analytics-ingestion) echo "Analytics event ingestion (writes)" ;;
         analytics) echo "Analytics API (metrics, dashboards)" ;;
         llm-proxy) echo "LLM API proxy (BYOK/Platform modes)" ;;
+        balance)   echo "Balance and transaction tracking" ;;
         cocoon)    echo "Worker container" ;;
         registry)  echo "Plugin registry (local)" ;;
         cocoon-manager) echo "Cocoon orchestration API" ;;
@@ -404,6 +408,26 @@ start_service() {
             analytics_port=$(get_port "analytics-ingestion")
             env_cmd="$env_cmd ANALYTICS_URL=http://localhost:$analytics_port"
             ;;
+        balance)
+            # Balance service needs database, JWT secret, and analytics URL
+            local pg_port
+            pg_port=$(get_port "postgres")
+            if [ -f "$PROJECT_ROOT/.env.local" ]; then
+                # shellcheck disable=SC1091
+                source "$PROJECT_ROOT/.env.local" 2>/dev/null || true
+                [ -n "$JWT_SECRET" ] && env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
+            fi
+            # Use balance-specific database if set, otherwise use docker postgres
+            if [ -n "$BALANCE_DATABASE_URL" ]; then
+                env_cmd="$env_cmd DATABASE_URL=$BALANCE_DATABASE_URL"
+            else
+                env_cmd="$env_cmd DATABASE_URL=postgres://adi:adi@localhost:$pg_port/adi_balance"
+            fi
+            # Set analytics URL to local analytics-ingestion service
+            local analytics_port
+            analytics_port=$(get_port "analytics-ingestion")
+            env_cmd="$env_cmd ANALYTICS_URL=http://localhost:$analytics_port"
+            ;;
     esac
 
     log "Starting $service on port $port..."
@@ -629,6 +653,8 @@ cmd_ports() {
     analytics_port=$(get_port "analytics")
     local llm_proxy_port
     llm_proxy_port=$(get_port "llm-proxy")
+    local balance_port
+    balance_port=$(get_port "balance")
     local cocoon_port
     cocoon_port=$(get_port "cocoon")
     local registry_port
@@ -637,7 +663,7 @@ cmd_ports() {
     manager_port=$(get_port "cocoon-manager")
 
     echo -e "  ${BOLD}Databases:${NC}"
-    echo -e "  ${CYAN}PostgreSQL:${NC}          localhost:$postgres_port (auth, platform, llm-proxy)"
+    echo -e "  ${CYAN}PostgreSQL:${NC}          localhost:$postgres_port (auth, platform, llm-proxy, balance)"
     echo -e "  ${CYAN}TimescaleDB:${NC}         localhost:$timescaledb_port (analytics)"
     echo ""
     echo -e "  ${BOLD}Services:${NC}"
@@ -649,6 +675,7 @@ cmd_ports() {
     echo -e "  ${CYAN}Analytics Ingestion:${NC} http://localhost:$analytics_ingestion_port"
     echo -e "  ${CYAN}Analytics API:${NC}       http://localhost:$analytics_port"
     echo -e "  ${CYAN}LLM Proxy:${NC}           http://localhost:$llm_proxy_port"
+    echo -e "  ${CYAN}Balance API:${NC}         http://localhost:$balance_port"
     echo -e "  ${CYAN}Registry:${NC}            http://localhost:$registry_port"
     echo -e "  ${CYAN}Cocoon Manager:${NC}      http://localhost:$manager_port"
     echo -e "  ${CYAN}Signaling:${NC}           ws://localhost:$signaling_port/ws"
