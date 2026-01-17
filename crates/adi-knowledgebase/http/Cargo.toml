@@ -10,8 +10,14 @@ description = "HTTP API server for ADI Knowledgebase"
 name = "adi-knowledgebase-http"
 path = "src/main.rs"
 
+[features]
+default = ["mcp"]
+mcp = ["lib-mcp-core/sse-server"]
+fastembed = ["adi-knowledgebase-core/fastembed"]
+
 [dependencies]
-adi-knowledgebase-core = { path = "../core" }
+adi-knowledgebase-core = { path = "../core", features = ["fastembed"] }
+lib-mcp-core = { path = "../../lib/lib-mcp-core", optional = true }
 axum.workspace = true
 tower.workspace = true
 tower-http = { workspace = true, features = ["cors", "trace"] }
@@ -22,3 +28,4 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 uuid.workspace = true
+futures.workspace = true

@@ -18,8 +18,11 @@ use tracing::info;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use uuid::Uuid;
 
+#[cfg(feature = "mcp")]
+mod mcp;
+
 struct AppState {
-    kb: RwLock<Option<Knowledgebase>>,
+    kb: Arc<RwLock<Option<Knowledgebase>>>,
     data_dir: PathBuf,
 }
 
@@ -76,6 +79,9 @@ async fn main() -> Result<()> {
     info!("Starting ADI Knowledgebase HTTP server");
     info!("Data directory: {}", data_dir.display());
 
+    #[cfg(feature = "mcp")]
+    info!("MCP support enabled at /mcp/sse (SSE) and /mcp/message (POST)");
+
     let kb = match Knowledgebase::open(&data_dir).await {
         Ok(kb) => Some(kb),
         Err(e) => {
@@ -84,12 +90,16 @@ async fn main() -> Result<()> {
         }
     };
 
+    let kb = RwLock::new(kb);
+    let kb_arc = Arc::new(kb);
+
     let state = Arc::new(AppState {
-        kb: RwLock::new(kb),
+        kb: kb_arc.clone(),
         data_dir,
     });
 
-    let app = Router::new()
+    // Build REST API router
+    let rest_router = Router::new()
         .route("/", get(health))
         .route("/health", get(health))
         .route("/status", get(status))
@@ -102,9 +112,24 @@ async fn main() -> Result<()> {
         .route("/conflicts", get(conflicts))
         .route("/orphans", get(orphans))
         .route("/edges", post(add_edge))
-        .layer(CorsLayer::permissive())
-        .layer(TraceLayer::new_for_http())
         .with_state(state);
+
+    // Build MCP router if feature is enabled
+    #[cfg(feature = "mcp")]
+    let mcp_router = mcp::create_mcp_router(kb_arc);
+
+    // Combine routers
+    #[cfg(feature = "mcp")]
+    let app = Router::new()
+        .merge(rest_router)
+        .nest("/mcp", mcp_router)
+        .layer(CorsLayer::permissive())
+        .layer(TraceLayer::new_for_http());
+
+    #[cfg(not(feature = "mcp"))]
+    let app = rest_router
+        .layer(CorsLayer::permissive())
+        .layer(TraceLayer::new_for_http());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     info!("Listening on http://{}", addr);
