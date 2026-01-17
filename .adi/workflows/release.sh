@@ -33,6 +33,7 @@ get_service_config() {
         adi-plugin-registry) echo "crates/adi-plugin-registry-http:adi-plugin-registry:adi-plugin-registry" ;;
         flowmap-api) echo "apps/flowmap-api:flowmap-api:flowmap-api" ;;
         cocoon-manager) echo "crates/cocoon-manager:cocoon-manager:cocoon-manager" ;;
+        cocoon) echo "crates/cocoon:cocoon:cocoon" ;;
         llm-proxy) echo "crates/adi-api-proxy/http:adi-api-proxy,adi-api-proxy-migrate:llm-proxy" ;;
         *) return 1 ;;
     esac
@@ -48,7 +49,7 @@ get_image_name() {
 }
 
 # All available services
-ALL_SERVICES="adi-auth adi-platform-api adi-analytics-api adi-analytics-ingestion tarminal-signaling-server adi-plugin-registry flowmap-api cocoon-manager llm-proxy"
+ALL_SERVICES="adi-auth adi-platform-api adi-analytics-api adi-analytics-ingestion tarminal-signaling-server adi-plugin-registry flowmap-api cocoon-manager cocoon llm-proxy"
 
 usage() {
     cat <<EOF
@@ -71,6 +72,7 @@ SERVICES:
     adi-plugin-registry         Plugin registry
     flowmap-api                 FlowMap API
     cocoon-manager              Cocoon manager
+    cocoon                      Cocoon worker (Docker image)
     llm-proxy                   LLM API Proxy
     all                         All services (default)
 

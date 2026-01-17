@@ -44,7 +44,8 @@ if ! command -v x86_64-linux-musl-gcc &> /dev/null; then
     exit 1
 fi
 
-# Get service configuration (crate-path:binary-names)
+# Get service configuration (crate-path:binary-names:features)
+# Format: crate-path:binary-names[:features]
 get_service_config() {
     local service=$1
     case "$service" in
@@ -56,13 +57,14 @@ get_service_config() {
         adi-plugin-registry) echo "crates/adi-plugin-registry-http:adi-plugin-registry" ;;
         flowmap-api) echo "apps/flowmap-api:flowmap-api" ;;
         cocoon-manager) echo "crates/cocoon-manager:cocoon-manager" ;;
+        cocoon) echo "crates/cocoon:cocoon:standalone" ;;
         llm-proxy) echo "crates/adi-api-proxy/http:adi-api-proxy,adi-api-proxy-migrate" ;;
         *) return 1 ;;
     esac
 }
 
 # All available services
-ALL_SERVICES="adi-auth adi-platform-api adi-analytics-api adi-analytics-ingestion tarminal-signaling-server adi-plugin-registry flowmap-api cocoon-manager llm-proxy"
+ALL_SERVICES="adi-auth adi-platform-api adi-analytics-api adi-analytics-ingestion tarminal-signaling-server adi-plugin-registry flowmap-api cocoon-manager cocoon llm-proxy"
 
 build_service() {
     local service=$1
@@ -72,8 +74,14 @@ build_service() {
         return 1
     fi
 
+    # Parse config: crate-path:binary-names[:features]
     local crate_path="${config%%:*}"
-    local binaries="${config##*:}"
+    local rest="${config#*:}"
+    local binaries="${rest%%:*}"
+    local features=""
+    if [[ "$rest" == *:* ]]; then
+        features="${rest##*:}"
+    fi
 
     info "Building $service (linux/amd64)"
 
@@ -96,16 +104,22 @@ build_service() {
     # Build all binaries for this service
     IFS=',' read -ra BINS <<< "$binaries"
     for binary in "${BINS[@]}"; do
-        info "  - $binary"
+        info "  - $binary${features:+ (features: $features)}"
 
         # Set environment for musl cross-compilation
         export CC_x86_64_unknown_linux_musl=x86_64-linux-musl-gcc
         export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-musl-gcc
 
+        # Build feature flag if specified
+        local feature_flag=""
+        if [[ -n "$features" ]]; then
+            feature_flag="--features=$features"
+        fi
+
         if [[ "$is_standalone" == "true" ]]; then
             # Standalone crate: build from crate directory
             cd "$crate_dir"
-            cargo build --release --target x86_64-unknown-linux-musl --bin "$binary"
+            cargo build --release --target x86_64-unknown-linux-musl --bin "$binary" $feature_flag
         else
             # Workspace member: build from project root with -p
             cd "$PROJECT_ROOT"
@@ -115,7 +129,7 @@ build_service() {
                 error "Could not read package name from $crate_dir/Cargo.toml"
                 return 1
             fi
-            cargo build --release --target x86_64-unknown-linux-musl -p "$package_name" --bin "$binary"
+            cargo build --release --target x86_64-unknown-linux-musl -p "$package_name" --bin "$binary" $feature_flag
         fi
     done
 
