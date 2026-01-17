@@ -56,8 +56,8 @@ PID_DIR="$PROJECT_ROOT/.dev"
 LOG_DIR="$PROJECT_ROOT/.dev/logs"
 
 # All services
-ALL_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy balance cocoon registry cocoon-manager"
-# Default services to start (balance, cocoon, registry, cocoon-manager are optional)
+ALL_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy balance cocoon registry hive"
+# Default services to start (balance, cocoon, registry, hive are optional)
 DEFAULT_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy"
 
 # -----------------------------------------------------------------------------
@@ -79,7 +79,7 @@ service_dir() {
         balance)   echo "crates/adi-balance-api" ;;
         cocoon)    echo "crates/cocoon" ;;
         registry)  echo "crates/adi-plugin-registry-http" ;;
-        cocoon-manager) echo "crates/cocoon-manager" ;;
+        hive) echo "crates/hive" ;;
         *)         echo "" ;;
     esac
 }
@@ -99,7 +99,7 @@ service_cmd() {
         balance)   echo "cargo run --bin adi-balance-api" ;;
         cocoon)    echo "cargo run --features standalone" ;;
         registry)  echo "cargo run" ;;
-        cocoon-manager) echo "cargo run" ;;
+        hive) echo "cargo run" ;;
         *)         echo "" ;;
     esac
 }
@@ -119,7 +119,7 @@ service_port_name() {
         balance)   echo "adi-balance" ;;
         cocoon)    echo "adi-cocoon" ;;
         registry)  echo "adi-registry" ;;
-        cocoon-manager) echo "adi-cocoon-manager" ;;
+        hive) echo "adi-hive" ;;
         *)         echo "" ;;
     esac
 }
@@ -139,7 +139,7 @@ service_description() {
         balance)   echo "Balance and transaction tracking" ;;
         cocoon)    echo "Worker container" ;;
         registry)  echo "Plugin registry (local)" ;;
-        cocoon-manager) echo "Cocoon orchestration API" ;;
+        hive) echo "Hive - Cocoon orchestration API" ;;
         *)         echo "" ;;
     esac
 }
@@ -375,13 +375,13 @@ start_service() {
                 env_cmd="$env_cmd DATABASE_URL=postgres://adi:adi@localhost:$pg_port/adi_auth"
             fi
             ;;
-        cocoon-manager)
-            # Cocoon manager needs database, signaling URL, and Docker config
+        hive)
+            # Hive needs database, signaling URL, and Docker config
             local signaling_port
             signaling_port=$(get_port "signaling")
-            local db_dir="$PROJECT_ROOT/.dev/cocoon-manager-data"
+            local db_dir="$PROJECT_ROOT/.dev/hive-data"
             ensure_dir "$db_dir"
-            env_cmd="$env_cmd DATABASE_URL=sqlite:$db_dir/cocoon-manager.db"
+            env_cmd="$env_cmd DATABASE_URL=sqlite:$db_dir/hive.db"
             env_cmd="$env_cmd SIGNALING_SERVER_URL=ws://localhost:$signaling_port/ws"
             env_cmd="$env_cmd COCOON_IMAGE=ghcr.io/adi-family/cocoon:latest"
             env_cmd="$env_cmd MAX_COCOONS=100"
@@ -661,7 +661,7 @@ cmd_ports() {
     local registry_port
     registry_port=$(get_port "registry")
     local manager_port
-    manager_port=$(get_port "cocoon-manager")
+    manager_port=$(get_port "hive")
 
     echo -e "  ${BOLD}Databases:${NC}"
     echo -e "  ${CYAN}PostgreSQL:${NC}          localhost:$postgres_port (auth, platform, llm-proxy, balance)"
@@ -678,7 +678,7 @@ cmd_ports() {
     echo -e "  ${CYAN}LLM Proxy:${NC}           http://localhost:$llm_proxy_port"
     echo -e "  ${CYAN}Balance API:${NC}         http://localhost:$balance_port"
     echo -e "  ${CYAN}Registry:${NC}            http://localhost:$registry_port"
-    echo -e "  ${CYAN}Cocoon Manager:${NC}      http://localhost:$manager_port"
+    echo -e "  ${CYAN}Hive:${NC}                http://localhost:$manager_port"
     echo -e "  ${CYAN}Signaling:${NC}           ws://localhost:$signaling_port/ws"
     echo -e "  ${CYAN}Cocoon:${NC}              (internal, port $cocoon_port)"
     echo ""

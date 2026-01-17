@@ -164,9 +164,9 @@
 [submodule "crates/lib/lib-typespec-api"]
 	path = crates/lib/lib-typespec-api
 	url = https://github.com/adi-family/lib-typespec-api.git
-[submodule "crates/cocoon-manager"]
-	path = crates/cocoon-manager
-	url = https://github.com/adi-family/cocoon-manager.git
+[submodule "crates/hive"]
+	path = crates/hive
+	url = https://github.com/adi-family/hive.git
 [submodule "release/adi.the-ihor.com"]
 	path = release/adi.the-ihor.com
 	url = git@github.com:adi-family/adi.the-ihor.com.git

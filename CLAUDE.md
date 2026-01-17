@@ -84,7 +84,7 @@ Several components follow a standard multi-crate structure within a single direc
 - `crates/adi-api-proxy/plugin` - API Proxy CLI plugin
 - `crates/adi-executor` - Docker-based task execution service
 - `crates/cocoon` - Containerized worker with signaling server connectivity for remote command execution
-- `crates/cocoon-manager` - REST API for on-demand cocoon container orchestration
+- `crates/hive` - Hive: REST API for spawning and managing cocoon containers
 - `crates/lib-misc-color` - Unified color type (RGB/RGBA/Hex)
 - `crates/lib-animation` - UI animation utilities
 - `crates/lib-syntax-highlight` - Syntax highlighting tokenizer
@@ -292,7 +292,7 @@ All production services are built using **cross-compilation** for 10-20x faster 
 - `tarminal-signaling-server` - WebSocket signaling server
 - `adi-plugin-registry` - Plugin registry HTTP server
 - `flowmap-api` - Code flow visualization API
-- `cocoon-manager` - Cocoon orchestration API
+- `hive` - Hive: Cocoon orchestration API
 
 Each release directory contains:
 - `Dockerfile` - Minimal Alpine image (copies pre-built binary)
@@ -454,7 +454,7 @@ AUTH_API_URL=http://adi.local/api/auth
 | `/api/balance/*` | Balance API | 8030 | Balance and transaction tracking |
 | `/api/signaling/*` | Signaling | 8011 | WebSocket relay for sync |
 | `/api/registry/*` | Registry | 8019 | Plugin registry (optional) |
-| `/api/cocoon/*` | Cocoon Manager | 8020 | Cocoon orchestration (optional) |
+| `/api/hive/*` | Hive | 8020 | Cocoon orchestration (optional) |
 
 ### Direct Service Ports
 | Service | URL | Description |
@@ -470,7 +470,7 @@ AUTH_API_URL=http://adi.local/api/auth
 | Analytics API | http://localhost:8023 | Metrics, dashboards, aggregates |
 | LLM Proxy | http://localhost:8029 | LLM API proxy (BYOK/Platform) |
 | Balance API | http://localhost:8030 | Balance and transaction tracking |
-| Cocoon Manager | http://localhost:8020 | Cocoon orchestration (optional) |
+| Hive | http://localhost:8020 | Cocoon orchestration (optional) |
 | Registry | http://localhost:8019 | Plugin registry (optional) |
 
 ### Native Development (No Docker)

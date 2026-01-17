@@ -11,7 +11,7 @@ exclude = [
     "crates/adi-llm-uzu-plugin",
     # Nested workspaces (submodules with their own workspace roots)
     "crates/adi-executor",
-    "crates/cocoon-manager",
+    "crates/hive",
     "crates/adi-plugin-registry-http",
     "crates/tarminal-signaling-server",
 ]

@@ -39,7 +39,7 @@ options = [
     "balance",
     "cocoon",
     "registry",
-    "cocoon-manager"
+    "hive"
 ]
 if = "{{ action | starts_with('up') or action | starts_with('restart') }}"
 
@@ -62,7 +62,7 @@ options = [
     "balance",
     "cocoon",
     "registry",
-    "cocoon-manager"
+    "hive"
 ]
 default = "all"
 if = "{{ action | starts_with('logs') }}"
@@ -85,7 +85,7 @@ options = [
     "balance",
     "cocoon",
     "registry",
-    "cocoon-manager"
+    "hive"
 ]
 if = "{{ action | starts_with('shell') }}"
 
