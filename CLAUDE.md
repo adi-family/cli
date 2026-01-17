@@ -84,7 +84,7 @@ Several components follow a standard multi-crate structure within a single direc
 - `crates/adi-api-proxy/plugin` - API Proxy CLI plugin
 - `crates/adi-executor` - Docker-based task execution service
 - `crates/cocoon` - Containerized worker with signaling server connectivity for remote command execution
-- `crates/hive` - Hive: REST API for spawning and managing cocoon containers
+- `crates/hive` - Hive: WebSocket-based cocoon orchestration (spawns/manages containers via signaling server)
 - `crates/lib-misc-color` - Unified color type (RGB/RGBA/Hex)
 - `crates/lib-animation` - UI animation utilities
 - `crates/lib-syntax-highlight` - Syntax highlighting tokenizer
@@ -359,6 +359,7 @@ Interactive workflows are defined in `.adi/workflows/` directory. Each workflow 
 | `commit-submodule` | Commit changes in submodule and parent | `adi workflow commit-submodule` |
 | `lint-plugin` | Lint a plugin before release | `adi workflow lint-plugin` |
 | `seal` | Commit and push all changes including submodules | `adi workflow seal` |
+| `cocoon-images` | Build cocoon Docker image variants | `adi workflow cocoon-images` |
 
 ### Workflow Structure
 

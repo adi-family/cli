@@ -1,0 +1,89 @@
+# Cocoon Docker Images Workflow
+# Build and push cocoon image variants (alpine, debian, ubuntu, python, node, full, gpu, custom)
+
+[workflow]
+name = "cocoon-images"
+description = "Build and release cocoon Docker image variants"
+
+[[inputs]]
+name = "variants"
+type = "multi-select"
+prompt = "Select image variants to build"
+options = [
+    { value = "default", label = "All standard (alpine, debian, ubuntu, python, node, full)" },
+    { value = "minimal", label = "Minimal only (alpine, debian)" },
+    { value = "dev", label = "Dev only (ubuntu, python, node)" },
+    { value = "alpine", label = "Alpine (~15MB)" },
+    { value = "debian", label = "Debian (~100MB)" },
+    { value = "ubuntu", label = "Ubuntu (~150MB, default)" },
+    { value = "python", label = "Python (~180MB)" },
+    { value = "node", label = "Node.js (~200MB)" },
+    { value = "full", label = "Full (~500MB)" },
+    { value = "gpu", label = "GPU/CUDA (~2GB)" },
+]
+default = ["default"]
+
+[[inputs]]
+name = "push"
+type = "confirm"
+prompt = "Push images to registry?"
+default = false
+
+[[inputs]]
+name = "tag"
+type = "input"
+prompt = "Image tag (leave empty for 'latest')"
+default = ""
+
+[[inputs]]
+name = "platform"
+type = "select"
+prompt = "Target platform(s)"
+options = [
+    { value = "linux/amd64,linux/arm64", label = "Both amd64 + arm64 (slower)" },
+    { value = "linux/amd64", label = "amd64 only (faster)" },
+    { value = "linux/arm64", label = "arm64 only" },
+]
+default = "linux/amd64"
+
+[[steps]]
+name = "Build cocoon images"
+run = """
+VARIANTS="{{ variants | join(' ') }}"
+PUSH="{{ push }}"
+TAG="{{ tag }}"
+PLATFORM="{{ platform }}"
+
+# Build args
+ARGS=""
+
+# Handle variant selection
+if echo "$VARIANTS" | grep -q "default"; then
+    ARGS="--all"
+elif echo "$VARIANTS" | grep -q "minimal"; then
+    ARGS="--minimal"
+elif echo "$VARIANTS" | grep -q "dev"; then
+    ARGS="--dev"
+else
+    # Individual variants
+    for v in $VARIANTS; do
+        ARGS="$ARGS --variant $v"
+    done
+fi
+
+if [ "$PUSH" = "true" ]; then
+    ARGS="$ARGS --push"
+fi
+
+if [ -n "$TAG" ]; then
+    ARGS="$ARGS --tag $TAG"
+fi
+
+ARGS="$ARGS --platform $PLATFORM"
+
+info "Building cocoon images: $ARGS"
+
+"$PROJECT_ROOT/crates/cocoon/scripts/build-images.sh" $ARGS
+
+success "Cocoon images build complete!"
+"""
