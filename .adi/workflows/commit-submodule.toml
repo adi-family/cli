@@ -1,0 +1,34 @@
+# Commit Submodule Workflow
+# Commits changes in a submodule with AI-generated messages
+
+[workflow]
+name = "commit-submodule"
+description = "Commit changes in a submodule with AI-generated messages"
+
+[[inputs]]
+name = "submodule"
+type = "select"
+prompt = "Select submodule to commit"
+options_cmd = """
+git submodule status | awk '{print $2}' | sort
+"""
+autocomplete = true
+
+[[inputs]]
+name = "update_parent"
+type = "select"
+prompt = "Also commit submodule update in parent repo?"
+options = [
+    "yes - Commit parent reference",
+    "no - Only commit submodule"
+]
+default = "yes - Commit parent reference"
+
+[[steps]]
+name = "Commit submodule changes"
+run = """
+SUBMODULE="{{ submodule }}"
+UPDATE_PARENT="{{ update_parent | split(' ') | first }}"
+
+"$WORKFLOWS_DIR/commit-submodule.sh" "$SUBMODULE" --update-parent "$UPDATE_PARENT"
+"""

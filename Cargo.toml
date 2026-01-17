@@ -25,6 +25,7 @@ members = [
     "crates/lib/lib-typespec-api",
     "crates/lib/lib-task-store",
     "crates/lib/lib-i18n-core",
+    "crates/lib/lib-mcp-core",
 
     # Indexer components (flat submodules)
     "crates/lib/lib-embed",
@@ -36,6 +37,10 @@ members = [
     "crates/adi-tasks/core",
     "crates/adi-tasks/cli",
     "crates/adi-tasks/http",
+    "crates/adi-tasks/mcp",
+
+    # Workflow components
+    "crates/adi-workflow/mcp",
 
     # Linter components
     "crates/adi-linter/core",
@@ -201,6 +206,7 @@ lib-cli-common = { path = "crates/lib/lib-cli-common" }
 lib-migrations = { path = "crates/lib/lib-migrations" }
 lib-task-store = { path = "crates/lib/lib-task-store" }
 lib-analytics-core = { path = "crates/lib/lib-analytics-core" }
+lib-mcp-core = { path = "crates/lib/lib-mcp-core" }
 
 # API clients
 lib-client-github = { path = "crates/lib/lib-client/github" }

@@ -358,6 +358,7 @@ Interactive workflows are defined in `.adi/workflows/` directory. Each workflow 
 | `release-plugins` | Build and publish multiple plugins | `adi workflow release-plugins` |
 | `commit-submodule` | Commit changes in submodule and parent | `adi workflow commit-submodule` |
 | `lint-plugin` | Lint a plugin before release | `adi workflow lint-plugin` |
+| `seal` | Commit and push all changes including submodules | `adi workflow seal` |
 
 ### Workflow Structure
 

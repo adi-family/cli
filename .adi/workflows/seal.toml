@@ -1,0 +1,31 @@
+# Seal Workflow
+# Commit and push all changes including submodules
+
+[workflow]
+name = "seal"
+description = "Commit and push all changes including submodules"
+
+[[inputs]]
+name = "message"
+type = "input"
+prompt = "Commit message (leave empty for AI-generated)"
+default = ""
+
+[[inputs]]
+name = "push"
+type = "select"
+prompt = "Push after commit?"
+options = [
+    "yes - Push to remote",
+    "no - Commit only"
+]
+default = "yes - Push to remote"
+
+[[steps]]
+name = "Seal all changes"
+run = """
+MESSAGE="{{ message }}"
+PUSH="{{ push | split(' ') | first }}"
+
+"$WORKFLOWS_DIR/seal.sh" --message "$MESSAGE" --push "$PUSH"
+"""

@@ -1,0 +1,23 @@
+[package]
+name = "adi-workflow-mcp"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "MCP (Model Context Protocol) server for ADI Workflows"
+
+[[bin]]
+name = "adi-workflow-mcp"
+path = "src/main.rs"
+
+[dependencies]
+lib-mcp-core = { path = "../../lib/lib-mcp-core" }
+tokio = { version = "1.49", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dirs = "5"
+minijinja = "2"
+glob = "0.3"

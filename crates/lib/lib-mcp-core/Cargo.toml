@@ -1,0 +1,44 @@
+[package]
+name = "lib-mcp-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "MCP (Model Context Protocol) implementation with JSON-RPC transport"
+keywords = ["mcp", "model-context-protocol", "json-rpc", "llm", "tools"]
+categories = ["development-tools", "api-bindings"]
+
+[dependencies]
+# Error handling
+thiserror.workspace = true
+
+# Serialization
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+# Async runtime
+tokio = { workspace = true, features = ["io-util", "io-std", "sync", "macros", "rt"] }
+async-trait.workspace = true
+futures.workspace = true
+
+# HTTP for SSE transport
+reqwest = { workspace = true, features = ["stream"], optional = true }
+axum = { workspace = true, optional = true }
+tokio-stream = { version = "0.1", optional = true }
+async-stream = { version = "0.3", optional = true }
+
+# Logging
+tracing.workspace = true
+
+# Misc
+uuid = { workspace = true, features = ["v4"] }
+
+[features]
+default = ["stdio"]
+stdio = []
+sse-client = ["dep:reqwest", "dep:tokio-stream"]
+sse-server = ["dep:axum", "dep:tokio-stream", "dep:async-stream"]
+full = ["stdio", "sse-client", "sse-server"]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }
