@@ -10,6 +10,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use lib_http_common::version_header_layer;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -121,6 +122,10 @@ async fn main() -> Result<()> {
         .route("/files/*path", get(get_file))
         .route("/tree", get(get_tree))
         .route("/dead-code", get(find_dead_code))
+        .layer(version_header_layer(
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+        ))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(state);

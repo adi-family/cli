@@ -1,28 +1,26 @@
 use axum::{
-    extract::{Path, State},
     Json,
+    extract::{Path, State},
 };
 use lib_analytics_core::AnalyticsEvent;
 use uuid::Uuid;
 
 use crate::{
+    AppState,
     auth::AuthUser,
     error::{ApiError, ApiResult},
     models::{Balance, BalanceResponse, InitBalanceRequest},
-    AppState,
 };
 
 pub async fn get_my_balance(
     State(state): State<AppState>,
     user: AuthUser,
 ) -> ApiResult<Json<BalanceResponse>> {
-    let balance = sqlx::query_as::<_, Balance>(
-        "SELECT * FROM balances WHERE user_id = $1"
-    )
-    .bind(user.id)
-    .fetch_optional(state.db.pool())
-    .await?
-    .ok_or(ApiError::NotFound)?;
+    let balance = sqlx::query_as::<_, Balance>("SELECT * FROM balances WHERE user_id = $1")
+        .bind(user.id)
+        .fetch_optional(state.db.pool())
+        .await?
+        .ok_or(ApiError::NotFound)?;
 
     Ok(Json(BalanceResponse::from(balance)))
 }
@@ -31,13 +29,11 @@ pub async fn get_balance_by_user(
     State(state): State<AppState>,
     Path(user_id): Path<Uuid>,
 ) -> ApiResult<Json<BalanceResponse>> {
-    let balance = sqlx::query_as::<_, Balance>(
-        "SELECT * FROM balances WHERE user_id = $1"
-    )
-    .bind(user_id)
-    .fetch_optional(state.db.pool())
-    .await?
-    .ok_or(ApiError::NotFound)?;
+    let balance = sqlx::query_as::<_, Balance>("SELECT * FROM balances WHERE user_id = $1")
+        .bind(user_id)
+        .fetch_optional(state.db.pool())
+        .await?
+        .ok_or(ApiError::NotFound)?;
 
     Ok(Json(BalanceResponse::from(balance)))
 }
@@ -49,15 +45,16 @@ pub async fn init_balance(
 ) -> ApiResult<Json<BalanceResponse>> {
     let target_user_id = input.user_id.unwrap_or(user.id);
 
-    let existing = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM balances WHERE user_id = $1)"
-    )
-    .bind(target_user_id)
-    .fetch_one(state.db.pool())
-    .await?;
+    let existing =
+        sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM balances WHERE user_id = $1)")
+            .bind(target_user_id)
+            .fetch_one(state.db.pool())
+            .await?;
 
     if existing {
-        return Err(ApiError::Conflict("Balance already exists for this user".into()));
+        return Err(ApiError::Conflict(
+            "Balance already exists for this user".into(),
+        ));
     }
 
     let balance = sqlx::query_as::<_, Balance>(
@@ -65,7 +62,7 @@ pub async fn init_balance(
         INSERT INTO balances (user_id, amount, currency)
         VALUES ($1, 0, 'ADI_TOKEN')
         RETURNING *
-        "#
+        "#,
     )
     .bind(target_user_id)
     .fetch_one(state.db.pool())

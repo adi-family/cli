@@ -6,6 +6,7 @@ use axum::{
     routing::{delete, get, put},
     Json, Router,
 };
+use lib_http_common::version_header_layer;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -76,6 +77,10 @@ async fn main() {
         .route("/tasks/:id/link/:symbol_id", put(link_to_symbol))
         .route("/tasks/:id/link", delete(unlink_symbol))
         .with_state(state)
+        .layer(version_header_layer(
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+        ))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive());
 
@@ -126,7 +131,7 @@ async fn list_tasks(
                         return (
                             StatusCode::BAD_REQUEST,
                             Json(serde_json::json!({ "error": "Invalid status" })),
-                        )
+                        );
                     }
                 }
             } else {
@@ -220,7 +225,7 @@ async fn update_task(
                         return (
                             StatusCode::BAD_REQUEST,
                             Json(serde_json::json!({ "error": "Invalid status" })),
-                        )
+                        );
                     }
                 }
             }
@@ -267,7 +272,7 @@ async fn update_status(
                     return (
                         StatusCode::BAD_REQUEST,
                         Json(serde_json::json!({ "error": "Invalid status" })),
-                    )
+                    );
                 }
             };
 

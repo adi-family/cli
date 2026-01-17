@@ -6,6 +6,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use lib_http_common::version_header_layer;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -78,6 +79,10 @@ async fn main() {
         .route("/auth/verify", post(verify_code))
         .route("/auth/me", get(get_current_user))
         .with_state(state)
+        .layer(version_header_layer(
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+        ))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive());
 

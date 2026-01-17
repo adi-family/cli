@@ -15,6 +15,7 @@ use axum::{
     Router,
 };
 use lib_analytics_core::AnalyticsClient;
+use lib_http_common::version_header_layer;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -67,6 +68,10 @@ async fn main() -> anyhow::Result<()> {
         // Proxy API (proxy token auth)
         .nest("/v1", proxy_routes())
         // Layers
+        .layer(version_header_layer(
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+        ))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state);

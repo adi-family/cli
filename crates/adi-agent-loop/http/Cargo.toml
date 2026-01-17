@@ -21,3 +21,6 @@ tower-http = { version = "0.5", features = ["cors", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow = "1.0"
+
+# HTTP utilities
+lib-http-common = { path = "../../lib/lib-http-common" }

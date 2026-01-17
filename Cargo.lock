@@ -100,6 +100,7 @@ dependencies = [
  "adi-agent-loop-core",
  "anyhow",
  "axum",
+ "lib-http-common",
  "serde",
  "serde_json",
  "tokio",
@@ -171,6 +172,7 @@ dependencies = [
  "http 1.4.0",
  "jsonwebtoken",
  "lib-analytics-core",
+ "lib-http-common",
  "rust_decimal",
  "serde",
  "serde_json",
@@ -227,6 +229,7 @@ version = "0.8.4"
 dependencies = [
  "adi-auth-core",
  "axum",
+ "lib-http-common",
  "serde",
  "serde_json",
  "tokio",
@@ -360,6 +363,23 @@ dependencies = [
  "tokio-test",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "adi-coolify-http"
+version = "0.8.4"
+dependencies = [
+ "adi-coolify-core",
+ "anyhow",
+ "axum",
+ "lib-http-common",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower 0.4.13",
+ "tower-http 0.5.2",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -520,6 +540,7 @@ dependencies = [
  "adi-indexer-core",
  "anyhow",
  "axum",
+ "lib-http-common",
  "serde",
  "serde_json",
  "tokio",
@@ -588,6 +609,7 @@ dependencies = [
  "anyhow",
  "axum",
  "futures",
+ "lib-http-common",
  "lib-mcp-core",
  "serde",
  "serde_json",
@@ -849,6 +871,7 @@ version = "0.8.3"
 dependencies = [
  "adi-tasks-core",
  "axum",
+ "lib-http-common",
  "serde",
  "serde_json",
  "tokio",
@@ -5475,6 +5498,14 @@ dependencies = [
  "thiserror 2.0.17",
  "toml 0.8.23",
  "tracing",
+]
+
+[[package]]
+name = "lib-http-common"
+version = "0.8.4"
+dependencies = [
+ "http 1.4.0",
+ "tower 0.4.13",
 ]
 
 [[package]]

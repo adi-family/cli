@@ -1,5 +1,5 @@
-use std::env;
 use anyhow::{Context, Result};
+use std::env;
 
 #[derive(Clone)]
 pub struct Config {
@@ -18,14 +18,12 @@ impl Config {
                 .unwrap_or_else(|_| "8030".to_string())
                 .parse()
                 .context("Invalid PORT")?,
-            database_url: env::var("DATABASE_URL")
-                .context("DATABASE_URL is required")?,
+            database_url: env::var("DATABASE_URL").context("DATABASE_URL is required")?,
             database_max_connections: env::var("DATABASE_MAX_CONNECTIONS")
                 .unwrap_or_else(|_| "10".to_string())
                 .parse()
                 .context("Invalid DATABASE_MAX_CONNECTIONS")?,
-            jwt_secret: env::var("JWT_SECRET")
-                .context("JWT_SECRET is required")?,
+            jwt_secret: env::var("JWT_SECRET").context("JWT_SECRET is required")?,
         })
     }
 }

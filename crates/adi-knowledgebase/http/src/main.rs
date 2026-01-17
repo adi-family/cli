@@ -7,6 +7,7 @@ use axum::{
     routing::{delete, get, post},
     Json, Router,
 };
+use lib_http_common::version_header_layer;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -123,11 +124,19 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .merge(rest_router)
         .nest("/mcp", mcp_router)
+        .layer(version_header_layer(
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+        ))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
 
     #[cfg(not(feature = "mcp"))]
     let app = rest_router
+        .layer(version_header_layer(
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+        ))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
 

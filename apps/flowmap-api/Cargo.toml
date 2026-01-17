@@ -25,3 +25,6 @@ walkdir = "2.5"
 
 # Enable vendored OpenSSL for cross-compilation
 openssl = { version = "0.10", features = ["vendored"] }
+
+# HTTP utilities
+lib-http-common = { path = "../../crates/lib/lib-http-common" }

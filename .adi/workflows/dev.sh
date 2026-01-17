@@ -295,7 +295,8 @@ start_service() {
     pf=$(pid_file "$service")
 
     # Service-specific environment setup
-    local env_cmd="PORT=$port"
+    # Enable version headers in responses for debugging
+    local env_cmd="PORT=$port SHOW_VERSION_IN_HEADERS=true"
     case "$service" in
         cocoon)
             local signaling_port

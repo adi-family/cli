@@ -5,6 +5,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use lib_http_common::version_header_layer;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -110,6 +111,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(health_check))
         .route("/api/status", get(get_status))
         .route("/api/run", post(run_agent))
+        .layer(version_header_layer(
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+        ))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
         .with_state(state);

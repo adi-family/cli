@@ -21,6 +21,7 @@ members = [
 
     # Shared libraries
     "crates/lib/lib-cli-common",
+    "crates/lib/lib-http-common",
     "crates/lib/lib-migrations",
     "crates/lib/lib-typespec-api",
     "crates/lib/lib-task-store",
@@ -129,6 +130,8 @@ members = [
     "crates/adi-knowledgebase/plugin",
     "crates/adi-agent-loop/plugin",
     "crates/adi-linter/plugin",
+    "crates/adi-coolify/core",
+    "crates/adi-coolify/http",
     "crates/adi-coolify/plugin",
     "crates/adi-workflow/plugin",
     "crates/adi-api-proxy/plugin",
@@ -203,6 +206,7 @@ lib-iced-ui = { path = "crates/lib/lib-iced-ui" }
 lib-tarminal-sync = { path = "crates/lib/lib-tarminal-sync" }
 lib-embed = { path = "crates/lib/lib-embed" }
 lib-cli-common = { path = "crates/lib/lib-cli-common" }
+lib-http-common = { path = "crates/lib/lib-http-common" }
 lib-migrations = { path = "crates/lib/lib-migrations" }
 lib-task-store = { path = "crates/lib/lib-task-store" }
 lib-analytics-core = { path = "crates/lib/lib-analytics-core" }

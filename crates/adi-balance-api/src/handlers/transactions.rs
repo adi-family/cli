@@ -1,18 +1,18 @@
 use axum::{
-    extract::{Path, Query, State},
     Json,
+    extract::{Path, Query, State},
 };
 use lib_analytics_core::AnalyticsEvent;
 use uuid::Uuid;
 
 use crate::{
+    AppState,
     auth::AuthUser,
     error::{ApiError, ApiResult},
     models::{
         Balance, CheckBalanceRequest, CheckBalanceResponse, DebitRequest, DepositRequest,
         Transaction, TransactionQuery, TransactionResponse,
     },
-    AppState,
 };
 
 pub async fn deposit(
@@ -25,7 +25,7 @@ pub async fn deposit(
 
     if let Some(key) = &input.idempotency_key {
         let existing = sqlx::query_as::<_, Transaction>(
-            "SELECT * FROM transactions WHERE user_id = $1 AND idempotency_key = $2"
+            "SELECT * FROM transactions WHERE user_id = $1 AND idempotency_key = $2",
         )
         .bind(input.user_id)
         .bind(key)
@@ -39,13 +39,12 @@ pub async fn deposit(
 
     let mut db_tx = state.db.pool().begin().await?;
 
-    let balance = sqlx::query_as::<_, Balance>(
-        "SELECT * FROM balances WHERE user_id = $1 FOR UPDATE"
-    )
-    .bind(input.user_id)
-    .fetch_optional(&mut *db_tx)
-    .await?
-    .ok_or(ApiError::NotFound)?;
+    let balance =
+        sqlx::query_as::<_, Balance>("SELECT * FROM balances WHERE user_id = $1 FOR UPDATE")
+            .bind(input.user_id)
+            .fetch_optional(&mut *db_tx)
+            .await?
+            .ok_or(ApiError::NotFound)?;
 
     let new_amount = balance.amount + input.amount;
 
@@ -55,14 +54,16 @@ pub async fn deposit(
         SET amount = $1, version = version + 1, updated_at = NOW()
         WHERE id = $2 AND version = $3
         RETURNING *
-        "#
+        "#,
     )
     .bind(new_amount)
     .bind(balance.id)
     .bind(balance.version)
     .fetch_optional(&mut *db_tx)
     .await?
-    .ok_or(ApiError::Conflict("Balance was modified concurrently".into()))?;
+    .ok_or(ApiError::Conflict(
+        "Balance was modified concurrently".into(),
+    ))?;
 
     let metadata = if input.metadata.is_null() {
         serde_json::json!({})
@@ -78,7 +79,7 @@ pub async fn deposit(
              reference_id, idempotency_key, metadata)
         VALUES ($1, $2, 'deposit', 'completed', $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
-        "#
+        "#,
     )
     .bind(input.user_id)
     .bind(balance.id)
@@ -115,7 +116,7 @@ pub async fn debit(
 
     if let Some(key) = &input.idempotency_key {
         let existing = sqlx::query_as::<_, Transaction>(
-            "SELECT * FROM transactions WHERE user_id = $1 AND idempotency_key = $2"
+            "SELECT * FROM transactions WHERE user_id = $1 AND idempotency_key = $2",
         )
         .bind(input.user_id)
         .bind(key)
@@ -129,13 +130,12 @@ pub async fn debit(
 
     let mut db_tx = state.db.pool().begin().await?;
 
-    let balance = sqlx::query_as::<_, Balance>(
-        "SELECT * FROM balances WHERE user_id = $1 FOR UPDATE"
-    )
-    .bind(input.user_id)
-    .fetch_optional(&mut *db_tx)
-    .await?
-    .ok_or(ApiError::NotFound)?;
+    let balance =
+        sqlx::query_as::<_, Balance>("SELECT * FROM balances WHERE user_id = $1 FOR UPDATE")
+            .bind(input.user_id)
+            .fetch_optional(&mut *db_tx)
+            .await?
+            .ok_or(ApiError::NotFound)?;
 
     if balance.amount < input.amount {
         state.analytics.track(AnalyticsEvent::BalanceInsufficient {
@@ -155,14 +155,16 @@ pub async fn debit(
         SET amount = $1, version = version + 1, updated_at = NOW()
         WHERE id = $2 AND version = $3
         RETURNING *
-        "#
+        "#,
     )
     .bind(new_amount)
     .bind(balance.id)
     .bind(balance.version)
     .fetch_optional(&mut *db_tx)
     .await?
-    .ok_or(ApiError::Conflict("Balance was modified concurrently".into()))?;
+    .ok_or(ApiError::Conflict(
+        "Balance was modified concurrently".into(),
+    ))?;
 
     let metadata = if input.metadata.is_null() {
         serde_json::json!({})
@@ -178,7 +180,7 @@ pub async fn debit(
              reference_id, idempotency_key, metadata)
         VALUES ($1, $2, 'debit', 'completed', $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
-        "#
+        "#,
     )
     .bind(input.user_id)
     .bind(balance.id)
@@ -209,13 +211,11 @@ pub async fn check_balance(
     State(state): State<AppState>,
     Json(input): Json<CheckBalanceRequest>,
 ) -> ApiResult<Json<CheckBalanceResponse>> {
-    let balance = sqlx::query_as::<_, Balance>(
-        "SELECT * FROM balances WHERE user_id = $1"
-    )
-    .bind(input.user_id)
-    .fetch_optional(state.db.pool())
-    .await?
-    .ok_or(ApiError::NotFound)?;
+    let balance = sqlx::query_as::<_, Balance>("SELECT * FROM balances WHERE user_id = $1")
+        .bind(input.user_id)
+        .fetch_optional(state.db.pool())
+        .await?
+        .ok_or(ApiError::NotFound)?;
 
     let sufficient = balance.amount >= input.amount;
     let shortfall = if sufficient {
@@ -246,7 +246,7 @@ pub async fn list_transactions(
         WHERE user_id = $1
         ORDER BY created_at DESC
         LIMIT $2 OFFSET $3
-        "#
+        "#,
     )
     .bind(user.id)
     .bind(limit)
@@ -268,7 +268,7 @@ pub async fn get_transaction(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<TransactionResponse>> {
     let transaction = sqlx::query_as::<_, Transaction>(
-        "SELECT * FROM transactions WHERE id = $1 AND user_id = $2"
+        "SELECT * FROM transactions WHERE id = $1 AND user_id = $2",
     )
     .bind(id)
     .bind(user.id)

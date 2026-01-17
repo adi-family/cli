@@ -10,6 +10,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use lib_http_common::version_header_layer;
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -193,7 +194,12 @@ async fn get_deployments(
         .services
         .iter()
         .find(|s| s.id == service_id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Service not found: {}", service_id)))?;
+        .ok_or_else(|| {
+            (
+                StatusCode::NOT_FOUND,
+                format!("Service not found: {}", service_id),
+            )
+        })?;
 
     let deployments = state
         .client
@@ -241,8 +247,8 @@ async fn main() -> anyhow::Result<()> {
     // Get configuration from environment
     let coolify_url =
         std::env::var("COOLIFY_URL").unwrap_or_else(|_| "http://in.the-ihor.com".to_string());
-    let api_key = std::env::var("COOLIFY_API_KEY")
-        .expect("COOLIFY_API_KEY environment variable is required");
+    let api_key =
+        std::env::var("COOLIFY_API_KEY").expect("COOLIFY_API_KEY environment variable is required");
     let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|p| p.parse().ok())
@@ -265,6 +271,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/deploy/:service_id", post(deploy_service))
         .route("/api/deployments/:service_id", get(get_deployments))
         .route("/api/logs/:deployment_uuid", get(get_logs))
+        .layer(version_header_layer(
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+        ))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
         .with_state(state);

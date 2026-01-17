@@ -1,12 +1,13 @@
 use axum::{
+    Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
     routing::{get, post},
-    Router,
 };
 use lib_flowmap_core::*;
 use lib_flowmap_parser::{FlowParser, MultiLangParser};
+use lib_http_common::version_header_layer;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -94,6 +95,10 @@ async fn main() {
         .route("/api/v2/blocks", get(get_blocks))
         .route("/api/v2/blocks/{id}", get(get_block))
         .route("/api/v2/languages", get(get_supported_languages))
+        .layer(version_header_layer(
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+        ))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state);
@@ -163,7 +168,9 @@ async fn list_flows(
     if let Some(index) = indexes.get(&query.path) {
         Json(ApiResponse::ok(index.summaries()))
     } else {
-        Json(ApiResponse::err("Path not parsed yet. Call /api/parse first."))
+        Json(ApiResponse::err(
+            "Path not parsed yet. Call /api/parse first.",
+        ))
     }
 }
 
@@ -181,7 +188,9 @@ async fn get_flow(
         return Json(ApiResponse::err(&format!("Flow not found: {}", id)));
     }
 
-    Json(ApiResponse::err("Path not parsed yet. Call /api/parse first."))
+    Json(ApiResponse::err(
+        "Path not parsed yet. Call /api/parse first.",
+    ))
 }
 
 async fn get_flow_issues(
@@ -199,7 +208,9 @@ async fn get_flow_issues(
         return Json(ApiResponse::err(&format!("Flow not found: {}", id)));
     }
 
-    Json(ApiResponse::err("Path not parsed yet. Call /api/parse first."))
+    Json(ApiResponse::err(
+        "Path not parsed yet. Call /api/parse first.",
+    ))
 }
 
 fn detect_issues(flow: &FlowGraph) -> Vec<FlowIssue> {
@@ -254,7 +265,9 @@ async fn get_source(
         return Json(ApiResponse::err(&format!("Node not found: {}", node_id)));
     }
 
-    Json(ApiResponse::err("Path not parsed yet. Call /api/parse first."))
+    Json(ApiResponse::err(
+        "Path not parsed yet. Call /api/parse first.",
+    ))
 }
 
 // ============================================================================
@@ -345,7 +358,11 @@ async fn parse_blocks(
 
     // Store the index
     let key = query.path.clone();
-    state.block_indexes.write().unwrap().insert(key, combined_output);
+    state
+        .block_indexes
+        .write()
+        .unwrap()
+        .insert(key, combined_output);
 
     Ok(Json(ApiResponse::ok(response)))
 }
@@ -381,7 +398,9 @@ async fn get_blocks(
     if let Some(output) = indexes.get(&query.path) {
         Json(ApiResponse::ok(output.clone()))
     } else {
-        Json(ApiResponse::err("Path not parsed yet. Call /api/v2/parse first."))
+        Json(ApiResponse::err(
+            "Path not parsed yet. Call /api/v2/parse first.",
+        ))
     }
 }
 
@@ -401,7 +420,9 @@ async fn get_block(
         return Json(ApiResponse::err(&format!("Block not found: {}", id)));
     }
 
-    Json(ApiResponse::err("Path not parsed yet. Call /api/v2/parse first."))
+    Json(ApiResponse::err(
+        "Path not parsed yet. Call /api/v2/parse first.",
+    ))
 }
 
 #[derive(Debug, Serialize)]
@@ -413,7 +434,15 @@ struct LanguagesResponse {
 /// Get list of supported languages and extensions
 async fn get_supported_languages() -> Json<ApiResponse<LanguagesResponse>> {
     Json(ApiResponse::ok(LanguagesResponse {
-        languages: vec!["typescript", "javascript", "tsx", "jsx", "python", "java", "rust"],
+        languages: vec![
+            "typescript",
+            "javascript",
+            "tsx",
+            "jsx",
+            "python",
+            "java",
+            "rust",
+        ],
         extensions: MultiLangParser::supported_extensions().to_vec(),
     }))
 }

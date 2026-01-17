@@ -2,11 +2,11 @@ use axum::{
     extract::FromRequestParts,
     http::{header::AUTHORIZATION, header::COOKIE, request::Parts},
 };
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{error::ApiError, AppState};
+use crate::{AppState, error::ApiError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -23,7 +23,11 @@ pub struct AuthUser {
 }
 
 fn extract_token(parts: &Parts) -> Option<String> {
-    if let Some(auth_header) = parts.headers.get(AUTHORIZATION).and_then(|v| v.to_str().ok()) {
+    if let Some(auth_header) = parts
+        .headers
+        .get(AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+    {
         if let Some(token) = auth_header.strip_prefix("Bearer ") {
             return Some(token.to_string());
         }

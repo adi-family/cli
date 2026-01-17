@@ -1,0 +1,11 @@
+[package]
+name = "lib-http-common"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Common HTTP utilities for ADI services"
+
+[dependencies]
+http = { workspace = true }
+tower = { workspace = true }

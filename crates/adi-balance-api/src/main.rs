@@ -2,27 +2,27 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::{
-    Router,
-    routing::{get, post},
+    Json, Router,
+    http::{HeaderValue, Method, header},
     response::IntoResponse,
-    Json,
-    http::{Method, HeaderValue, header},
+    routing::{get, post},
 };
 use sqlx::postgres::PgPoolOptions;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+mod auth;
 mod config;
 mod db;
 mod error;
 mod handlers;
-mod models;
-mod auth;
 mod middleware;
+mod models;
 
 use config::Config;
 use db::Database;
 use lib_analytics_core::AnalyticsClient;
+use lib_http_common::version_header_layer;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -36,8 +36,10 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| "adi_balance_api=debug,tower_http=debug".into()))
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "adi_balance_api=debug,tower_http=debug".into()),
+        )
         .with(tracing_subscriber::fmt::layer())
         .init();
 
@@ -50,17 +52,13 @@ async fn main() -> anyhow::Result<()> {
         .await
         .map_err(|e| {
             let safe_url = redact_password(&config.database_url);
-            anyhow::anyhow!(
-                "Failed to connect to database at '{}': {}",
-                safe_url,
-                e
-            )
+            anyhow::anyhow!("Failed to connect to database at '{}': {}", safe_url, e)
         })?;
 
     let db = Database::new(pool.clone());
 
-    let analytics_url = std::env::var("ANALYTICS_URL")
-        .unwrap_or_else(|_| "http://localhost:8094".to_string());
+    let analytics_url =
+        std::env::var("ANALYTICS_URL").unwrap_or_else(|_| "http://localhost:8094".to_string());
 
     let analytics_client = AnalyticsClient::new(analytics_url);
     tracing::info!("Analytics client initialized");
@@ -76,9 +74,15 @@ async fn main() -> anyhow::Result<()> {
             std::env::var("CORS_ORIGIN")
                 .unwrap_or_else(|_| "http://localhost:8013".to_string())
                 .parse::<HeaderValue>()
-                .expect("Invalid CORS_ORIGIN")
+                .expect("Invalid CORS_ORIGIN"),
         )
-        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
         .allow_headers([
             header::CONTENT_TYPE,
             header::AUTHORIZATION,
@@ -91,15 +95,34 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(health_check))
         .route("/balances/me", get(handlers::balances::get_my_balance))
         .route("/balances/init", post(handlers::balances::init_balance))
-        .route("/balances/{user_id}", get(handlers::balances::get_balance_by_user))
-        .route("/transactions", get(handlers::transactions::list_transactions))
-        .route("/transactions/deposit", post(handlers::transactions::deposit))
+        .route(
+            "/balances/{user_id}",
+            get(handlers::balances::get_balance_by_user),
+        )
+        .route(
+            "/transactions",
+            get(handlers::transactions::list_transactions),
+        )
+        .route(
+            "/transactions/deposit",
+            post(handlers::transactions::deposit),
+        )
         .route("/transactions/debit", post(handlers::transactions::debit))
-        .route("/transactions/check", post(handlers::transactions::check_balance))
-        .route("/transactions/{id}", get(handlers::transactions::get_transaction))
+        .route(
+            "/transactions/check",
+            post(handlers::transactions::check_balance),
+        )
+        .route(
+            "/transactions/{id}",
+            get(handlers::transactions::get_transaction),
+        )
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             middleware::analytics_middleware,
+        ))
+        .layer(version_header_layer(
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
         ))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
