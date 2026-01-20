@@ -1,8 +1,10 @@
 import { LitElement, html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./loading-indicators";
+import "./buttons";
+import "./inputs";
 
-type TabId = "loading" | "buttons" | "inputs" | "feedback";
+type TabId = "loading" | "speceffects" | "fullpageeffects" | "buttons" | "inputs" | "feedback";
 
 interface ComponentInfo {
   name: string;
@@ -55,15 +57,6 @@ export class ComponentsPage extends LitElement {
       ],
     },
     {
-      name: "Particle Explosion",
-      tag: "particle-explosion",
-      description: "Canvas-based particles that burst and regenerate",
-      props: [
-        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the canvas" },
-        { name: "label", type: "string", description: "Optional label below" },
-      ],
-    },
-    {
       name: "Gradient Sweep",
       tag: "gradient-sweep",
       description: "Circular progress with animated sweeping gradient",
@@ -80,6 +73,231 @@ export class ComponentsPage extends LitElement {
         { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the bars" },
         { name: "bars", type: "number", default: "5", description: "Number of bars" },
         { name: "label", type: "string", description: "Optional label below" },
+      ],
+    },
+  ];
+
+  private specEffectsComponents: ComponentInfo[] = [
+    {
+      name: "Particle Explosion",
+      tag: "particle-explosion",
+      description: "Canvas-based particles that burst and regenerate",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the canvas" },
+        { name: "label", type: "string", description: "Optional label below" },
+      ],
+    },
+    {
+      name: "Confetti Burst",
+      tag: "confetti-burst",
+      description: "Colorful confetti explosion for congratulations",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the canvas" },
+        { name: "label", type: "string", description: "Optional label below" },
+      ],
+    },
+    {
+      name: "Sparkle Burst",
+      tag: "sparkle-burst",
+      description: "Radiating star sparkles for attention and highlights",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the canvas" },
+        { name: "label", type: "string", description: "Optional label below" },
+      ],
+    },
+    {
+      name: "Fireworks",
+      tag: "fireworks-effect",
+      description: "Rising rockets that explode into colorful sparks",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the canvas" },
+        { name: "label", type: "string", description: "Optional label below" },
+      ],
+    },
+  ];
+
+  private fullPageEffectsComponents: ComponentInfo[] = [
+    {
+      name: "Fullpage Confetti",
+      tag: "fullpage-confetti",
+      description: "Full-screen confetti overlay for celebrations and achievements",
+      props: [
+        { name: "intensity", type: "number", default: "80", description: "Number of confetti pieces per burst" },
+        { name: "duration", type: "number", default: "3000", description: "Effect duration in ms" },
+      ],
+    },
+    {
+      name: "Fullpage Fireworks",
+      tag: "fullpage-fireworks",
+      description: "Full-screen fireworks overlay with rockets and explosions",
+      props: [
+        { name: "rockets", type: "number", default: "5", description: "Number of rockets to launch" },
+      ],
+    },
+    {
+      name: "Fullpage Aurora",
+      tag: "fullpage-aurora",
+      description: "Northern lights overlay effect for ambient celebrations",
+      props: [
+        { name: "duration", type: "number", default: "4000", description: "Effect duration in ms" },
+      ],
+    },
+    {
+      name: "Fullpage Starfield",
+      tag: "fullpage-starfield",
+      description: "Warp speed starfield overlay for level-ups and achievements",
+      props: [
+        { name: "duration", type: "number", default: "3000", description: "Effect duration in ms" },
+        { name: "speed", type: "number", default: "15", description: "Star travel speed" },
+      ],
+    },
+  ];
+
+  private buttonComponents: ComponentInfo[] = [
+    {
+      name: "Primary Button",
+      tag: "primary-button",
+      description: "Main call-to-action button with gradient background",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the button" },
+        { name: "label", type: "string", default: '"Button"', description: "Button text" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable the button" },
+        { name: "loading", type: "boolean", default: "false", description: "Show loading spinner" },
+      ],
+    },
+    {
+      name: "Secondary Button",
+      tag: "secondary-button",
+      description: "Outlined button for secondary actions",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the button" },
+        { name: "label", type: "string", default: '"Button"', description: "Button text" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable the button" },
+        { name: "loading", type: "boolean", default: "false", description: "Show loading spinner" },
+      ],
+    },
+    {
+      name: "Ghost Button",
+      tag: "ghost-button",
+      description: "Subtle button with no background",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the button" },
+        { name: "label", type: "string", default: '"Button"', description: "Button text" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable the button" },
+        { name: "loading", type: "boolean", default: "false", description: "Show loading spinner" },
+      ],
+    },
+    {
+      name: "Danger Button",
+      tag: "danger-button",
+      description: "Red button for destructive actions",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the button" },
+        { name: "label", type: "string", default: '"Delete"', description: "Button text" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable the button" },
+        { name: "loading", type: "boolean", default: "false", description: "Show loading spinner" },
+      ],
+    },
+    {
+      name: "Icon Button",
+      tag: "icon-button",
+      description: "Square button for icon-only actions",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the button" },
+        { name: "icon", type: "string", description: "Icon content (emoji or slot)" },
+        { name: "label", type: "string", description: "Accessible label / tooltip" },
+        { name: "variant", type: '"default" | "primary" | "danger"', default: '"default"', description: "Visual style" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable the button" },
+      ],
+    },
+    {
+      name: "Button Group",
+      tag: "button-group",
+      description: "Segmented control for selecting one option from a group",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the buttons" },
+        { name: "value", type: "string", default: '""', description: "Selected value" },
+        { name: "options", type: "ButtonGroupOption[]", description: "Array of options {value, label, disabled?}" },
+        { name: "variant", type: '"default" | "primary"', default: '"default"', description: "Visual style" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable all buttons" },
+      ],
+    },
+  ];
+
+  private inputComponents: ComponentInfo[] = [
+    {
+      name: "Text Input",
+      tag: "text-input",
+      description: "Standard text input field with label and validation",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the input" },
+        { name: "value", type: "string", default: '""', description: "Input value" },
+        { name: "placeholder", type: "string", default: '"Enter text..."', description: "Placeholder text" },
+        { name: "label", type: "string", description: "Label above input" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable the input" },
+        { name: "error", type: "boolean", default: "false", description: "Show error state" },
+        { name: "errorMessage", type: "string", description: "Error message to display" },
+      ],
+    },
+    {
+      name: "Search Input",
+      tag: "search-input",
+      description: "Search field with icon and clear button",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the input" },
+        { name: "value", type: "string", default: '""', description: "Search value" },
+        { name: "placeholder", type: "string", default: '"Search..."', description: "Placeholder text" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable the input" },
+        { name: "loading", type: "boolean", default: "false", description: "Show loading spinner" },
+      ],
+    },
+    {
+      name: "Textarea",
+      tag: "textarea-input",
+      description: "Multi-line text input for longer content",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the textarea" },
+        { name: "value", type: "string", default: '""', description: "Textarea value" },
+        { name: "placeholder", type: "string", default: '"Enter text..."', description: "Placeholder text" },
+        { name: "label", type: "string", description: "Label above textarea" },
+        { name: "rows", type: "number", default: "4", description: "Number of visible rows" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable the textarea" },
+        { name: "error", type: "boolean", default: "false", description: "Show error state" },
+      ],
+    },
+    {
+      name: "Select",
+      tag: "select-input",
+      description: "Dropdown select with custom styling",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the select" },
+        { name: "value", type: "string", default: '""', description: "Selected value" },
+        { name: "placeholder", type: "string", default: '"Select option..."', description: "Placeholder text" },
+        { name: "label", type: "string", description: "Label above select" },
+        { name: "options", type: "SelectOption[]", description: "Array of options" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable the select" },
+      ],
+    },
+    {
+      name: "Checkbox",
+      tag: "checkbox-input",
+      description: "Checkbox with optional label",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the checkbox" },
+        { name: "checked", type: "boolean", default: "false", description: "Checked state" },
+        { name: "label", type: "string", description: "Label next to checkbox" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable the checkbox" },
+      ],
+    },
+    {
+      name: "Toggle",
+      tag: "toggle-input",
+      description: "Toggle switch for on/off states",
+      props: [
+        { name: "size", type: '"sm" | "md" | "lg"', default: '"md"', description: "Size of the toggle" },
+        { name: "checked", type: "boolean", default: "false", description: "Checked state" },
+        { name: "label", type: "string", description: "Label next to toggle" },
+        { name: "disabled", type: "boolean", default: "false", description: "Disable the toggle" },
       ],
     },
   ];
@@ -214,7 +432,6 @@ export class ComponentsPage extends LitElement {
       background: #13101c;
       border-radius: 1rem;
       border: 1px solid rgba(255, 255, 255, 0.1);
-      overflow: hidden;
     }
 
     .main-header {
@@ -378,13 +595,75 @@ export class ComponentsPage extends LitElement {
         return html`<gradient-sweep size="sm"></gradient-sweep>`;
       case "wave-bar":
         return html`<wave-bar size="sm" bars="3"></wave-bar>`;
+      case "confetti-burst":
+        return html`<confetti-burst size="sm"></confetti-burst>`;
+      case "sparkle-burst":
+        return html`<sparkle-burst size="sm"></sparkle-burst>`;
+      case "fireworks-effect":
+        return html`<fireworks-effect size="sm"></fireworks-effect>`;
+      // Full-page effects (show mini preview)
+      case "fullpage-confetti":
+        return html`<confetti-burst size="sm"></confetti-burst>`;
+      case "fullpage-fireworks":
+        return html`<fireworks-effect size="sm"></fireworks-effect>`;
+      case "fullpage-aurora":
+        return html`<div style="width: 32px; height: 32px; background: linear-gradient(135deg, #a78bfa, #67e8f9, #4ade80); border-radius: 4px; opacity: 0.8;"></div>`;
+      case "fullpage-starfield":
+        return html`<div style="width: 32px; height: 32px; background: radial-gradient(circle, #1a1030 0%, #0a0815 100%); border-radius: 4px; position: relative;">
+          <div style="position: absolute; width: 2px; height: 2px; background: white; top: 8px; left: 10px; border-radius: 50%;"></div>
+          <div style="position: absolute; width: 1px; height: 1px; background: white; top: 15px; left: 20px; border-radius: 50%;"></div>
+          <div style="position: absolute; width: 2px; height: 2px; background: #a78bfa; top: 20px; left: 8px; border-radius: 50%;"></div>
+        </div>`;
+      // Buttons
+      case "primary-button":
+        return html`<primary-button size="sm" label="Btn"></primary-button>`;
+      case "secondary-button":
+        return html`<secondary-button size="sm" label="Btn"></secondary-button>`;
+      case "ghost-button":
+        return html`<ghost-button size="sm" label="Btn"></ghost-button>`;
+      case "danger-button":
+        return html`<danger-button size="sm" label="Del"></danger-button>`;
+      case "icon-button":
+        return html`<icon-button size="sm" icon="+" variant="primary"></icon-button>`;
+      case "button-group":
+        return html`<button-group size="sm" value="a" .options=${[{ value: "a", label: "A" }, { value: "b", label: "B" }]}></button-group>`;
+      // Inputs
+      case "text-input":
+        return html`<text-input size="sm" placeholder="Text" style="width: 60px;"></text-input>`;
+      case "search-input":
+        return html`<search-input size="sm" placeholder="..." style="width: 60px;"></search-input>`;
+      case "textarea-input":
+        return html`<textarea-input size="sm" placeholder="..." rows="1" style="width: 60px;"></textarea-input>`;
+      case "select-input":
+        return html`<select-input size="sm" placeholder="..." style="width: 60px;"></select-input>`;
+      case "checkbox-input":
+        return html`<checkbox-input size="sm"></checkbox-input>`;
+      case "toggle-input":
+        return html`<toggle-input size="sm"></toggle-input>`;
       default:
         return html``;
     }
   }
 
+  private getComponentsForTab(): ComponentInfo[] {
+    switch (this.activeTab) {
+      case "loading":
+        return this.loadingComponents;
+      case "speceffects":
+        return this.specEffectsComponents;
+      case "fullpageeffects":
+        return this.fullPageEffectsComponents;
+      case "buttons":
+        return this.buttonComponents;
+      case "inputs":
+        return this.inputComponents;
+      default:
+        return [];
+    }
+  }
+
   private renderSidebar() {
-    const components = this.activeTab === "loading" ? this.loadingComponents : [];
+    const components = this.getComponentsForTab();
 
     return html`
       <div class="sidebar">
@@ -526,6 +805,409 @@ export class ComponentsPage extends LitElement {
             </div>
           </div>
         `;
+      case "confetti-burst":
+        return html`
+          <div class="preview-sizes">
+            <div class="preview-item">
+              <confetti-burst size="sm"></confetti-burst>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <confetti-burst size="md"></confetti-burst>
+              <span>Medium</span>
+            </div>
+            <div class="preview-item">
+              <confetti-burst size="lg"></confetti-burst>
+              <span>Large</span>
+            </div>
+          </div>
+        `;
+      case "sparkle-burst":
+        return html`
+          <div class="preview-sizes">
+            <div class="preview-item">
+              <sparkle-burst size="sm"></sparkle-burst>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <sparkle-burst size="md"></sparkle-burst>
+              <span>Medium</span>
+            </div>
+            <div class="preview-item">
+              <sparkle-burst size="lg"></sparkle-burst>
+              <span>Large</span>
+            </div>
+          </div>
+        `;
+      case "fireworks-effect":
+        return html`
+          <div class="preview-sizes">
+            <div class="preview-item">
+              <fireworks-effect size="sm"></fireworks-effect>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <fireworks-effect size="md"></fireworks-effect>
+              <span>Medium</span>
+            </div>
+            <div class="preview-item">
+              <fireworks-effect size="lg"></fireworks-effect>
+              <span>Large</span>
+            </div>
+          </div>
+        `;
+      // Full-page effects - show trigger button
+      case "fullpage-confetti":
+        return html`
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+            <button
+              @click=${() => (this.shadowRoot?.querySelector("fullpage-confetti") as any)?.trigger()}
+              style="padding: 1rem 2rem; background: linear-gradient(135deg, #8b5cf6, #ec4899); border: none; border-radius: 0.5rem; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;"
+            >
+              Trigger Confetti
+            </button>
+            <span style="color: #6b7280; font-size: 0.875rem;">Click to see full-page effect</span>
+            <fullpage-confetti></fullpage-confetti>
+          </div>
+        `;
+      case "fullpage-fireworks":
+        return html`
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+            <button
+              @click=${() => (this.shadowRoot?.querySelector("fullpage-fireworks") as any)?.trigger()}
+              style="padding: 1rem 2rem; background: linear-gradient(135deg, #f97316, #fbbf24); border: none; border-radius: 0.5rem; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;"
+            >
+              Launch Fireworks
+            </button>
+            <span style="color: #6b7280; font-size: 0.875rem;">Click to see full-page effect</span>
+            <fullpage-fireworks></fullpage-fireworks>
+          </div>
+        `;
+      case "fullpage-aurora":
+        return html`
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+            <button
+              @click=${() => (this.shadowRoot?.querySelector("fullpage-aurora") as any)?.trigger()}
+              style="padding: 1rem 2rem; background: linear-gradient(135deg, #4ade80, #67e8f9); border: none; border-radius: 0.5rem; color: #0d0a14; font-weight: 600; cursor: pointer; font-size: 1rem;"
+            >
+              Trigger Aurora
+            </button>
+            <span style="color: #6b7280; font-size: 0.875rem;">Click to see full-page effect</span>
+            <fullpage-aurora></fullpage-aurora>
+          </div>
+        `;
+      case "fullpage-starfield":
+        return html`
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+            <button
+              @click=${() => (this.shadowRoot?.querySelector("fullpage-starfield") as any)?.trigger()}
+              style="padding: 1rem 2rem; background: linear-gradient(135deg, #1a1030, #3b0764); border: 1px solid #8b5cf6; border-radius: 0.5rem; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;"
+            >
+              Enter Warp Speed
+            </button>
+            <span style="color: #6b7280; font-size: 0.875rem;">Click to see full-page effect</span>
+            <fullpage-starfield></fullpage-starfield>
+          </div>
+        `;
+      // Button components
+      case "primary-button":
+        return html`
+          <div class="preview-sizes">
+            <div class="preview-item">
+              <primary-button size="sm">Small</primary-button>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <primary-button size="md">Medium</primary-button>
+              <span>Medium</span>
+            </div>
+            <div class="preview-item">
+              <primary-button size="lg">Large</primary-button>
+              <span>Large</span>
+            </div>
+            <div class="preview-item">
+              <primary-button size="md" loading>Loading</primary-button>
+              <span>Loading</span>
+            </div>
+            <div class="preview-item">
+              <primary-button size="md" disabled>Disabled</primary-button>
+              <span>Disabled</span>
+            </div>
+          </div>
+        `;
+      case "secondary-button":
+        return html`
+          <div class="preview-sizes">
+            <div class="preview-item">
+              <secondary-button size="sm">Small</secondary-button>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <secondary-button size="md">Medium</secondary-button>
+              <span>Medium</span>
+            </div>
+            <div class="preview-item">
+              <secondary-button size="lg">Large</secondary-button>
+              <span>Large</span>
+            </div>
+            <div class="preview-item">
+              <secondary-button size="md" loading>Loading</secondary-button>
+              <span>Loading</span>
+            </div>
+            <div class="preview-item">
+              <secondary-button size="md" disabled>Disabled</secondary-button>
+              <span>Disabled</span>
+            </div>
+          </div>
+        `;
+      case "ghost-button":
+        return html`
+          <div class="preview-sizes">
+            <div class="preview-item">
+              <ghost-button size="sm">Small</ghost-button>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <ghost-button size="md">Medium</ghost-button>
+              <span>Medium</span>
+            </div>
+            <div class="preview-item">
+              <ghost-button size="lg">Large</ghost-button>
+              <span>Large</span>
+            </div>
+            <div class="preview-item">
+              <ghost-button size="md" loading>Loading</ghost-button>
+              <span>Loading</span>
+            </div>
+            <div class="preview-item">
+              <ghost-button size="md" disabled>Disabled</ghost-button>
+              <span>Disabled</span>
+            </div>
+          </div>
+        `;
+      case "danger-button":
+        return html`
+          <div class="preview-sizes">
+            <div class="preview-item">
+              <danger-button size="sm">Delete</danger-button>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <danger-button size="md">Delete</danger-button>
+              <span>Medium</span>
+            </div>
+            <div class="preview-item">
+              <danger-button size="lg">Delete</danger-button>
+              <span>Large</span>
+            </div>
+            <div class="preview-item">
+              <danger-button size="md" loading>Deleting</danger-button>
+              <span>Loading</span>
+            </div>
+            <div class="preview-item">
+              <danger-button size="md" disabled>Delete</danger-button>
+              <span>Disabled</span>
+            </div>
+          </div>
+        `;
+      case "icon-button":
+        return html`
+          <div class="preview-sizes">
+            <div class="preview-item">
+              <icon-button size="sm" icon="+"></icon-button>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <icon-button size="md" icon="+"></icon-button>
+              <span>Medium</span>
+            </div>
+            <div class="preview-item">
+              <icon-button size="lg" icon="+"></icon-button>
+              <span>Large</span>
+            </div>
+            <div class="preview-item">
+              <icon-button size="md" icon="+" variant="primary"></icon-button>
+              <span>Primary</span>
+            </div>
+            <div class="preview-item">
+              <icon-button size="md" icon="x" variant="danger"></icon-button>
+              <span>Danger</span>
+            </div>
+          </div>
+        `;
+      case "button-group":
+        return html`
+          <div class="preview-sizes" style="flex-direction: column; gap: 1.5rem; align-items: flex-start;">
+            <div class="preview-item" style="flex-direction: row; gap: 1rem;">
+              <button-group 
+                size="sm" 
+                value="left"
+                .options=${[{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }]}
+              ></button-group>
+              <span style="color: #6b7280;">Small</span>
+            </div>
+            <div class="preview-item" style="flex-direction: row; gap: 1rem;">
+              <button-group 
+                size="md" 
+                value="monthly"
+                .options=${[{ value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "monthly", label: "Monthly" }]}
+              ></button-group>
+              <span style="color: #6b7280;">Medium</span>
+            </div>
+            <div class="preview-item" style="flex-direction: row; gap: 1rem;">
+              <button-group 
+                size="lg" 
+                value="b"
+                .options=${[{ value: "a", label: "Option A" }, { value: "b", label: "Option B" }, { value: "c", label: "Option C" }]}
+              ></button-group>
+              <span style="color: #6b7280;">Large</span>
+            </div>
+            <div class="preview-item" style="flex-direction: row; gap: 1rem;">
+              <button-group 
+                size="md" 
+                value="grid"
+                variant="primary"
+                .options=${[{ value: "list", label: "List" }, { value: "grid", label: "Grid" }, { value: "table", label: "Table" }]}
+              ></button-group>
+              <span style="color: #6b7280;">Primary Variant</span>
+            </div>
+          </div>
+        `;
+      // Input components
+      case "text-input":
+        return html`
+          <div class="preview-sizes" style="gap: 2rem;">
+            <div class="preview-item">
+              <text-input size="sm" placeholder="Small input"></text-input>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <text-input size="md" placeholder="Medium input" label="Label"></text-input>
+              <span>Medium + Label</span>
+            </div>
+            <div class="preview-item">
+              <text-input size="lg" placeholder="Large input"></text-input>
+              <span>Large</span>
+            </div>
+            <div class="preview-item">
+              <text-input size="md" placeholder="Error state" error errorMessage="This field is required"></text-input>
+              <span>Error</span>
+            </div>
+          </div>
+        `;
+      case "search-input":
+        return html`
+          <div class="preview-sizes" style="gap: 2rem;">
+            <div class="preview-item">
+              <search-input size="sm" placeholder="Search..."></search-input>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <search-input size="md" placeholder="Search components..."></search-input>
+              <span>Medium</span>
+            </div>
+            <div class="preview-item">
+              <search-input size="lg" placeholder="Search..."></search-input>
+              <span>Large</span>
+            </div>
+            <div class="preview-item">
+              <search-input size="md" value="Searching" loading></search-input>
+              <span>Loading</span>
+            </div>
+          </div>
+        `;
+      case "textarea-input":
+        return html`
+          <div class="preview-sizes" style="gap: 2rem;">
+            <div class="preview-item">
+              <textarea-input size="sm" placeholder="Small textarea" rows="2" style="width: 150px;"></textarea-input>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <textarea-input size="md" placeholder="Medium textarea" label="Description" rows="3" style="width: 200px;"></textarea-input>
+              <span>Medium</span>
+            </div>
+            <div class="preview-item">
+              <textarea-input size="lg" placeholder="Large textarea" rows="4" style="width: 250px;"></textarea-input>
+              <span>Large</span>
+            </div>
+          </div>
+        `;
+      case "select-input":
+        return html`
+          <div class="preview-sizes" style="gap: 2rem;">
+            <div class="preview-item">
+              <select-input 
+                size="sm" 
+                placeholder="Select..." 
+                .options=${[{ value: "1", label: "Option 1" }, { value: "2", label: "Option 2" }]}
+                style="width: 120px;"
+              ></select-input>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <select-input 
+                size="md" 
+                placeholder="Choose option..." 
+                label="Category"
+                .options=${[{ value: "a", label: "Alpha" }, { value: "b", label: "Beta" }, { value: "c", label: "Gamma" }]}
+                style="width: 160px;"
+              ></select-input>
+              <span>Medium + Label</span>
+            </div>
+            <div class="preview-item">
+              <select-input 
+                size="lg" 
+                placeholder="Select..." 
+                .options=${[{ value: "x", label: "Extra Large" }, { value: "y", label: "Option Y" }]}
+                style="width: 180px;"
+              ></select-input>
+              <span>Large</span>
+            </div>
+          </div>
+        `;
+      case "checkbox-input":
+        return html`
+          <div class="preview-sizes" style="gap: 2rem;">
+            <div class="preview-item">
+              <checkbox-input size="sm"></checkbox-input>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <checkbox-input size="md" label="Accept terms"></checkbox-input>
+              <span>Medium + Label</span>
+            </div>
+            <div class="preview-item">
+              <checkbox-input size="lg" checked></checkbox-input>
+              <span>Large Checked</span>
+            </div>
+            <div class="preview-item">
+              <checkbox-input size="md" disabled label="Disabled"></checkbox-input>
+              <span>Disabled</span>
+            </div>
+          </div>
+        `;
+      case "toggle-input":
+        return html`
+          <div class="preview-sizes" style="gap: 2rem;">
+            <div class="preview-item">
+              <toggle-input size="sm"></toggle-input>
+              <span>Small</span>
+            </div>
+            <div class="preview-item">
+              <toggle-input size="md" label="Enable feature"></toggle-input>
+              <span>Medium + Label</span>
+            </div>
+            <div class="preview-item">
+              <toggle-input size="lg" checked></toggle-input>
+              <span>Large On</span>
+            </div>
+            <div class="preview-item">
+              <toggle-input size="md" disabled label="Disabled"></toggle-input>
+              <span>Disabled</span>
+            </div>
+          </div>
+        `;
       default:
         return html``;
     }
@@ -534,16 +1216,166 @@ export class ComponentsPage extends LitElement {
   private renderCodeExample(component: ComponentInfo) {
     const tag = component.tag;
     
+    // Build additional attributes based on component type
+    let additionalAttrs = "";
+    switch (tag) {
+      case "wave-bar":
+        additionalAttrs = ' bars="7"';
+        break;
+      case "loading-skeleton":
+        additionalAttrs = ' variant="card"';
+        break;
+      case "primary-button":
+      case "secondary-button":
+      case "ghost-button":
+      case "danger-button":
+        return html`
+          <div class="code-block">
+            <span class="code-tag">&lt;${tag}</span>
+            <span class="code-attr"> size</span>=<span class="code-value">"md"</span><span class="code-tag">&gt;</span>Click me<span class="code-tag">&lt;/${tag}&gt;</span>
+          </div>
+        `;
+      case "icon-button":
+        return html`
+          <div class="code-block">
+            <span class="code-tag">&lt;${tag}</span>
+            <span class="code-attr"> size</span>=<span class="code-value">"md"</span>
+            <span class="code-attr"> icon</span>=<span class="code-value">"+"</span>
+            <span class="code-attr"> variant</span>=<span class="code-value">"primary"</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+          </div>
+        `;
+      case "button-group":
+        return html`
+          <div class="code-block">
+            <span class="code-tag">&lt;${tag}</span>
+            <span class="code-attr"> size</span>=<span class="code-value">"md"</span>
+            <span class="code-attr"> value</span>=<span class="code-value">"option1"</span>
+            <span class="code-attr"> variant</span>=<span class="code-value">"primary"</span>
+            <span class="code-attr"> .options</span>=<span class="code-value">\${options}</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+          </div>
+        `;
+      case "text-input":
+        return html`
+          <div class="code-block">
+            <span class="code-tag">&lt;${tag}</span>
+            <span class="code-attr"> size</span>=<span class="code-value">"md"</span>
+            <span class="code-attr"> label</span>=<span class="code-value">"Username"</span>
+            <span class="code-attr"> placeholder</span>=<span class="code-value">"Enter username..."</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+          </div>
+        `;
+      case "search-input":
+        return html`
+          <div class="code-block">
+            <span class="code-tag">&lt;${tag}</span>
+            <span class="code-attr"> size</span>=<span class="code-value">"md"</span>
+            <span class="code-attr"> placeholder</span>=<span class="code-value">"Search..."</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+          </div>
+        `;
+      case "textarea-input":
+        return html`
+          <div class="code-block">
+            <span class="code-tag">&lt;${tag}</span>
+            <span class="code-attr"> size</span>=<span class="code-value">"md"</span>
+            <span class="code-attr"> label</span>=<span class="code-value">"Description"</span>
+            <span class="code-attr"> rows</span>=<span class="code-value">"4"</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+          </div>
+        `;
+      case "select-input":
+        return html`
+          <div class="code-block">
+            <span class="code-tag">&lt;${tag}</span>
+            <span class="code-attr"> size</span>=<span class="code-value">"md"</span>
+            <span class="code-attr"> label</span>=<span class="code-value">"Category"</span>
+            <span class="code-attr"> .options</span>=<span class="code-value">\${options}</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+          </div>
+        `;
+      case "checkbox-input":
+        return html`
+          <div class="code-block">
+            <span class="code-tag">&lt;${tag}</span>
+            <span class="code-attr"> size</span>=<span class="code-value">"md"</span>
+            <span class="code-attr"> label</span>=<span class="code-value">"Accept terms"</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+          </div>
+        `;
+      case "toggle-input":
+        return html`
+          <div class="code-block">
+            <span class="code-tag">&lt;${tag}</span>
+            <span class="code-attr"> size</span>=<span class="code-value">"md"</span>
+            <span class="code-attr"> label</span>=<span class="code-value">"Enable feature"</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+          </div>
+        `;
+      case "fullpage-confetti":
+        return html`
+          <div class="code-block" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div><span style="color: #6b7280;">// HTML</span></div>
+            <div>
+              <span class="code-tag">&lt;${tag}</span>
+              <span class="code-attr"> id</span>=<span class="code-value">"confetti"</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+            </div>
+            <div style="margin-top: 0.5rem;"><span style="color: #6b7280;">// Trigger methods:</span></div>
+            <div><span class="code-attr">document</span>.<span class="code-tag">getElementById</span>(<span class="code-value">'confetti'</span>).<span class="code-tag">trigger</span>()</div>
+            <div><span class="code-attr">document</span>.<span class="code-tag">dispatchEvent</span>(<span class="code-value">new CustomEvent('trigger-confetti')</span>)</div>
+            <div><span class="code-attr">window</span>.<span class="code-tag">triggerConfetti</span>()</div>
+          </div>
+        `;
+      case "fullpage-fireworks":
+        return html`
+          <div class="code-block" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div><span style="color: #6b7280;">// HTML</span></div>
+            <div>
+              <span class="code-tag">&lt;${tag}</span>
+              <span class="code-attr"> id</span>=<span class="code-value">"fireworks"</span>
+              <span class="code-attr"> rockets</span>=<span class="code-value">"5"</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+            </div>
+            <div style="margin-top: 0.5rem;"><span style="color: #6b7280;">// Trigger methods:</span></div>
+            <div><span class="code-attr">document</span>.<span class="code-tag">getElementById</span>(<span class="code-value">'fireworks'</span>).<span class="code-tag">trigger</span>()</div>
+            <div><span class="code-attr">document</span>.<span class="code-tag">dispatchEvent</span>(<span class="code-value">new CustomEvent('trigger-fireworks')</span>)</div>
+            <div><span class="code-attr">window</span>.<span class="code-tag">triggerFireworks</span>()</div>
+          </div>
+        `;
+      case "fullpage-aurora":
+        return html`
+          <div class="code-block" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div><span style="color: #6b7280;">// HTML</span></div>
+            <div>
+              <span class="code-tag">&lt;${tag}</span>
+              <span class="code-attr"> id</span>=<span class="code-value">"aurora"</span>
+              <span class="code-attr"> duration</span>=<span class="code-value">"4000"</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+            </div>
+            <div style="margin-top: 0.5rem;"><span style="color: #6b7280;">// Trigger methods:</span></div>
+            <div><span class="code-attr">document</span>.<span class="code-tag">getElementById</span>(<span class="code-value">'aurora'</span>).<span class="code-tag">trigger</span>()</div>
+            <div><span class="code-attr">document</span>.<span class="code-tag">dispatchEvent</span>(<span class="code-value">new CustomEvent('trigger-aurora')</span>)</div>
+            <div><span class="code-attr">window</span>.<span class="code-tag">triggerAurora</span>()</div>
+          </div>
+        `;
+      case "fullpage-starfield":
+        return html`
+          <div class="code-block" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div><span style="color: #6b7280;">// HTML</span></div>
+            <div>
+              <span class="code-tag">&lt;${tag}</span>
+              <span class="code-attr"> id</span>=<span class="code-value">"starfield"</span>
+              <span class="code-attr"> duration</span>=<span class="code-value">"3000"</span><span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+            </div>
+            <div style="margin-top: 0.5rem;"><span style="color: #6b7280;">// Trigger methods:</span></div>
+            <div><span class="code-attr">document</span>.<span class="code-tag">getElementById</span>(<span class="code-value">'starfield'</span>).<span class="code-tag">trigger</span>()</div>
+            <div><span class="code-attr">document</span>.<span class="code-tag">dispatchEvent</span>(<span class="code-value">new CustomEvent('trigger-starfield')</span>)</div>
+            <div><span class="code-attr">window</span>.<span class="code-tag">triggerStarfield</span>()</div>
+          </div>
+        `;
+    }
+    
     return html`
       <div class="code-block">
         <span class="code-tag">&lt;${tag}</span>
-        <span class="code-attr"> size</span>=<span class="code-value">"md"</span>${tag === "wave-bar" ? html`<span class="code-attr"> bars</span>=<span class="code-value">"7"</span>` : ""}${tag === "loading-skeleton" ? html`<span class="code-attr"> variant</span>=<span class="code-value">"card"</span>` : ""}<span class="code-tag">&gt;&lt;/${tag}&gt;</span>
+        <span class="code-attr"> size</span>=<span class="code-value">"md"</span>${additionalAttrs}<span class="code-tag">&gt;&lt;/${tag}&gt;</span>
       </div>
     `;
   }
 
   private renderMain() {
-    const components = this.activeTab === "loading" ? this.loadingComponents : [];
+    const components = this.getComponentsForTab();
     const component = components.find((c) => c.tag === this.selectedComponent);
 
     if (!component) {
@@ -627,8 +1459,42 @@ export class ComponentsPage extends LitElement {
           >
             Loading Indicators
           </button>
-          <button class="tab disabled" disabled>Buttons</button>
-          <button class="tab disabled" disabled>Inputs</button>
+          <button
+            class="tab ${this.activeTab === "speceffects" ? "active" : ""}"
+            @click=${() => {
+              this.activeTab = "speceffects";
+              this.selectedComponent = this.specEffectsComponents[0]?.tag || null;
+            }}
+          >
+            Spec Effects
+          </button>
+          <button
+            class="tab ${this.activeTab === "fullpageeffects" ? "active" : ""}"
+            @click=${() => {
+              this.activeTab = "fullpageeffects";
+              this.selectedComponent = this.fullPageEffectsComponents[0]?.tag || null;
+            }}
+          >
+            Full Page Spec Effects
+          </button>
+          <button
+            class="tab ${this.activeTab === "buttons" ? "active" : ""}"
+            @click=${() => {
+              this.activeTab = "buttons";
+              this.selectedComponent = this.buttonComponents[0]?.tag || null;
+            }}
+          >
+            Buttons
+          </button>
+          <button
+            class="tab ${this.activeTab === "inputs" ? "active" : ""}"
+            @click=${() => {
+              this.activeTab = "inputs";
+              this.selectedComponent = this.inputComponents[0]?.tag || null;
+            }}
+          >
+            Inputs
+          </button>
           <button class="tab disabled" disabled>Feedback</button>
         </div>
 

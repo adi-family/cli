@@ -9,8 +9,11 @@ export class MatrixRain extends LitElement {
   private canvas?: HTMLCanvasElement;
   private ctx?: CanvasRenderingContext2D;
   private animationId?: number;
-  private columns: number[] = [];
+  private columns: { y: number; chars: { char: string; opacity: number }[] }[] = [];
   private chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789";
+  private trailLength = 25;
+  private frameCount = 0;
+  private frameSkip = 3; // Update every 3rd frame (slower)
 
   static styles = css`
     :host {
@@ -22,7 +25,6 @@ export class MatrixRain extends LitElement {
 
     canvas {
       border-radius: 8px;
-      background: #0d0a14;
     }
 
     canvas.sm { width: 60px; height: 80px; }
@@ -49,39 +51,72 @@ export class MatrixRain extends LitElement {
 
     const { width, height } = this.getCanvasSize();
     const fontSize = this.size === "sm" ? 10 : this.size === "md" ? 12 : 14;
+    const shouldUpdate = this.frameCount % this.frameSkip === 0;
 
-    // Fade effect
-    this.ctx.fillStyle = "rgba(13, 10, 20, 0.05)";
-    this.ctx.fillRect(0, 0, width, height);
+    // Clear canvas (transparent)
+    this.ctx.clearRect(0, 0, width, height);
 
     // Set font
     this.ctx.font = `${fontSize}px monospace`;
 
     for (let i = 0; i < this.columns.length; i++) {
-      // Random character
-      const char = this.chars[Math.floor(Math.random() * this.chars.length)];
+      const col = this.columns[i];
       const x = i * fontSize;
-      const y = this.columns[i] * fontSize;
 
-      // Gradient from bright to dim
-      const brightness = Math.random();
-      if (brightness > 0.98) {
-        this.ctx.fillStyle = "#fff";
-      } else if (brightness > 0.9) {
-        this.ctx.fillStyle = "#c4b5fd";
-      } else {
-        this.ctx.fillStyle = "#8b5cf6";
+      // Draw trail characters with fading opacity
+      for (let j = 0; j < col.chars.length; j++) {
+        const trailChar = col.chars[j];
+        const trailY = (col.y - col.chars.length + j + 1) * fontSize;
+        
+        if (trailY > 0 && trailY < height) {
+          // Gray color with fading opacity for trail
+          const alpha = trailChar.opacity * 0.6;
+          this.ctx.fillStyle = `rgba(107, 114, 128, ${alpha})`;
+          this.ctx.fillText(trailChar.char, x, trailY);
+        }
       }
 
-      this.ctx.fillText(char, x, y);
-
-      // Reset or increment
-      if (y > height && Math.random() > 0.98) {
-        this.columns[i] = 0;
+      // Draw head character (bright colored)
+      const headY = col.y * fontSize;
+      if (headY > 0 && headY < height) {
+        const brightness = Math.random();
+        if (brightness > 0.7) {
+          this.ctx.fillStyle = "#fff";
+        } else if (brightness > 0.3) {
+          this.ctx.fillStyle = "#c4b5fd";
+        } else {
+          this.ctx.fillStyle = "#8b5cf6";
+        }
+        const headChar = this.chars[Math.floor(Math.random() * this.chars.length)];
+        this.ctx.fillText(headChar, x, headY);
+        
+        // Only update on specific frames (slower movement)
+        if (shouldUpdate) {
+          // Add to trail
+          col.chars.push({ char: headChar, opacity: 1 });
+          if (col.chars.length > this.trailLength) {
+            col.chars.shift();
+          }
+          // Fade trail
+          for (const tc of col.chars) {
+            tc.opacity *= 0.9;
+          }
+        }
       }
-      this.columns[i]++;
+
+      // Move down only on update frames
+      if (shouldUpdate) {
+        col.y++;
+
+        // Reset if past bottom
+        if (col.y * fontSize > height + this.trailLength * fontSize && Math.random() > 0.98) {
+          col.y = 0;
+          col.chars = [];
+        }
+      }
     }
 
+    this.frameCount++;
     this.animationId = requestAnimationFrame(this.runAnimation);
   };
 
@@ -93,12 +128,13 @@ export class MatrixRain extends LitElement {
       this.canvas.height = height;
       this.ctx = this.canvas.getContext("2d")!;
 
-      // Initialize columns
+      // Initialize columns with trail tracking
       const fontSize = this.size === "sm" ? 10 : this.size === "md" ? 12 : 14;
       const columnCount = Math.floor(width / fontSize);
-      this.columns = Array.from({ length: columnCount }, () => 
-        Math.floor(Math.random() * (height / fontSize))
-      );
+      this.columns = Array.from({ length: columnCount }, () => ({
+        y: Math.floor(Math.random() * (height / fontSize)),
+        chars: [],
+      }));
 
       this.runAnimation();
     }

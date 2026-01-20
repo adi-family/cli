@@ -75,8 +75,7 @@ export class ParticleExplosion extends LitElement {
     if (!this.ctx || !this.canvas) return;
 
     const canvasSize = this.getCanvasSize();
-    this.ctx.fillStyle = "rgba(13, 10, 20, 0.15)";
-    this.ctx.fillRect(0, 0, canvasSize, canvasSize);
+    this.ctx.clearRect(0, 0, canvasSize, canvasSize);
 
     // Trigger explosion periodically
     const now = Date.now();
@@ -120,8 +119,6 @@ export class ParticleExplosion extends LitElement {
       this.canvas.width = size;
       this.canvas.height = size;
       this.ctx = this.canvas.getContext("2d")!;
-      this.ctx.fillStyle = "#0d0a14";
-      this.ctx.fillRect(0, 0, size, size);
       this.explode();
       this.lastExplosion = Date.now();
       this.runAnimation();
