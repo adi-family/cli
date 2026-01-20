@@ -56,8 +56,8 @@ PID_DIR="$PROJECT_ROOT/.dev"
 LOG_DIR="$PROJECT_ROOT/.dev/logs"
 
 # All services
-ALL_SERVICES="postgres timescaledb signaling auth platform web web-app flowmap analytics-ingestion analytics llm-proxy balance credentials cocoon registry hive"
-# Default services to start (balance, credentials, cocoon, registry, hive are optional)
+ALL_SERVICES="postgres timescaledb signaling auth platform web web-app flowmap analytics-ingestion analytics llm-proxy balance credentials cocoon registry hive codegen"
+# Default services to start (balance, credentials, cocoon, registry, hive, codegen are optional)
 DEFAULT_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy"
 
 # -----------------------------------------------------------------------------
@@ -82,6 +82,7 @@ service_dir() {
         cocoon)    echo "crates/cocoon" ;;
         registry)  echo "crates/adi-plugin-registry-http" ;;
         hive) echo "." ;;
+        codegen)   echo "." ;;
         *)         echo "" ;;
     esac
 }
@@ -104,6 +105,7 @@ service_cmd() {
         cocoon)    echo "cargo run --features standalone" ;;
         registry)  echo "cargo run" ;;
         hive) echo "cargo run -p adi-hive-http --bin hive" ;;
+        codegen)   echo "adi tsp-gen generate crates/adi-credentials-api/api.tsp -l typescript -s client -o apps/web-app/src/services/generated/credentials -p credentials-api --watch" ;;
         *)         echo "" ;;
     esac
 }
@@ -126,6 +128,7 @@ service_port_name() {
         cocoon)    echo "adi-cocoon" ;;
         registry)  echo "adi-registry" ;;
         hive) echo "adi-hive" ;;
+        codegen)   echo "" ;;  # No port needed - file watcher only
         *)         echo "" ;;
     esac
 }
@@ -148,14 +151,15 @@ service_description() {
         cocoon)    echo "Worker container" ;;
         registry)  echo "Plugin registry (local)" ;;
         hive) echo "Hive - Cocoon orchestration (WebSocket client)" ;;
+        codegen)   echo "TypeSpec watcher (regenerates on .tsp changes)" ;;
         *)         echo "" ;;
     esac
 }
 
-# Services that don't listen on a port (WebSocket clients, etc.)
+# Services that don't listen on a port (WebSocket clients, watchers, etc.)
 service_skip_port_check() {
     case "$1" in
-        hive|cocoon) return 0 ;;  # These are WebSocket clients, not servers
+        hive|cocoon|codegen) return 0 ;;  # These are WebSocket clients or watchers, not servers
         *) return 1 ;;
     esac
 }
@@ -168,6 +172,8 @@ get_port() {
     local service="$1"
     local port_name
     port_name=$(service_port_name "$service")
+    # Return empty if no port name (service doesn't need a port)
+    [ -z "$port_name" ] && return
     # ports-manager get outputs the port (auto-assigns if new)
     # Use tail -1 to get just the port number in case of auto-assign message
     ports-manager get "$port_name" 2>/dev/null | tail -1
@@ -488,7 +494,12 @@ start_service() {
             ;;
     esac
 
-    log "Starting $service on port $port..."
+    # Log startup message
+    if [ -n "$port" ]; then
+        log "Starting $service on port $port..."
+    else
+        log "Starting $service..."
+    fi
 
     # Start service in background
     (
@@ -499,7 +510,7 @@ start_service() {
     local pid=$!
     echo "$pid" > "$pf"
 
-    # Some services (WebSocket clients) don't listen on a port
+    # Some services (WebSocket clients, watchers) don't listen on a port
     if service_skip_port_check "$service"; then
         # Just wait a bit and check if process is still running
         sleep 3
@@ -507,7 +518,7 @@ start_service() {
             rm -f "$pf"
             error "Failed to start $service. Check logs: $lf"
         fi
-        success "$service started (PID: $pid, WebSocket client)"
+        success "$service started (PID: $pid)"
         return 0
     fi
 
