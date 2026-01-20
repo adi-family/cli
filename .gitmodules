@@ -183,3 +183,6 @@
 [submodule "crates/lib/lib-analytics-core"]
 	path = crates/lib/lib-analytics-core
 	url = git@github.com:adi-family/lib-analytics-core.git
+[submodule "apps/web-app"]
+	path = apps/web-app
+	url = git@github.com:adi-family/web-app.git
