@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "ADI Browser Debugger",
+  "version": "1.0.0",
+  "description": "Browser debugging extension for ADI - captures network and console events from ADI-proxied pages",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "debugger",
+    "tabs",
+    "storage",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "ADI Browser Debugger",
+    "default_popup": "popup.html"
+  }
+}

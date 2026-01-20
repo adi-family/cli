@@ -11,9 +11,11 @@ exclude = [
     "crates/adi-llm-uzu-plugin",
     # Nested workspaces (submodules with their own workspace roots)
     "crates/adi-executor",
-    "crates/hive",
     "crates/adi-plugin-registry-http",
     "crates/tarminal-signaling-server",
+    # Standalone API services
+    "crates/adi-balance-api",
+    "crates/adi-credentials-api",
 ]
 members = [
     # CLI manager (submodule)
@@ -62,6 +64,11 @@ members = [
     # API Proxy components
     "crates/adi-api-proxy/core",
     "crates/adi-api-proxy/http",
+
+    # Hive components
+    "crates/hive/core",
+    "crates/hive/http",
+    "crates/hive/ssl",
 
     # Tarminal components (flat submodules)
     "crates/lib/lib-misc-color",
@@ -135,9 +142,15 @@ members = [
     "crates/adi-coolify/plugin",
     "crates/adi-workflow/plugin",
     "crates/adi-api-proxy/plugin",
+    "crates/hive/plugin",
     "crates/adi-llm-extract-plugin",
     "crates/lib/lib-typespec-api/plugin",
     "crates/cocoon",
+
+    # Browser Debug components
+    "crates/adi-browser-debug/core",
+    "crates/adi-browser-debug/plugin",
+    "crates/adi-browser-debug/mcp",
 
     # Workflow translation plugins
     "crates/adi-workflow/langs/en",
@@ -194,6 +207,7 @@ adi-agent-loop-core = { path = "crates/adi-agent-loop/core" }
 adi-auth-core = { path = "crates/adi-auth-core" }
 adi-linter-core = { path = "crates/adi-linter/core" }
 adi-api-proxy-core = { path = "crates/adi-api-proxy/core" }
+adi-hive-core = { path = "crates/hive/core" }
 
 # Libraries (flat submodules)
 lib-misc-color = { path = "crates/lib/lib-misc-color" }

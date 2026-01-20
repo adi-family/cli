@@ -56,8 +56,8 @@ PID_DIR="$PROJECT_ROOT/.dev"
 LOG_DIR="$PROJECT_ROOT/.dev/logs"
 
 # All services
-ALL_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy balance cocoon registry hive"
-# Default services to start (balance, cocoon, registry, hive are optional)
+ALL_SERVICES="postgres timescaledb signaling auth platform web web-app flowmap analytics-ingestion analytics llm-proxy balance credentials cocoon registry hive"
+# Default services to start (balance, credentials, cocoon, registry, hive are optional)
 DEFAULT_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy"
 
 # -----------------------------------------------------------------------------
@@ -72,14 +72,16 @@ service_dir() {
         auth)      echo "crates/adi-auth" ;;
         platform)  echo "crates/adi-platform-api" ;;
         web)       echo "apps/infra-service-web" ;;
+        web-app)   echo "apps/web-app" ;;
         flowmap)   echo "apps/flowmap-api" ;;
         analytics-ingestion) echo "crates/adi-analytics-ingestion" ;;
         analytics) echo "crates/adi-analytics-api" ;;
         llm-proxy) echo "crates/adi-api-proxy/http" ;;
         balance)   echo "crates/adi-balance-api" ;;
+        credentials) echo "crates/adi-credentials-api" ;;
         cocoon)    echo "crates/cocoon" ;;
         registry)  echo "crates/adi-plugin-registry-http" ;;
-        hive) echo "crates/hive" ;;
+        hive) echo "." ;;
         *)         echo "" ;;
     esac
 }
@@ -92,14 +94,16 @@ service_cmd() {
         auth)      echo "cargo run -p adi-auth-http" ;;
         platform)  echo "cargo run --bin adi-platform-api" ;;
         web)       echo "npm run dev" ;;
+        web-app)   echo "npm run dev" ;;
         flowmap)   echo "cargo run --release" ;;
         analytics-ingestion) echo "cargo run" ;;
         analytics) echo "cargo run" ;;
         llm-proxy) echo "cargo run --bin adi-api-proxy" ;;
         balance)   echo "cargo run --bin adi-balance-api" ;;
+        credentials) echo "cargo run --bin adi-credentials-api" ;;
         cocoon)    echo "cargo run --features standalone" ;;
         registry)  echo "cargo run" ;;
-        hive) echo "cargo run" ;;
+        hive) echo "cargo run -p adi-hive-http --bin hive" ;;
         *)         echo "" ;;
     esac
 }
@@ -112,11 +116,13 @@ service_port_name() {
         auth)      echo "adi-auth" ;;
         platform)  echo "adi-platform" ;;
         web)       echo "adi-web" ;;
+        web-app)   echo "adi-web-app" ;;
         flowmap)   echo "adi-flowmap" ;;
         analytics-ingestion) echo "adi-analytics-ingestion" ;;
         analytics) echo "adi-analytics" ;;
         llm-proxy) echo "adi-llm-proxy" ;;
         balance)   echo "adi-balance" ;;
+        credentials) echo "adi-credentials" ;;
         cocoon)    echo "adi-cocoon" ;;
         registry)  echo "adi-registry" ;;
         hive) echo "adi-hive" ;;
@@ -132,15 +138,25 @@ service_description() {
         auth)      echo "Authentication API" ;;
         platform)  echo "Platform API (tasks, integrations)" ;;
         web)       echo "Next.js frontend" ;;
+        web-app)   echo "Vite + Lit web app" ;;
         flowmap)   echo "Code flow visualization API" ;;
         analytics-ingestion) echo "Analytics event ingestion (writes)" ;;
         analytics) echo "Analytics API (metrics, dashboards)" ;;
         llm-proxy) echo "LLM API proxy (BYOK/Platform modes)" ;;
         balance)   echo "Balance and transaction tracking" ;;
+        credentials) echo "Secure credentials storage" ;;
         cocoon)    echo "Worker container" ;;
         registry)  echo "Plugin registry (local)" ;;
-        hive) echo "Hive - Cocoon orchestration API" ;;
+        hive) echo "Hive - Cocoon orchestration (WebSocket client)" ;;
         *)         echo "" ;;
+    esac
+}
+
+# Services that don't listen on a port (WebSocket clients, etc.)
+service_skip_port_check() {
+    case "$1" in
+        hive|cocoon) return 0 ;;  # These are WebSocket clients, not servers
+        *) return 1 ;;
     esac
 }
 
@@ -298,6 +314,14 @@ start_service() {
     # Enable version headers in responses for debugging
     local env_cmd="PORT=$port SHOW_VERSION_IN_HEADERS=true"
     case "$service" in
+        signaling)
+            # Signaling server needs HIVE_SECRETS for hive authentication
+            if [ -f "$PROJECT_ROOT/.env.local" ]; then
+                # shellcheck disable=SC1091
+                source "$PROJECT_ROOT/.env.local" 2>/dev/null || true
+                [ -n "$HIVE_SECRETS" ] && env_cmd="$env_cmd HIVE_SECRETS=$HIVE_SECRETS"
+            fi
+            ;;
         cocoon)
             local signaling_port
             signaling_port=$(get_port "signaling")
@@ -333,6 +357,10 @@ start_service() {
             env_cmd="$env_cmd AUTH_API_URL=http://localhost:$auth_port"
             env_cmd="$env_cmd NEXT_PUBLIC_PLATFORM_API_URL=http://localhost:$platform_port"
             env_cmd="$env_cmd NEXT_PUBLIC_FLOWMAP_API_URL=http://localhost:$flowmap_port"
+            env_cmd="$env_cmd NEXT_PUBLIC_CREDENTIALS_API_URL=http://adi.local/api/credentials"
+            ;;
+        web-app)
+            # Vite dev server - PORT is already set
             ;;
         platform)
             # Platform service needs DATABASE_URL, JWT_SECRET from .env.local
@@ -376,16 +404,24 @@ start_service() {
             fi
             ;;
         hive)
-            # Hive needs database, signaling URL, and Docker config
+            # Hive needs signaling URL, secret, and Docker config
             local signaling_port
             signaling_port=$(get_port "signaling")
-            local db_dir="$PROJECT_ROOT/.dev/hive-data"
-            ensure_dir "$db_dir"
-            env_cmd="$env_cmd DATABASE_URL=sqlite:$db_dir/hive.db"
+            if [ -f "$PROJECT_ROOT/.env.local" ]; then
+                # shellcheck disable=SC1091
+                source "$PROJECT_ROOT/.env.local" 2>/dev/null || true
+                [ -n "$HIVE_SECRET" ] && env_cmd="$env_cmd HIVE_SECRET=$HIVE_SECRET"
+                [ -n "$HIVE_ID" ] && env_cmd="$env_cmd HIVE_ID=$HIVE_ID"
+                [ -n "$COCOON_KINDS" ] && env_cmd="$env_cmd COCOON_KINDS=$COCOON_KINDS"
+            fi
+            # Use COCOON_REGISTRY from env or default to docker-registry.the-ihor.com
+            local cocoon_registry="${COCOON_REGISTRY:-docker-registry.the-ihor.com}"
+            env_cmd="$env_cmd COCOON_REGISTRY=$cocoon_registry"
+            # Default COCOON_KINDS to use :latest tag for all variants (local dev)
+            if [ -z "$COCOON_KINDS" ]; then
+                env_cmd="$env_cmd COCOON_KINDS=alpine:$cocoon_registry/cocoon:latest,linux:$cocoon_registry/cocoon:latest,ubuntu:$cocoon_registry/cocoon:latest"
+            fi
             env_cmd="$env_cmd SIGNALING_SERVER_URL=ws://localhost:$signaling_port/ws"
-            env_cmd="$env_cmd COCOON_IMAGE=ghcr.io/adi-family/cocoon:latest"
-            env_cmd="$env_cmd MAX_COCOONS=100"
-            env_cmd="$env_cmd BIND_ADDRESS=0.0.0.0:$port"
             ;;
         llm-proxy)
             # LLM Proxy needs database, JWT secret, encryption key, and analytics URL
@@ -429,6 +465,27 @@ start_service() {
             analytics_port=$(get_port "analytics-ingestion")
             env_cmd="$env_cmd ANALYTICS_URL=http://localhost:$analytics_port"
             ;;
+        credentials)
+            # Credentials service needs database, JWT secret, encryption key, and analytics URL
+            local pg_port
+            pg_port=$(get_port "postgres")
+            if [ -f "$PROJECT_ROOT/.env.local" ]; then
+                # shellcheck disable=SC1091
+                source "$PROJECT_ROOT/.env.local" 2>/dev/null || true
+                [ -n "$JWT_SECRET" ] && env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
+                [ -n "$ENCRYPTION_KEY" ] && env_cmd="$env_cmd ENCRYPTION_KEY=$ENCRYPTION_KEY"
+            fi
+            # Use credentials-specific database if set, otherwise use docker postgres
+            if [ -n "$CREDENTIALS_DATABASE_URL" ]; then
+                env_cmd="$env_cmd DATABASE_URL=$CREDENTIALS_DATABASE_URL"
+            else
+                env_cmd="$env_cmd DATABASE_URL=postgres://adi:adi@localhost:$pg_port/adi_credentials"
+            fi
+            # Set analytics URL to local analytics-ingestion service
+            local analytics_port
+            analytics_port=$(get_port "analytics-ingestion")
+            env_cmd="$env_cmd ANALYTICS_URL=http://localhost:$analytics_port"
+            ;;
     esac
 
     log "Starting $service on port $port..."
@@ -441,6 +498,18 @@ start_service() {
     ) &
     local pid=$!
     echo "$pid" > "$pf"
+
+    # Some services (WebSocket clients) don't listen on a port
+    if service_skip_port_check "$service"; then
+        # Just wait a bit and check if process is still running
+        sleep 3
+        if ! kill -0 "$pid" 2>/dev/null; then
+            rm -f "$pf"
+            error "Failed to start $service. Check logs: $lf"
+        fi
+        success "$service started (PID: $pid, WebSocket client)"
+        return 0
+    fi
 
     # Wait for port to be listening (handles cargo compile time)
     local timeout=60
@@ -646,6 +715,8 @@ cmd_ports() {
     platform_port=$(get_port "platform")
     local web_port
     web_port=$(get_port "web")
+    local web_app_port
+    web_app_port=$(get_port "web-app")
     local flowmap_port
     flowmap_port=$(get_port "flowmap")
     local analytics_ingestion_port
@@ -656,6 +727,8 @@ cmd_ports() {
     llm_proxy_port=$(get_port "llm-proxy")
     local balance_port
     balance_port=$(get_port "balance")
+    local credentials_port
+    credentials_port=$(get_port "credentials")
     local cocoon_port
     cocoon_port=$(get_port "cocoon")
     local registry_port
@@ -669,6 +742,7 @@ cmd_ports() {
     echo ""
     echo -e "  ${BOLD}Services:${NC}"
     echo -e "  ${CYAN}Web UI:${NC}              http://localhost:$web_port"
+    echo -e "  ${CYAN}Web App:${NC}             http://localhost:$web_app_port (http://adi.local/*/app/)"
     echo -e "  ${CYAN}FlowMap UI:${NC}          http://localhost:$web_port/flowmap"
     echo -e "  ${CYAN}Auth API:${NC}            http://localhost:$auth_port"
     echo -e "  ${CYAN}Platform API:${NC}        http://localhost:$platform_port"
@@ -677,6 +751,7 @@ cmd_ports() {
     echo -e "  ${CYAN}Analytics API:${NC}       http://localhost:$analytics_port"
     echo -e "  ${CYAN}LLM Proxy:${NC}           http://localhost:$llm_proxy_port"
     echo -e "  ${CYAN}Balance API:${NC}         http://localhost:$balance_port"
+    echo -e "  ${CYAN}Credentials API:${NC}     http://localhost:$credentials_port"
     echo -e "  ${CYAN}Registry:${NC}            http://localhost:$registry_port"
     echo -e "  ${CYAN}Hive:${NC}                http://localhost:$manager_port"
     echo -e "  ${CYAN}Signaling:${NC}           ws://localhost:$signaling_port/ws"

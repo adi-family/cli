@@ -54,6 +54,7 @@ Several components follow a standard multi-crate structure within a single direc
 - `adi-indexer` (core, cli, http, plugin) - Code indexing
 - `adi-knowledgebase` (core, cli, http) - Graph DB + embeddings
 - `adi-api-proxy` (core, http, plugin) - LLM API proxy with BYOK/Platform modes
+- `hive` (core, http, plugin) - Cocoon container orchestration via WebSocket
 
 **Naming convention:**
 - Core: `adi-{component}-core` (e.g., `adi-agent-loop-core`)
@@ -82,9 +83,11 @@ Several components follow a standard multi-crate structure within a single direc
 - `crates/adi-api-proxy/core` - API Proxy core library (BYOK/Platform modes, encryption)
 - `crates/adi-api-proxy/http` - API Proxy HTTP server (OpenAI-compatible proxy)
 - `crates/adi-api-proxy/plugin` - API Proxy CLI plugin
+- `crates/hive/core` - Hive core library (cocoon container orchestration)
+- `crates/hive/http` - Hive HTTP server (WebSocket signaling client)
+- `crates/hive/plugin` - Hive CLI plugin (`adi hive` commands)
 - `crates/adi-executor` - Docker-based task execution service
 - `crates/cocoon` - Containerized worker with signaling server connectivity for remote command execution
-- `crates/hive` - Hive: WebSocket-based cocoon orchestration (spawns/manages containers via signaling server)
 - `crates/lib-misc-color` - Unified color type (RGB/RGBA/Hex)
 - `crates/lib-animation` - UI animation utilities
 - `crates/lib-syntax-highlight` - Syntax highlighting tokenizer
@@ -100,6 +103,7 @@ Several components follow a standard multi-crate structure within a single direc
 - `crates/lib-analytics-core` - Analytics event tracking and persistence library
 - `crates/adi-analytics-api` - Analytics API (metrics, dashboards, aggregates)
 - `crates/adi-balance-api` - Balance and transaction tracking service
+- `crates/adi-credentials-api` - Secure credentials storage service (ChaCha20-Poly1305 encrypted)
 - `crates/debug-metal-shader` - Metal shader debug app
 
 ## FlowMap (Standalone)
@@ -453,6 +457,7 @@ AUTH_API_URL=http://adi.local/api/auth
 | `/api/analytics-ingestion/*` | Analytics Ingestion | 8022 | Event ingestion |
 | `/api/llm-proxy/*` | LLM Proxy | 8029 | LLM API proxy (BYOK/Platform) |
 | `/api/balance/*` | Balance API | 8030 | Balance and transaction tracking |
+| `/api/credentials/*` | Credentials API | 8032 | Secure credentials storage |
 | `/api/signaling/*` | Signaling | 8011 | WebSocket relay for sync |
 | `/api/registry/*` | Registry | 8019 | Plugin registry (optional) |
 | `/api/hive/*` | Hive | 8020 | Cocoon orchestration (optional) |
@@ -471,6 +476,7 @@ AUTH_API_URL=http://adi.local/api/auth
 | Analytics API | http://localhost:8023 | Metrics, dashboards, aggregates |
 | LLM Proxy | http://localhost:8029 | LLM API proxy (BYOK/Platform) |
 | Balance API | http://localhost:8030 | Balance and transaction tracking |
+| Credentials API | http://localhost:8032 | Secure credentials storage |
 | Hive | http://localhost:8020 | Cocoon orchestration (optional) |
 | Registry | http://localhost:8019 | Plugin registry (optional) |
 

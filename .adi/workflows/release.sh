@@ -32,7 +32,7 @@ get_service_config() {
         tarminal-signaling-server) echo "crates/tarminal-signaling-server:tarminal-signaling:tarminal-signaling-server" ;;
         adi-plugin-registry) echo "crates/adi-plugin-registry-http:adi-plugin-registry:adi-plugin-registry" ;;
         flowmap-api) echo "apps/flowmap-api:flowmap-api:flowmap-api" ;;
-        hive) echo "crates/hive:hive:hive" ;;
+        hive) echo "crates/hive/http:hive:hive" ;;
         cocoon) echo "crates/cocoon:cocoon:cocoon" ;;
         llm-proxy) echo "crates/adi-api-proxy/http:adi-api-proxy,adi-api-proxy-migrate:llm-proxy" ;;
         *) return 1 ;;
