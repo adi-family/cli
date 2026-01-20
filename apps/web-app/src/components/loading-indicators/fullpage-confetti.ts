@@ -1,5 +1,6 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { triggerSound } from "../sounds";
 
 interface ConfettiPiece {
   x: number;
@@ -182,6 +183,9 @@ export class FullpageConfetti extends LitElement {
     
     this.resizeCanvas();
     this.burst();
+    
+    // Play confetti sound
+    triggerSound("confetti", 0.05);
     
     // Add more bursts over time
     setTimeout(() => this.burst(), 150);

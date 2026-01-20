@@ -152,6 +152,10 @@ members = [
     "crates/adi-browser-debug/plugin",
     "crates/adi-browser-debug/mcp",
 
+    # Audio components
+    "crates/adi-audio/core",
+    "crates/adi-audio/plugin",
+
     # Workflow translation plugins
     "crates/adi-workflow/langs/en",
     "crates/adi-workflow/langs/uk",
@@ -208,6 +212,7 @@ adi-auth-core = { path = "crates/adi-auth-core" }
 adi-linter-core = { path = "crates/adi-linter/core" }
 adi-api-proxy-core = { path = "crates/adi-api-proxy/core" }
 adi-hive-core = { path = "crates/hive/core" }
+adi-audio-core = { path = "crates/adi-audio/core" }
 
 # Libraries (flat submodules)
 lib-misc-color = { path = "crates/lib/lib-misc-color" }

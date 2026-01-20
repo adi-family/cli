@@ -1,0 +1,18 @@
+[package]
+name = "adi-audio-core"
+version = "0.5.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "ADI Audio core library - WAV processing, filters, EQ, compression, normalization"
+authors = ["ADI Team"]
+
+[dependencies]
+# Audio I/O
+hound = "3.5"              # WAV file reading/writing
+
+# Error handling
+thiserror = "2"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

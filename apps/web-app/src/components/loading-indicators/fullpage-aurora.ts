@@ -1,5 +1,6 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { triggerSound } from "../sounds";
 
 /**
  * Full-page aurora/northern lights overlay effect.
@@ -140,6 +141,9 @@ export class FullpageAurora extends LitElement {
     }
     
     this.resizeCanvas();
+    
+    // Play magic sound for aurora
+    triggerSound("magic");
     
     if (this.animationId) cancelAnimationFrame(this.animationId);
     this.runAnimation();

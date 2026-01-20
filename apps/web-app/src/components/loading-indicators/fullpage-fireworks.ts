@@ -1,5 +1,6 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { triggerSound } from "../sounds";
 
 interface Rocket {
   x: number;
@@ -101,6 +102,9 @@ export class FullpageFireworks extends LitElement {
   }
 
   private explode(rocket: Rocket) {
+    // Play firework explosion sound
+    triggerSound("firework", 0.3);
+    
     const sparkCount = 35;
     const isRing = Math.random() < 0.5;
     

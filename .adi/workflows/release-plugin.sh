@@ -157,6 +157,7 @@ get_plugin_crate() {
         lang-swift|adi-lang-swift) echo "crates/adi-lang/swift/plugin" ;;
         lang-typescript|adi-lang-typescript) echo "crates/adi-lang/typescript/plugin" ;;
         embed|adi-embed) echo "crates/adi-embed-plugin" ;;
+        audio|adi-audio) echo "crates/adi-audio" ;;
         cli-lang-en|adi-cli-lang-en) echo "crates/adi-cli-lang-en" ;;
         *) echo "" ;;
     esac

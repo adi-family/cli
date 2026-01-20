@@ -3,8 +3,10 @@ import { customElement, state } from "lit/decorators.js";
 import "./loading-indicators";
 import "./buttons";
 import "./inputs";
+import { SoundController } from "./sounds";
+import type { SoundType } from "./sounds";
 
-type TabId = "loading" | "speceffects" | "fullpageeffects" | "buttons" | "inputs" | "feedback";
+type TabId = "loading" | "speceffects" | "fullpageeffects" | "buttons" | "inputs" | "sounds" | "feedback";
 
 interface ComponentInfo {
   name: string;
@@ -17,6 +19,9 @@ interface ComponentInfo {
 export class ComponentsPage extends LitElement {
   @state() private activeTab: TabId = "loading";
   @state() private selectedComponent: string | null = null;
+
+  // Sound controller - listens for sound events in this component tree
+  private soundController = new SoundController(this);
 
   private loadingComponents: ComponentInfo[] = [
     {
@@ -220,6 +225,98 @@ export class ComponentsPage extends LitElement {
         { name: "options", type: "ButtonGroupOption[]", description: "Array of options {value, label, disabled?}" },
         { name: "variant", type: '"default" | "primary"', default: '"default"', description: "Visual style" },
         { name: "disabled", type: "boolean", default: "false", description: "Disable all buttons" },
+      ],
+    },
+  ];
+
+  private soundComponents: ComponentInfo[] = [
+    {
+      name: "UI Click",
+      tag: "ui-click",
+      description: "Clean tap sound for button feedback",
+      props: [
+        { name: "volume", type: "number", default: "0.3", description: "Volume level (0-1)" },
+      ],
+    },
+    {
+      name: "Success Chime",
+      tag: "success-chime",
+      description: "Pleasant two-note ascending chime",
+      props: [
+        { name: "volume", type: "number", default: "0.25", description: "Volume level (0-1)" },
+      ],
+    },
+    {
+      name: "Error Tone",
+      tag: "error-tone",
+      description: "Short descending tone for errors",
+      props: [
+        { name: "volume", type: "number", default: "0.2", description: "Volume level (0-1)" },
+      ],
+    },
+    {
+      name: "Notification Ding",
+      tag: "notification-ding",
+      description: "Clear bell-like notification tone",
+      props: [
+        { name: "volume", type: "number", default: "0.25", description: "Volume level (0-1)" },
+      ],
+    },
+    {
+      name: "Whoosh",
+      tag: "whoosh",
+      description: "Smooth sweep for page transitions",
+      props: [
+        { name: "volume", type: "number", default: "0.15", description: "Volume level (0-1)" },
+      ],
+    },
+    // File-based sounds from public/sounds/
+    {
+      name: "Confetti",
+      tag: "confetti",
+      description: "Celebration pop sound from audio file",
+      props: [
+        { name: "volume", type: "number", default: "0.5", description: "Volume level (0-1)" },
+      ],
+    },
+    {
+      name: "Error (File)",
+      tag: "error-file",
+      description: "Error tone from audio file",
+      props: [
+        { name: "volume", type: "number", default: "0.5", description: "Volume level (0-1)" },
+      ],
+    },
+    {
+      name: "Firework",
+      tag: "firework",
+      description: "Explosive celebration sound",
+      props: [
+        { name: "volume", type: "number", default: "0.5", description: "Volume level (0-1)" },
+      ],
+    },
+    {
+      name: "Magic",
+      tag: "magic",
+      description: "Sparkle/enchantment sound effect",
+      props: [
+        { name: "volume", type: "number", default: "0.5", description: "Volume level (0-1)" },
+      ],
+    },
+    {
+      name: "Success (File)",
+      tag: "success-file",
+      description: "Achievement unlock sound",
+      props: [
+        { name: "volume", type: "number", default: "0.5", description: "Volume level (0-1)" },
+      ],
+    },
+    {
+      name: "Warning",
+      tag: "warning",
+      description: "Alert/caution sound from audio file",
+      props: [
+        { name: "volume", type: "number", default: "0.5", description: "Volume level (0-1)" },
       ],
     },
   ];
@@ -577,6 +674,119 @@ export class ComponentsPage extends LitElement {
       margin-bottom: 1rem;
       opacity: 0.5;
     }
+
+    /* Sound trigger buttons */
+    .sound-btn {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      border-radius: 0.75rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .sound-btn:hover {
+      transform: scale(1.02);
+    }
+
+    .sound-btn:active {
+      transform: scale(0.98);
+    }
+
+    .sound-btn .icon {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .sound-btn .label {
+      font-weight: 500;
+      font-size: 0.875rem;
+    }
+
+    .sound-btn.ui-click {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #818cf8;
+    }
+    .sound-btn.ui-click:hover {
+      background: rgba(99, 102, 241, 0.15);
+    }
+
+    .sound-btn.success-chime, .sound-btn.success-file {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #4ade80;
+    }
+    .sound-btn.success-chime:hover, .sound-btn.success-file:hover {
+      background: rgba(34, 197, 94, 0.15);
+    }
+
+    .sound-btn.error-tone, .sound-btn.error-file {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+    .sound-btn.error-tone:hover, .sound-btn.error-file:hover {
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    .sound-btn.notification-ding {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      color: #fbbf24;
+    }
+    .sound-btn.notification-ding:hover {
+      background: rgba(251, 191, 36, 0.15);
+    }
+
+    .sound-btn.whoosh {
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      color: #a78bfa;
+    }
+    .sound-btn.whoosh:hover {
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    .sound-btn.confetti {
+      background: rgba(236, 72, 153, 0.1);
+      border: 1px solid rgba(236, 72, 153, 0.3);
+      color: #f472b6;
+    }
+    .sound-btn.confetti:hover {
+      background: rgba(236, 72, 153, 0.15);
+    }
+
+    .sound-btn.firework {
+      background: rgba(249, 115, 22, 0.1);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      color: #fb923c;
+    }
+    .sound-btn.firework:hover {
+      background: rgba(249, 115, 22, 0.15);
+    }
+
+    .sound-btn.magic {
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      color: #c084fc;
+    }
+    .sound-btn.magic:hover {
+      background: rgba(168, 85, 247, 0.15);
+    }
+
+    .sound-btn.warning {
+      background: rgba(234, 179, 8, 0.1);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      color: #facc15;
+    }
+    .sound-btn.warning:hover {
+      background: rgba(234, 179, 8, 0.15);
+    }
   `;
 
   private renderSidebarIcon(tag: string) {
@@ -640,6 +850,30 @@ export class ComponentsPage extends LitElement {
         return html`<checkbox-input size="sm"></checkbox-input>`;
       case "toggle-input":
         return html`<toggle-input size="sm"></toggle-input>`;
+      // Sound types (event-based)
+      case "ui-click":
+        return html`<div style="width: 32px; height: 32px; background: rgba(99, 102, 241, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #818cf8;">tap</div>`;
+      case "success-chime":
+        return html`<div style="width: 32px; height: 32px; background: rgba(34, 197, 94, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #4ade80;">ok</div>`;
+      case "error-tone":
+        return html`<div style="width: 32px; height: 32px; background: rgba(239, 68, 68, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #f87171;">err</div>`;
+      case "notification-ding":
+        return html`<div style="width: 32px; height: 32px; background: rgba(251, 191, 36, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #fbbf24;">!</div>`;
+      case "whoosh":
+        return html`<div style="width: 32px; height: 32px; background: rgba(139, 92, 246, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #a78bfa;">~></div>`;
+      // File-based sounds
+      case "confetti":
+        return html`<div style="width: 32px; height: 32px; background: rgba(236, 72, 153, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #f472b6;">pop</div>`;
+      case "error-file":
+        return html`<div style="width: 32px; height: 32px; background: rgba(239, 68, 68, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #f87171;">err</div>`;
+      case "firework":
+        return html`<div style="width: 32px; height: 32px; background: rgba(249, 115, 22, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fb923c;">boom</div>`;
+      case "magic":
+        return html`<div style="width: 32px; height: 32px; background: rgba(168, 85, 247, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #c084fc;">*</div>`;
+      case "success-file":
+        return html`<div style="width: 32px; height: 32px; background: rgba(34, 197, 94, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #4ade80;">ok</div>`;
+      case "warning":
+        return html`<div style="width: 32px; height: 32px; background: rgba(234, 179, 8, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #facc15;">!</div>`;
       default:
         return html``;
     }
@@ -657,6 +891,8 @@ export class ComponentsPage extends LitElement {
         return this.buttonComponents;
       case "inputs":
         return this.inputComponents;
+      case "sounds":
+        return this.soundComponents;
       default:
         return [];
     }
@@ -681,6 +917,36 @@ export class ComponentsPage extends LitElement {
           `
         )}
       </div>
+    `;
+  }
+
+  private getSoundButtonInfo(sound: SoundType): { icon: string; label: string } {
+    switch (sound) {
+      case "ui-click": return { icon: "tap", label: "Click" };
+      case "success-chime": return { icon: "ok", label: "Success" };
+      case "error-tone": return { icon: "err", label: "Error" };
+      case "notification-ding": return { icon: "!", label: "Ding" };
+      case "whoosh": return { icon: "~>", label: "Whoosh" };
+      case "confetti": return { icon: "pop", label: "Confetti" };
+      case "error-file": return { icon: "err", label: "Error" };
+      case "firework": return { icon: "boom", label: "Firework" };
+      case "magic": return { icon: "*", label: "Magic" };
+      case "success-file": return { icon: "ok", label: "Success" };
+      case "warning": return { icon: "!", label: "Warning" };
+      default: return { icon: "?", label: "Sound" };
+    }
+  }
+
+  private renderSoundButton(sound: SoundType) {
+    const { icon, label } = this.getSoundButtonInfo(sound);
+    return html`
+      <button 
+        class="sound-btn ${sound}" 
+        @click=${() => this.soundController.play(sound)}
+      >
+        <span class="icon">${icon}</span>
+        <span class="label">${label}</span>
+      </button>
     `;
   }
 
@@ -1208,6 +1474,24 @@ export class ComponentsPage extends LitElement {
             </div>
           </div>
         `;
+      // Sound types - event-based triggers
+      case "ui-click":
+      case "success-chime":
+      case "error-tone":
+      case "notification-ding":
+      case "whoosh":
+      case "confetti":
+      case "error-file":
+      case "firework":
+      case "magic":
+      case "success-file":
+      case "warning":
+        return html`
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+            ${this.renderSoundButton(tag as SoundType)}
+            <span style="color: #6b7280; font-size: 0.875rem;">Click to play sound</span>
+          </div>
+        `;
       default:
         return html``;
     }
@@ -1364,6 +1648,31 @@ export class ComponentsPage extends LitElement {
             <div><span class="code-attr">window</span>.<span class="code-tag">triggerStarfield</span>()</div>
           </div>
         `;
+      // Sound types - event-based system
+      case "ui-click":
+      case "success-chime":
+      case "error-tone":
+      case "notification-ding":
+      case "whoosh":
+      case "confetti":
+      case "error-file":
+      case "firework":
+      case "magic":
+      case "success-file":
+      case "warning":
+        return html`
+          <div class="code-block" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div><span style="color: #6b7280;">// Import the sound utilities</span></div>
+            <div><span class="code-attr">import</span> { <span class="code-tag">triggerSound</span>, <span class="code-tag">SoundController</span>, <span class="code-tag">dispatchSoundEvent</span> } <span class="code-attr">from</span> <span class="code-value">"./sounds"</span>;</div>
+            <div style="margin-top: 0.5rem;"><span style="color: #6b7280;">// Option 1: Direct function call</span></div>
+            <div><span class="code-tag">triggerSound</span>(<span class="code-value">"${tag}"</span>, <span class="code-value">0.5</span>);</div>
+            <div style="margin-top: 0.5rem;"><span style="color: #6b7280;">// Option 2: Via SoundController (in LitElement)</span></div>
+            <div><span class="code-attr">private</span> <span class="code-tag">soundController</span> = <span class="code-attr">new</span> <span class="code-tag">SoundController</span>(<span class="code-attr">this</span>);</div>
+            <div><span class="code-attr">this</span>.<span class="code-tag">soundController</span>.<span class="code-tag">play</span>(<span class="code-value">"${tag}"</span>);</div>
+            <div style="margin-top: 0.5rem;"><span style="color: #6b7280;">// Option 3: Dispatch event (bubbles up to listener)</span></div>
+            <div><span class="code-tag">dispatchSoundEvent</span>(<span class="code-attr">this</span>, <span class="code-value">"${tag}"</span>, <span class="code-value">0.5</span>);</div>
+          </div>
+        `;
     }
     
     return html`
@@ -1494,6 +1803,15 @@ export class ComponentsPage extends LitElement {
             }}
           >
             Inputs
+          </button>
+          <button
+            class="tab ${this.activeTab === "sounds" ? "active" : ""}"
+            @click=${() => {
+              this.activeTab = "sounds";
+              this.selectedComponent = this.soundComponents[0]?.tag || null;
+            }}
+          >
+            Sounds
           </button>
           <button class="tab disabled" disabled>Feedback</button>
         </div>

@@ -1,5 +1,6 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { triggerSound } from "../sounds";
 
 interface Star {
   x: number;
@@ -184,6 +185,9 @@ export class FullpageStarfield extends LitElement {
     const width = this.canvas!.width / window.devicePixelRatio;
     const height = this.canvas!.height / window.devicePixelRatio;
     this.initStars(width, height);
+    
+    // Play whoosh sound for warp speed
+    triggerSound("whoosh");
     
     if (this.animationId) cancelAnimationFrame(this.animationId);
     this.runAnimation();
