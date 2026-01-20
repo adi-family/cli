@@ -2,7 +2,7 @@ type RouteChangeCallback = (route: string) => void;
 
 class Router {
   private basePath = '/app';
-  private validRoutes = ['board', 'credentials'];
+  private validRoutes = ['board', 'credentials', 'components'];
   private defaultRoute = 'board';
   private listeners: RouteChangeCallback[] = [];
   private currentRoute: string;

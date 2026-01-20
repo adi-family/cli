@@ -12,6 +12,8 @@
     <script type="module" src="./src/components/command-palette.ts"></script>
     <script type="module" src="./src/components/credentials-list.ts"></script>
     <script type="module" src="./src/components/credentials-form.ts"></script>
+    <script type="module" src="./src/components/source-settings.ts"></script>
+    <script type="module" src="./src/components/components-page.ts"></script>
     <script type="module" src="./src/setup-commands.ts"></script>
   </head>
   <body>
@@ -22,9 +24,11 @@
     ></app-header>
 
     <!-- Main content area -->
-    <main class="flex-1" style="overflow: auto;">
+    <main class="flex-1" style="overflow: auto; height: calc(100vh - 4rem);">
       <credentials-list id="credentials-view"></credentials-list>
       <credentials-form id="credentials-form"></credentials-form>
+      <source-settings id="source-settings"></source-settings>
+      <components-page id="components-view" style="display: none; height: 100%; overflow: auto;"></components-page>
     </main>
 
     <script type="module">
@@ -33,10 +37,14 @@
       const header = document.querySelector('app-header');
       const credentialsList = document.getElementById('credentials-view');
       const credentialsForm = document.getElementById('credentials-form');
+      const sourceSettings = document.getElementById('source-settings');
+      const componentsView = document.getElementById('components-view');
 
       function updateView(route) {
         // Hide all views
         credentialsList.visible = false;
+        sourceSettings.visible = false;
+        componentsView.style.display = 'none';
 
         // Update header active state
         header.activeNav = route;
@@ -45,6 +53,12 @@
         switch (route) {
           case 'credentials':
             credentialsList.visible = true;
+            break;
+          case 'settings':
+            sourceSettings.visible = true;
+            break;
+          case 'components':
+            componentsView.style.display = 'block';
             break;
           case 'board':
           case 'list':
@@ -76,7 +90,15 @@
       });
 
       credentialsForm.addEventListener('saved', () => {
-        credentialsList.loadCredentials();
+        // Refresh credentials list after save
+        import('./src/stores/credentials.ts').then(({ credentialsStore }) => {
+          credentialsStore.refresh();
+        });
+      });
+
+      // Handle settings close
+      sourceSettings.addEventListener('close', () => {
+        router.navigate('credentials');
       });
 
       // Handle Cmd+R / Ctrl+R to refresh content instead of page
