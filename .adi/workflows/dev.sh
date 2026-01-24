@@ -366,17 +366,24 @@ start_service() {
             env_cmd="$env_cmd NEXT_PUBLIC_CREDENTIALS_API_URL=http://adi.local/api/credentials"
             ;;
         web-app)
-            # Vite dev server - PORT is already set
+            # Vite dev server - use adi.local URLs (via nginx) to preserve cookies
+            local signaling_port
+            signaling_port=$(get_port "signaling")
+            env_cmd="$env_cmd VITE_SIGNALING_URL=ws://adi.local/api/signaling/ws"
+            # Platform/Auth use relative URLs (proxied by nginx) - no need to set
             ;;
         platform)
-            # Platform service needs DATABASE_URL, JWT_SECRET from .env.local
+            # Platform service needs DATABASE_URL, JWT_SECRET, PUBLIC_BASE_URL, CORS_ORIGIN from .env.local
             local pg_port
             pg_port=$(get_port "postgres")
             if [ -f "$PROJECT_ROOT/.env.local" ]; then
                 # shellcheck disable=SC1091
                 source "$PROJECT_ROOT/.env.local" 2>/dev/null || true
                 [ -n "$JWT_SECRET" ] && env_cmd="$env_cmd JWT_SECRET=$JWT_SECRET"
+                [ -n "$PUBLIC_BASE_URL" ] && env_cmd="$env_cmd PUBLIC_BASE_URL=$PUBLIC_BASE_URL"
             fi
+            # Set CORS origin for local dev (adi.local via nginx)
+            env_cmd="$env_cmd CORS_ORIGIN=http://adi.local"
             # Use platform-specific database if set, otherwise use docker postgres
             if [ -n "$PLATFORM_DATABASE_URL" ]; then
                 env_cmd="$env_cmd DATABASE_URL=$PLATFORM_DATABASE_URL"
