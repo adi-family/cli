@@ -2666,7 +2666,7 @@ dependencies = [
 
 [[package]]
 name = "cocoon"
-version = "0.2.5"
+version = "0.2.7"
 dependencies = [
  "abi_stable",
  "base64 0.22.1",
@@ -12225,6 +12225,27 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "webrtc-util",
+]
+
+[[package]]
+name = "webrtc-test-peer"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "clap",
+ "futures",
+ "lib-tarminal-sync",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-test",
+ "tokio-tungstenite 0.24.0",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+ "webrtc",
 ]
 
 [[package]]

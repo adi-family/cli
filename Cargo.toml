@@ -146,6 +146,7 @@ members = [
     "crates/adi-llm-extract-plugin",
     "crates/lib/lib-typespec-api/plugin",
     "crates/cocoon",
+    "crates/webrtc-test-peer",
 
     # Browser Debug components
     "crates/adi-browser-debug/core",
