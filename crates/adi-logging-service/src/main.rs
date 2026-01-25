@@ -62,8 +62,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/logs/batch", post(routes::ingest_logs))
         // Query API
         .route("/logs", get(routes::query_logs))
-        .route("/logs/trace/{trace_id}", get(routes::get_trace_logs))
-        .route("/logs/span/{span_id}", get(routes::get_span_logs))
+        .route("/logs/trace/:trace_id", get(routes::get_trace_logs))
+        .route("/logs/span/:span_id", get(routes::get_span_logs))
         .route("/logs/stats", get(routes::get_stats))
         // Middleware
         .layer(version_header_layer(
