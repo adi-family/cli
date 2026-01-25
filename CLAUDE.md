@@ -102,6 +102,8 @@ Several components follow a standard multi-crate structure within a single direc
 - `crates/adi-platform-api` - Unified Platform API (tasks, integrations, orchestration)
 - `crates/lib-analytics-core` - Analytics event tracking and persistence library
 - `crates/adi-analytics-api` - Analytics API (metrics, dashboards, aggregates)
+- `crates/lib-logging-core` - Centralized logging client with distributed tracing
+- `crates/adi-logging-service` - Logging service (ingestion + query API)
 - `crates/adi-balance-api` - Balance and transaction tracking service
 - `crates/adi-credentials-api` - Secure credentials storage service (ChaCha20-Poly1305 encrypted)
 - `crates/debug-metal-shader` - Metal shader debug app
@@ -254,6 +256,135 @@ Services that track events need:
 Analytics ingestion service needs:
 - `DATABASE_URL` - PostgreSQL connection string
 - `PORT` - Listen port (default: 8094)
+
+## Logging System
+
+### Architecture
+```
+Request → Service A [trace: abc, span: 001] → Service B [trace: abc, span: 002]
+              ↓                                    ↓
+         LoggingClient                       LoggingClient
+              ↓                                    ↓
+                    adi-logging-service (TimescaleDB)
+```
+
+- **lib-logging-core**: Client library with distributed tracing (trace ID + span ID)
+- **adi-logging-service**: Receives logs via HTTP and stores to TimescaleDB, provides query API
+- **TimescaleDB**: Time-series database for log storage with 30-day retention
+
+### Distributed Tracing
+All logs include hierarchical trace context:
+- **Trace ID**: UUID v7 for entire request chain (propagated across services)
+- **Span ID**: UUID v7 for current operation
+- **Parent Span ID**: Links spans in parent-child hierarchy
+
+Headers for propagation:
+- `X-Trace-ID`: Trace identifier (root of request chain)
+- `X-Span-ID`: Current span identifier
+- `X-Parent-Span-ID`: Parent span (passed to downstream services)
+
+### Log Levels (Extended 7)
+| Level | Value | Description |
+|-------|-------|-------------|
+| TRACE | 0 | Most detailed, for development |
+| DEBUG | 1 | Debug information |
+| INFO | 2 | General information |
+| NOTICE | 3 | Notable events |
+| WARN | 4 | Warning conditions |
+| ERROR | 5 | Error conditions |
+| FATAL | 6 | Critical errors |
+
+### Logging API Endpoints
+| Endpoint | Description |
+|----------|-------------|
+| `POST /logs/batch` | Ingest batch of logs |
+| `GET /logs` | Query logs with filters |
+| `GET /logs/trace/{trace_id}` | Get all logs for a trace |
+| `GET /logs/span/{span_id}` | Get logs for a specific span |
+| `GET /logs/stats` | Get logging statistics (24h) |
+| `GET /health` | Health check |
+
+### Query Parameters
+| Parameter | Description |
+|-----------|-------------|
+| `service` | Filter by service name |
+| `level` | Minimum log level (trace, debug, info, notice, warn, error, fatal) |
+| `trace_id` | Filter by trace ID |
+| `search` | Search in message text |
+| `from` | Start time (ISO 8601) |
+| `to` | End time (ISO 8601) |
+| `limit` | Max results (default: 100, max: 1000) |
+| `offset` | Pagination offset |
+
+### Integration Example
+```rust
+use lib_logging_core::{LoggingClient, TraceContext};
+
+// Initialize in main (non-blocking, fire-and-forget)
+let logging_url = std::env::var("LOGGING_URL")
+    .unwrap_or_else(|_| "http://localhost:8040".to_string());
+let client = LoggingClient::new(logging_url, "my-service");
+
+// Or console-only mode (no service delivery)
+let client = LoggingClient::console_only("my-service");
+
+// Create trace context for a request
+let ctx = TraceContext::new();
+
+// Log with context (non-blocking, returns immediately)
+// 1. Logs to console via tracing (always works)
+// 2. Queues for async delivery to logging service
+client.info("User logged in", &ctx)
+    .with_field("user_id", "123")
+    .with_field("email", "user@example.com")
+    .send();
+
+// Create child span for downstream call
+let child_ctx = ctx.child();
+client.debug("Calling auth service", &child_ctx).send();
+```
+
+### Non-Blocking Guarantees
+- All `log()` calls return immediately (never block)
+- Uses unbounded channel (send never blocks)
+- Console output via `tracing` always works (backup)
+- If logging service is down, logs still appear in console
+- Background task handles async HTTP delivery
+
+### Axum Middleware
+```rust
+use lib_logging_core::{trace_layer, TraceContextExt};
+
+// Add middleware to router
+let app = Router::new()
+    .route("/api/users", get(list_users))
+    .layer(trace_layer());
+
+// Extract context in handler
+async fn list_users(req: Request) -> impl IntoResponse {
+    let ctx = req.trace_context();
+    client.info("Listing users", &ctx).send();
+    // ...
+}
+```
+
+### Database Migrations
+```bash
+# Run logging migrations
+cd crates/lib/lib-logging-core
+cargo run --bin logging-migrate --features migrate all
+
+# Check status
+cargo run --bin logging-migrate --features migrate status
+```
+
+### Configuration
+Services need:
+- `LOGGING_URL` - URL of logging service (e.g., `http://localhost:8040`)
+
+Logging service needs:
+- `DATABASE_URL` - TimescaleDB connection string
+- `PORT` - Listen port (default: 8040)
 
 ## Cocoon
 - Cocoon is a containerized worker environment that connects to the signaling server
@@ -459,6 +590,7 @@ AUTH_API_URL=http://adi.local/api/auth
 | `/api/balance/*` | Balance API | 8030 | Balance and transaction tracking |
 | `/api/credentials/*` | Credentials API | 8032 | Secure credentials storage |
 | `/api/signaling/*` | Signaling | 8011 | WebSocket relay for sync |
+| `/api/logging/*` | Logging | 8040 | Centralized logging service |
 | `/api/registry/*` | Registry | 8019 | Plugin registry (optional) |
 | `/api/hive/*` | Hive | 8020 | Cocoon orchestration (optional) |
 
@@ -467,6 +599,7 @@ AUTH_API_URL=http://adi.local/api/auth
 |---------|-----|-------------|
 | PostgreSQL | localhost:8027 | Auth, Platform, LLM Proxy databases |
 | TimescaleDB | localhost:8028 | Analytics database |
+| Coturn TURN | turn:localhost:3478 | WebRTC NAT traversal (user: adi, pass: adi) |
 | Web UI | http://localhost:8013 | Next.js frontend |
 | Auth API | http://localhost:8012 | Authentication (email + TOTP) |
 | Platform API | http://localhost:8015 | Tasks, projects, integrations |
@@ -477,6 +610,7 @@ AUTH_API_URL=http://adi.local/api/auth
 | LLM Proxy | http://localhost:8029 | LLM API proxy (BYOK/Platform) |
 | Balance API | http://localhost:8030 | Balance and transaction tracking |
 | Credentials API | http://localhost:8032 | Secure credentials storage |
+| Logging | http://localhost:8040 | Centralized logging service |
 | Hive | http://localhost:8020 | Cocoon orchestration (optional) |
 | Registry | http://localhost:8019 | Plugin registry (optional) |
 

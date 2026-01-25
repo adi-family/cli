@@ -38,6 +38,31 @@ services:
       timeout: 5s
       retries: 5
 
+  # Coturn TURN server for WebRTC NAT traversal
+  # Provides relay for WebRTC connections when direct P2P fails
+  coturn:
+    image: coturn/coturn:latest
+    container_name: adi-coturn
+    network_mode: host
+    command:
+      - "turnserver"
+      - "-n"
+      - "--log-file=stdout"
+      - "--listening-port=${COTURN_PORT:-3478}"
+      - "--fingerprint"
+      - "--lt-cred-mech"
+      - "--user=adi:adi"
+      - "--realm=adi.local"
+      - "--no-tls"
+      - "--no-dtls"
+      - "--no-cli"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost ${COTURN_PORT:-3478} || exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
 volumes:
   adi-postgres-data:
   adi-timescaledb-data:

@@ -28,3 +28,6 @@ openssl = { version = "0.10", features = ["vendored"] }
 
 # HTTP utilities
 lib-http-common = { path = "../../crates/lib/lib-http-common" }
+
+# Logging
+lib-logging-core = { path = "../../crates/lib/lib-logging-core", features = ["axum-08-compat"] }

@@ -1,0 +1,43 @@
+[package]
+name = "adi-logging-service"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Centralized logging service for ADI - ingestion and query API"
+
+[dependencies]
+# Core logging library
+lib-logging-core = { path = "../lib/lib-logging-core" }
+lib-http-common = { path = "../lib/lib-http-common" }
+
+# Async runtime
+tokio = { version = "1.49", features = ["full"] }
+
+# Web framework
+axum = { version = "0.7", features = ["macros"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1.19", features = ["serde", "v4", "v7"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Environment
+dotenvy = "0.15"

@@ -1,0 +1,67 @@
+[package]
+name = "lib-logging-core"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Centralized logging library with distributed tracing support for ADI services"
+
+[[bin]]
+name = "logging-migrate"
+path = "src/bin/migrate.rs"
+required-features = ["migrate"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.49", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP client (use rustls for musl cross-compilation)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID v7 for time-ordered IDs
+uuid = { version = "1.19", features = ["serde", "v4", "v7"] }
+
+# Logging/tracing integration
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+
+# HTTP types for middleware
+http = "1"
+
+# Axum for middleware (optional)
+# Use specific package names to allow both versions
+axum-07 = { package = "axum", version = "0.7", optional = true }
+axum-08 = { package = "axum", version = "0.8", optional = true }
+tower-04 = { package = "tower", version = "0.4", optional = true }
+tower-05 = { package = "tower", version = "0.5", optional = true }
+
+# Migrations (for binary only)
+lib-migrations-core = { git = "https://github.com/adi-family/lib-migrations-core.git", optional = true }
+lib-migrations-sql = { git = "https://github.com/adi-family/lib-migrations-sql.git", optional = true }
+
+# Environment (for binary only)
+dotenvy = { version = "0.15", optional = true }
+
+[features]
+default = []
+migrate = ["lib-migrations-core", "lib-migrations-sql", "dotenvy"]
+# Axum 0.7 support (for adi-auth, signaling, adi-api-proxy, etc.)
+axum = ["axum-07", "tower-04"]
+# Axum 0.8 support (for adi-platform, analytics, balance, credentials, etc.)
+axum-08-compat = ["axum-08", "tower-05"]
+
+[dev-dependencies]
+tokio-test = "0.4"

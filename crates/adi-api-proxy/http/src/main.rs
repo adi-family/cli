@@ -16,6 +16,7 @@ use axum::{
 };
 use lib_analytics_core::AnalyticsClient;
 use lib_http_common::version_header_layer;
+use lib_logging_core::trace_layer;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -72,6 +73,7 @@ async fn main() -> anyhow::Result<()> {
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),
         ))
+        .layer(trace_layer())
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state);

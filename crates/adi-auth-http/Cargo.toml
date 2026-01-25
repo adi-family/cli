@@ -24,3 +24,6 @@ uuid = { version = "1.19", features = ["v4", "serde"] }
 
 # HTTP utilities
 lib-http-common = { path = "../lib/lib-http-common" }
+
+# Logging
+lib-logging-core = { path = "../lib/lib-logging-core", features = ["axum"] }

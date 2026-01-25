@@ -28,6 +28,9 @@ lib-analytics-core = { path = "../../lib/lib-analytics-core" }
 # HTTP utilities
 lib-http-common = { path = "../../lib/lib-http-common" }
 
+# Logging
+lib-logging-core = { path = "../../lib/lib-logging-core", features = ["axum"] }
+
 # Workspace dependencies
 thiserror.workspace = true
 anyhow.workspace = true

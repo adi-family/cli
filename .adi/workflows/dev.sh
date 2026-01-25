@@ -56,9 +56,9 @@ PID_DIR="$PROJECT_ROOT/.dev"
 LOG_DIR="$PROJECT_ROOT/.dev/logs"
 
 # All services
-ALL_SERVICES="postgres timescaledb signaling auth platform web web-app flowmap analytics-ingestion analytics llm-proxy balance credentials cocoon registry hive codegen"
-# Default services to start (balance, credentials, cocoon, registry, hive, codegen are optional)
-DEFAULT_SERVICES="postgres timescaledb signaling auth platform web flowmap analytics-ingestion analytics llm-proxy"
+ALL_SERVICES="postgres timescaledb coturn signaling auth platform web web-app flowmap analytics-ingestion analytics llm-proxy balance credentials logging cocoon registry hive codegen"
+# Default services to start (balance, credentials, logging, cocoon, registry, hive, codegen are optional)
+DEFAULT_SERVICES="postgres timescaledb coturn signaling auth platform web flowmap analytics-ingestion analytics llm-proxy"
 
 # -----------------------------------------------------------------------------
 # Service Configuration (functions for bash 3.2 compatibility)
@@ -68,6 +68,7 @@ service_dir() {
     case "$1" in
         postgres)    echo "docker" ;;
         timescaledb) echo "docker" ;;
+        coturn)      echo "docker" ;;
         signaling) echo "crates/tarminal-signaling-server" ;;
         auth)      echo "crates/adi-auth" ;;
         platform)  echo "crates/adi-platform-api" ;;
@@ -78,6 +79,7 @@ service_dir() {
         analytics) echo "crates/adi-analytics-api" ;;
         llm-proxy) echo "crates/adi-api-proxy/http" ;;
         balance)   echo "crates/adi-balance-api" ;;
+        logging)   echo "crates/adi-logging-service" ;;
         credentials) echo "crates/adi-credentials-api" ;;
         cocoon)    echo "crates/cocoon" ;;
         registry)  echo "crates/adi-plugin-registry-http" ;;
@@ -91,6 +93,7 @@ service_cmd() {
     case "$1" in
         postgres)    echo "docker" ;;
         timescaledb) echo "docker" ;;
+        coturn)      echo "docker" ;;
         signaling) echo "cargo run" ;;
         auth)      echo "cargo run -p adi-auth-http" ;;
         platform)  echo "cargo run --bin adi-platform-api" ;;
@@ -101,6 +104,7 @@ service_cmd() {
         analytics) echo "cargo run" ;;
         llm-proxy) echo "cargo run --bin adi-api-proxy" ;;
         balance)   echo "cargo run --bin adi-balance-api" ;;
+        logging)   echo "cargo run --bin adi-logging-service" ;;
         credentials) echo "cargo run --bin adi-credentials-api" ;;
         cocoon)    echo "cargo run --features standalone" ;;
         registry)  echo "cargo run" ;;
@@ -114,6 +118,7 @@ service_port_name() {
     case "$1" in
         postgres)    echo "adi-postgres" ;;
         timescaledb) echo "adi-timescaledb" ;;
+        coturn)      echo "adi-coturn" ;;
         signaling) echo "adi-signaling" ;;
         auth)      echo "adi-auth" ;;
         platform)  echo "adi-platform" ;;
@@ -124,6 +129,7 @@ service_port_name() {
         analytics) echo "adi-analytics" ;;
         llm-proxy) echo "adi-llm-proxy" ;;
         balance)   echo "adi-balance" ;;
+        logging)   echo "adi-logging" ;;
         credentials) echo "adi-credentials" ;;
         cocoon)    echo "adi-cocoon" ;;
         registry)  echo "adi-registry" ;;
@@ -137,6 +143,7 @@ service_description() {
     case "$1" in
         postgres)    echo "PostgreSQL database (auth, platform, llm-proxy, balance)" ;;
         timescaledb) echo "TimescaleDB (analytics)" ;;
+        coturn)      echo "TURN server for WebRTC NAT traversal" ;;
         signaling) echo "WebSocket relay for sync" ;;
         auth)      echo "Authentication API" ;;
         platform)  echo "Platform API (tasks, integrations)" ;;
@@ -147,6 +154,7 @@ service_description() {
         analytics) echo "Analytics API (metrics, dashboards)" ;;
         llm-proxy) echo "LLM API proxy (BYOK/Platform modes)" ;;
         balance)   echo "Balance and transaction tracking" ;;
+        logging)   echo "Centralized logging service (ingestion + query)" ;;
         credentials) echo "Secure credentials storage" ;;
         cocoon)    echo "Worker container" ;;
         registry)  echo "Plugin registry (local)" ;;
@@ -244,9 +252,11 @@ start_docker_service() {
     postgres_port=$(get_port "postgres")
     local timescaledb_port
     timescaledb_port=$(get_port "timescaledb")
+    local coturn_port
+    coturn_port=$(get_port "coturn")
 
     # Start specific service via docker-compose
-    POSTGRES_PORT="$postgres_port" TIMESCALEDB_PORT="$timescaledb_port" \
+    POSTGRES_PORT="$postgres_port" TIMESCALEDB_PORT="$timescaledb_port" COTURN_PORT="$coturn_port" \
         docker compose -f "$PROJECT_ROOT/docker-compose.dev.yml" up -d "$service" >> "$(log_file "$service")" 2>&1
 
     # Wait for container to be healthy
@@ -261,13 +271,23 @@ start_docker_service() {
     done
 
     # Wait for port to be listening
-    while ! nc -z localhost "$port" 2>/dev/null; do
-        if [ $elapsed -ge $timeout ]; then
-            error "$service port not ready after ${timeout}s. Check logs: $(log_file "$service")"
+    # Coturn uses UDP primarily, so we check UDP for it, TCP for others
+    if [ "$service" = "coturn" ]; then
+        # For coturn, just wait a bit and check if container is still running
+        # UDP port checks are unreliable
+        sleep 3
+        if ! is_docker_running "$service"; then
+            error "$service failed to start. Check logs: $(log_file "$service")"
         fi
-        sleep 1
-        elapsed=$((elapsed + 1))
-    done
+    else
+        while ! nc -z localhost "$port" 2>/dev/null; do
+            if [ $elapsed -ge $timeout ]; then
+                error "$service port not ready after ${timeout}s. Check logs: $(log_file "$service")"
+            fi
+            sleep 1
+            elapsed=$((elapsed + 1))
+        done
+    fi
 
     success "$service started (container: $container_name, port: $port)"
 }
@@ -318,7 +338,10 @@ start_service() {
 
     # Service-specific environment setup
     # Enable version headers in responses for debugging
-    local env_cmd="PORT=$port SHOW_VERSION_IN_HEADERS=true"
+    # Add LOGGING_URL for centralized logging (all services send logs to logging service)
+    local logging_port
+    logging_port=$(get_port "logging")
+    local env_cmd="PORT=$port SHOW_VERSION_IN_HEADERS=true LOGGING_URL=http://localhost:$logging_port"
     case "$service" in
         signaling)
             # Signaling server needs HIVE_SECRETS for hive authentication
@@ -331,7 +354,13 @@ start_service() {
         cocoon)
             local signaling_port
             signaling_port=$(get_port "signaling")
+            local coturn_port
+            coturn_port=$(get_port "coturn")
             env_cmd="$env_cmd SIGNALING_SERVER_URL=ws://localhost:$signaling_port/ws"
+            # Configure WebRTC ICE servers with local TURN for NAT traversal
+            env_cmd="$env_cmd WEBRTC_ICE_SERVERS=stun:stun.l.google.com:19302,turn:localhost:$coturn_port"
+            env_cmd="$env_cmd WEBRTC_TURN_USERNAME=adi"
+            env_cmd="$env_cmd WEBRTC_TURN_CREDENTIAL=adi"
             ;;
         registry)
             # Registry service needs REGISTRY_DATA_DIR from .env.local
@@ -498,6 +527,16 @@ start_service() {
             local analytics_port
             analytics_port=$(get_port "analytics-ingestion")
             env_cmd="$env_cmd ANALYTICS_URL=http://localhost:$analytics_port"
+            ;;
+        logging)
+            # Logging service uses TimescaleDB (same as analytics)
+            local tsdb_port
+            tsdb_port=$(get_port "timescaledb")
+            if [ -n "$LOGGING_DATABASE_URL" ]; then
+                env_cmd="$env_cmd DATABASE_URL=$LOGGING_DATABASE_URL"
+            else
+                env_cmd="$env_cmd DATABASE_URL=postgres://adi:adi@localhost:$tsdb_port/adi_logging"
+            fi
             ;;
     esac
 
@@ -725,6 +764,8 @@ cmd_ports() {
     postgres_port=$(get_port "postgres")
     local timescaledb_port
     timescaledb_port=$(get_port "timescaledb")
+    local coturn_port
+    coturn_port=$(get_port "coturn")
     local signaling_port
     signaling_port=$(get_port "signaling")
     local auth_port
@@ -747,6 +788,8 @@ cmd_ports() {
     balance_port=$(get_port "balance")
     local credentials_port
     credentials_port=$(get_port "credentials")
+    local logging_port
+    logging_port=$(get_port "logging")
     local cocoon_port
     cocoon_port=$(get_port "cocoon")
     local registry_port
@@ -757,6 +800,9 @@ cmd_ports() {
     echo -e "  ${BOLD}Databases:${NC}"
     echo -e "  ${CYAN}PostgreSQL:${NC}          localhost:$postgres_port (auth, platform, llm-proxy, balance)"
     echo -e "  ${CYAN}TimescaleDB:${NC}         localhost:$timescaledb_port (analytics)"
+    echo ""
+    echo -e "  ${BOLD}Infrastructure:${NC}"
+    echo -e "  ${CYAN}Coturn TURN:${NC}         turn:localhost:$coturn_port (WebRTC NAT traversal)"
     echo ""
     echo -e "  ${BOLD}Services:${NC}"
     echo -e "  ${CYAN}Web UI:${NC}              http://localhost:$web_port"
@@ -770,6 +816,7 @@ cmd_ports() {
     echo -e "  ${CYAN}LLM Proxy:${NC}           http://localhost:$llm_proxy_port"
     echo -e "  ${CYAN}Balance API:${NC}         http://localhost:$balance_port"
     echo -e "  ${CYAN}Credentials API:${NC}     http://localhost:$credentials_port"
+    echo -e "  ${CYAN}Logging:${NC}             http://localhost:$logging_port"
     echo -e "  ${CYAN}Registry:${NC}            http://localhost:$registry_port"
     echo -e "  ${CYAN}Hive:${NC}                http://localhost:$manager_port"
     echo -e "  ${CYAN}Signaling:${NC}           ws://localhost:$signaling_port/ws"

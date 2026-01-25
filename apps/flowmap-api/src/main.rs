@@ -8,6 +8,7 @@ use axum::{
 use lib_flowmap_core::*;
 use lib_flowmap_parser::{FlowParser, MultiLangParser};
 use lib_http_common::version_header_layer;
+use lib_logging_core::trace_layer;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -99,6 +100,7 @@ async fn main() {
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),
         ))
+        .layer(trace_layer())
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state);

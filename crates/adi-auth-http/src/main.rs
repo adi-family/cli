@@ -7,6 +7,7 @@ use axum::{
     Json, Router,
 };
 use lib_http_common::version_header_layer;
+use lib_logging_core::{LoggingClient, trace_layer};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -22,6 +23,8 @@ struct AppState {
     admin_emails: HashSet<String>,
     /// Admin token manager (if ADMIN_JWT_SECRET is set)
     admin_token_manager: Option<TokenManager>,
+    /// Logging client
+    logger: LoggingClient,
 }
 
 #[tokio::main]
@@ -66,10 +69,15 @@ async fn main() {
         tracing::info!("Admin JWT authentication enabled");
     }
 
+    // Initialize logging client from environment
+    // Uses LOGGING_URL and LOGGING_ENABLED env vars
+    let logger = lib_logging_core::from_env(env!("CARGO_PKG_NAME"));
+
     let state = Arc::new(AppState {
         auth: RwLock::new(auth),
         admin_emails,
         admin_token_manager,
+        logger,
     });
 
     let app = Router::new()
@@ -83,6 +91,7 @@ async fn main() {
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),
         ))
+        .layer(trace_layer())
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive());
 
