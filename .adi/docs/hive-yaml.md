@@ -51,10 +51,12 @@ services:
       script:
         run: cargo run --bin api
     rollout:
-      type: recreate
-      recreate:
+      type: blue-green
+      blue-green:
         ports:
-          http: 8080
+          http:
+            blue: 8080
+            green: 8081
     proxy:
       host: localhost
       path: /api
