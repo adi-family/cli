@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::{LogLevel, TraceContext};
+use crate::{CorrelationIds, LogLevel, TraceContext};
 
 /// A log entry to be sent to the logging service.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,6 +27,10 @@ pub struct LogEntry {
     /// Parent span ID (if this is a child span)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_span_id: Option<Uuid>,
+
+    /// Business-level correlation IDs
+    #[serde(default, skip_serializing_if = "CorrelationIds::is_empty")]
+    pub correlation: CorrelationIds,
 
     /// Additional structured fields
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
@@ -68,6 +72,7 @@ impl LogEntry {
             trace_id: ctx.trace_id,
             span_id: ctx.span_id,
             parent_span_id: ctx.parent_span_id,
+            correlation: ctx.correlation.clone(),
             fields: HashMap::new(),
             error: None,
             source: None,
@@ -111,6 +116,26 @@ impl LogEntry {
         let trace_id = &self.trace_id.to_string()[..8]; // Short trace ID for console
         let span_id = &self.span_id.to_string()[..8];
 
+        // Build correlation IDs string
+        let mut corr_parts = Vec::new();
+        if let Some(ref cocoon_id) = self.correlation.cocoon_id {
+            corr_parts.push(format!("cocoon={}", &cocoon_id[..cocoon_id.len().min(8)]));
+        }
+        if let Some(ref user_id) = self.correlation.user_id {
+            corr_parts.push(format!("user={}", &user_id[..user_id.len().min(8)]));
+        }
+        if let Some(ref session_id) = self.correlation.session_id {
+            corr_parts.push(format!(
+                "session={}",
+                &session_id[..session_id.len().min(8)]
+            ));
+        }
+        let corr_str = if corr_parts.is_empty() {
+            String::new()
+        } else {
+            format!(" {}", corr_parts.join(" "))
+        };
+
         // Build fields string for structured logging
         let fields_str = if self.fields.is_empty() {
             String::new()
@@ -137,9 +162,12 @@ impl LogEntry {
                 trace_id = trace_id,
                 span_id = span_id,
                 service = service,
-                "[{}] {}{}{}",
+                cocoon_id = self.correlation.cocoon_id.as_deref().unwrap_or(""),
+                user_id = self.correlation.user_id.as_deref().unwrap_or(""),
+                "[{}] {}{}{}{}",
                 service,
                 self.message,
+                corr_str,
                 fields_str,
                 error_str
             ),
@@ -147,9 +175,12 @@ impl LogEntry {
                 trace_id = trace_id,
                 span_id = span_id,
                 service = service,
-                "[{}] {}{}{}",
+                cocoon_id = self.correlation.cocoon_id.as_deref().unwrap_or(""),
+                user_id = self.correlation.user_id.as_deref().unwrap_or(""),
+                "[{}] {}{}{}{}",
                 service,
                 self.message,
+                corr_str,
                 fields_str,
                 error_str
             ),
@@ -157,9 +188,12 @@ impl LogEntry {
                 trace_id = trace_id,
                 span_id = span_id,
                 service = service,
-                "[{}] {}{}{}",
+                cocoon_id = self.correlation.cocoon_id.as_deref().unwrap_or(""),
+                user_id = self.correlation.user_id.as_deref().unwrap_or(""),
+                "[{}] {}{}{}{}",
                 service,
                 self.message,
+                corr_str,
                 fields_str,
                 error_str
             ),
@@ -167,9 +201,12 @@ impl LogEntry {
                 trace_id = trace_id,
                 span_id = span_id,
                 service = service,
-                "[{}] [NOTICE] {}{}{}",
+                cocoon_id = self.correlation.cocoon_id.as_deref().unwrap_or(""),
+                user_id = self.correlation.user_id.as_deref().unwrap_or(""),
+                "[{}] [NOTICE] {}{}{}{}",
                 service,
                 self.message,
+                corr_str,
                 fields_str,
                 error_str
             ),
@@ -177,9 +214,12 @@ impl LogEntry {
                 trace_id = trace_id,
                 span_id = span_id,
                 service = service,
-                "[{}] {}{}{}",
+                cocoon_id = self.correlation.cocoon_id.as_deref().unwrap_or(""),
+                user_id = self.correlation.user_id.as_deref().unwrap_or(""),
+                "[{}] {}{}{}{}",
                 service,
                 self.message,
+                corr_str,
                 fields_str,
                 error_str
             ),
@@ -187,9 +227,12 @@ impl LogEntry {
                 trace_id = trace_id,
                 span_id = span_id,
                 service = service,
-                "[{}] {}{}{}",
+                cocoon_id = self.correlation.cocoon_id.as_deref().unwrap_or(""),
+                user_id = self.correlation.user_id.as_deref().unwrap_or(""),
+                "[{}] {}{}{}{}",
                 service,
                 self.message,
+                corr_str,
                 fields_str,
                 error_str
             ),
@@ -197,9 +240,12 @@ impl LogEntry {
                 trace_id = trace_id,
                 span_id = span_id,
                 service = service,
-                "[{}] [FATAL] {}{}{}",
+                cocoon_id = self.correlation.cocoon_id.as_deref().unwrap_or(""),
+                user_id = self.correlation.user_id.as_deref().unwrap_or(""),
+                "[{}] [FATAL] {}{}{}{}",
                 service,
                 self.message,
+                corr_str,
                 fields_str,
                 error_str
             ),

@@ -268,7 +268,7 @@ Request → Service A [trace: abc, span: 001] → Service B [trace: abc, span: 0
                     adi-logging-service (TimescaleDB)
 ```
 
-- **lib-logging-core**: Client library with distributed tracing (trace ID + span ID)
+- **lib-logging-core**: Client library with distributed tracing (trace ID + span ID) and correlation IDs
 - **adi-logging-service**: Receives logs via HTTP and stores to TimescaleDB, provides query API
 - **TimescaleDB**: Time-series database for log storage with 30-day retention
 
@@ -282,6 +282,13 @@ Headers for propagation:
 - `X-Trace-ID`: Trace identifier (root of request chain)
 - `X-Span-ID`: Current span identifier
 - `X-Parent-Span-ID`: Parent span (passed to downstream services)
+
+### Correlation IDs
+Business-level correlation IDs allow querying all logs related to a specific entity:
+- **Cocoon ID**: All logs for a specific cocoon device (`X-Cocoon-ID` header)
+- **User ID**: All logs for a specific user (`X-User-ID` header)
+- **Session ID**: All logs for a WebSocket/WebRTC session (`X-Session-ID` header)
+- **Hive ID**: All logs for hive orchestration (`X-Hive-ID` header)
 
 ### Log Levels (Extended 7)
 | Level | Value | Description |
@@ -301,6 +308,9 @@ Headers for propagation:
 | `GET /logs` | Query logs with filters |
 | `GET /logs/trace/{trace_id}` | Get all logs for a trace |
 | `GET /logs/span/{span_id}` | Get logs for a specific span |
+| `GET /logs/cocoon/{cocoon_id}` | Get all logs for a cocoon |
+| `GET /logs/user/{user_id}` | Get all logs for a user |
+| `GET /logs/session/{session_id}` | Get all logs for a session |
 | `GET /logs/stats` | Get logging statistics (24h) |
 | `GET /health` | Health check |
 
@@ -310,36 +320,50 @@ Headers for propagation:
 | `service` | Filter by service name |
 | `level` | Minimum log level (trace, debug, info, notice, warn, error, fatal) |
 | `trace_id` | Filter by trace ID |
+| `cocoon_id` | Filter by cocoon device ID |
+| `user_id` | Filter by user ID |
+| `session_id` | Filter by session ID |
+| `hive_id` | Filter by hive ID |
 | `search` | Search in message text |
 | `from` | Start time (ISO 8601) |
 | `to` | End time (ISO 8601) |
 | `limit` | Max results (default: 100, max: 1000) |
 | `offset` | Pagination offset |
 
+### Query Examples
+```bash
+# All logs for a specific cocoon
+curl "http://localhost:8040/logs/cocoon/49ab3b2a32fdb98f..."
+
+# All logs for a specific user
+curl "http://localhost:8040/logs/user/09f210bf-f65e-41df..."
+
+# Filter by cocoon and level
+curl "http://localhost:8040/logs?cocoon_id=abc123&level=error"
+
+# Search within a session
+curl "http://localhost:8040/logs/session/webrtc-123?search=WebRTC"
+```
+
 ### Integration Example
 ```rust
 use lib_logging_core::{LoggingClient, TraceContext};
 
 // Initialize in main (non-blocking, fire-and-forget)
-let logging_url = std::env::var("LOGGING_URL")
-    .unwrap_or_else(|_| "http://localhost:8040".to_string());
-let client = LoggingClient::new(logging_url, "my-service");
+let client = lib_logging_core::from_env("my-service");
 
-// Or console-only mode (no service delivery)
-let client = LoggingClient::console_only("my-service");
-
-// Create trace context for a request
-let ctx = TraceContext::new();
+// Create trace context with correlation IDs
+let ctx = TraceContext::new()
+    .with_cocoon("device-id-here")
+    .with_user("user-uuid-here")
+    .with_session("ws-session-id");
 
 // Log with context (non-blocking, returns immediately)
-// 1. Logs to console via tracing (always works)
-// 2. Queues for async delivery to logging service
 client.info("User logged in", &ctx)
-    .with_field("user_id", "123")
     .with_field("email", "user@example.com")
     .send();
 
-// Create child span for downstream call
+// Create child span (preserves correlation IDs)
 let child_ctx = ctx.child();
 client.debug("Calling auth service", &child_ctx).send();
 ```

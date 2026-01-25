@@ -50,7 +50,7 @@ mod entry;
 mod middleware;
 
 pub use client::{LoggingClient, LoggingClientConfig};
-pub use context::{TraceContext, SpanContext};
+pub use context::{TraceContext, SpanContext, CorrelationIds};
 pub use env::{from_env, from_env_with, LOGGING_URL_ENV, LOGGING_ENABLED_ENV};
 pub use error::{LoggingError, Result};
 pub use level::LogLevel;
@@ -70,3 +70,15 @@ pub const SPAN_ID_HEADER: &str = "X-Span-ID";
 
 /// Header name for parent span ID propagation
 pub const PARENT_SPAN_ID_HEADER: &str = "X-Parent-Span-ID";
+
+/// Header name for cocoon ID correlation
+pub const COCOON_ID_HEADER: &str = "X-Cocoon-ID";
+
+/// Header name for user ID correlation
+pub const USER_ID_HEADER: &str = "X-User-ID";
+
+/// Header name for session ID correlation
+pub const SESSION_ID_HEADER: &str = "X-Session-ID";
+
+/// Header name for hive ID correlation
+pub const HIVE_ID_HEADER: &str = "X-Hive-ID";

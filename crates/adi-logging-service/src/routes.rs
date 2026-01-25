@@ -65,6 +65,18 @@ pub struct LogQuery {
     /// Filter by trace ID
     pub trace_id: Option<Uuid>,
 
+    /// Filter by cocoon ID (correlation)
+    pub cocoon_id: Option<String>,
+
+    /// Filter by user ID (correlation)
+    pub user_id: Option<String>,
+
+    /// Filter by session ID (correlation)
+    pub session_id: Option<String>,
+
+    /// Filter by hive ID (correlation)
+    pub hive_id: Option<String>,
+
     /// Search in message text
     pub search: Option<String>,
 
@@ -94,6 +106,10 @@ pub struct LogResponse {
     pub trace_id: Uuid,
     pub span_id: Uuid,
     pub parent_span_id: Option<Uuid>,
+    pub cocoon_id: Option<String>,
+    pub user_id: Option<String>,
+    pub session_id: Option<String>,
+    pub hive_id: Option<String>,
     pub fields: Option<serde_json::Value>,
     pub error_kind: Option<String>,
     pub error_message: Option<String>,
@@ -133,15 +149,20 @@ pub async fn query_logs(
             id, timestamp, service, hostname, environment,
             level_name as level, message,
             trace_id, span_id, parent_span_id,
+            cocoon_id, user_id, session_id, hive_id,
             fields, error_kind, error_message, source, target
         FROM logs
         WHERE timestamp >= $1 AND timestamp <= $2
             AND ($3::varchar IS NULL OR service = $3)
             AND ($4::smallint IS NULL OR level >= $4)
             AND ($5::uuid IS NULL OR trace_id = $5)
-            AND ($6::text IS NULL OR message ILIKE '%' || $6 || '%')
+            AND ($6::varchar IS NULL OR cocoon_id = $6)
+            AND ($7::varchar IS NULL OR user_id = $7)
+            AND ($8::varchar IS NULL OR session_id = $8)
+            AND ($9::varchar IS NULL OR hive_id = $9)
+            AND ($10::text IS NULL OR message ILIKE '%' || $10 || '%')
         ORDER BY timestamp DESC
-        LIMIT $7 OFFSET $8
+        LIMIT $11 OFFSET $12
         "#,
     )
     .bind(from)
@@ -149,6 +170,10 @@ pub async fn query_logs(
     .bind(&query.service)
     .bind(level_filter)
     .bind(query.trace_id)
+    .bind(&query.cocoon_id)
+    .bind(&query.user_id)
+    .bind(&query.session_id)
+    .bind(&query.hive_id)
     .bind(&query.search)
     .bind(limit)
     .bind(offset)
@@ -180,6 +205,7 @@ pub async fn get_trace_logs(
             id, timestamp, service, hostname, environment,
             level_name as level, message,
             trace_id, span_id, parent_span_id,
+            cocoon_id, user_id, session_id, hive_id,
             fields, error_kind, error_message, source, target
         FROM logs
         WHERE trace_id = $1
@@ -215,6 +241,7 @@ pub async fn get_span_logs(
             id, timestamp, service, hostname, environment,
             level_name as level, message,
             trace_id, span_id, parent_span_id,
+            cocoon_id, user_id, session_id, hive_id,
             fields, error_kind, error_message, source, target
         FROM logs
         WHERE span_id = $1
@@ -236,6 +263,159 @@ pub async fn get_span_logs(
         "span_id": span_id,
         "logs": logs,
         "count": logs.len(),
+    })))
+}
+
+/// Get all logs for a specific cocoon.
+pub async fn get_cocoon_logs(
+    State(state): State<AppState>,
+    Path(cocoon_id): Path<String>,
+    Query(query): Query<LogQuery>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let limit = query.limit.unwrap_or(100).min(1000);
+    let offset = query.offset.unwrap_or(0);
+    
+    // Default time range: last 24 hours
+    let from = query.from.unwrap_or_else(|| Utc::now() - chrono::Duration::hours(24));
+    let to = query.to.unwrap_or_else(Utc::now);
+
+    let rows = sqlx::query_as::<_, LogRow>(
+        r#"
+        SELECT
+            id, timestamp, service, hostname, environment,
+            level_name as level, message,
+            trace_id, span_id, parent_span_id,
+            cocoon_id, user_id, session_id, hive_id,
+            fields, error_kind, error_message, source, target
+        FROM logs
+        WHERE cocoon_id = $1
+            AND timestamp >= $2 AND timestamp <= $3
+        ORDER BY timestamp DESC
+        LIMIT $4 OFFSET $5
+        "#,
+    )
+    .bind(&cocoon_id)
+    .bind(from)
+    .bind(to)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to query cocoon logs: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let logs: Vec<LogResponse> = rows.into_iter().map(|r| r.into()).collect();
+
+    Ok(Json(serde_json::json!({
+        "cocoon_id": cocoon_id,
+        "logs": logs,
+        "count": logs.len(),
+        "limit": limit,
+        "offset": offset,
+    })))
+}
+
+/// Get all logs for a specific user.
+pub async fn get_user_logs(
+    State(state): State<AppState>,
+    Path(user_id): Path<String>,
+    Query(query): Query<LogQuery>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let limit = query.limit.unwrap_or(100).min(1000);
+    let offset = query.offset.unwrap_or(0);
+    
+    // Default time range: last 24 hours
+    let from = query.from.unwrap_or_else(|| Utc::now() - chrono::Duration::hours(24));
+    let to = query.to.unwrap_or_else(Utc::now);
+
+    let rows = sqlx::query_as::<_, LogRow>(
+        r#"
+        SELECT
+            id, timestamp, service, hostname, environment,
+            level_name as level, message,
+            trace_id, span_id, parent_span_id,
+            cocoon_id, user_id, session_id, hive_id,
+            fields, error_kind, error_message, source, target
+        FROM logs
+        WHERE user_id = $1
+            AND timestamp >= $2 AND timestamp <= $3
+        ORDER BY timestamp DESC
+        LIMIT $4 OFFSET $5
+        "#,
+    )
+    .bind(&user_id)
+    .bind(from)
+    .bind(to)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to query user logs: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let logs: Vec<LogResponse> = rows.into_iter().map(|r| r.into()).collect();
+
+    Ok(Json(serde_json::json!({
+        "user_id": user_id,
+        "logs": logs,
+        "count": logs.len(),
+        "limit": limit,
+        "offset": offset,
+    })))
+}
+
+/// Get all logs for a specific session.
+pub async fn get_session_logs(
+    State(state): State<AppState>,
+    Path(session_id): Path<String>,
+    Query(query): Query<LogQuery>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let limit = query.limit.unwrap_or(100).min(1000);
+    let offset = query.offset.unwrap_or(0);
+    
+    // Default time range: last 24 hours
+    let from = query.from.unwrap_or_else(|| Utc::now() - chrono::Duration::hours(24));
+    let to = query.to.unwrap_or_else(Utc::now);
+
+    let rows = sqlx::query_as::<_, LogRow>(
+        r#"
+        SELECT
+            id, timestamp, service, hostname, environment,
+            level_name as level, message,
+            trace_id, span_id, parent_span_id,
+            cocoon_id, user_id, session_id, hive_id,
+            fields, error_kind, error_message, source, target
+        FROM logs
+        WHERE session_id = $1
+            AND timestamp >= $2 AND timestamp <= $3
+        ORDER BY timestamp DESC
+        LIMIT $4 OFFSET $5
+        "#,
+    )
+    .bind(&session_id)
+    .bind(from)
+    .bind(to)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to query session logs: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let logs: Vec<LogResponse> = rows.into_iter().map(|r| r.into()).collect();
+
+    Ok(Json(serde_json::json!({
+        "session_id": session_id,
+        "logs": logs,
+        "count": logs.len(),
+        "limit": limit,
+        "offset": offset,
     })))
 }
 
@@ -315,6 +495,10 @@ struct LogRow {
     trace_id: Uuid,
     span_id: Uuid,
     parent_span_id: Option<Uuid>,
+    cocoon_id: Option<String>,
+    user_id: Option<String>,
+    session_id: Option<String>,
+    hive_id: Option<String>,
     fields: Option<serde_json::Value>,
     error_kind: Option<String>,
     error_message: Option<String>,
@@ -335,6 +519,10 @@ impl From<LogRow> for LogResponse {
             trace_id: row.trace_id,
             span_id: row.span_id,
             parent_span_id: row.parent_span_id,
+            cocoon_id: row.cocoon_id,
+            user_id: row.user_id,
+            session_id: row.session_id,
+            hive_id: row.hive_id,
             fields: row.fields,
             error_kind: row.error_kind,
             error_message: row.error_message,

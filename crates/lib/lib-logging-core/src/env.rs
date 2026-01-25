@@ -107,13 +107,13 @@ where
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_from_env_no_url() {
+    #[tokio::test]
+    async fn test_from_env_no_url() {
         // Without LOGGING_URL, should create console-only client
         std::env::remove_var(LOGGING_URL_ENV);
         std::env::remove_var(LOGGING_ENABLED_ENV);
 
-        // This won't panic
+        // This won't panic - creates console-only client
         let _client = from_env("test-service");
     }
 }

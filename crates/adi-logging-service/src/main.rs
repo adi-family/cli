@@ -64,6 +64,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/logs", get(routes::query_logs))
         .route("/logs/trace/:trace_id", get(routes::get_trace_logs))
         .route("/logs/span/:span_id", get(routes::get_span_logs))
+        .route("/logs/cocoon/:cocoon_id", get(routes::get_cocoon_logs))
+        .route("/logs/user/:user_id", get(routes::get_user_logs))
+        .route("/logs/session/:session_id", get(routes::get_session_logs))
         .route("/logs/stats", get(routes::get_stats))
         // Middleware
         .layer(version_header_layer(

@@ -48,6 +48,7 @@ impl LogWriter {
                     timestamp, service, hostname, environment, version,
                     level, level_name, message,
                     trace_id, span_id, parent_span_id,
+                    cocoon_id, user_id, session_id, hive_id,
                     fields, error_kind, error_message, error_stack_trace,
                     source, target
                 ) VALUES (
@@ -55,7 +56,8 @@ impl LogWriter {
                     $6, $7, $8,
                     $9, $10, $11,
                     $12, $13, $14, $15,
-                    $16, $17
+                    $16, $17, $18, $19,
+                    $20, $21
                 )
                 "#,
             )
@@ -70,6 +72,10 @@ impl LogWriter {
             .bind(entry.entry.trace_id)
             .bind(entry.entry.span_id)
             .bind(entry.entry.parent_span_id)
+            .bind(&entry.entry.correlation.cocoon_id)
+            .bind(&entry.entry.correlation.user_id)
+            .bind(&entry.entry.correlation.session_id)
+            .bind(&entry.entry.correlation.hive_id)
             .bind(fields)
             .bind(error_kind)
             .bind(error_message)

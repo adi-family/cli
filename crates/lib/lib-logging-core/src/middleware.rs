@@ -30,7 +30,11 @@ use std::{
 use tower::{Layer, Service};
 use uuid::Uuid;
 
-use crate::{TraceContext, TRACE_ID_HEADER, SPAN_ID_HEADER, PARENT_SPAN_ID_HEADER};
+use crate::{
+    TraceContext, CorrelationIds,
+    TRACE_ID_HEADER, SPAN_ID_HEADER, PARENT_SPAN_ID_HEADER,
+    COCOON_ID_HEADER, USER_ID_HEADER, SESSION_ID_HEADER, HIVE_ID_HEADER,
+};
 
 /// Configuration for the trace layer.
 #[derive(Clone)]
@@ -121,8 +125,39 @@ where
             .and_then(|v| v.to_str().ok())
             .and_then(|s| Uuid::parse_str(s).ok());
 
-        // Create trace context (new or continued)
-        let ctx = TraceContext::from_headers(trace_id, parent_span_id);
+        // Extract correlation IDs from headers
+        let cocoon_id = req
+            .headers()
+            .get(COCOON_ID_HEADER)
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string());
+
+        let user_id = req
+            .headers()
+            .get(USER_ID_HEADER)
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string());
+
+        let session_id = req
+            .headers()
+            .get(SESSION_ID_HEADER)
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string());
+
+        let hive_id = req
+            .headers()
+            .get(HIVE_ID_HEADER)
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string());
+
+        // Create trace context (new or continued) with correlation IDs
+        let mut ctx = TraceContext::from_headers(trace_id, parent_span_id);
+        ctx.correlation = CorrelationIds {
+            cocoon_id,
+            user_id,
+            session_id,
+            hive_id,
+        };
 
         // Store in request extensions
         req.extensions_mut().insert(ctx.clone());
