@@ -14,16 +14,17 @@ For more information, see https://mariadb.com/bsl11/
 
 # Hive YAML Specification
 
-**Version:** 0.1.0-draft  
+**Version:** 0.2.0-draft  
 **Status:** Draft  
 **Authors:** ADI Team  
 **License:** BSL-1.1  
-**Created:** 2026-01-25
+**Created:** 2026-01-25  
+**Updated:** 2026-01-25
 
 ## TL;DR
 
 ```bash
-# Start all services
+# Start all services (in current source)
 adi hive up
 
 # Start specific services
@@ -34,10 +35,19 @@ adi hive down
 
 # View service status
 adi hive status
+adi hive status --all     # all sources
 
 # View logs
 adi hive logs auth
 adi hive logs -f          # follow all
+
+# Multi-source management
+adi hive source list
+adi hive source add ~/projects/myapp
+adi hive start default:postgres   # FQN addressing
+
+# Remote control (via signaling server)
+adi hive connect <device-id>
 ```
 
 **Minimal example** (`.adi/hive.yaml`):
@@ -78,7 +88,14 @@ services:
 
 ## Abstract
 
-This document specifies the `hive.yaml` configuration format for Hive, a plugin-based universal process orchestrator. Hive manages heterogeneous services through a declarative configuration file with integrated HTTP/WebSocket reverse proxy capabilities. All functionality—runners, environment providers, health checks, port allocation, and logging—is implemented via a plugin system.
+This document specifies the configuration format for Hive, a plugin-based universal process orchestrator. Hive runs as a **single daemon per machine**, managing heterogeneous services from **multiple configuration sources** (YAML files or SQLite databases) with an integrated HTTP/WebSocket reverse proxy.
+
+Key features:
+- **Plugin system**: Runners, environment providers, health checks, logging—all via plugins
+- **Multi-source**: Manage services from multiple projects/directories simultaneously
+- **Service exposure**: Share services between sources with `expose`/`uses` declarations
+- **Remote control**: Manage Hive via signaling server from CLI or Web UI
+- **Dual config backends**: YAML (read-only, version-controllable) or SQLite (read-write, dynamic)
 
 ## Table of Contents
 
@@ -100,6 +117,10 @@ This document specifies the `hive.yaml` configuration format for Hive, a plugin-
 16. [Variable Interpolation](#16-variable-interpolation)
 17. [Architecture](#17-architecture)
 18. [Examples](#18-examples)
+19. [Service Exposure](#19-service-exposure)
+20. [Multi-Source Architecture](#20-multi-source-architecture)
+21. [SQLite Config Backend](#21-sqlite-config-backend)
+22. [Remote Control](#22-remote-control)
 
 ---
 
@@ -109,8 +130,12 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 | Term | Definition |
 |------|------------|
-| **Hive** | The orchestrator process that manages services and routes traffic |
+| **Hive** | The orchestrator daemon that manages services and routes traffic (one per machine) |
+| **Hive Daemon** | The single background process managing all sources on a machine |
 | **Service** | A managed unit of execution |
+| **Source** | A configuration origin (directory with hive.yaml or SQLite file) |
+| **Default Source** | The `~/.adi/hive/` source, always loaded |
+| **FQN** | Fully Qualified Name for a service: `source:service` (e.g., `default:postgres`) |
 | **Plugin** | A modular component providing specific functionality |
 | **Runner** | Plugin that executes services (process, docker, etc.) |
 | **Environment Provider** | Plugin that supplies environment variables |
@@ -119,6 +144,8 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 | **Log Handler** | Plugin that processes service output |
 | **Route** | An HTTP path prefix mapped to a service |
 | **Proxy** | The built-in HTTP/WebSocket reverse proxy |
+| **Expose** | Making a service available to other sources with shared variables |
+| **Uses** | Declaring dependency on an exposed service from another source |
 
 ---
 
@@ -126,7 +153,13 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ### 2.1 File Location
 
-The configuration file MUST be located at `.adi/hive.yaml` relative to the project root.
+For YAML sources, the configuration file MUST be located at `.adi/hive.yaml` relative to the project root.
+
+For SQLite sources, the database file is `hive.db` in the source directory or a standalone `.db` file.
+
+The default source is always `~/.adi/hive/` (can contain either `hive.yaml` or `hive.db`).
+
+See [Section 20](#20-multi-source-architecture) for multi-source configuration.
 
 ### 2.2 File Encoding
 
@@ -362,6 +395,8 @@ Service names MUST:
 | `log` | object | OPTIONAL | - | Log plugin configuration |
 | `build` | object | OPTIONAL | - | Build configuration |
 | `restart` | string | OPTIONAL | `never` | Restart policy |
+| `expose` | object | OPTIONAL | - | Make service available to other sources. See [Section 19](#19-service-exposure) |
+| `uses` | array | OPTIONAL | `[]` | Declare dependencies on exposed services. See [Section 19](#19-service-exposure) |
 
 **Note on `rollout`:**
 - With `proxy` configured: `rollout` is REQUIRED (Hive needs to know which port to proxy to)
@@ -1694,71 +1729,92 @@ impl ParsePlugin for PortsManagerPlugin {
 ### 17.1 Component Diagram
 
 ```
-                              Hive Core
-┌─────────────────────────────────────────────────────────────┐
-│                      Plugin Manager                          │
-│  ┌─────────────────────┐  ┌─────────────────────────────┐   │
-│  │     Built-in        │  │      External (auto-install) │   │
-│  ├─────────────────────┤  ├─────────────────────────────┤   │
-│  │ parse: env, service │  │ parse: ports, vault,        │   │
-│  │ runner: script      │  │        1password, aws-ssm   │   │
-│  │ env: static         │  │ runner: docker, compose,    │   │
-│  │ health: http,tcp,cmd│  │         podman, kubernetes  │   │
-│  │ log: file           │  │ env: dotenv, vault,         │   │
-│  │ rollout: recreate   │  │      1password, aws-secrets │   │
-│  │                     │  │ health: grpc, postgres,     │   │
-│  │                     │  │         redis, mysql        │   │
-│  │                     │  │ log: stdout, loki,          │   │
-│  │                     │  │      cloudwatch             │   │
-│  │                     │  │ rollout: blue-green,        │   │
-│  │                     │  │          canary, rolling    │   │
-│  └─────────────────────┘  └─────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-        ┌──────────┐   ┌──────────┐   ┌──────────┐
-        │ Service  │   │ Service  │   │ Service  │
-        │  (auth)  │   │(platform)│   │  (web)   │
-        └──────────┘   └──────────┘   └──────────┘
-              │               │               │
-              └───────────────┼───────────────┘
-                              ▼
-                    ┌──────────────────┐
-                    │   HTTP/WS Proxy  │
-                    │   (bind: :8080)  │
-                    └──────────────────┘
-                              │
-                              ▼
-                         Clients
+                              Hive Daemon (one per machine)
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Sources                                                                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                   │
+│  │ ~/.adi/hive/ │  │ ~/p/project-a│  │ ~/p/project-b│                   │
+│  │  (default)   │  │   (yaml)     │  │  (sqlite)    │                   │
+│  └──────────────┘  └──────────────┘  └──────────────┘                   │
+│         │                 │                 │                            │
+│         └─────────────────┼─────────────────┘                            │
+│                           ▼                                              │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │                      Plugin Manager                                │  │
+│  │  ┌─────────────────────┐  ┌─────────────────────────────┐         │  │
+│  │  │     Built-in        │  │      External (auto-install) │         │  │
+│  │  ├─────────────────────┤  ├─────────────────────────────┤         │  │
+│  │  │ parse: env, service │  │ parse: ports, vault,        │         │  │
+│  │  │ runner: script      │  │        1password, aws-ssm   │         │  │
+│  │  │ env: static         │  │ runner: docker, compose,    │         │  │
+│  │  │ health: http,tcp,cmd│  │         podman, kubernetes  │         │  │
+│  │  │ log: file, stdout   │  │ env: dotenv, vault,         │         │  │
+│  │  │ rollout: recreate   │  │      1password, aws-secrets │         │  │
+│  │  │                     │  │ health: grpc, postgres,     │         │  │
+│  │  │                     │  │         redis, mysql        │         │  │
+│  │  │                     │  │ log: loki, cloudwatch       │         │  │
+│  │  │                     │  │ rollout: blue-green,        │         │  │
+│  │  │                     │  │          canary, rolling    │         │  │
+│  │  └─────────────────────┘  └─────────────────────────────┘         │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+│                           │                                              │
+│         ┌─────────────────┼─────────────────┐                           │
+│         ▼                 ▼                 ▼                            │
+│   ┌──────────┐      ┌──────────┐      ┌──────────┐                      │
+│   │ default: │      │project-a:│      │project-b:│                      │
+│   │ postgres │      │  auth    │      │   api    │                      │
+│   │ redis    │      │ platform │      │  worker  │                      │
+│   └──────────┘      └──────────┘      └──────────┘                      │
+│         │                 │                 │                            │
+│         └─────────────────┼─────────────────┘                            │
+│                           ▼                                              │
+│                 ┌──────────────────┐                                    │
+│                 │ Unified HTTP/WS  │                                    │
+│                 │      Proxy       │                                    │
+│                 └──────────────────┘                                    │
+│                           │                                              │
+├───────────────────────────┼──────────────────────────────────────────────┤
+│                           ▼                                              │
+│                 ┌──────────────────┐     ┌──────────────────┐           │
+│                 │     Clients      │     │ Signaling Server │           │
+│                 │  (HTTP/WebSocket)│     │ (Remote Control) │           │
+│                 └──────────────────┘     └──────────────────┘           │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 17.2 Startup Sequence
 
 ```
-1. Parse hive.yaml
-2. Load and initialize plugins
-   - Discover built-in plugins
-   - Load external plugins
-   - Validate plugin configurations
-3. Validate service configurations
-   - Check for circular dependencies
-   - Verify runner/health/env plugins exist
-   - Validate routes (no conflicts)
-4. Resolve ports via port plugins
-5. Build dependency graph
+1. Start daemon (if not running)
+   - Create socket at ~/.adi/hive/hive.sock
+   - Write PID to ~/.adi/hive/hive.pid
+2. Load all registered sources
+   - Always load default source (~/.adi/hive/)
+   - Load each registered source (YAML or SQLite)
+3. For each source:
+   a. Parse configuration
+   b. Load and initialize plugins
+   c. Validate service configurations
+   d. Check for port/route conflicts with other sources
+4. Collect all expose declarations
+   - Validate expose names are globally unique
+5. Build combined dependency graph (including cross-source uses)
 6. Start services in topological order:
    For each service:
-   a. Load environment via env plugins
-   b. Run build command (if configured)
-   c. Start runner plugin
-   d. Wait for health check plugin (if configured)
-   e. Register route (if configured)
-7. Start proxy server
-8. Enter supervision loop:
+   a. Resolve uses dependencies (wait for exposed services)
+   b. Inject exposed variables
+   c. Load environment via env plugins
+   d. Run build command (if configured)
+   e. Start runner plugin
+   f. Wait for health check plugin (if configured)
+   g. Register route in unified proxy
+7. Start unified proxy server
+8. Connect to signaling server (if configured)
+9. Enter supervision loop:
    - Monitor service health
    - Restart crashed services (per restart policy)
    - Handle SIGTERM/SIGINT gracefully
+   - Process remote control commands
 ```
 
 ### 17.3 Request Flow
@@ -1793,14 +1849,16 @@ Client Request
 ### 17.4 Shutdown Sequence
 
 ```
-1. Receive SIGTERM/SIGINT
-2. Stop accepting new connections
-3. Drain existing connections (30s timeout)
-4. Send SIGTERM to all services (reverse dependency order)
-5. Wait for graceful shutdown (10s per service)
-6. Send SIGKILL to remaining processes
-7. Unload plugins
-8. Exit
+1. Receive SIGTERM/SIGINT (or remote shutdown command)
+2. Disconnect from signaling server
+3. Stop accepting new proxy connections
+4. Drain existing connections (30s timeout)
+5. Send SIGTERM to all services (reverse dependency order, respecting cross-source uses)
+6. Wait for graceful shutdown (10s per service)
+7. Send SIGKILL to remaining processes
+8. Unload plugins
+9. Remove socket and PID file
+10. Exit
 ```
 
 ---
@@ -2227,6 +2285,625 @@ services:
 
 ---
 
+## 19. Service Exposure
+
+Service exposure enables cross-source dependencies. By default, services are **private** to their source. To share a service with other sources, explicitly **expose** it.
+
+### 19.1 Expose Configuration
+
+The `expose` field makes a service available to other sources:
+
+```yaml
+services:
+  postgres:
+    runner:
+      type: docker
+      docker:
+        image: postgres:15
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          db: 5432
+    
+    expose:
+      name: shared-postgres              # REQUIRED - globally unique name
+      secret: ${env.POSTGRES_SECRET}     # OPTIONAL - require secret to use
+      vars:                              # REQUIRED - variables to share
+        DATABASE_URL: postgres://adi:adi@localhost:{{runtime.port.db}}/
+        PG_HOST: localhost
+        PG_PORT: "{{runtime.port.db}}"
+        PG_USER: adi
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | REQUIRED | Globally unique name across all sources |
+| `secret` | string | OPTIONAL | Secret required to use this service |
+| `vars` | object | REQUIRED | Variables to share with consumers |
+
+**Notes:**
+- All ports from `rollout.ports` are automatically available to consumers
+- `vars` values support `{{runtime.port.<name>}}` interpolation
+- If `secret` is specified, consumers MUST provide matching secret
+
+### 19.2 Uses Configuration
+
+The `uses` field declares dependencies on exposed services from other sources:
+
+```yaml
+services:
+  auth:
+    runner:
+      type: script
+      script:
+        run: cargo run -p auth
+    
+    uses:
+      - name: shared-postgres            # REQUIRED - exposed service name
+        secret: ${env.POSTGRES_SECRET}   # REQUIRED if expose has secret
+        as: pg                           # OPTIONAL - local alias
+        vars:                            # OPTIONAL - remap variable names
+          DATABASE_URL: AUTH_DB_URL      # Inject as AUTH_DB_URL instead
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | REQUIRED | Name of exposed service |
+| `secret` | string | CONDITIONAL | Required if exposed service has secret |
+| `as` | string | OPTIONAL | Local alias for port references |
+| `vars` | object | OPTIONAL | Remap exposed variable names |
+
+### 19.3 Variable Injection
+
+When a service with `uses` starts, exposed variables are injected into its environment:
+
+```yaml
+# Exposed by shared-postgres:
+vars:
+  DATABASE_URL: postgres://adi:adi@localhost:5432/
+  PG_HOST: localhost
+  PG_PORT: "5432"
+
+# Consumer's uses:
+uses:
+  - name: shared-postgres
+    vars:
+      DATABASE_URL: AUTH_DB_URL    # Remap
+      # PG_HOST and PG_PORT not remapped
+
+# Consumer's final environment:
+AUTH_DB_URL=postgres://adi:adi@localhost:5432/
+PG_HOST=localhost
+PG_PORT=5432
+```
+
+### 19.4 Port References
+
+Access exposed service ports using `{{uses.<alias>.port.<name>}}`:
+
+```yaml
+uses:
+  - name: shared-postgres
+    as: pg
+
+environment:
+  static:
+    CUSTOM_PORT: "{{uses.pg.port.db}}"   # Resolves to 5432
+```
+
+### 19.5 Startup Ordering
+
+Services with `uses` wait for their dependencies:
+
+1. Hive collects all `expose` declarations from all sources
+2. Validates expose names are globally unique
+3. When starting a service with `uses`:
+   - Resolve each exposed service by name
+   - Verify secret matches (bcrypt hashed)
+   - Wait for exposed service to be **healthy**
+   - Inject exposed variables
+4. Start the consumer service
+
+### 19.6 Security
+
+- Secrets are stored as bcrypt hashes (not plaintext)
+- No secret = service is publicly exposed to all sources
+- Secret verification happens at service startup
+- Failed secret verification prevents service from starting
+
+### 19.7 Example: Shared Infrastructure
+
+```yaml
+# Source: ~/.adi/hive/ (default source)
+version: "1"
+
+services:
+  postgres:
+    runner:
+      type: docker
+      docker:
+        image: postgres:15
+        ports:
+          - "{{runtime.port.db}}:5432"
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          db: 5432
+    expose:
+      name: shared-postgres
+      secret: ${env.INFRA_SECRET}
+      vars:
+        DATABASE_URL: postgres://adi:adi@localhost:{{runtime.port.db}}/
+        PG_HOST: localhost
+        PG_PORT: "{{runtime.port.db}}"
+
+  redis:
+    runner:
+      type: docker
+      docker:
+        image: redis:7
+        ports:
+          - "{{runtime.port.cache}}:6379"
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          cache: 6379
+    expose:
+      name: shared-redis
+      secret: ${env.INFRA_SECRET}
+      vars:
+        REDIS_URL: redis://localhost:{{runtime.port.cache}}
+```
+
+```yaml
+# Source: ~/projects/adi/ (project source)
+version: "1"
+
+services:
+  auth:
+    runner:
+      type: script
+      script:
+        run: cargo run -p adi-auth-http
+    uses:
+      - name: shared-postgres
+        secret: ${env.INFRA_SECRET}
+        vars:
+          DATABASE_URL: AUTH_DATABASE_URL
+      - name: shared-redis
+        secret: ${env.INFRA_SECRET}
+    # auth gets: AUTH_DATABASE_URL, REDIS_URL
+
+  platform:
+    runner:
+      type: script
+      script:
+        run: cargo run --bin adi-platform-api
+    uses:
+      - name: shared-postgres
+        secret: ${env.INFRA_SECRET}
+        vars:
+          DATABASE_URL: PLATFORM_DATABASE_URL
+    depends_on:
+      - auth
+```
+
+---
+
+## 20. Multi-Source Architecture
+
+Hive supports managing services from **multiple config sources** simultaneously. Each source is independent but shares a unified proxy and can expose services to other sources.
+
+### 20.1 Daemon Model
+
+One Hive daemon runs per machine:
+
+```
++---------------------------------------------------------------------+
+|                           Machine                                    |
+|                                                                      |
+|  +----------------------------------------------------------------+ |
+|  |                    Hive Daemon (ONE)                            | |
+|  |                                                                  | |
+|  |  Sources:                                                        | |
+|  |  +------------+ +------------+ +------------+                   | |
+|  |  | ~/.adi/hive| | ~/p/adi    | | ~/p/foo    |                   | |
+|  |  | (default)  | | (yaml)     | | (sqlite)   |                   | |
+|  |  +------------+ +------------+ +------------+                   | |
+|  |         |              |              |                          | |
+|  |         v              v              v                          | |
+|  |  +-----------------------------------------------------+        | |
+|  |  |              Unified Proxy Server                    |        | |
+|  |  |         (routes from ALL sources merged)             |        | |
+|  |  +-----------------------------------------------------+        | |
+|  +----------------------------------------------------------------+ |
++---------------------------------------------------------------------+
+```
+
+### 20.2 Default Source
+
+`~/.adi/hive/` is the **default source**, always loaded:
+
+- Can contain `hive.yaml` OR `hive.db` (SQLite)
+- Ideal for shared infrastructure (databases, caches, proxies)
+- Services here are available to all other sources via `expose`
+
+### 20.3 Source Types
+
+| Type | Detection | Mutability |
+|------|-----------|------------|
+| YAML | Project directory with `.adi/hive.yaml` | Read-only |
+| SQLite | Standalone `.db` file OR directory with `hive.db` | Read-write |
+
+**Detection logic:**
+1. If path is a `.db` file → SQLite source
+2. If path is a directory containing `hive.db` → SQLite source  
+3. If path is a directory containing `.adi/hive.yaml` → YAML source
+4. Special case: `~/.adi/hive/` checks for `hive.yaml` or `hive.db` directly (no `.adi/` subdirectory)
+
+### 20.4 Source Management
+
+```bash
+# List sources
+adi hive source list
+# NAME        TYPE    PATH                    SERVICES  STATUS
+# default     sqlite  ~/.adi/hive/            3         running
+# adi         yaml    ~/projects/adi/         12        running
+# myproject   sqlite  ~/projects/foo/hive.db  2         stopped
+
+# Add source
+adi hive source add ~/projects/adi
+adi hive source add ~/infra.db --name infra
+
+# Remove source (stops services first)
+adi hive source remove myproject
+
+# Reload source config
+adi hive source reload adi
+
+# Enable/disable without removing
+adi hive source disable myproject
+adi hive source enable myproject
+```
+
+### 20.5 Service Addressing
+
+Services are addressed by **Fully Qualified Name (FQN)**: `source:service`
+
+```bash
+# Start specific service
+adi hive start default:postgres
+adi hive start adi:auth
+
+# View logs
+adi hive logs adi:platform
+
+# In project directory (context-aware)
+cd ~/projects/adi
+adi hive start auth              # Implicit: adi:auth
+adi hive logs platform           # Implicit: adi:platform
+```
+
+### 20.6 Conflict Detection
+
+Hive prevents conflicts at source add time:
+
+**Port conflicts:**
+```
+Error: Port 8080 already used by default:nginx
+Cannot add source 'myproject' with service 'api' using port 8080
+```
+
+**Route conflicts:**
+```
+Error: Route /api/auth conflicts with adi:auth
+Cannot add source 'other' with service 'auth' using path /api/auth
+```
+
+**Expose name conflicts:**
+```
+Error: Expose name 'shared-postgres' already used by default:postgres
+Cannot add source 'backup' with service 'pg' exposing 'shared-postgres'
+```
+
+### 20.7 Daemon Lifecycle
+
+```bash
+# Daemon auto-starts on first use
+adi hive up                      # Starts daemon if needed
+
+# Explicit daemon control
+adi hive daemon status           # Check if running
+adi hive daemon stop             # Stop daemon and all services
+adi hive daemon restart          # Restart daemon
+```
+
+**Daemon files:**
+- Socket: `~/.adi/hive/hive.sock`
+- PID: `~/.adi/hive/hive.pid`
+- Logs: `~/.adi/hive/logs/`
+
+---
+
+## 21. SQLite Config Backend
+
+SQLite provides a **read-write** alternative to YAML for configuration. Both backends have full feature parity.
+
+### 21.1 When to Use SQLite
+
+| Use Case | YAML | SQLite |
+|----------|------|--------|
+| Version control | Best | Possible |
+| Remote editing | Read-only | Best |
+| Dynamic config | - | Best |
+| Human editing | Best | Via CLI |
+| Programmatic access | Parse needed | Best |
+
+### 21.2 SQLite Schema
+
+```sql
+-- Meta
+CREATE TABLE hive_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+
+-- Global configuration
+CREATE TABLE global_defaults (
+    plugin_id TEXT PRIMARY KEY,
+    config JSON NOT NULL
+);
+
+CREATE TABLE global_proxy (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    bind JSON NOT NULL
+);
+
+CREATE TABLE global_environment (
+    provider TEXT PRIMARY KEY,
+    config JSON NOT NULL,
+    priority INTEGER DEFAULT 0
+);
+
+-- Services
+CREATE TABLE services (
+    name TEXT PRIMARY KEY,
+    enabled BOOLEAN DEFAULT true,
+    restart_policy TEXT DEFAULT 'never',
+    working_dir TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE service_runners (
+    service_name TEXT PRIMARY KEY REFERENCES services(name) ON DELETE CASCADE,
+    runner_type TEXT NOT NULL,
+    config JSON NOT NULL
+);
+
+CREATE TABLE service_rollouts (
+    service_name TEXT PRIMARY KEY REFERENCES services(name) ON DELETE CASCADE,
+    rollout_type TEXT NOT NULL,
+    config JSON NOT NULL
+);
+
+CREATE TABLE service_proxies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_name TEXT NOT NULL REFERENCES services(name) ON DELETE CASCADE,
+    host TEXT,
+    path TEXT NOT NULL,
+    port_ref TEXT DEFAULT '{{runtime.port.http}}',
+    strip_prefix BOOLEAN DEFAULT false,
+    timeout_ms INTEGER DEFAULT 60000,
+    extra JSON
+);
+
+CREATE TABLE service_healthchecks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_name TEXT NOT NULL REFERENCES services(name) ON DELETE CASCADE,
+    check_type TEXT NOT NULL,
+    config JSON NOT NULL
+);
+
+CREATE TABLE service_environment (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_name TEXT NOT NULL REFERENCES services(name) ON DELETE CASCADE,
+    provider TEXT NOT NULL,
+    config JSON NOT NULL,
+    priority INTEGER DEFAULT 0
+);
+
+CREATE TABLE service_dependencies (
+    service_name TEXT NOT NULL REFERENCES services(name) ON DELETE CASCADE,
+    depends_on TEXT NOT NULL REFERENCES services(name),
+    PRIMARY KEY (service_name, depends_on)
+);
+
+CREATE TABLE service_builds (
+    service_name TEXT PRIMARY KEY REFERENCES services(name) ON DELETE CASCADE,
+    command TEXT NOT NULL,
+    working_dir TEXT,
+    build_when TEXT DEFAULT 'missing'
+);
+
+CREATE TABLE service_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_name TEXT NOT NULL REFERENCES services(name) ON DELETE CASCADE,
+    log_type TEXT NOT NULL,
+    config JSON NOT NULL
+);
+
+-- Service exposure
+CREATE TABLE service_expose (
+    service_name TEXT PRIMARY KEY REFERENCES services(name) ON DELETE CASCADE,
+    expose_name TEXT UNIQUE NOT NULL,
+    secret_hash TEXT,
+    vars JSON NOT NULL
+);
+
+CREATE TABLE service_uses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_name TEXT NOT NULL REFERENCES services(name) ON DELETE CASCADE,
+    exposed_name TEXT NOT NULL,
+    secret_encrypted TEXT,
+    local_alias TEXT,
+    var_remaps JSON,
+    UNIQUE(service_name, exposed_name)
+);
+
+-- Runtime state (not config)
+CREATE TABLE runtime_state (
+    service_name TEXT PRIMARY KEY,
+    state TEXT NOT NULL,
+    pid INTEGER,
+    container_id TEXT,
+    started_at TIMESTAMP,
+    stopped_at TIMESTAMP,
+    restart_count INTEGER DEFAULT 0,
+    last_exit_code INTEGER,
+    last_error TEXT
+);
+```
+
+### 21.3 CLI Config Commands
+
+```bash
+# View config as YAML
+adi hive config show
+adi hive config show --source infra
+
+# Service management (SQLite only)
+adi hive config service add              # Interactive
+adi hive config service edit auth        # Edit service
+adi hive config service remove auth      # Remove service
+
+# Environment management
+adi hive config env set FOO=bar          # Global env
+adi hive config env unset FOO
+adi hive config env list
+
+# Export to YAML (for backup/version control)
+adi hive config export > hive-backup.yaml
+```
+
+---
+
+## 22. Remote Control
+
+Hive registers with the signaling server as a **special cocoon type**, enabling remote control via CLI or Web UI.
+
+### 22.1 Hive Registration
+
+```rust
+SignalingMessage::Register {
+    secret: String,
+    device_id: Option<String>,
+    version: String,
+    device_type: DeviceType::Hive {
+        name: String,              // Machine/hive name
+        sources: Vec<SourceInfo>,  // Config sources
+    },
+}
+```
+
+Hive uses the same claiming flow as cocoons:
+1. Hive registers with signaling server
+2. User claims hive via JWT
+3. User can send control commands
+
+### 22.2 Hive Control Protocol
+
+```rust
+// Tunneled via SignalingMessage::HiveControl { device_id, request_id, payload }
+
+enum HiveRequest {
+    // Daemon
+    GetStatus,
+    Shutdown { graceful: bool },
+    
+    // Sources
+    ListSources,
+    AddSource { path: String, name: Option<String> },
+    RemoveSource { source_id: String },
+    ReloadSource { source_id: String },
+    
+    // Services
+    ListServices { source: Option<String> },
+    GetService { fqn: String },
+    StartService { fqn: String },
+    StopService { fqn: String },
+    RestartService { fqn: String },
+    StartSource { source_id: String },
+    StopSource { source_id: String },
+    
+    // Logs
+    GetLogs { fqn: String, lines: u32, since: Option<DateTime> },
+    StreamLogs { fqn: String },
+    
+    // Config (SQLite sources only)
+    GetSourceConfig { source_id: String },
+    CreateService { source_id: String, config: ServiceConfig },
+    UpdateService { fqn: String, patch: ServicePatch },
+    DeleteService { fqn: String },
+    
+    // Exposed services
+    ListExposed,
+    GetExposedUsers { name: String },
+}
+
+enum HiveResponse {
+    Status(DaemonStatus),
+    Sources(Vec<SourceInfo>),
+    Services(Vec<ServiceInfo>),
+    Service(ServiceInfo),
+    Config(SourceConfig),
+    Logs(Vec<LogLine>),
+    StreamStarted { stream_id: Uuid },
+    Exposed(Vec<ExposedInfo>),
+    Ok,
+    Error { code: ErrorCode, message: String },
+}
+```
+
+### 22.3 Remote CLI
+
+```bash
+# Connect to remote hive
+adi hive connect <device-id>
+adi hive connect --list          # List available hives
+
+# Once connected, all commands work remotely
+adi hive status
+adi hive source list
+adi hive start adi:auth
+adi hive logs adi:platform
+adi hive config show             # Remote config
+```
+
+### 22.4 Log Streaming
+
+```rust
+// Request streaming
+HiveRequest::StreamLogs { fqn: "adi:auth".to_string() }
+
+// Response
+HiveResponse::StreamStarted { stream_id: Uuid }
+
+// Server pushes logs
+SignalingMessage::HiveLogStream {
+    stream_id: Uuid,
+    lines: Vec<LogLine>,
+}
+
+// Client stops stream
+HiveRequest::StopLogStream { stream_id: Uuid }
+```
+
+---
+
 ## Appendix A: Plugin Interface
 
 Plugins MUST implement a specific trait depending on their type. See `crates/hive/core/src/plugins/` for trait definitions.
@@ -2278,6 +2955,11 @@ pub trait HealthPlugin: Send + Sync {
 | Plugin architecture | - | - | + |
 | Environment plugins | - | - | + |
 | ports-manager integration | - | - | + |
+| Multi-source management | - | - | + |
+| Cross-source dependencies | - | - | + (expose/uses) |
+| SQLite config backend | - | - | + |
+| Remote control | - | - | + (signaling) |
+| Daemon mode | - | - | + |
 
 ---
 
@@ -2286,3 +2968,4 @@ pub trait HealthPlugin: Send + Sync {
 | Version | Date | Description |
 |---------|------|-------------|
 | 0.1.0-draft | 2026-01-25 | Initial draft with plugin architecture |
+| 0.2.0-draft | 2026-01-25 | Added service exposure (expose/uses), multi-source architecture, SQLite backend, remote control |
