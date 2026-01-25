@@ -1,8 +1,23 @@
+<!--
+SPDX-License-Identifier: BSL-1.1
+
+Business Source License 1.1
+
+Licensor: ADI Team
+Licensed Work: Hive YAML Specification
+
+Change Date: Four years from the date of each release
+Change License: Apache License 2.0
+
+For more information, see https://mariadb.com/bsl11/
+-->
+
 # Hive YAML Specification
 
 **Version:** 0.1.0-draft  
 **Status:** Draft  
 **Authors:** ADI Team  
+**License:** BSL-1.1  
 **Created:** 2026-01-25
 
 ## Abstract
