@@ -50,6 +50,10 @@ services:
       type: script
       script:
         run: cargo run --bin api
+    environment:
+      1password:
+        vault: Development
+        item: api-secrets
     rollout:
       type: blue-green
       blue-green:
@@ -63,7 +67,11 @@ services:
     healthcheck:
       type: http
       http:
+        port: "{{runtime.port.http}}"
         path: /health
+        interval: 5s
+        timeout: 3s
+        retries: 3
 ```
 
 ---
