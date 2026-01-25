@@ -14,7 +14,7 @@ For more information, see https://mariadb.com/bsl11/
 
 # Hive YAML Specification
 
-**Version:** 0.2.0-draft  
+**Version:** 0.3.0-draft  
 **Status:** Draft  
 **Authors:** ADI Team  
 **License:** BSL-1.1  
@@ -108,19 +108,19 @@ Key features:
 7. [Runner Plugins](#7-runner-plugins)
 8. [Environment Plugins](#8-environment-plugins)
 9. [Health Check Plugins](#9-health-check-plugins)
-10. [Log Plugins](#10-log-plugins)
-11. [Dependencies](#11-dependencies)
-12. [Routing](#12-routing)
-13. [Build Configuration](#13-build-configuration)
-14. [Restart Policies](#14-restart-policies)
-15. [Rollout Plugins](#15-rollout-plugins)
-16. [Variable Interpolation](#16-variable-interpolation)
-17. [Architecture](#17-architecture)
-18. [Examples](#18-examples)
-19. [Service Exposure](#19-service-exposure)
-20. [Multi-Source Architecture](#20-multi-source-architecture)
-21. [SQLite Config Backend](#21-sqlite-config-backend)
-22. [Remote Control](#22-remote-control)
+10. [Dependencies](#10-dependencies)
+11. [Routing](#11-routing)
+12. [Build Configuration](#12-build-configuration)
+13. [Restart Policies](#13-restart-policies)
+14. [Rollout Plugins](#14-rollout-plugins)
+15. [Variable Interpolation](#15-variable-interpolation)
+16. [Architecture](#16-architecture)
+17. [Examples](#17-examples)
+18. [Service Exposure](#18-service-exposure)
+19. [Multi-Source Architecture](#19-multi-source-architecture)
+20. [SQLite Config Backend](#20-sqlite-config-backend)
+21. [Remote Control](#21-remote-control)
+22. [Observability](#22-observability)
 
 ---
 
@@ -211,8 +211,8 @@ Hive uses a plugin architecture where all functionality is provided by plugins. 
 | `runner` | `hive.runner.*` | Execute services | `script` |
 | `env` | `hive.env.*` | Provide environment variables | `static` |
 | `health` | `hive.health.*` | Check service readiness | `http`, `tcp`, `cmd` |
-| `log` | `hive.log.*` | Handle service output | `file`, `stdout` |
 | `rollout` | `hive.rollout.*` | Control restart/deploy strategy | `recreate` |
+| `obs` | `hive.obs.*` | Observability (logs, metrics, traces) | (none - all external) |
 
 ### 4.2 Plugin Defaults
 
@@ -231,30 +231,32 @@ defaults:
       - .env
       - .env.local
   
-  hive.log.file:
+  hive.health.http:
+    timeout: 5s
+  
+  hive.obs.stdout:
+    format: pretty
+    level: info
+  
+  hive.obs.file:
     dir: .hive/logs
     rotate: true
     max_size: 10MB
-  
-  hive.health.http:
-    timeout: 5s
 ```
 
 Services inherit these defaults. Service-level config overrides defaults:
 
 ```yaml
 defaults:
-  hive.log.file:
+  hive.obs.file:
     dir: .hive/logs
     rotate: true
 
-services:
-  auth:
-    log:
-      type: file
-      file:
-        # Inherits dir: .hive/logs and rotate: true from defaults
-        max_size: 20MB    # Override just this field
+# Observability is global, not per-service
+# Individual plugins inherit from defaults
+observability:
+  plugins:
+    - file            # Uses hive.obs.file defaults
 ```
 
 ### 4.3 Built-in vs External Plugins
@@ -300,17 +302,21 @@ When a service uses `type: X`, Hive:
 
 **Auto-install naming convention:**
 ```
-type: loki  →  auto-installs: hive.log.loki
 type: docker  →  auto-installs: hive.runner.docker
 type: vault  →  auto-installs: hive.env.vault
 type: blue-green  →  auto-installs: hive.rollout.blue-green
+type: loki  →  auto-installs: hive.obs.loki (observability)
 ```
 
 **Example - Auto-install on first run:**
 ```yaml
 # First time running this config:
-# - hive.log.loki will be auto-installed
 # - hive.runner.docker will be auto-installed
+# - hive.obs.loki will be auto-installed (observability plugin)
+
+observability:
+  plugins:
+    - loki              # Auto-installs hive.obs.loki
 
 services:
   postgres:
@@ -318,13 +324,6 @@ services:
       type: docker          # Auto-installs hive.runner.docker
       docker:
         image: postgres:15
-    log:
-      - type: file          # Built-in, no install needed
-        file:
-          path: .hive/logs/postgres.log
-      - type: loki          # Auto-installs hive.log.loki
-        loki:
-          url: http://loki:3100
 ```
 
 **Disable auto-install:**
@@ -370,9 +369,10 @@ services:
     depends_on: [ ... ]       # OPTIONAL
     healthcheck: { ... }      # OPTIONAL
     environment: { ... }      # OPTIONAL
-    log: { ... }              # OPTIONAL
     build: { ... }            # OPTIONAL
     restart: <string>         # OPTIONAL
+    expose: { ... }           # OPTIONAL - cross-source sharing
+    uses: [ ... ]             # OPTIONAL - cross-source dependencies
 ```
 
 ### 6.1 Service Name
@@ -392,11 +392,10 @@ Service names MUST:
 | `depends_on` | array | OPTIONAL | `[]` | Services that MUST be healthy before starting |
 | `healthcheck` | object | OPTIONAL | - | Health check plugin configuration |
 | `environment` | object | OPTIONAL | `{}` | Environment plugin configuration |
-| `log` | object | OPTIONAL | - | Log plugin configuration |
 | `build` | object | OPTIONAL | - | Build configuration |
 | `restart` | string | OPTIONAL | `never` | Restart policy |
-| `expose` | object | OPTIONAL | - | Make service available to other sources. See [Section 19](#19-service-exposure) |
-| `uses` | array | OPTIONAL | `[]` | Declare dependencies on exposed services. See [Section 19](#19-service-exposure) |
+| `expose` | object | OPTIONAL | - | Make service available to other sources. See [Section 18](#18-service-exposure) |
+| `uses` | array | OPTIONAL | `[]` | Declare dependencies on exposed services. See [Section 18](#18-service-exposure) |
 
 **Note on `rollout`:**
 - With `proxy` configured: `rollout` is REQUIRED (Hive needs to know which port to proxy to)
@@ -991,69 +990,7 @@ Durations MUST be specified as a number followed by a unit:
 
 ---
 
-## 10. Log Plugins
-
-Log plugins handle service output.
-
-### 10.1 Global Log Configuration
-
-```yaml
-defaults:
-  hive.log.file:
-    dir: .hive/logs
-    rotate: true
-    max_size: 10MB
-```
-
-### 10.2 Service Log Configuration
-
-```yaml
-services:
-  auth:
-    log:
-      type: file
-      file:
-        path: logs/auth.log
-```
-
-### 10.3 File Log Plugin (built-in)
-
-Write logs to files:
-
-```yaml
-log:
-  type: file
-  file:
-    path: .hive/logs/${service}.log   # ${service} = service name
-    rotate: true
-    max_size: 10MB
-    max_files: 5
-```
-
-### 10.4 Stdout Log Plugin (built-in)
-
-Stream logs to console with service name prefix and optional color coding:
-
-```yaml
-log:
-  type: stdout
-  stdout:
-    prefix: true              # OPTIONAL, default: true - prefix lines with service name
-    color: auto               # OPTIONAL: auto, always, never
-```
-
-### 10.5 External Log Plugins
-
-Additional log handlers are available as external plugins:
-
-| Plugin | Install | Description |
-|--------|---------|-------------|
-| `loki` | `adi plugin install hive.log.loki` | Send to Grafana Loki |
-| `cloudwatch` | `adi plugin install hive.log.cloudwatch` | Send to AWS CloudWatch |
-
----
-
-## 11. Dependencies
+## 10. Dependencies
 
 The `depends_on` field specifies services that MUST be healthy before the current service starts.
 
@@ -1094,11 +1031,11 @@ services:
 
 ---
 
-## 12. Routing
+## 11. Routing
 
 The `proxy` section configures HTTP reverse proxy routing using explicit `host` and `path` fields.
 
-### 12.1 Route Format
+### 11.1 Route Format
 
 ```yaml
 proxy:
@@ -1124,14 +1061,14 @@ proxy:
 2. `host` MUST NOT include protocol (no `http://`)
 3. Trailing `/` in path is ignored
 
-### 12.2 Route Matching
+### 11.2 Route Matching
 
 1. Routes with `host` are matched first (by `Host` header)
 2. Within same host, longest `path` prefix wins
 3. Routes without `host` match any `Host` header
 4. If multiple services have identical host+path, Hive MUST fail with an error
 
-### 12.3 WebSocket Support
+### 11.3 WebSocket Support
 
 Hive MUST transparently support WebSocket upgrades for all routes. When a request includes the `Upgrade: websocket` header:
 - Hive MUST forward the upgrade request to the backend service
@@ -1142,7 +1079,7 @@ No explicit configuration is required.
 
 ---
 
-## 13. Build Configuration
+## 12. Build Configuration
 
 The `build` field specifies how to build a service before running.
 
@@ -1159,7 +1096,7 @@ build:
 | `working_dir` | string | OPTIONAL | runner's `working_dir` or `.` | Build working directory (falls back to project root if runner has no working_dir) |
 | `when` | string | OPTIONAL | `missing` | When to build |
 
-### 13.1 Build Triggers (`when`)
+### 12.1 Build Triggers (`when`)
 
 | Value | Description |
 |-------|-------------|
@@ -1169,7 +1106,7 @@ build:
 
 ---
 
-## 14. Restart Policies
+## 13. Restart Policies
 
 The `restart` field controls service restart behavior.
 
@@ -1182,7 +1119,7 @@ The `restart` field controls service restart behavior.
 
 **Default:** `never`
 
-### 14.1 Restart Behavior
+### 13.1 Restart Behavior
 
 When a service crashes and restart policy applies:
 1. Hive MUST wait 1 second before first restart
@@ -1191,7 +1128,7 @@ When a service crashes and restart policy applies:
 
 ---
 
-## 15. Rollout Plugins
+## 14. Rollout Plugins
 
 Rollout plugins control how services are started, restarted, and updated. They manage **port allocation** (internal network) and the **deployment strategy**.
 
@@ -1207,7 +1144,7 @@ rollout:
 |-------|------|----------|-------------|
 | `type` | string | REQUIRED | Rollout strategy plugin |
 
-### 15.1 Port Configuration
+### 14.1 Port Configuration
 
 Ports are defined as a named map. Names are used to reference ports in `proxy` and `healthcheck` configurations via `{{runtime.port.<name>}}`.
 
@@ -1241,7 +1178,7 @@ ports:
     green: 9091
 ```
 
-### 15.2 Recreate (built-in)
+### 14.2 Recreate (built-in)
 
 Stop the old instance, then start the new one. Simple but causes downtime.
 
@@ -1278,7 +1215,7 @@ rollout:
       metrics: 9091
 ```
 
-### 15.3 External Rollout Plugins
+### 14.3 External Rollout Plugins
 
 Additional rollout strategies are available as external plugins:
 
@@ -1288,7 +1225,7 @@ Additional rollout strategies are available as external plugins:
 | `canary` | `adi plugin install hive.rollout.canary` | Gradual traffic shifting |
 | `rolling` | `adi plugin install hive.rollout.rolling` | Rolling update for multiple instances |
 
-### 15.4 Blue-Green (external plugin)
+### 14.4 Blue-Green (external plugin)
 
 Run new instance alongside old, switch traffic when healthy. Zero-downtime updates.
 
@@ -1417,7 +1354,7 @@ rollout:
         green: ${ports.auth-grpc-green}
 ```
 
-### 15.5 Blue-Green Sequence Diagram
+### 14.5 Blue-Green Sequence Diagram
 
 ```
 Config: rollout.blue-green.ports.http: { blue: 8012, green: 8013 }
@@ -1444,7 +1381,7 @@ Time    Port 8012            Hive Proxy           Port 8013
 State:  green (8013) is now active (next deploy will use blue/8012)
 ```
 
-### 15.6 Blue-Green Failure Scenarios
+### 14.6 Blue-Green Failure Scenarios
 
 **Scenario: New instance fails healthcheck**
 ```
@@ -1476,13 +1413,13 @@ Result: healthy_duration not met, blue continues serving
 
 ---
 
-## 16. Variable Interpolation
+## 15. Variable Interpolation
 
 Hive supports two types of variable interpolation:
 1. **Parse-time plugins** (`${plugin.key}`) - resolved when YAML is parsed, via plugins
 2. **Runtime templates** (`{{runtime...}}`) - resolved at service start from service config
 
-### 16.1 Parse-Time Plugins (`${...}`)
+### 15.1 Parse-Time Plugins (`${...}`)
 
 Parse-time interpolation uses plugins to resolve values **before** services start. Plugins are invoked during YAML parsing.
 
@@ -1561,7 +1498,7 @@ defaults:
     prefix: "adi-"            # Prefix for ports-manager keys
 ```
 
-### 16.2 Runtime Templates (`{{runtime...}}`)
+### 15.2 Runtime Templates (`{{runtime...}}`)
 
 Resolved **at service start** from the current service's configuration. Use this to reference values defined within the same service.
 
@@ -1627,7 +1564,7 @@ services:
             green: 3001
 ```
 
-### 16.3 Where Runtime Templates Can Be Used
+### 15.3 Where Runtime Templates Can Be Used
 
 Runtime templates (`{{runtime.port.<name>}}`) are valid in:
 - `runner.docker.ports` - container port mapping
@@ -1654,7 +1591,7 @@ services:
           metrics: 9091
 ```
 
-### 16.4 Escaping
+### 15.4 Escaping
 
 To include literal `${` or `{{`, escape with double:
 ```yaml
@@ -1664,7 +1601,7 @@ environment:
     TEMPLATE: "{{{runtime.port.http}}}"    # Results in: {{runtime.port.http}}
 ```
 
-### 16.5 Resolution Order
+### 15.5 Resolution Order
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -1687,7 +1624,7 @@ environment:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 16.6 Parse-Time Plugin Interface
+### 15.6 Parse-Time Plugin Interface
 
 Parse-time plugins implement the `ParsePlugin` trait:
 
@@ -1724,9 +1661,9 @@ impl ParsePlugin for PortsManagerPlugin {
 
 ---
 
-## 17. Architecture
+## 16. Architecture
 
-### 17.1 Component Diagram
+### 16.1 Component Diagram
 
 ```
                               Hive Daemon (one per machine)
@@ -1782,7 +1719,7 @@ impl ParsePlugin for PortsManagerPlugin {
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 17.2 Startup Sequence
+### 16.2 Startup Sequence
 
 ```
 1. Start daemon (if not running)
@@ -1817,7 +1754,7 @@ impl ParsePlugin for PortsManagerPlugin {
    - Process remote control commands
 ```
 
-### 17.3 Request Flow
+### 16.3 Request Flow
 
 ```
 Client Request
@@ -1846,7 +1783,7 @@ Client Request
 +------------------+
 ```
 
-### 17.4 Shutdown Sequence
+### 16.4 Shutdown Sequence
 
 ```
 1. Receive SIGTERM/SIGINT (or remote shutdown command)
@@ -1863,9 +1800,9 @@ Client Request
 
 ---
 
-## 18. Examples
+## 17. Examples
 
-### 18.1 Minimal Configuration
+### 17.1 Minimal Configuration
 
 ```yaml
 version: "1"
@@ -1886,7 +1823,7 @@ services:
       path: /
 ```
 
-### 18.2 Full ADI Development Stack
+### 17.2 Full ADI Development Stack
 
 ```yaml
 version: "1"
@@ -1896,9 +1833,21 @@ defaults:
     prefix: "adi-"            # Prefix for ports-manager keys
   hive.runner.docker:
     socket: /var/run/docker.sock
-  hive.log.file:
+  hive.obs.stdout:
+    format: pretty
+    level: info
+  hive.obs.file:
     dir: .hive/logs
+    per_service: true
     rotate: true
+    max_size: 100MB
+
+observability:
+  resource_interval: 10s
+  plugins:
+    - stdout
+    - file
+    - prometheus
 
 proxy:
   bind:
@@ -2245,7 +2194,7 @@ services:
     restart: on-failure
 ```
 
-### 18.3 With External Plugins
+### 17.3 With External Plugins
 
 ```yaml
 version: "1"
@@ -2285,11 +2234,11 @@ services:
 
 ---
 
-## 19. Service Exposure
+## 18. Service Exposure
 
 Service exposure enables cross-source dependencies. By default, services are **private** to their source. To share a service with other sources, explicitly **expose** it.
 
-### 19.1 Expose Configuration
+### 18.1 Expose Configuration
 
 The `expose` field makes a service available to other sources:
 
@@ -2327,7 +2276,7 @@ services:
 - `vars` values support `{{runtime.port.<name>}}` interpolation
 - If `secret` is specified, consumers MUST provide matching secret
 
-### 19.2 Uses Configuration
+### 18.2 Uses Configuration
 
 The `uses` field declares dependencies on exposed services from other sources:
 
@@ -2354,7 +2303,7 @@ services:
 | `as` | string | OPTIONAL | Local alias for port references |
 | `vars` | object | OPTIONAL | Remap exposed variable names |
 
-### 19.3 Variable Injection
+### 18.3 Variable Injection
 
 When a service with `uses` starts, exposed variables are injected into its environment:
 
@@ -2378,7 +2327,7 @@ PG_HOST=localhost
 PG_PORT=5432
 ```
 
-### 19.4 Port References
+### 18.4 Port References
 
 Access exposed service ports using `{{uses.<alias>.port.<name>}}`:
 
@@ -2392,7 +2341,7 @@ environment:
     CUSTOM_PORT: "{{uses.pg.port.db}}"   # Resolves to 5432
 ```
 
-### 19.5 Startup Ordering
+### 18.5 Startup Ordering
 
 Services with `uses` wait for their dependencies:
 
@@ -2405,14 +2354,14 @@ Services with `uses` wait for their dependencies:
    - Inject exposed variables
 4. Start the consumer service
 
-### 19.6 Security
+### 18.6 Security
 
 - Secrets are stored as bcrypt hashes (not plaintext)
 - No secret = service is publicly exposed to all sources
 - Secret verification happens at service startup
 - Failed secret verification prevents service from starting
 
-### 19.7 Example: Shared Infrastructure
+### 18.7 Example: Shared Infrastructure
 
 ```yaml
 # Source: ~/.adi/hive/ (default source)
@@ -2493,11 +2442,11 @@ services:
 
 ---
 
-## 20. Multi-Source Architecture
+## 19. Multi-Source Architecture
 
 Hive supports managing services from **multiple config sources** simultaneously. Each source is independent but shares a unified proxy and can expose services to other sources.
 
-### 20.1 Daemon Model
+### 19.1 Daemon Model
 
 One Hive daemon runs per machine:
 
@@ -2523,7 +2472,7 @@ One Hive daemon runs per machine:
 +---------------------------------------------------------------------+
 ```
 
-### 20.2 Default Source
+### 19.2 Default Source
 
 `~/.adi/hive/` is the **default source**, always loaded:
 
@@ -2531,7 +2480,7 @@ One Hive daemon runs per machine:
 - Ideal for shared infrastructure (databases, caches, proxies)
 - Services here are available to all other sources via `expose`
 
-### 20.3 Source Types
+### 19.3 Source Types
 
 | Type | Detection | Mutability |
 |------|-----------|------------|
@@ -2544,7 +2493,7 @@ One Hive daemon runs per machine:
 3. If path is a directory containing `.adi/hive.yaml` → YAML source
 4. Special case: `~/.adi/hive/` checks for `hive.yaml` or `hive.db` directly (no `.adi/` subdirectory)
 
-### 20.4 Source Management
+### 19.4 Source Management
 
 ```bash
 # List sources
@@ -2569,7 +2518,7 @@ adi hive source disable myproject
 adi hive source enable myproject
 ```
 
-### 20.5 Service Addressing
+### 19.5 Service Addressing
 
 Services are addressed by **Fully Qualified Name (FQN)**: `source:service`
 
@@ -2587,7 +2536,7 @@ adi hive start auth              # Implicit: adi:auth
 adi hive logs platform           # Implicit: adi:platform
 ```
 
-### 20.6 Conflict Detection
+### 19.6 Conflict Detection
 
 Hive prevents conflicts at source add time:
 
@@ -2609,7 +2558,7 @@ Error: Expose name 'shared-postgres' already used by default:postgres
 Cannot add source 'backup' with service 'pg' exposing 'shared-postgres'
 ```
 
-### 20.7 Daemon Lifecycle
+### 19.7 Daemon Lifecycle
 
 ```bash
 # Daemon auto-starts on first use
@@ -2628,11 +2577,11 @@ adi hive daemon restart          # Restart daemon
 
 ---
 
-## 21. SQLite Config Backend
+## 20. SQLite Config Backend
 
 SQLite provides a **read-write** alternative to YAML for configuration. Both backends have full feature parity.
 
-### 21.1 When to Use SQLite
+### 20.1 When to Use SQLite
 
 | Use Case | YAML | SQLite |
 |----------|------|--------|
@@ -2642,7 +2591,7 @@ SQLite provides a **read-write** alternative to YAML for configuration. Both bac
 | Human editing | Best | Via CLI |
 | Programmatic access | Parse needed | Best |
 
-### 21.2 SQLite Schema
+### 20.2 SQLite Schema
 
 ```sql
 -- Meta
@@ -2768,7 +2717,7 @@ CREATE TABLE runtime_state (
 );
 ```
 
-### 21.3 CLI Config Commands
+### 20.3 CLI Config Commands
 
 ```bash
 # View config as YAML
@@ -2791,11 +2740,11 @@ adi hive config export > hive-backup.yaml
 
 ---
 
-## 22. Remote Control
+## 21. Remote Control
 
 Hive registers with the signaling server as a **special cocoon type**, enabling remote control via CLI or Web UI.
 
-### 22.1 Hive Registration
+### 21.1 Hive Registration
 
 ```rust
 SignalingMessage::Register {
@@ -2814,7 +2763,7 @@ Hive uses the same claiming flow as cocoons:
 2. User claims hive via JWT
 3. User can send control commands
 
-### 22.2 Hive Control Protocol
+### 21.2 Hive Control Protocol
 
 ```rust
 // Tunneled via SignalingMessage::HiveControl { device_id, request_id, payload }
@@ -2868,7 +2817,7 @@ enum HiveResponse {
 }
 ```
 
-### 22.3 Remote CLI
+### 21.3 Remote CLI
 
 ```bash
 # Connect to remote hive
@@ -2883,7 +2832,7 @@ adi hive logs adi:platform
 adi hive config show             # Remote config
 ```
 
-### 22.4 Log Streaming
+### 21.4 Log Streaming
 
 ```rust
 // Request streaming
@@ -2901,6 +2850,393 @@ SignalingMessage::HiveLogStream {
 // Client stops stream
 HiveRequest::StopLogStream { stream_id: Uuid }
 ```
+
+---
+
+## 22. Observability
+
+Hive provides a comprehensive observability system through a plugin-based architecture. The daemon collects all observability data internally and streams it to subscribed plugins via a Unix socket.
+
+### 22.1 Architecture
+
+```
++---------------------------------------------------------------------+
+|                         Hive Daemon                                  |
+|                                                                      |
+|  +---------------------------------------------------------------+  |
+|  |              Internal Event Collector                          |  |
+|  |  - Service logs (stdout/stderr)                               |  |
+|  |  - Process metrics (CPU, memory, FDs, network)                |  |
+|  |  - Health check results                                        |  |
+|  |  - Proxy request traces                                        |  |
+|  |  - Service lifecycle (start, stop, restart, crash)            |  |
+|  |  - Resource utilization                                        |  |
+|  +---------------------------------------------------------------+  |
+|                            |                                         |
+|                            v                                         |
+|  +---------------------------------------------------------------+  |
+|  |              Event Stream Socket                               |  |
+|  |              ~/.adi/hive/observability.sock                    |  |
+|  |                                                                |  |
+|  |    Plugin 1 <----+                                             |  |
+|  |    Plugin 2 <----+---- MessagePack events                      |  |
+|  |    Plugin 3 <----+                                             |  |
+|  +---------------------------------------------------------------+  |
++---------------------------------------------------------------------+
+         |                    |                    |
+         v                    v                    v
++---------------+    +---------------+    +---------------+
+| hive.obs.     |    | hive.obs.     |    | hive.obs.     |
+| prometheus    |    | loki          |    | otel          |
+| (metrics)     |    | (logs)        |    | (traces)      |
++---------------+    +---------------+    +---------------+
+```
+
+### 22.2 Event Types
+
+Hive collects and streams these event types:
+
+```rust
+enum ObservabilityEvent {
+    // Service logs (stdout/stderr)
+    Log {
+        timestamp: DateTime<Utc>,
+        service_fqn: String,        // "source:service"
+        level: LogLevel,            // trace, debug, info, notice, warn, error, fatal
+        message: String,
+        fields: HashMap<String, Value>,
+        stream: LogStream,          // stdout | stderr
+    },
+    
+    // Numeric metrics
+    Metric {
+        timestamp: DateTime<Utc>,
+        service_fqn: String,
+        name: String,               // e.g., "cpu_percent", "memory_rss_bytes"
+        value: MetricValue,         // gauge, counter, histogram
+        labels: HashMap<String, String>,
+    },
+    
+    // Distributed trace spans
+    Span {
+        trace_id: Uuid,
+        span_id: Uuid,
+        parent_span_id: Option<Uuid>,
+        service_fqn: String,
+        operation: String,          // e.g., "proxy_request", "healthcheck"
+        start: DateTime<Utc>,
+        duration_us: u64,
+        status: SpanStatus,         // ok, error
+        attributes: HashMap<String, Value>,
+    },
+    
+    // Health check results
+    HealthCheck {
+        timestamp: DateTime<Utc>,
+        service_fqn: String,
+        check_type: String,         // http, tcp, cmd, grpc
+        status: HealthStatus,       // healthy, unhealthy, unknown
+        latency_ms: u32,
+        error: Option<String>,
+    },
+    
+    // Service lifecycle events
+    ServiceEvent {
+        timestamp: DateTime<Utc>,
+        service_fqn: String,
+        event: ServiceEventType,    // starting, started, stopping, stopped,
+                                    // crashed, restarting, health_changed
+        details: HashMap<String, Value>,
+    },
+    
+    // Proxy request traces
+    ProxyRequest {
+        timestamp: DateTime<Utc>,
+        trace_id: Uuid,
+        span_id: Uuid,
+        service_fqn: String,
+        method: String,
+        path: String,
+        status_code: u16,
+        duration_us: u64,
+        request_bytes: u64,
+        response_bytes: u64,
+        client_ip: Option<String>,
+        user_agent: Option<String>,
+        is_websocket: bool,
+    },
+    
+    // Resource utilization
+    ResourceMetrics {
+        timestamp: DateTime<Utc>,
+        service_fqn: String,
+        pid: u32,
+        cpu_percent: f32,
+        memory_rss_bytes: u64,
+        memory_vms_bytes: u64,
+        open_fds: u32,
+        threads: u32,
+        network_rx_bytes: u64,
+        network_tx_bytes: u64,
+    },
+    
+    // Custom service events
+    Custom {
+        timestamp: DateTime<Utc>,
+        service_fqn: String,
+        event_type: String,
+        data: Value,
+    },
+}
+```
+
+### 22.3 Metric Types
+
+```rust
+enum MetricValue {
+    Gauge(f64),                     // Current value (e.g., CPU %)
+    Counter(u64),                   // Monotonic counter (e.g., requests)
+    Histogram {                     // Distribution (e.g., latency)
+        count: u64,
+        sum: f64,
+        buckets: Vec<(f64, u64)>,   // (le, count)
+    },
+}
+
+enum LogLevel {
+    Trace = 0,
+    Debug = 1,
+    Info = 2,
+    Notice = 3,
+    Warn = 4,
+    Error = 5,
+    Fatal = 6,
+}
+```
+
+### 22.4 Event Stream Protocol
+
+#### Socket Location
+
+```
+~/.adi/hive/observability.sock
+```
+
+#### Frame Format
+
+Length-prefixed MessagePack:
+
+```
+[4-byte length (big-endian)][MessagePack payload]
+```
+
+#### Subscription Handshake
+
+On connect, client sends subscription:
+
+```rust
+struct Subscribe {
+    event_types: Vec<String>,       // ["log", "metric", "span", ...] (empty = all)
+    services: Vec<String>,          // ["default:postgres", "adi:*"] (empty = all)
+    min_log_level: Option<LogLevel>,
+}
+```
+
+Server responds:
+
+```rust
+struct SubscribeAck {
+    stream_id: Uuid,
+    hive_version: String,
+}
+```
+
+Then server streams events matching the subscription.
+
+#### Backpressure
+
+- Socket has configurable send buffer limit
+- If client is slow, oldest events are dropped
+- `EventDropped` notification sent when dropping occurs
+
+### 22.5 Configuration
+
+#### Top-Level Configuration
+
+```yaml
+version: "1"
+
+observability:
+  # Resource metrics collection interval
+  resource_interval: 5s
+  
+  # Socket buffer size (events)
+  buffer_size: 10000
+  
+  # Enable/disable specific collectors
+  collectors:
+    logs: true
+    metrics: true
+    traces: true
+    health: true
+    resources: true
+    proxy: true
+  
+  # Active observability plugins
+  plugins:
+    - stdout                    # hive.obs.stdout
+    - file                      # hive.obs.file
+    - prometheus                # hive.obs.prometheus
+
+defaults:
+  hive.obs.stdout:
+    format: pretty              # pretty | json | compact
+    colors: auto                # auto | always | never
+    timestamp: true
+    level: info
+  
+  hive.obs.file:
+    dir: .hive/logs
+    per_service: true           # Separate file per service
+    rotate: true
+    max_size: 100MB
+    max_files: 10
+  
+  hive.obs.prometheus:
+    bind: "0.0.0.0:9090"
+    path: /metrics
+  
+  hive.obs.loki:
+    url: http://loki:3100/loki/api/v1/push
+    batch_size: 100
+    flush_interval: 5s
+    labels:
+      env: production
+  
+  hive.obs.otel:
+    endpoint: http://otel-collector:4317
+    protocol: grpc              # grpc | http
+    headers:
+      authorization: Bearer ${env.OTEL_TOKEN}
+  
+  hive.obs.adi:
+    signaling_url: ${env.SIGNALING_URL}
+    logging_service: true       # Forward to adi-logging-service
+    analytics_service: true     # Forward to adi-analytics
+```
+
+#### SQLite Schema
+
+```sql
+CREATE TABLE observability_config (
+    key TEXT PRIMARY KEY,
+    value JSON NOT NULL
+);
+-- Keys: 'resource_interval', 'buffer_size', 'collectors'
+
+CREATE TABLE observability_plugins (
+    plugin_id TEXT PRIMARY KEY,
+    enabled BOOLEAN DEFAULT true,
+    config JSON NOT NULL
+);
+```
+
+### 22.6 Plugin Interface
+
+```rust
+pub trait ObservabilityPlugin: Send + Sync {
+    /// Plugin identifier (e.g., "prometheus", "loki", "otel")
+    fn name(&self) -> &str;
+    
+    /// Start the plugin (called once on hive startup)
+    fn start(&mut self, config: &PluginConfig) -> Result<()>;
+    
+    /// Stop the plugin (called on hive shutdown)
+    fn stop(&mut self) -> Result<()>;
+    
+    /// Get subscription filter (what events this plugin wants)
+    fn subscription(&self) -> Subscribe;
+    
+    /// Handle incoming event
+    fn handle_event(&mut self, event: &ObservabilityEvent) -> Result<()>;
+}
+```
+
+### 22.7 Available Plugins
+
+| Plugin ID | Install | Description |
+|-----------|---------|-------------|
+| `stdout` | `adi plugin install hive.obs.stdout` | Formatted console output |
+| `file` | `adi plugin install hive.obs.file` | File logging with rotation |
+| `prometheus` | `adi plugin install hive.obs.prometheus` | Prometheus metrics endpoint |
+| `loki` | `adi plugin install hive.obs.loki` | Grafana Loki log shipping |
+| `otel` | `adi plugin install hive.obs.otel` | OpenTelemetry export (OTLP) |
+| `jaeger` | `adi plugin install hive.obs.jaeger` | Jaeger trace export |
+| `adi` | `adi plugin install hive.obs.adi` | ADI services integration |
+| `alertmanager` | `adi plugin install hive.obs.alertmanager` | Prometheus Alertmanager |
+| `datadog` | `adi plugin install hive.obs.datadog` | Datadog APM integration |
+| `cloudwatch` | `adi plugin install hive.obs.cloudwatch` | AWS CloudWatch |
+
+### 22.8 CLI Commands
+
+```bash
+# View real-time logs
+adi hive logs                     # All services
+adi hive logs auth                # Specific service
+adi hive logs -f                  # Follow mode
+adi hive logs --level warn        # Filter by level
+adi hive logs --since 5m          # Last 5 minutes
+
+# View metrics
+adi hive metrics                  # Current metrics summary
+adi hive metrics auth             # Service metrics
+adi hive metrics --watch          # Live update
+
+# View health
+adi hive health                   # All services health
+adi hive health --watch           # Live health status
+
+# View resources (htop-like)
+adi hive top                      # Interactive resource view
+adi hive resources                # Detailed resource usage
+
+# Plugin management
+adi hive obs plugins              # List observability plugins
+adi hive obs enable prometheus    # Enable plugin
+adi hive obs disable loki         # Disable plugin
+adi hive obs config prometheus    # View/edit plugin config
+```
+
+### 22.9 Remote Observability
+
+The `hive.obs.adi` plugin enables remote observability access via the signaling server:
+
+```rust
+// Events relayed through signaling (batched)
+SignalingMessage::HiveObservability {
+    hive_id: String,
+    stream_id: Uuid,
+    events: Vec<ObservabilityEvent>,
+}
+
+// Remote subscription request
+HiveRequest::SubscribeObservability {
+    event_types: Vec<String>,
+    services: Vec<String>,
+    min_log_level: Option<LogLevel>,
+}
+
+// Response
+HiveResponse::ObservabilitySubscribed {
+    stream_id: Uuid,
+}
+```
+
+This enables:
+- Remote log viewing via `adi hive logs` (when connected to remote hive)
+- Web UI log viewer and metrics dashboard
+- Centralized logging to `adi-logging-service`
+- Analytics events to `adi-analytics`
 
 ---
 
@@ -2960,6 +3296,11 @@ pub trait HealthPlugin: Send + Sync {
 | SQLite config backend | - | - | + |
 | Remote control | - | - | + (signaling) |
 | Daemon mode | - | - | + |
+| Observability plugins | logging only | - | + (full stack) |
+| Prometheus metrics | - | - | + (plugin) |
+| OpenTelemetry export | - | - | + (plugin) |
+| Distributed tracing | - | - | + |
+| Resource monitoring | - | - | + |
 
 ---
 
@@ -2969,3 +3310,4 @@ pub trait HealthPlugin: Send + Sync {
 |---------|------|-------------|
 | 0.1.0-draft | 2026-01-25 | Initial draft with plugin architecture |
 | 0.2.0-draft | 2026-01-25 | Added service exposure (expose/uses), multi-source architecture, SQLite backend, remote control |
+| 0.3.0-draft | 2026-01-25 | Replaced log plugins with comprehensive observability system (Section 22) |
