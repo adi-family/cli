@@ -20,6 +20,52 @@ For more information, see https://mariadb.com/bsl11/
 **License:** BSL-1.1  
 **Created:** 2026-01-25
 
+## TL;DR
+
+```bash
+# Start all services
+adi hive up
+
+# Start specific services
+adi hive up auth platform
+
+# Stop all services
+adi hive down
+
+# View service status
+adi hive status
+
+# View logs
+adi hive logs auth
+adi hive logs -f          # follow all
+```
+
+**Minimal example** (`.adi/hive.yaml`):
+```yaml
+version: "1"
+
+services:
+  api:
+    runner:
+      type: script
+      script:
+        run: cargo run --bin api
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8080
+    proxy:
+      host: localhost
+      path: /api
+    healthcheck:
+      type: http
+      http:
+        path: /health
+```
+
+---
+
 ## Abstract
 
 This document specifies the `hive.yaml` configuration format for Hive, a plugin-based universal process orchestrator. Hive manages heterogeneous services through a declarative configuration file with integrated HTTP/WebSocket reverse proxy capabilities. All functionality—runners, environment providers, health checks, port allocation, and logging—is implemented via a plugin system.
