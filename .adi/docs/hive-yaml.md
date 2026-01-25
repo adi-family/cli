@@ -251,7 +251,7 @@ When disabled, Hive will fail with an error listing missing plugins.
 
 ## 5. Proxy Configuration
 
-The `proxy` section configures the built-in HTTP/WebSocket reverse proxy. Domains are auto-detected from service `route` definitions.
+The `proxy` section configures the built-in HTTP/WebSocket reverse proxy.
 
 ```yaml
 proxy:
@@ -265,13 +265,6 @@ proxy:
 | `bind` | string or array | OPTIONAL | `["127.0.0.1:8080"]` | Address(es) and port(s) to bind |
 
 If `proxy` is omitted, Hive MUST still start the proxy on the default bind address.
-
-### 5.1 Domain Auto-Detection
-
-Domains are extracted from service `proxy.route` fields. When a route includes a domain (e.g., `adi.local/api/auth`), Hive automatically:
-1. Extracts the domain (`adi.local`)
-2. Routes requests with matching `Host` header to that service
-3. Strips the domain from the path for proxying
 
 ---
 
