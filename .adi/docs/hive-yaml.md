@@ -91,11 +91,12 @@ services:
 This document specifies the configuration format for Hive, a plugin-based universal process orchestrator. Hive runs as a **single daemon per machine**, managing heterogeneous services from **multiple configuration sources** (YAML files or SQLite databases) with an integrated HTTP/WebSocket reverse proxy.
 
 Key features:
-- **Plugin system**: Runners, environment providers, health checks, logging—all via plugins
+- **Plugin system**: Runners, environment providers, health checks, observability—all via plugins
 - **Multi-source**: Manage services from multiple projects/directories simultaneously
 - **Service exposure**: Share services between sources with `expose`/`uses` declarations
 - **Remote control**: Manage Hive via signaling server from CLI or Web UI
 - **Dual config backends**: YAML (read-only, version-controllable) or SQLite (read-write, dynamic)
+- **Observability**: Comprehensive logs, metrics, traces via plugin-based event streaming
 
 ## Table of Contents
 
@@ -141,7 +142,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 | **Environment Provider** | Plugin that supplies environment variables |
 | **Health Checker** | Plugin that probes service readiness |
 | **Port Provider** | Plugin that allocates ports |
-| **Log Handler** | Plugin that processes service output |
+| **Observability Plugin** | Plugin that handles logs, metrics, traces, and events |
 | **Route** | An HTTP path prefix mapped to a service |
 | **Proxy** | The built-in HTTP/WebSocket reverse proxy |
 | **Expose** | Making a service available to other sources with shared variables |
@@ -159,7 +160,7 @@ For SQLite sources, the database file is `hive.db` in the source directory or a 
 
 The default source is always `~/.adi/hive/` (can contain either `hive.yaml` or `hive.db`).
 
-See [Section 20](#20-multi-source-architecture) for multi-source configuration.
+See [Section 19](#19-multi-source-architecture) for multi-source configuration.
 
 ### 2.2 File Encoding
 
@@ -1685,11 +1686,12 @@ impl ParsePlugin for PortsManagerPlugin {
 │  │  │ runner: script      │  │        1password, aws-ssm   │         │  │
 │  │  │ env: static         │  │ runner: docker, compose,    │         │  │
 │  │  │ health: http,tcp,cmd│  │         podman, kubernetes  │         │  │
-│  │  │ log: file, stdout   │  │ env: dotenv, vault,         │         │  │
-│  │  │ rollout: recreate   │  │      1password, aws-secrets │         │  │
+│  │  │ rollout: recreate   │  │ env: dotenv, vault,         │         │  │
+│  │  │                     │  │      1password, aws-secrets │         │  │
 │  │  │                     │  │ health: grpc, postgres,     │         │  │
 │  │  │                     │  │         redis, mysql        │         │  │
-│  │  │                     │  │ log: loki, cloudwatch       │         │  │
+│  │  │                     │  │ obs: stdout, file, loki,    │         │  │
+│  │  │                     │  │      prometheus, otel       │         │  │
 │  │  │                     │  │ rollout: blue-green,        │         │  │
 │  │  │                     │  │          canary, rolling    │         │  │
 │  │  └─────────────────────┘  └─────────────────────────────┘         │  │
