@@ -61,9 +61,8 @@ services:
       script:
         run: cargo run --bin api
     environment:
-      1password:
-        vault: Development
-        item: api-secrets
+      static:
+        API_KEY: ${op.api-secrets.credential}  # 1Password via parse plugin
     rollout:
       type: blue-green
       blue-green:
@@ -105,6 +104,9 @@ Key features:
 3. [Top-Level Fields](#3-top-level-fields)
 4. [Plugin System](#4-plugin-system)
 5. [Proxy Configuration](#5-proxy-configuration)
+   - [5.1 SSL Plugins](#51-ssl-plugins)
+   - [5.2 Proxy Middleware Plugins](#52-proxy-middleware-plugins)
+   - [5.3 Per-Service Plugin Overrides](#53-per-service-plugin-overrides)
 6. [Services](#6-services)
 7. [Runner Plugins](#7-runner-plugins)
 8. [Environment Plugins](#8-environment-plugins)
@@ -187,6 +189,7 @@ version: "1"           # REQUIRED
 defaults: { ... }      # OPTIONAL
 proxy: { ... }         # OPTIONAL
 environment: { ... }   # OPTIONAL
+observability: { ... } # OPTIONAL
 services: { ... }      # REQUIRED
 ```
 
@@ -196,6 +199,7 @@ services: { ... }      # REQUIRED
 | `defaults` | object | OPTIONAL | Default configuration for plugins |
 | `proxy` | object | OPTIONAL | Proxy configuration |
 | `environment` | object | OPTIONAL | Global environment configuration |
+| `observability` | object | OPTIONAL | Observability configuration (see [Section 22](#22-observability)) |
 | `services` | object | REQUIRED | Service definitions |
 
 ---
@@ -213,7 +217,10 @@ Hive uses a plugin architecture where all functionality is provided by plugins. 
 | `env` | `hive.env.*` | Provide environment variables | `static` |
 | `health` | `hive.health.*` | Check service readiness | `http`, `tcp`, `cmd` |
 | `rollout` | `hive.rollout.*` | Control restart/deploy strategy | `recreate` |
-| `obs` | `hive.obs.*` | Observability (logs, metrics, traces) | (none - all external) |
+| `proxy.ssl` | `hive.proxy.ssl.*` | TLS/SSL termination | (none - all external) |
+| `proxy.auth` | `hive.proxy.auth.*` | Proxy authentication middleware | (none - all external) |
+| `proxy` | `hive.proxy.*` | Proxy middleware (rate-limit, cors, etc.) | (none - all external) |
+| `obs` | `hive.obs.*` | Observability (logs, metrics, traces) | `stdout`, `file` |
 
 ### 4.2 Plugin Defaults
 
@@ -347,13 +354,310 @@ proxy:
   bind:
     - "0.0.0.0:80"
     - "0.0.0.0:443"
+  
+  ssl:
+    type: letsencrypt                    # hive.proxy.ssl.letsencrypt
+    letsencrypt:
+      email: admin@example.com
+      staging: false
+      storage: ~/.adi/hive/certs
+  
+  plugins:
+    - type: auth.jwt                     # hive.proxy.auth.jwt
+      auth.jwt:
+        jwks_url: https://auth.example.com/.well-known/jwks.json
+    
+    - type: rate-limit                   # hive.proxy.rate-limit
+      rate-limit:
+        requests: 1000
+        window: 1m
+    
+    - type: cors                         # hive.proxy.cors
+      cors:
+        origins: ["*"]
 ```
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `bind` | string or array | OPTIONAL | `["127.0.0.1:8080"]` | Address(es) and port(s) to bind |
+| `ssl` | object | OPTIONAL | - | SSL/TLS configuration (see [Section 5.1](#51-ssl-plugins)) |
+| `plugins` | array | OPTIONAL | `[]` | Middleware plugin chain (see [Section 5.2](#52-proxy-middleware-plugins)) |
 
 If `proxy` is omitted, Hive MUST still start the proxy on the default bind address.
+
+### 5.1 SSL Plugins
+
+The `ssl` section configures TLS termination. Only one SSL plugin can be active.
+
+```yaml
+ssl:
+  type: <plugin-name>
+  <plugin-name>:
+    <plugin-specific-options>
+```
+
+#### Available SSL Plugins
+
+| Type | Plugin ID | Description |
+|------|-----------|-------------|
+| `letsencrypt` | `hive.proxy.ssl.letsencrypt` | Auto-renewing Let's Encrypt certificates |
+| `acme` | `hive.proxy.ssl.acme` | Generic ACME provider (ZeroSSL, Buypass, etc.) |
+| `static` | `hive.proxy.ssl.static` | Static certificate and key files |
+| `vault` | `hive.proxy.ssl.vault` | Certificates from HashiCorp Vault |
+
+#### Let's Encrypt (external plugin)
+
+```yaml
+ssl:
+  type: letsencrypt                      # Auto-installs hive.proxy.ssl.letsencrypt
+  letsencrypt:
+    email: admin@example.com             # REQUIRED - contact email
+    staging: false                       # OPTIONAL - use staging environment
+    storage: ~/.adi/hive/certs           # OPTIONAL - certificate storage path
+    domains:                             # OPTIONAL - explicit domain list (auto-detected from routes if omitted)
+      - example.com
+      - api.example.com
+```
+
+#### Generic ACME (external plugin)
+
+```yaml
+ssl:
+  type: acme                             # Auto-installs hive.proxy.ssl.acme
+  acme:
+    directory: https://acme.zerossl.com/v2/DV90
+    email: admin@example.com
+    eab:                                 # OPTIONAL - External Account Binding
+      kid: ${env.ACME_EAB_KID}
+      hmac: ${env.ACME_EAB_HMAC}
+```
+
+#### Static Certificates (external plugin)
+
+```yaml
+ssl:
+  type: static                           # Auto-installs hive.proxy.ssl.static
+  static:
+    cert: /path/to/fullchain.pem         # REQUIRED
+    key: /path/to/privkey.pem            # REQUIRED
+    watch: true                          # OPTIONAL - reload on file change
+```
+
+#### Vault Certificates (external plugin)
+
+```yaml
+ssl:
+  type: vault                            # Auto-installs hive.proxy.ssl.vault
+  vault:
+    address: https://vault.example.com
+    path: secret/data/certs/api          # REQUIRED
+    cert_field: certificate              # OPTIONAL, default: certificate
+    key_field: private_key               # OPTIONAL, default: private_key
+    refresh: 1h                          # OPTIONAL - refresh interval
+```
+
+### 5.2 Proxy Middleware Plugins
+
+The `plugins` array defines a chain of middleware that processes requests. Plugins execute in order (first to last).
+
+```yaml
+plugins:
+  - type: <plugin-name>
+    <plugin-name>:
+      <plugin-specific-options>
+```
+
+#### Available Middleware Plugins
+
+| Type | Plugin ID | Description |
+|------|-----------|-------------|
+| `auth.jwt` | `hive.proxy.auth.jwt` | JWT token validation |
+| `auth.api-key` | `hive.proxy.auth.api-key` | API key authentication |
+| `auth.basic` | `hive.proxy.auth.basic` | HTTP Basic authentication |
+| `auth.oidc` | `hive.proxy.auth.oidc` | OpenID Connect authentication |
+| `rate-limit` | `hive.proxy.rate-limit` | Request rate limiting |
+| `cors` | `hive.proxy.cors` | CORS headers |
+| `ip-filter` | `hive.proxy.ip-filter` | IP allow/deny lists |
+| `compress` | `hive.proxy.compress` | Response compression (gzip/brotli) |
+| `cache` | `hive.proxy.cache` | Response caching |
+| `rewrite` | `hive.proxy.rewrite` | URL rewriting |
+| `headers` | `hive.proxy.headers` | Header manipulation |
+
+#### JWT Authentication (external plugin)
+
+```yaml
+- type: auth.jwt                         # Auto-installs hive.proxy.auth.jwt
+  auth.jwt:
+    jwks_url: https://auth.example.com/.well-known/jwks.json
+    header: Authorization                # OPTIONAL, default: Authorization
+    scheme: Bearer                       # OPTIONAL, default: Bearer
+    claims:                              # OPTIONAL - required claims
+      iss: https://auth.example.com
+    forward_claims:                      # OPTIONAL - forward claims as headers
+      sub: X-User-ID
+      email: X-User-Email
+```
+
+#### API Key Authentication (external plugin)
+
+```yaml
+- type: auth.api-key                     # Auto-installs hive.proxy.auth.api-key
+  auth.api-key:
+    header: X-API-Key                    # OPTIONAL, default: X-API-Key
+    query_param: api_key                 # OPTIONAL - also check query param
+    keys_file: ~/.adi/hive/api-keys.json # REQUIRED
+    forward_header: X-API-Key-Name       # OPTIONAL - forward key name
+```
+
+#### Basic Authentication (external plugin)
+
+```yaml
+- type: auth.basic                       # Auto-installs hive.proxy.auth.basic
+  auth.basic:
+    realm: "Restricted"                  # OPTIONAL
+    users_file: ~/.adi/hive/htpasswd     # REQUIRED - htpasswd format
+```
+
+#### Rate Limiting (external plugin)
+
+```yaml
+- type: rate-limit                       # Auto-installs hive.proxy.rate-limit
+  rate-limit:
+    requests: 1000                       # REQUIRED - max requests
+    window: 1m                           # REQUIRED - time window
+    by: ip                               # OPTIONAL - ip | header:X-User-ID | path
+    burst: 50                            # OPTIONAL - burst allowance
+    response:                            # OPTIONAL - custom 429 response
+      status: 429
+      body: '{"error": "rate limited"}'
+```
+
+#### CORS (external plugin)
+
+```yaml
+- type: cors                             # Auto-installs hive.proxy.cors
+  cors:
+    origins: ["https://example.com"]     # REQUIRED - allowed origins (* for all)
+    methods: ["GET", "POST", "PUT", "DELETE"]  # OPTIONAL
+    headers: ["Content-Type", "Authorization"] # OPTIONAL
+    expose_headers: ["X-Request-ID"]     # OPTIONAL
+    max_age: 86400                       # OPTIONAL - preflight cache (seconds)
+    credentials: true                    # OPTIONAL - allow credentials
+```
+
+#### IP Filter (external plugin)
+
+```yaml
+- type: ip-filter                        # Auto-installs hive.proxy.ip-filter
+  ip-filter:
+    allow:                               # OPTIONAL - whitelist (if set, denies all others)
+      - 10.0.0.0/8
+      - 192.168.1.0/24
+    deny:                                # OPTIONAL - blacklist
+      - 1.2.3.4
+    trust_xff: true                      # OPTIONAL - trust X-Forwarded-For
+```
+
+#### Response Compression (external plugin)
+
+```yaml
+- type: compress                         # Auto-installs hive.proxy.compress
+  compress:
+    algorithms: [br, gzip]               # OPTIONAL, default: [br, gzip]
+    min_size: 1KB                        # OPTIONAL - minimum response size
+    types:                               # OPTIONAL - content types to compress
+      - text/*
+      - application/json
+      - application/javascript
+```
+
+#### Response Caching (external plugin)
+
+```yaml
+- type: cache                            # Auto-installs hive.proxy.cache
+  cache:
+    storage: memory                      # OPTIONAL - memory | redis
+    max_size: 100MB                      # OPTIONAL - max cache size
+    ttl: 5m                              # OPTIONAL - default TTL
+    key: "${method}:${host}:${path}"     # OPTIONAL - cache key template
+    bypass_header: X-Cache-Bypass        # OPTIONAL - header to bypass cache
+```
+
+#### URL Rewriting (external plugin)
+
+```yaml
+- type: rewrite                          # Auto-installs hive.proxy.rewrite
+  rewrite:
+    rules:
+      - match: "^/old/(.*)"              # Regex pattern
+        replace: "/new/$1"               # Replacement
+      - match: "^/api/v1/(.*)"
+        replace: "/api/v2/$1"
+        permanent: true                  # OPTIONAL - 301 vs 302
+```
+
+#### Header Manipulation (external plugin)
+
+```yaml
+- type: headers                          # Auto-installs hive.proxy.headers
+  headers:
+    add:
+      X-Frame-Options: DENY
+      X-Content-Type-Options: nosniff
+      Strict-Transport-Security: "max-age=31536000; includeSubDomains"
+    remove:
+      - Server
+      - X-Powered-By
+    set:                                 # Overwrite if exists
+      X-Request-ID: "${uuid}"
+```
+
+### 5.3 Per-Service Plugin Overrides
+
+Services can override global proxy plugins:
+
+```yaml
+proxy:
+  plugins:
+    - type: auth.jwt
+      auth.jwt:
+        jwks_url: https://auth.example.com/.well-known/jwks.json
+    - type: rate-limit
+      rate-limit:
+        requests: 1000
+        window: 1m
+
+services:
+  api:
+    proxy:
+      path: /api
+      plugins:
+        - type: rate-limit
+          rate-limit:
+            requests: 100                # Stricter limit for API
+            window: 1m
+
+  public:
+    proxy:
+      path: /public
+      plugins:
+        - type: auth.jwt
+          auth.jwt:
+            skip: true                   # Disable auth for public endpoints
+
+  admin:
+    proxy:
+      path: /admin
+      plugins:
+        - type: ip-filter                # Additional plugin for admin
+          ip-filter:
+            allow: ["10.0.0.0/8"]
+```
+
+**Override behavior:**
+- Same plugin type in service config replaces global config
+- `skip: true` disables a globally-enabled plugin for that service
+- Additional plugins are appended to the chain
 
 ---
 
@@ -388,7 +692,7 @@ Service names MUST:
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `runner` | object | REQUIRED | - | Runner plugin configuration |
-| `rollout` | object | OPTIONAL | - | Port allocation and deployment strategy. Required if `proxy` or `healthcheck` is configured |
+| `rollout` | object | CONDITIONAL | - | Port allocation and deployment strategy. REQUIRED if `proxy` or `healthcheck` is configured; otherwise OPTIONAL |
 | `proxy` | object | OPTIONAL | - | HTTP exposure configuration (external network) |
 | `depends_on` | array | OPTIONAL | `[]` | Services that MUST be healthy before starting |
 | `healthcheck` | object | OPTIONAL | - | Health check plugin configuration |
@@ -742,6 +1046,12 @@ services:
         path: /health
 ```
 
+**Note on blue-green port resolution:**
+- During initial startup: `{{runtime.port.http}}` resolves to the blue port
+- During rollout: new instance uses the inactive color's port
+- After switch: `{{runtime.port.http}}` resolves to the now-active port
+- The proxy always routes to `{{runtime.port.http}}`, which Hive updates atomically during traffic switch
+
 **Example - Compose runner (external plugin):**
 ```yaml
 services:
@@ -931,7 +1241,7 @@ These fields are available inside each plugin's configuration block:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `port` | string | OPTIONAL | `{{runtime.port.http}}` | Port to check. Use `{{runtime.port.<name>}}` to reference rollout ports |
+| `port` | string | REQUIRED | - | Port to check. Must be specified explicitly using `{{runtime.port.<name>}}` |
 | `interval` | duration | OPTIONAL | `10s` | Time between checks |
 | `timeout` | duration | OPTIONAL | `5s` | Timeout for each check |
 | `retries` | integer | OPTIONAL | `3` | Consecutive failures before unhealthy |
@@ -943,7 +1253,7 @@ These fields are available inside each plugin's configuration block:
 healthcheck:
   type: http
   http:
-    port: "{{runtime.port.http}}"  # OPTIONAL, default: first port from rollout.ports
+    port: "{{runtime.port.http}}"  # REQUIRED - must be specified explicitly
     path: /health
     method: GET               # OPTIONAL, default: GET
     status: 200               # OPTIONAL, default: 2xx
@@ -956,7 +1266,7 @@ healthcheck:
 healthcheck:
   type: tcp
   tcp:
-    port: "{{runtime.port.db}}"   # OPTIONAL, default: first port from rollout.ports
+    port: "{{runtime.port.db}}"   # REQUIRED - must be specified explicitly
     interval: 5s
 ```
 
@@ -1442,7 +1752,7 @@ ${<plugin>.<key>:-default}  # With default value if plugin returns nothing
 |--------|---------|--------|-------------|
 | `ports` | `adi plugin install hive.parse.ports` | `${ports.<name>}` | Port from `ports-manager get <name>` |
 | `vault` | `adi plugin install hive.parse.vault` | `${vault.<path>}` | Secret from HashiCorp Vault |
-| `op` | `adi plugin install hive.parse.1password` | `${op.<item>.<field>}` | Secret from 1Password CLI |
+| `op` | `adi plugin install hive.parse.1password` | `${op.item.field}` | Secret from 1Password CLI |
 | `aws-ssm` | `adi plugin install hive.parse.aws-ssm` | `${aws-ssm.<param>}` | AWS SSM Parameter Store |
 
 **Example - Environment variables:**
@@ -2719,26 +3029,34 @@ CREATE TABLE runtime_state (
 );
 ```
 
-### 20.3 CLI Config Commands
+### 20.3 CLI and UI Operations
 
+**CLI (read-only operations):**
 ```bash
 # View config as YAML
 adi hive config show
 adi hive config show --source infra
 
-# Service management (SQLite only)
-adi hive config service add              # Interactive
-adi hive config service edit auth        # Edit service
-adi hive config service remove auth      # Remove service
-
-# Environment management
-adi hive config env set FOO=bar          # Global env
-adi hive config env unset FOO
-adi hive config env list
-
 # Export to YAML (for backup/version control)
 adi hive config export > hive-backup.yaml
+
+# Runtime control (works for both YAML and SQLite sources)
+adi hive start <service>
+adi hive stop <service>
+adi hive restart <service>
+adi hive status
+adi hive logs <service>
 ```
+
+**SQLite Configuration (Web UI only):**
+
+SQLite sources are designed for dynamic configuration via the Web UI. The CLI does not support editing SQLite configurations directly. All service management operations (add, edit, remove, environment changes) MUST be performed through the Web UI at `https://<your-domain>/hive`.
+
+This ensures:
+- Proper validation of configuration changes
+- Atomic updates with rollback capability
+- Audit logging of all modifications
+- Real-time synchronization with running daemon
 
 ---
 
