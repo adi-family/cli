@@ -57,8 +57,8 @@ LOG_DIR="$PROJECT_ROOT/.dev/logs"
 
 # All services
 ALL_SERVICES="postgres timescaledb coturn signaling auth platform web web-app flowmap analytics-ingestion analytics llm-proxy balance credentials logging cocoon registry hive codegen"
-# Default services to start (balance, credentials, logging, cocoon, registry, hive, codegen are optional)
-DEFAULT_SERVICES="postgres timescaledb coturn signaling auth platform web flowmap analytics-ingestion analytics llm-proxy"
+# Default services to start (balance, credentials, cocoon, registry, hive, codegen are optional)
+DEFAULT_SERVICES="postgres timescaledb coturn signaling logging auth platform web flowmap analytics-ingestion analytics llm-proxy"
 
 # -----------------------------------------------------------------------------
 # Service Configuration (functions for bash 3.2 compatibility)
