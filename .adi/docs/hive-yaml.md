@@ -29,6 +29,14 @@ Drop a single `hive.yaml` into your project and you're ready:
 
 ```yaml
 version: "1"
+
+proxy:
+  bind: ["0.0.0.0:80", "0.0.0.0:443"]
+  ssl:
+    type: letsencrypt
+    letsencrypt:
+      email: admin@myapp.com
+
 services:
   api:
     runner:
@@ -41,7 +49,8 @@ services:
         ports:
           http: 8080
     proxy:
-      path: /api
+      host: api.myapp.com
+      path: /
     healthcheck:
       type: http
       http:
@@ -49,7 +58,7 @@ services:
         path: /health
 ```
 
-That's it. Run `adi hive up` and you have: process management, health checks, automatic restarts, and HTTP routing.
+That's it. Run `adi hive up` and you have: process management, health checks, automatic restarts, HTTP routing, and **automatic SSL certificates**.
 
 ### What Makes Hive Different
 
@@ -57,6 +66,7 @@ That's it. Run `adi hive up` and you have: process management, health checks, au
 |---------|------|----------------|-----------------|
 | **No containers required** | Run native processes | Docker only | Native only |
 | **Built-in reverse proxy** | HTTP/WebSocket/gRPC | - | - |
+| **Automatic SSL/TLS** | Let's Encrypt built-in | - | - |
 | **Zero-downtime deploys** | Blue-green, canary | Manual | - |
 | **Secrets from anywhere** | 1Password, Vault, AWS | - | - |
 | **Multi-project management** | Single daemon | Per-project | Per-project |
