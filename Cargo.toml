@@ -70,6 +70,40 @@ members = [
     "crates/hive/http",
     "crates/hive/ssl",
 
+    # Hive plugins
+    "crates/hive/plugins/abi",
+    "crates/hive/plugins/runner-docker",
+    "crates/hive/plugins/obs-stdout",
+    "crates/hive/plugins/obs-file",
+    "crates/hive/plugins/proxy-cors",
+    "crates/hive/plugins/proxy-rate-limit",
+    "crates/hive/plugins/health-http",
+    "crates/hive/plugins/health-tcp",
+    "crates/hive/plugins/health-cmd",
+    "crates/hive/plugins/health-grpc",
+    "crates/hive/plugins/health-postgres",
+    "crates/hive/plugins/health-redis",
+    "crates/hive/plugins/health-mysql",
+    "crates/hive/plugins/env-dotenv",
+    "crates/hive/plugins/env-vault",
+    "crates/hive/plugins/env-1password",
+    "crates/hive/plugins/env-aws-secrets",
+    "crates/hive/plugins/runner-compose",
+    "crates/hive/plugins/runner-podman",
+    "crates/hive/plugins/rollout-recreate",
+    "crates/hive/plugins/rollout-blue-green",
+    "crates/hive/plugins/proxy-ip-filter",
+    "crates/hive/plugins/proxy-headers",
+    "crates/hive/plugins/proxy-auth-jwt",
+    "crates/hive/plugins/proxy-auth-basic",
+    "crates/hive/plugins/obs-loki",
+    "crates/hive/plugins/obs-prometheus",
+    "crates/hive/plugins/proxy-compress",
+    "crates/hive/plugins/proxy-cache",
+    "crates/hive/plugins/proxy-rewrite",
+    "crates/hive/plugins/proxy-auth-api-key",
+    "crates/hive/plugins/proxy-auth-oidc",
+
     # Tarminal components (flat submodules)
     "crates/lib/lib-misc-color",
     "crates/lib/lib-animation",
@@ -218,6 +252,40 @@ adi-linter-core = { path = "crates/adi-linter/core" }
 adi-api-proxy-core = { path = "crates/adi-api-proxy/core" }
 adi-hive-core = { path = "crates/hive/core" }
 adi-audio-core = { path = "crates/adi-audio/core" }
+
+# Hive plugin system
+hive-plugin-abi = { path = "crates/hive/plugins/abi" }
+hive-runner-docker = { path = "crates/hive/plugins/runner-docker" }
+hive-obs-stdout = { path = "crates/hive/plugins/obs-stdout" }
+hive-obs-file = { path = "crates/hive/plugins/obs-file" }
+hive-proxy-cors = { path = "crates/hive/plugins/proxy-cors" }
+hive-proxy-rate-limit = { path = "crates/hive/plugins/proxy-rate-limit" }
+hive-health-http = { path = "crates/hive/plugins/health-http" }
+hive-health-tcp = { path = "crates/hive/plugins/health-tcp" }
+hive-health-cmd = { path = "crates/hive/plugins/health-cmd" }
+hive-health-grpc = { path = "crates/hive/plugins/health-grpc" }
+hive-health-postgres = { path = "crates/hive/plugins/health-postgres" }
+hive-health-redis = { path = "crates/hive/plugins/health-redis" }
+hive-health-mysql = { path = "crates/hive/plugins/health-mysql" }
+hive-env-dotenv = { path = "crates/hive/plugins/env-dotenv" }
+hive-env-vault = { path = "crates/hive/plugins/env-vault" }
+hive-env-1password = { path = "crates/hive/plugins/env-1password" }
+hive-env-aws-secrets = { path = "crates/hive/plugins/env-aws-secrets" }
+hive-runner-compose = { path = "crates/hive/plugins/runner-compose" }
+hive-runner-podman = { path = "crates/hive/plugins/runner-podman" }
+hive-rollout-recreate = { path = "crates/hive/plugins/rollout-recreate" }
+hive-rollout-blue-green = { path = "crates/hive/plugins/rollout-blue-green" }
+hive-proxy-ip-filter = { path = "crates/hive/plugins/proxy-ip-filter" }
+hive-proxy-headers = { path = "crates/hive/plugins/proxy-headers" }
+hive-proxy-auth-jwt = { path = "crates/hive/plugins/proxy-auth-jwt" }
+hive-proxy-auth-basic = { path = "crates/hive/plugins/proxy-auth-basic" }
+hive-obs-loki = { path = "crates/hive/plugins/obs-loki" }
+hive-obs-prometheus = { path = "crates/hive/plugins/obs-prometheus" }
+hive-proxy-compress = { path = "crates/hive/plugins/proxy-compress" }
+hive-proxy-cache = { path = "crates/hive/plugins/proxy-cache" }
+hive-proxy-rewrite = { path = "crates/hive/plugins/proxy-rewrite" }
+hive-proxy-auth-api-key = { path = "crates/hive/plugins/proxy-auth-api-key" }
+hive-proxy-auth-oidc = { path = "crates/hive/plugins/proxy-auth-oidc" }
 
 # Libraries (flat submodules)
 lib-misc-color = { path = "crates/lib/lib-misc-color" }
@@ -384,4 +452,5 @@ fastrand = "2"
 
 # Auth
 jsonwebtoken = "9"
+shellexpand = "3"
 lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "smtp-transport"] }

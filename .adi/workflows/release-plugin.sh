@@ -91,9 +91,41 @@ PLUGINS:
     llm-extract         LLM extraction utilities
     llm-uzu             Local LLM inference (Apple Silicon)
     embed               Embedding utilities
-    hive                Service orchestration & container management
     lang-*              Language plugins (rust, python, typescript, etc.)
     cli-lang-en         CLI English translations
+
+    Hive Plugins:
+    hive-runner-docker      Docker container runner
+    hive-runner-compose     Docker Compose delegation
+    hive-runner-podman      Podman container runner
+    hive-obs-stdout         Stdout logging
+    hive-obs-file           File logging
+    hive-obs-loki           Grafana Loki integration
+    hive-obs-prometheus     Prometheus metrics export
+    hive-proxy-cors         CORS middleware
+    hive-proxy-rate-limit   Rate limiting
+    hive-proxy-ip-filter    IP allow/deny lists
+    hive-proxy-headers      Header manipulation
+    hive-proxy-compress     Response compression (gzip, brotli)
+    hive-proxy-cache        Response caching with TTL
+    hive-proxy-rewrite      URL path/query rewriting
+    hive-proxy-auth-jwt     JWT authentication
+    hive-proxy-auth-basic   HTTP Basic authentication
+    hive-proxy-auth-api-key API key authentication
+    hive-proxy-auth-oidc    OpenID Connect authentication
+    hive-health-http        HTTP health checks
+    hive-health-tcp         TCP health checks
+    hive-health-cmd         Command health checks
+    hive-health-grpc        gRPC health checks
+    hive-health-postgres    PostgreSQL health checks
+    hive-health-redis       Redis PING health checks
+    hive-health-mysql       MySQL health checks
+    hive-env-dotenv         .env file loading
+    hive-env-vault          HashiCorp Vault secrets
+    hive-env-1password      1Password secrets
+    hive-env-aws-secrets    AWS Secrets Manager
+    hive-rollout-recreate   Stop-start deployment
+    hive-rollout-blue-green Zero-downtime deployment
 
 EXAMPLES:
     $0 cocoon                   # Build and publish (current version)
@@ -160,6 +192,39 @@ get_plugin_crate() {
         embed|adi-embed) echo "crates/adi-embed-plugin" ;;
         audio|adi-audio) echo "crates/adi-audio" ;;
         cli-lang-en|adi-cli-lang-en) echo "crates/adi-cli-lang-en" ;;
+        # Hive plugins
+        hive-plugin-abi) echo "crates/hive/plugins/abi" ;;
+        hive-runner-docker) echo "crates/hive/plugins/runner-docker" ;;
+        hive-runner-compose) echo "crates/hive/plugins/runner-compose" ;;
+        hive-runner-podman) echo "crates/hive/plugins/runner-podman" ;;
+        hive-obs-stdout) echo "crates/hive/plugins/obs-stdout" ;;
+        hive-obs-file) echo "crates/hive/plugins/obs-file" ;;
+        hive-obs-loki) echo "crates/hive/plugins/obs-loki" ;;
+        hive-obs-prometheus) echo "crates/hive/plugins/obs-prometheus" ;;
+        hive-proxy-cors) echo "crates/hive/plugins/proxy-cors" ;;
+        hive-proxy-rate-limit) echo "crates/hive/plugins/proxy-rate-limit" ;;
+        hive-proxy-ip-filter) echo "crates/hive/plugins/proxy-ip-filter" ;;
+        hive-proxy-headers) echo "crates/hive/plugins/proxy-headers" ;;
+        hive-proxy-compress) echo "crates/hive/plugins/proxy-compress" ;;
+        hive-proxy-cache) echo "crates/hive/plugins/proxy-cache" ;;
+        hive-proxy-rewrite) echo "crates/hive/plugins/proxy-rewrite" ;;
+        hive-proxy-auth-jwt) echo "crates/hive/plugins/proxy-auth-jwt" ;;
+        hive-proxy-auth-basic) echo "crates/hive/plugins/proxy-auth-basic" ;;
+        hive-proxy-auth-api-key) echo "crates/hive/plugins/proxy-auth-api-key" ;;
+        hive-proxy-auth-oidc) echo "crates/hive/plugins/proxy-auth-oidc" ;;
+        hive-health-http) echo "crates/hive/plugins/health-http" ;;
+        hive-health-tcp) echo "crates/hive/plugins/health-tcp" ;;
+        hive-health-cmd) echo "crates/hive/plugins/health-cmd" ;;
+        hive-health-grpc) echo "crates/hive/plugins/health-grpc" ;;
+        hive-health-postgres) echo "crates/hive/plugins/health-postgres" ;;
+        hive-health-redis) echo "crates/hive/plugins/health-redis" ;;
+        hive-health-mysql) echo "crates/hive/plugins/health-mysql" ;;
+        hive-env-dotenv) echo "crates/hive/plugins/env-dotenv" ;;
+        hive-env-vault) echo "crates/hive/plugins/env-vault" ;;
+        hive-env-1password) echo "crates/hive/plugins/env-1password" ;;
+        hive-env-aws-secrets) echo "crates/hive/plugins/env-aws-secrets" ;;
+        hive-rollout-recreate) echo "crates/hive/plugins/rollout-recreate" ;;
+        hive-rollout-blue-green) echo "crates/hive/plugins/rollout-blue-green" ;;
         *) echo "" ;;
     esac
 }
