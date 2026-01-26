@@ -561,11 +561,14 @@ name = "adi-hive-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum 0.7.9",
  "base64 0.22.1",
+ "bcrypt",
  "bollard",
  "chrono",
  "dashmap",
+ "dirs 5.0.1",
  "futures",
  "hex",
  "hmac",
@@ -574,10 +577,14 @@ dependencies = [
  "hyper 1.8.1",
  "hyper-util",
  "lib-tarminal-sync",
+ "libc",
  "rand 0.8.5",
+ "regex",
+ "reqwest 0.12.28",
  "rustls 0.23.36",
  "serde",
  "serde_json",
+ "serde_yaml",
  "sha2",
  "thiserror 2.0.17",
  "tokio",
@@ -613,6 +620,7 @@ dependencies = [
  "futures",
  "lib-plugin-abi",
  "lib-tarminal-sync",
+ "libc",
  "once_cell",
  "serde",
  "serde_json",
@@ -2025,6 +2033,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d809780667f4410e7c41b07f52439b94d2bdf8528eeedc287fa38d3b7f95d82"
 
 [[package]]
+name = "bcrypt"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b1866ecef4f2d06a0bb77880015fdf2b89e25a1c2e5addacb87e459c86dc67e"
+dependencies = [
+ "base64 0.22.1",
+ "blowfish",
+ "getrandom 0.2.16",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
 name = "beef"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2164,6 +2185,16 @@ dependencies = [
  "futures-io",
  "futures-lite",
  "piper",
+]
+
+[[package]]
+name = "blowfish"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e412e2cd0f2b2d93e02543ceae7917b3c70331573df19ee046bcbc35e45e87d7"
+dependencies = [
+ "byteorder",
+ "cipher",
 ]
 
 [[package]]
@@ -9686,6 +9717,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_yaml"
+version = "0.9.34+deprecated"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+dependencies = [
+ "indexmap 2.12.1",
+ "itoa",
+ "ryu",
+ "serde",
+ "unsafe-libyaml",
+]
+
+[[package]]
 name = "serial"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11631,6 +11675,12 @@ dependencies = [
  "crypto-common",
  "subtle",
 ]
+
+[[package]]
+name = "unsafe-libyaml"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
 
 [[package]]
 name = "untrusted"

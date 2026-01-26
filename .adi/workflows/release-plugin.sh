@@ -91,6 +91,7 @@ PLUGINS:
     llm-extract         LLM extraction utilities
     llm-uzu             Local LLM inference (Apple Silicon)
     embed               Embedding utilities
+    hive                Service orchestration & container management
     lang-*              Language plugins (rust, python, typescript, etc.)
     cli-lang-en         CLI English translations
 
