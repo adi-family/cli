@@ -64,7 +64,7 @@ That's it. Run `adi hive up` and you have: process management, health checks, au
 
 | Feature | Hive | docker-compose | process-compose |
 |---------|------|----------------|-----------------|
-| **No containers required** | Run native processes | Docker only | Native only |
+| **Native + Docker** | Scripts built-in, Docker via plugin | Docker only | Native only |
 | **Built-in reverse proxy** | HTTP/WebSocket/gRPC | - | - |
 | **Automatic SSL/TLS** | Let's Encrypt built-in | - | - |
 | **Zero-downtime deploys** | Blue-green, canary | Manual | - |
