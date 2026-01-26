@@ -14,12 +14,115 @@ For more information, see https://mariadb.com/bsl11/
 
 # Hive YAML Specification
 
-**Version:** 0.4.0-draft  
+**Version:** 0.5.0-draft  
 **Status:** Draft  
 **Authors:** ADI Team  
 **License:** BSL-1.1  
 **Created:** 2026-01-25  
 **Updated:** 2026-01-26
+
+## Why Hive?
+
+### Zero to Production in One File
+
+Drop a single `hive.yaml` into your project and you're ready:
+
+```yaml
+version: "1"
+services:
+  api:
+    runner:
+      type: script
+      script:
+        run: cargo run --release
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8080
+    proxy:
+      path: /api
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+```
+
+That's it. Run `adi hive up` and you have: process management, health checks, automatic restarts, and HTTP routing.
+
+### What Makes Hive Different
+
+| Feature | Hive | docker-compose | process-compose |
+|---------|------|----------------|-----------------|
+| **No containers required** | Run native processes | Docker only | Native only |
+| **Built-in reverse proxy** | HTTP/WebSocket/gRPC | - | - |
+| **Zero-downtime deploys** | Blue-green, canary | Manual | - |
+| **Secrets from anywhere** | 1Password, Vault, AWS | - | - |
+| **Multi-project management** | Single daemon | Per-project | Per-project |
+| **Production observability** | Prometheus, Loki, OTEL | - | - |
+
+### Core Philosophy
+
+1. **Minimal Initial Bundle**
+   - Built-in script runner - no plugins needed to start
+   - Single binary, no runtime dependencies
+   - Works offline, no cloud account required
+
+2. **Instant Plugin Ecosystem**
+   - `type: docker` → auto-installs Docker runner
+   - `type: vault` → auto-installs Vault secrets provider
+   - First use triggers install, zero configuration
+
+3. **Development to Production**
+   - Same config works locally and in production
+   - Blue-green deployments out of the box
+   - SSL/TLS with automatic Let's Encrypt
+
+4. **One Daemon, All Projects**
+   - Single daemon manages all your projects
+   - Cross-project service sharing (`expose`/`uses`)
+   - Unified logs, metrics, and health dashboard
+
+5. **Plugin Everything**
+   - Runners: `script`, `docker`, `podman`, `compose`, `kubernetes`
+   - Secrets: `dotenv`, `vault`, `1password`, `aws-secrets`
+   - Health: `http`, `tcp`, `grpc`, `postgres`, `redis`
+   - Observability: `prometheus`, `loki`, `datadog`, `cloudwatch`
+
+### From Dev to Prod
+
+**Local development:**
+```bash
+adi hive up                    # Start everything
+adi hive logs -f               # Watch logs
+adi hive restart api           # Hot reload
+```
+
+**Production deployment:**
+```yaml
+services:
+  api:
+    runner:
+      type: docker
+      docker:
+        image: myapp:latest
+    rollout:
+      type: blue-green
+      blue-green:
+        ports:
+          http:
+            blue: 8080
+            green: 8081
+        healthy_duration: 30s
+    environment:
+      vault:
+        path: secret/data/prod/api
+```
+
+**Zero-downtime deploy:** New container starts → health check passes → traffic switches → old container stops. Your users never notice.
+
+---
 
 ## TL;DR
 
@@ -3770,4 +3873,5 @@ pub trait HealthPlugin: Send + Sync {
 | 0.1.0-draft | 2026-01-25 | Initial draft with plugin architecture |
 | 0.2.0-draft | 2026-01-25 | Added service exposure (expose/uses), multi-source architecture, SQLite backend |
 | 0.3.0-draft | 2026-01-25 | Replaced log plugins with comprehensive observability system |
-| 0.4.0-draft | 2026-01-26 | Added Daemon Management (Section 22), CLI Reference (Section 23), updated TL;DR with daemon/source/ssl commands |
+| 0.4.0-draft | 2026-01-26 | Added Daemon Management (Section 22), CLI Reference (Section 23), updated TL;DR |
+| 0.5.0-draft | 2026-01-26 | Added "Why Hive?" section with value proposition and feature comparison |
