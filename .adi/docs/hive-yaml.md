@@ -14,16 +14,21 @@ For more information, see https://mariadb.com/bsl11/
 
 # Hive YAML Specification
 
-**Version:** 0.3.0-draft  
+**Version:** 0.4.0-draft  
 **Status:** Draft  
 **Authors:** ADI Team  
 **License:** BSL-1.1  
 **Created:** 2026-01-25  
-**Updated:** 2026-01-25
+**Updated:** 2026-01-26
 
 ## TL;DR
 
 ```bash
+# Daemon management (one daemon per machine)
+adi hive daemon status    # check if daemon is running
+adi hive daemon start     # start daemon (foreground)
+adi hive daemon stop      # stop daemon
+
 # Start all services (in current source)
 adi hive up
 
@@ -37,17 +42,28 @@ adi hive down
 adi hive status
 adi hive status --all     # all sources
 
+# Restart a service
+adi hive restart auth
+
 # View logs
 adi hive logs auth
-adi hive logs -f          # follow all
+adi hive logs -f              # follow all
+adi hive logs --level error   # filter by level
 
-# Multi-source management
+# Source management
 adi hive source list
 adi hive source add ~/projects/myapp
-adi hive start default:postgres   # FQN addressing
+adi hive source add ~/projects/myapp --name myapp
+adi hive source remove myapp
+adi hive source reload myapp
+adi hive source enable myapp
+adi hive source disable myapp
 
-# Remote control (via signaling server)
-adi hive connect <device-id>
+# SSL certificate management
+adi hive ssl status
+adi hive ssl renew [--force]
+adi hive ssl domains
+adi hive ssl issue example.com --email admin@example.com
 ```
 
 **Minimal example** (`.adi/hive.yaml`):
@@ -90,12 +106,15 @@ services:
 This document specifies the configuration format for Hive, a plugin-based universal process orchestrator. Hive runs as a **single daemon per machine**, managing heterogeneous services from **multiple configuration sources** (YAML files or SQLite databases) with an integrated HTTP/WebSocket reverse proxy.
 
 Key features:
+- **Single daemon per machine**: One Hive daemon manages all services across all sources
 - **Plugin system**: Runners, environment providers, health checks, observability—all via plugins
+- **Built-in script runner**: Execute shell commands and scripts without additional plugins
+- **Docker support**: Run containers via the `hive.runner.docker` plugin (requires Docker socket access)
 - **Multi-source**: Manage services from multiple projects/directories simultaneously
 - **Service exposure**: Share services between sources with `expose`/`uses` declarations
-- **Remote control**: Manage Hive via signaling server from CLI or Web UI
 - **Dual config backends**: YAML (read-only, version-controllable) or SQLite (read-write, dynamic)
 - **Observability**: Comprehensive logs, metrics, traces via plugin-based event streaming
+- **SSL/TLS**: Automatic certificate management with Let's Encrypt integration
 
 ## Table of Contents
 
@@ -122,8 +141,11 @@ Key features:
 18. [Service Exposure](#18-service-exposure)
 19. [Multi-Source Architecture](#19-multi-source-architecture)
 20. [SQLite Config Backend](#20-sqlite-config-backend)
-21. [Remote Control](#21-remote-control)
-22. [Observability](#22-observability)
+21. [Observability](#21-observability)
+22. [Daemon Management](#22-daemon-management)
+23. [CLI Reference](#23-cli-reference)
+24. [Appendix A: Plugin Interface](#appendix-a-plugin-interface)
+25. [Appendix B: Comparison with Alternatives](#appendix-b-comparison-with-alternatives)
 
 ---
 
@@ -3060,124 +3082,11 @@ This ensures:
 
 ---
 
-## 21. Remote Control
-
-Hive registers with the signaling server as a **special cocoon type**, enabling remote control via CLI or Web UI.
-
-### 21.1 Hive Registration
-
-```rust
-SignalingMessage::Register {
-    secret: String,
-    device_id: Option<String>,
-    version: String,
-    device_type: DeviceType::Hive {
-        name: String,              // Machine/hive name
-        sources: Vec<SourceInfo>,  // Config sources
-    },
-}
-```
-
-Hive uses the same claiming flow as cocoons:
-1. Hive registers with signaling server
-2. User claims hive via JWT
-3. User can send control commands
-
-### 21.2 Hive Control Protocol
-
-```rust
-// Tunneled via SignalingMessage::HiveControl { device_id, request_id, payload }
-
-enum HiveRequest {
-    // Daemon
-    GetStatus,
-    Shutdown { graceful: bool },
-    
-    // Sources
-    ListSources,
-    AddSource { path: String, name: Option<String> },
-    RemoveSource { source_id: String },
-    ReloadSource { source_id: String },
-    
-    // Services
-    ListServices { source: Option<String> },
-    GetService { fqn: String },
-    StartService { fqn: String },
-    StopService { fqn: String },
-    RestartService { fqn: String },
-    StartSource { source_id: String },
-    StopSource { source_id: String },
-    
-    // Logs
-    GetLogs { fqn: String, lines: u32, since: Option<DateTime> },
-    StreamLogs { fqn: String },
-    
-    // Config (SQLite sources only)
-    GetSourceConfig { source_id: String },
-    CreateService { source_id: String, config: ServiceConfig },
-    UpdateService { fqn: String, patch: ServicePatch },
-    DeleteService { fqn: String },
-    
-    // Exposed services
-    ListExposed,
-    GetExposedUsers { name: String },
-}
-
-enum HiveResponse {
-    Status(DaemonStatus),
-    Sources(Vec<SourceInfo>),
-    Services(Vec<ServiceInfo>),
-    Service(ServiceInfo),
-    Config(SourceConfig),
-    Logs(Vec<LogLine>),
-    StreamStarted { stream_id: Uuid },
-    Exposed(Vec<ExposedInfo>),
-    Ok,
-    Error { code: ErrorCode, message: String },
-}
-```
-
-### 21.3 Remote CLI
-
-```bash
-# Connect to remote hive
-adi hive connect <device-id>
-adi hive connect --list          # List available hives
-
-# Once connected, all commands work remotely
-adi hive status
-adi hive source list
-adi hive start adi:auth
-adi hive logs adi:platform
-adi hive config show             # Remote config
-```
-
-### 21.4 Log Streaming
-
-```rust
-// Request streaming
-HiveRequest::StreamLogs { fqn: "adi:auth".to_string() }
-
-// Response
-HiveResponse::StreamStarted { stream_id: Uuid }
-
-// Server pushes logs
-SignalingMessage::HiveLogStream {
-    stream_id: Uuid,
-    lines: Vec<LogLine>,
-}
-
-// Client stops stream
-HiveRequest::StopLogStream { stream_id: Uuid }
-```
-
----
-
-## 22. Observability
+## 21. Observability
 
 Hive provides a comprehensive observability system through a plugin-based architecture. The daemon collects all observability data internally and streams it to subscribed plugins via a Unix socket.
 
-### 22.1 Architecture
+### 21.1 Architecture
 
 ```
 +---------------------------------------------------------------------+
@@ -3212,7 +3121,7 @@ Hive provides a comprehensive observability system through a plugin-based archit
 +---------------+    +---------------+    +---------------+
 ```
 
-### 22.2 Event Types
+### 21.2 Event Types
 
 Hive collects and streams these event types:
 
@@ -3310,7 +3219,7 @@ enum ObservabilityEvent {
 }
 ```
 
-### 22.3 Metric Types
+### 21.3 Metric Types
 
 ```rust
 enum MetricValue {
@@ -3334,7 +3243,7 @@ enum LogLevel {
 }
 ```
 
-### 22.4 Event Stream Protocol
+### 21.4 Event Stream Protocol
 
 #### Socket Location
 
@@ -3379,7 +3288,7 @@ Then server streams events matching the subscription.
 - If client is slow, oldest events are dropped
 - `EventDropped` notification sent when dropping occurs
 
-### 22.5 Configuration
+### 21.5 Configuration
 
 #### Top-Level Configuration
 
@@ -3461,7 +3370,7 @@ CREATE TABLE observability_plugins (
 );
 ```
 
-### 22.6 Plugin Interface
+### 21.6 Plugin Interface
 
 ```rust
 pub trait ObservabilityPlugin: Send + Sync {
@@ -3482,7 +3391,7 @@ pub trait ObservabilityPlugin: Send + Sync {
 }
 ```
 
-### 22.7 Available Plugins
+### 21.7 Available Plugins
 
 | Plugin ID | Install | Description |
 |-----------|---------|-------------|
@@ -3497,7 +3406,7 @@ pub trait ObservabilityPlugin: Send + Sync {
 | `datadog` | `adi plugin install hive.obs.datadog` | Datadog APM integration |
 | `cloudwatch` | `adi plugin install hive.obs.cloudwatch` | AWS CloudWatch |
 
-### 22.8 CLI Commands
+### 21.8 CLI Commands
 
 ```bash
 # View real-time logs
@@ -3527,7 +3436,7 @@ adi hive obs disable loki         # Disable plugin
 adi hive obs config prometheus    # View/edit plugin config
 ```
 
-### 22.9 Remote Observability
+### 21.9 Remote Observability
 
 The `hive.obs.adi` plugin enables remote observability access via the signaling server:
 
@@ -3557,6 +3466,236 @@ This enables:
 - Web UI log viewer and metrics dashboard
 - Centralized logging to `adi-logging-service`
 - Analytics events to `adi-analytics`
+
+---
+
+## 22. Daemon Management
+
+Hive runs as a **single daemon per machine**. The daemon manages all registered sources and their services, providing a unified control plane for service orchestration.
+
+### 22.1 Daemon Architecture
+
+```
+                    +-----------------------------------+
+                    |         Hive Daemon               |
+                    |  (one per machine)                |
+                    +-----------------------------------+
+                    |                                   |
+                    |  +-----------------------------+  |
+                    |  |     Source Manager          |  |
+                    |  |  - ~/.adi/hive/ (default)   |  |
+                    |  |  - ~/projects/app1          |  |
+                    |  |  - ~/projects/app2          |  |
+                    |  +-----------------------------+  |
+                    |                                   |
+                    |  +-----------------------------+  |
+                    |  |     Service Manager         |  |
+                    |  |  - Process lifecycle        |  |
+                    |  |  - Health monitoring        |  |
+                    |  |  - Rollout management       |  |
+                    |  +-----------------------------+  |
+                    |                                   |
+                    |  +-----------------------------+  |
+                    |  |     HTTP Proxy              |  |
+                    |  |  - Reverse proxy            |  |
+                    |  |  - WebSocket support        |  |
+                    |  |  - Middleware chain         |  |
+                    |  +-----------------------------+  |
+                    |                                   |
+                    +-----------------------------------+
+                              |           |
+              +---------------+           +---------------+
+              |                                           |
+    +------------------+                      +------------------+
+    | Unix Socket      |                      | HTTP Proxy       |
+    | ~/.adi/hive/     |                      | 127.0.0.1:8080   |
+    | hive.sock        |                      | (configurable)   |
+    +------------------+                      +------------------+
+```
+
+### 22.2 Daemon Files
+
+| File | Description |
+|------|-------------|
+| `~/.adi/hive/hive.sock` | Unix socket for daemon control |
+| `~/.adi/hive/hive.pid` | Process ID file |
+| `~/.adi/hive/sources.json` | Registered sources configuration |
+| `~/.adi/hive/hive.yaml` | Default source configuration (optional) |
+| `~/.adi/hive/hive.db` | Default source SQLite database (alternative) |
+| `~/.adi/hive/observability.sock` | Observability event stream socket |
+
+### 22.3 Daemon Commands
+
+```bash
+# Check daemon status
+adi hive daemon status
+
+# Start daemon (runs in foreground)
+adi hive daemon start
+
+# Stop running daemon
+adi hive daemon stop
+```
+
+**Status output:**
+```
+Daemon is running
+
+PID:              12345
+Version:          0.3.0
+Uptime:           3h 42m 15s
+Sources:          3
+Running services: 8/12
+Proxy addresses:  127.0.0.1:8080
+```
+
+### 22.4 Source Management
+
+Sources are directories containing `hive.yaml` or `hive.db` configurations. The daemon manages multiple sources simultaneously.
+
+```bash
+# List all registered sources
+adi hive source list
+
+# Add a new source
+adi hive source add ~/projects/myapp
+adi hive source add ~/projects/myapp --name myapp
+
+# Remove a source (stops its services first)
+adi hive source remove myapp
+
+# Reload source configuration
+adi hive source reload myapp
+
+# Enable/disable a source
+adi hive source enable myapp
+adi hive source disable myapp
+```
+
+**Source list output:**
+```
+NAME      TYPE   STATUS    SERVICES  PATH
+default   yaml   enabled   2/2       ~/.adi/hive
+myapp     yaml   enabled   5/5       ~/projects/myapp
+infra     sqlite enabled   3/4       ~/projects/infra
+```
+
+### 22.5 Service Addressing (FQN)
+
+Services are addressed using Fully Qualified Names: `source:service`
+
+```bash
+# Start a specific service
+adi hive up default:postgres
+adi hive up myapp:api
+
+# View logs for a service
+adi hive logs myapp:api
+
+# Restart a service
+adi hive restart infra:redis
+```
+
+When source is omitted, commands operate on the current directory's source (if registered) or all sources.
+
+---
+
+## 23. CLI Reference
+
+Complete reference for all Hive CLI commands.
+
+### 23.1 Service Orchestration
+
+| Command | Description |
+|---------|-------------|
+| `adi hive up [service...]` | Start all or specific services |
+| `adi hive down` | Stop all services in current source |
+| `adi hive status [--all]` | Show service status |
+| `adi hive restart <service>` | Restart a service |
+| `adi hive logs [service] [-f] [--tail N] [--level LEVEL]` | View service logs |
+
+**Logs options:**
+- `-f` - Follow mode (stream new entries)
+- `--tail <n>` - Number of lines to show (default: 100)
+- `--level <level>` - Minimum log level: trace, debug, info, notice, warn, error, fatal
+
+### 23.2 Daemon Management
+
+| Command | Description |
+|---------|-------------|
+| `adi hive daemon status` | Check if daemon is running |
+| `adi hive daemon start` | Start daemon (foreground) |
+| `adi hive daemon stop` | Stop running daemon |
+
+### 23.3 Source Management
+
+| Command | Description |
+|---------|-------------|
+| `adi hive source list` | List all registered sources |
+| `adi hive source add <path> [--name NAME]` | Add a new source |
+| `adi hive source remove <name>` | Remove a source |
+| `adi hive source reload <name>` | Reload source configuration |
+| `adi hive source enable <name>` | Enable a disabled source |
+| `adi hive source disable <name>` | Disable a source |
+
+### 23.4 SSL Certificate Management
+
+| Command | Description |
+|---------|-------------|
+| `adi hive ssl status` | Show certificate status for all domains |
+| `adi hive ssl renew [--force]` | Force certificate renewal |
+| `adi hive ssl domains` | List configured SSL domains |
+| `adi hive ssl issue <domain> --email <email> [--staging]` | Issue certificate via WebSocket |
+
+**SSL issue options:**
+- `--email <email>` - ACME account email (required)
+- `--staging` - Use Let's Encrypt staging environment
+- `--challenge <type>` - Challenge type: http01, tls-alpn01, or auto
+- `--url <url>` - Signaling server URL
+
+### 23.5 Observability Commands
+
+| Command | Description |
+|---------|-------------|
+| `adi hive logs [service] [-f] [--level LEVEL]` | View logs |
+| `adi hive metrics [service] [--watch]` | View metrics |
+| `adi hive health [--watch]` | View health status |
+| `adi hive top` | Interactive resource view |
+| `adi hive resources` | Detailed resource usage |
+
+### 23.6 Configuration Commands
+
+| Command | Description |
+|---------|-------------|
+| `adi hive config show [--source NAME]` | View configuration as YAML |
+| `adi hive config export` | Export configuration to stdout |
+| `adi hive config validate` | Validate configuration file |
+
+### 23.7 Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HIVE_AUTO_INSTALL` | `true` | Auto-install missing plugins |
+| `RUST_LOG` | `info` | Log level for hive daemon |
+
+**Daemon paths (not configurable):**
+- `~/.adi/hive/hive.sock` - Unix socket
+- `~/.adi/hive/hive.pid` - PID file
+- `~/.adi/hive/sources.json` - Sources configuration
+
+**SSL environment variables:**
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SSL_ENABLED` | `false` | Enable SSL/HTTPS |
+| `SSL_DOMAINS` | - | Comma-separated domains |
+| `SSL_EMAIL` | - | ACME account email |
+| `SSL_CERT_DIR` | `/var/lib/hive/certs` | Certificate directory |
+| `SSL_HTTPS_PORT` | `443` | HTTPS port |
+| `SSL_CHALLENGE_PORT` | `80` | HTTP-01 challenge port |
+| `SSL_CHALLENGE_TYPE` | `auto` | http01, tls-alpn01, or auto |
+| `SSL_STAGING` | `false` | Use Let's Encrypt staging |
+| `SSL_AUTO_RENEW` | `true` | Auto-renew certificates |
+| `SSL_RENEW_BEFORE_DAYS` | `30` | Days before expiry to renew |
 
 ---
 
@@ -3629,5 +3768,6 @@ pub trait HealthPlugin: Send + Sync {
 | Version | Date | Description |
 |---------|------|-------------|
 | 0.1.0-draft | 2026-01-25 | Initial draft with plugin architecture |
-| 0.2.0-draft | 2026-01-25 | Added service exposure (expose/uses), multi-source architecture, SQLite backend, remote control |
-| 0.3.0-draft | 2026-01-25 | Replaced log plugins with comprehensive observability system (Section 22) |
+| 0.2.0-draft | 2026-01-25 | Added service exposure (expose/uses), multi-source architecture, SQLite backend |
+| 0.3.0-draft | 2026-01-25 | Replaced log plugins with comprehensive observability system |
+| 0.4.0-draft | 2026-01-26 | Added Daemon Management (Section 22), CLI Reference (Section 23), updated TL;DR with daemon/source/ssl commands |
