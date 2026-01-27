@@ -69,6 +69,7 @@ members = [
     "crates/hive/core",
     "crates/hive/http",
     "crates/hive/ssl",
+    "crates/hive/orchestrator",
 
     # Hive plugins
     "crates/hive/plugins/abi",

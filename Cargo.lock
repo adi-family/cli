@@ -623,18 +623,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "adi-hive-plugin"
-version = "0.1.15"
+name = "adi-hive-orchestrator-plugin"
+version = "0.1.0"
 dependencies = [
  "abi_stable",
  "adi-hive-core",
  "adi-hive-ssl",
- "console 0.15.11",
  "futures",
  "lib-plugin-abi",
  "lib-tarminal-sync",
- "libc",
- "nix 0.29.0",
  "once_cell",
  "serde",
  "serde_json",
@@ -643,6 +640,24 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "adi-hive-plugin"
+version = "0.1.15"
+dependencies = [
+ "abi_stable",
+ "adi-hive-core",
+ "dirs 5.0.1",
+ "lib-plugin-abi",
+ "libc",
+ "nix 0.29.0",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
