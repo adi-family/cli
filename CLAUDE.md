@@ -599,13 +599,8 @@ cargo build -p adi-indexer-cli    # Build specific package
 ## Local Development
 
 ### Prerequisites
-1. **Nginx reverse proxy** - Located at `~/projects/docker-compose.yaml`
-   ```bash
-   cd ~/projects && docker-compose up -d nginx
-   ```
-2. **Add to /etc/hosts**: `127.0.0.1 adi.local`
-3. **Nginx config**: `~/projects/.config/nginx/sites-enabled/adi.local`
-   - Reload after changes: `docker exec nakit_yok_nginx nginx -s reload`
+- **Hive local orchestrator** - manages services, routing, and reverse proxy via `adi hive`
+- Add to `/etc/hosts`: `127.0.0.1 adi.local`
 
 ### Quick Start
 ```bash
@@ -624,7 +619,7 @@ NEXT_PUBLIC_PROXY_API_URL=http://adi.local/api/llm-proxy
 AUTH_API_URL=http://adi.local/api/auth
 ```
 
-### Local URLs (via nginx at http://adi.local)
+### Local URLs (via hive proxy at http://adi.local)
 | Path | Service | Port | Description |
 |------|---------|------|-------------|
 | `/` | Web UI | 8013 | Next.js frontend |

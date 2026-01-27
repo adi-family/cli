@@ -193,6 +193,7 @@ services:
     proxy:
       host: adi.local
       path: /api/signaling
+      strip_prefix: true
     healthcheck:
       type: http
       http:
