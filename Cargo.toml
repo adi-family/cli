@@ -122,8 +122,7 @@ members = [
     "crates/lib/lib-logging-core",
     "crates/adi-logging-service",
 
-    # Debug app (submodule)
-    "crates/debug-metal-shader",
+    # Tools
     "crates/tool-generate-heartbit",
 
     # API clients

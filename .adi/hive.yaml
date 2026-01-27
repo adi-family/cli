@@ -622,27 +622,6 @@ services:
     restart: on-failure
 
   # ---------------------------------------------------------------------------
-  # Hive Manager (Cocoon orchestration via WebSocket)
-  # ---------------------------------------------------------------------------
-
-  hive-manager:
-    runner:
-      type: script
-      script:
-        run: cargo run -p adi-hive-http --bin hive
-    # No rollout needed - hive-manager is a WebSocket client, not a server
-    environment:
-      static:
-        SIGNALING_SERVER_URL: "ws://localhost:8011/ws"
-        HIVE_ID: ${env.HIVE_ID:-hive-local}
-        HIVE_SECRET: ${env.HIVE_SECRET:-}
-        COCOON_REGISTRY: "docker-registry.the-ihor.com"
-        COCOON_KINDS: "alpine:docker-registry.the-ihor.com/cocoon:latest,linux:docker-registry.the-ihor.com/cocoon:latest,ubuntu:docker-registry.the-ihor.com/cocoon:latest"
-    depends_on:
-      - signaling
-    restart: on-failure
-
-  # ---------------------------------------------------------------------------
   # Development Tools
   # ---------------------------------------------------------------------------
 

@@ -106,7 +106,6 @@ Several components follow a standard multi-crate structure within a single direc
 - `crates/adi-logging-service` - Logging service (ingestion + query API)
 - `crates/adi-balance-api` - Balance and transaction tracking service
 - `crates/adi-credentials-api` - Secure credentials storage service (ChaCha20-Poly1305 encrypted)
-- `crates/debug-metal-shader` - Metal shader debug app
 
 ## FlowMap (Standalone)
 - `crates/lib-flowmap-core` - Core flow graph types
@@ -727,7 +726,6 @@ Each submodule is an independent repo that can be developed standalone:
 - lib-iced-ui: `../lib-iced-ui`
 - lib-client-github: `../lib-client-github`
 - lib-client-openrouter: `../lib-client-openrouter`
-- debug-metal-shader: `../debug-metal-shader`
 - adi-executor: `../adi-executor`
 - adi-web-ui: `../adi-web-ui`
 - each crate in the crates dir must be a submodule

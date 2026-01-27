@@ -1,9 +1,6 @@
 [submodule "crates/adi-cli"]
 	path = crates/adi-cli
 	url = https://github.com/adi-family/adi-cli.git
-[submodule "crates/debug-metal-shader"]
-	path = crates/debug-metal-shader
-	url = https://github.com/adi-family/debug-metal-shader.git
 [submodule "crates/lib/lib-embed"]
 	path = crates/lib/lib-embed
 	url = https://github.com/adi-family/lib-embed.git
