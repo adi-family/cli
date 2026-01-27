@@ -624,7 +624,7 @@ dependencies = [
 
 [[package]]
 name = "adi-hive-plugin"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "abi_stable",
  "adi-hive-core",
