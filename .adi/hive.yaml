@@ -20,9 +20,8 @@ version: "1"
 # -----------------------------------------------------------------------------
 
 defaults:
-  # File-based logging with rotation
+  # File-based logging with rotation (defaults to ~/.adi/hive/logs/)
   hive.obs.file:
-    dir: .hive/logs
     rotate: true
     max_size: 10MB
 

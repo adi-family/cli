@@ -5537,6 +5537,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
+ "dirs 5.0.1",
  "hive-plugin-abi",
  "serde",
  "serde_json",
