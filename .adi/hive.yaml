@@ -1,0 +1,662 @@
+# =============================================================================
+# ADI Local Development - Hive Configuration
+# =============================================================================
+# Usage: adi hive up
+#
+# This replaces .adi/workflows/dev.sh with a declarative configuration.
+# All services that were in dev.sh are now managed by Hive.
+#
+# Default services to start: postgres, timescaledb, coturn, signaling, logging,
+#                           auth, platform, web, web-app, flowmap,
+#                           analytics-ingestion, analytics, llm-proxy
+#
+# Optional services: balance, credentials, cocoon, registry, codegen
+# =============================================================================
+
+version: "1"
+
+# -----------------------------------------------------------------------------
+# Global Defaults
+# -----------------------------------------------------------------------------
+
+defaults:
+  # File-based logging with rotation
+  hive.obs.file:
+    dir: .hive/logs
+    rotate: true
+    max_size: 10MB
+
+  # Console output for development
+  hive.obs.stdout:
+    format: pretty
+    level: info
+
+  # Default health check settings
+  hive.health.http:
+    timeout: 5s
+    interval: 10s
+    retries: 3
+
+  hive.health.tcp:
+    timeout: 5s
+    interval: 5s
+    retries: 3
+
+# -----------------------------------------------------------------------------
+# Reverse Proxy Configuration
+# -----------------------------------------------------------------------------
+
+proxy:
+  bind:
+    - "127.0.0.1:8080"
+
+# -----------------------------------------------------------------------------
+# Global Observability
+# -----------------------------------------------------------------------------
+
+observability:
+  plugins:
+    - stdout
+    - file
+
+# -----------------------------------------------------------------------------
+# Global Environment (inherited by all services)
+# -----------------------------------------------------------------------------
+
+environment:
+  dotenv:
+    files:
+      - .env.local
+  static:
+    RUST_LOG: info
+    SHOW_VERSION_IN_HEADERS: "true"
+
+# =============================================================================
+# Services
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Infrastructure: Databases
+  # ---------------------------------------------------------------------------
+
+  postgres:
+    runner:
+      type: docker
+      docker:
+        image: postgres:16-alpine
+        container_name: adi-postgres
+        ports:
+          - "8027:5432"
+        volumes:
+          - adi-postgres-data:/var/lib/postgresql/data
+          - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+        environment:
+          POSTGRES_USER: adi
+          POSTGRES_PASSWORD: adi
+          POSTGRES_DB: adi
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          db: 8027
+    healthcheck:
+      type: cmd
+      cmd:
+        command: pg_isready -U adi
+        interval: 5s
+        timeout: 5s
+        retries: 5
+    restart: unless-stopped
+
+  timescaledb:
+    runner:
+      type: docker
+      docker:
+        image: timescale/timescaledb:latest-pg16
+        container_name: adi-timescaledb
+        ports:
+          - "8028:5432"
+        volumes:
+          - adi-timescaledb-data:/var/lib/postgresql/data
+          - ./scripts/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql:ro
+        environment:
+          POSTGRES_USER: adi
+          POSTGRES_PASSWORD: adi
+          POSTGRES_DB: adi_analytics
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          db: 8028
+    healthcheck:
+      type: cmd
+      cmd:
+        command: pg_isready -U adi
+        interval: 5s
+        timeout: 5s
+        retries: 5
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Infrastructure: TURN Server for WebRTC
+  # ---------------------------------------------------------------------------
+
+  coturn:
+    runner:
+      type: docker
+      docker:
+        image: coturn/coturn:latest
+        container_name: adi-coturn
+        network_mode: host
+        command:
+          - "turnserver"
+          - "-n"
+          - "--log-file=stdout"
+          - "--listening-port=8039"
+          - "--fingerprint"
+          - "--lt-cred-mech"
+          - "--user=adi:adi"
+          - "--realm=adi.local"
+          - "--no-tls"
+          - "--no-dtls"
+          - "--no-cli"
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          turn: 8039
+    healthcheck:
+      type: cmd
+      cmd:
+        command: "nc -z localhost 8039 || exit 0"
+        interval: 10s
+        timeout: 5s
+        retries: 3
+        start_period: 5s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Core Services
+  # ---------------------------------------------------------------------------
+
+  signaling:
+    runner:
+      type: script
+      script:
+        run: cargo run
+        working_dir: crates/tarminal-signaling-server
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8011
+    proxy:
+      host: adi.local
+      path: /api/signaling
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8011"
+        HIVE_SECRETS: ${env.HIVE_SECRETS:-}
+        LOGGING_URL: "http://localhost:8040"
+    restart: on-failure
+    # Expose signaling URL for other services
+    expose:
+      name: signaling
+      vars:
+        URL: "ws://localhost:8011/ws"
+        PORT: "8011"
+
+  logging:
+    runner:
+      type: script
+      script:
+        run: cargo run --bin adi-logging-service
+        working_dir: crates/adi-logging-service
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8040
+    proxy:
+      host: adi.local
+      path: /api/logging
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8040"
+        DATABASE_URL: "postgres://adi:adi@localhost:8028/adi_logging"
+    depends_on:
+      - timescaledb
+    restart: on-failure
+    # Expose logging URL for other services
+    expose:
+      name: logging
+      vars:
+        URL: "http://localhost:8040"
+
+  auth:
+    runner:
+      type: script
+      script:
+        run: cargo run -p adi-auth-http
+        working_dir: crates/adi-auth
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8012
+    proxy:
+      host: adi.local
+      path: /api/auth
+      strip_prefix: true
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8012"
+        DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_auth"
+        JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
+        ADMIN_EMAILS: ${env.ADMIN_EMAILS:-}
+        SMTP_HOST: ${env.SMTP_HOST:-}
+        SMTP_PORT: ${env.SMTP_PORT:-}
+        SMTP_USERNAME: ${env.SMTP_USERNAME:-}
+        SMTP_PASSWORD: ${env.SMTP_PASSWORD:-}
+        SMTP_FROM_EMAIL: ${env.SMTP_FROM_EMAIL:-}
+        SMTP_FROM_NAME: ${env.SMTP_FROM_NAME:-}
+        SMTP_TLS: ${env.SMTP_TLS:-}
+        LOGGING_URL: "http://localhost:8040"
+    depends_on:
+      - postgres
+      - logging
+    restart: on-failure
+
+  platform:
+    runner:
+      type: script
+      script:
+        run: cargo run --bin adi-platform-api
+        working_dir: crates/adi-platform-api
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8015
+    proxy:
+      host: adi.local
+      path: /api/platform
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8015"
+        DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_platform"
+        JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
+        PUBLIC_BASE_URL: ${env.PUBLIC_BASE_URL:-http://adi.local}
+        CORS_ORIGIN: "http://adi.local"
+        LOGGING_URL: "http://localhost:8040"
+    depends_on:
+      - postgres
+      - logging
+    restart: on-failure
+
+  # ---------------------------------------------------------------------------
+  # Web Frontends
+  # ---------------------------------------------------------------------------
+
+  web:
+    runner:
+      type: script
+      script:
+        run: npm run dev
+        working_dir: apps/infra-service-web
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8013
+    proxy:
+      host: adi.local
+      path: /
+    healthcheck:
+      type: tcp
+      tcp:
+        port: "{{runtime.port.http}}"
+    environment:
+      static:
+        PORT: "8013"
+        AUTH_API_URL: "http://localhost:8012"
+        NEXT_PUBLIC_PLATFORM_API_URL: "http://localhost:8015"
+        NEXT_PUBLIC_FLOWMAP_API_URL: "http://localhost:8017"
+        NEXT_PUBLIC_CREDENTIALS_API_URL: "http://adi.local/api/credentials"
+    depends_on:
+      - auth
+      - platform
+    restart: on-failure
+
+  web-app:
+    runner:
+      type: script
+      script:
+        run: npm run dev
+        working_dir: apps/web-app
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8035
+    proxy:
+      host: adi.local
+      path: /app
+    healthcheck:
+      type: tcp
+      tcp:
+        port: "{{runtime.port.http}}"
+    environment:
+      static:
+        PORT: "8035"
+        VITE_SIGNALING_URL: "ws://adi.local/api/signaling/ws"
+    depends_on:
+      - signaling
+    restart: on-failure
+
+  # ---------------------------------------------------------------------------
+  # API Services
+  # ---------------------------------------------------------------------------
+
+  flowmap:
+    runner:
+      type: script
+      script:
+        run: cargo run --release
+        working_dir: apps/flowmap-api
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8017
+    proxy:
+      host: adi.local
+      path: /api/flowmap
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8017"
+        LOGGING_URL: "http://localhost:8040"
+    depends_on:
+      - logging
+    restart: on-failure
+
+  analytics-ingestion:
+    runner:
+      type: script
+      script:
+        run: cargo run
+        working_dir: crates/adi-analytics-ingestion
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8022
+    proxy:
+      host: adi.local
+      path: /api/analytics-ingestion
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8022"
+        DATABASE_URL: "postgres://adi:adi@localhost:8028/adi_analytics"
+        LOGGING_URL: "http://localhost:8040"
+    depends_on:
+      - timescaledb
+      - logging
+    restart: on-failure
+    # Expose analytics URL for other services
+    expose:
+      name: analytics-ingestion
+      vars:
+        URL: "http://localhost:8022"
+
+  analytics:
+    runner:
+      type: script
+      script:
+        run: cargo run
+        working_dir: crates/adi-analytics-api
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8023
+    proxy:
+      host: adi.local
+      path: /api/analytics
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8023"
+        DATABASE_URL: "postgres://adi:adi@localhost:8028/adi_analytics"
+        LOGGING_URL: "http://localhost:8040"
+    depends_on:
+      - timescaledb
+      - logging
+    restart: on-failure
+
+  llm-proxy:
+    runner:
+      type: script
+      script:
+        run: cargo run --bin adi-api-proxy
+        working_dir: crates/adi-api-proxy/http
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8029
+    proxy:
+      host: adi.local
+      path: /api/llm-proxy
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8029"
+        DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_llm_proxy"
+        JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
+        ADMIN_JWT_SECRET: ${env.ADMIN_JWT_SECRET:-}
+        ENCRYPTION_KEY: ${env.ENCRYPTION_KEY:-5a747f27420b903522ae3746c4ba79b5ecffea02f6bc333fd4da39fb2ef27de4}
+        ANALYTICS_URL: "http://localhost:8022"
+        LOGGING_URL: "http://localhost:8040"
+    depends_on:
+      - postgres
+      - analytics-ingestion
+      - logging
+    restart: on-failure
+
+  # ---------------------------------------------------------------------------
+  # Optional Services
+  # ---------------------------------------------------------------------------
+
+  balance:
+    runner:
+      type: script
+      script:
+        run: cargo run --bin adi-balance-api
+        working_dir: crates/adi-balance-api
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8030
+    proxy:
+      host: adi.local
+      path: /api/balance
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8030"
+        DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_balance"
+        JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
+        ANALYTICS_URL: "http://localhost:8022"
+        LOGGING_URL: "http://localhost:8040"
+    depends_on:
+      - postgres
+      - analytics-ingestion
+      - logging
+    restart: on-failure
+
+  credentials:
+    runner:
+      type: script
+      script:
+        run: cargo run --bin adi-credentials-api
+        working_dir: crates/adi-credentials-api
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8033
+    proxy:
+      host: adi.local
+      path: /api/credentials
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8033"
+        DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_credentials"
+        JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
+        ENCRYPTION_KEY: ${env.ENCRYPTION_KEY:-5a747f27420b903522ae3746c4ba79b5ecffea02f6bc333fd4da39fb2ef27de4}
+        ANALYTICS_URL: "http://localhost:8022"
+        LOGGING_URL: "http://localhost:8040"
+    depends_on:
+      - postgres
+      - analytics-ingestion
+      - logging
+    restart: on-failure
+
+  registry:
+    runner:
+      type: script
+      script:
+        run: cargo run
+        working_dir: crates/adi-plugin-registry-http
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8019
+    proxy:
+      host: adi.local
+      path: /api/registry
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8019"
+        REGISTRY_DATA_DIR: ${env.REGISTRY_DATA_DIR:-.dev/registry-data}
+        LOGGING_URL: "http://localhost:8040"
+    depends_on:
+      - logging
+    restart: on-failure
+
+  # ---------------------------------------------------------------------------
+  # Cocoon Orchestration (WebSocket client - no server port needed)
+  # ---------------------------------------------------------------------------
+
+  cocoon:
+    runner:
+      type: script
+      script:
+        run: cargo run --features standalone
+        working_dir: crates/cocoon
+    # No rollout needed - cocoon is a WebSocket client, not a server
+    environment:
+      static:
+        SIGNALING_SERVER_URL: "ws://localhost:8011/ws"
+        WEBRTC_ICE_SERVERS: "stun:stun.l.google.com:19302,turn:localhost:8039"
+        WEBRTC_TURN_USERNAME: adi
+        WEBRTC_TURN_CREDENTIAL: adi
+    depends_on:
+      - signaling
+      - coturn
+    restart: on-failure
+
+  # ---------------------------------------------------------------------------
+  # Hive Manager (Cocoon orchestration via WebSocket)
+  # ---------------------------------------------------------------------------
+
+  hive-manager:
+    runner:
+      type: script
+      script:
+        run: cargo run -p adi-hive-http --bin hive
+    # No rollout needed - hive-manager is a WebSocket client, not a server
+    environment:
+      static:
+        SIGNALING_SERVER_URL: "ws://localhost:8011/ws"
+        HIVE_ID: ${env.HIVE_ID:-hive-local}
+        HIVE_SECRET: ${env.HIVE_SECRET:-}
+        COCOON_REGISTRY: "docker-registry.the-ihor.com"
+        COCOON_KINDS: "alpine:docker-registry.the-ihor.com/cocoon:latest,linux:docker-registry.the-ihor.com/cocoon:latest,ubuntu:docker-registry.the-ihor.com/cocoon:latest"
+    depends_on:
+      - signaling
+    restart: on-failure
+
+  # ---------------------------------------------------------------------------
+  # Development Tools
+  # ---------------------------------------------------------------------------
+
+  codegen:
+    runner:
+      type: script
+      script:
+        run: |
+          adi tsp-gen generate crates/adi-credentials-api/api.tsp \
+            -l typescript \
+            -s client \
+            -o apps/web-app/src/services/generated/credentials \
+            -p credentials-api \
+            --watch
+    # No rollout or healthcheck - this is a file watcher
+    restart: on-failure

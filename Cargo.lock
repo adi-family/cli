@@ -314,6 +314,7 @@ name = "adi-cli"
 version = "0.9.1"
 dependencies = [
  "anyhow",
+ "atty",
  "axum 0.8.8",
  "clap",
  "clap_complete",
@@ -623,7 +624,7 @@ dependencies = [
 
 [[package]]
 name = "adi-hive-plugin"
-version = "0.1.0"
+version = "0.1.14"
 dependencies = [
  "abi_stable",
  "adi-hive-core",
@@ -633,6 +634,7 @@ dependencies = [
  "lib-plugin-abi",
  "lib-tarminal-sync",
  "libc",
+ "nix 0.29.0",
  "once_cell",
  "serde",
  "serde_json",

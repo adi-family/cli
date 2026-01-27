@@ -1,0 +1,62 @@
+# ADI Plugin Build Workflow
+# Build plugins locally and optionally install them without publishing to registry
+
+[workflow]
+name = "build-plugin"
+description = "Build and install plugins locally (no registry deploy)"
+
+[[inputs]]
+name = "plugin"
+type = "select"
+prompt = "Select plugin to build"
+# Dynamically discovers all plugins from plugin.toml files
+options_cmd = """
+find crates -name 'plugin.toml' -type f 2>/dev/null | while read f; do
+    grep -m1 '^id = ' "$f" 2>/dev/null | sed 's/id = "//;s/"//'
+done | sort -u
+"""
+autocomplete = true
+
+[[inputs]]
+name = "action"
+type = "select"
+prompt = "What to do after build?"
+options = [
+    "install - Build and install to local plugins directory (Recommended)",
+    "build - Build only, output to dist/",
+    "replace - Build and force-replace existing installation"
+]
+default = "install - Build and install to local plugins directory (Recommended)"
+
+[[inputs]]
+name = "skip_lint"
+type = "confirm"
+prompt = "Skip linting? (faster build)"
+default = false
+
+[[steps]]
+name = "Build and install plugin"
+run = """
+PLUGIN="{{ plugin }}"
+ACTION="{{ action | split(' ') | first }}"
+SKIP_LINT="{{ skip_lint }}"
+
+info "Building plugin: $PLUGIN (action: $ACTION)"
+
+LINT_FLAG=""
+if [ "$SKIP_LINT" = "true" ]; then
+    LINT_FLAG="--skip-lint"
+fi
+
+case "$ACTION" in
+    install)
+        "$WORKFLOWS_DIR/build-plugin.sh" "$PLUGIN" --install $LINT_FLAG
+        ;;
+    build)
+        "$WORKFLOWS_DIR/build-plugin.sh" "$PLUGIN" $LINT_FLAG
+        ;;
+    replace)
+        "$WORKFLOWS_DIR/build-plugin.sh" "$PLUGIN" --install --force $LINT_FLAG
+        ;;
+esac
+"""

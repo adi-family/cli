@@ -510,6 +510,7 @@ Interactive workflows are defined in `.adi/workflows/` directory. Each workflow 
 | Workflow | Description | Command |
 |----------|-------------|---------|
 | `build-linux` | Cross-compile services for Linux | `adi workflow build-linux` |
+| `build-plugin` | Build and install plugins locally (no registry) | `adi workflow build-plugin` |
 | `release` | Build + Docker image + push to registry | `adi workflow release` |
 | `deploy` | Deploy services to Coolify | `adi workflow deploy` |
 | `dev` | Local development environment | `adi workflow dev` |
@@ -558,6 +559,29 @@ adi workflow release-plugin
 # Direct - release specific plugin
 adi workflow release-plugin --plugin agent-loop --registry production
 ```
+
+### Example: Build Plugin (Local Development)
+Build and install plugins locally without publishing to registry:
+```bash
+# Interactive mode
+adi workflow build-plugin
+
+# Build and install directly
+.adi/workflows/build-plugin.sh adi.hive --install
+
+# Build, force-replace existing, skip lint (fastest)
+.adi/workflows/build-plugin.sh adi.hive --install --force --skip-lint
+
+# Build only (output to dist/plugins/)
+.adi/workflows/build-plugin.sh adi.cocoon
+```
+
+**Options:**
+- `--install` - Install to `~/.local/share/adi/plugins/`
+- `--force` - Replace existing installation
+- `--skip-lint` - Skip linting for faster builds
+
+**Common plugins:** `adi.hive`, `adi.cocoon`, `adi.agent-loop`, `adi.tasks`, `adi.workflow`
 
 ## Setup
 ```bash
