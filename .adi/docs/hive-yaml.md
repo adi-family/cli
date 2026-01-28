@@ -14,12 +14,12 @@ For more information, see https://mariadb.com/bsl11/
 
 # Hive YAML Specification
 
-**Version:** 0.5.0-draft  
+**Version:** 0.6.0-draft  
 **Status:** Draft  
 **Authors:** ADI Team  
 **License:** BSL-1.1  
 **Created:** 2026-01-25  
-**Updated:** 2026-01-26
+**Updated:** 2026-01-27
 
 ## Why Hive?
 
@@ -68,6 +68,7 @@ That's it. Run `adi hive up` and you have: process management, health checks, au
 | **Built-in reverse proxy** | HTTP/WebSocket/gRPC | - | - |
 | **Automatic SSL/TLS** | Let's Encrypt built-in | - | - |
 | **Zero-downtime deploys** | Blue-green, canary | Manual | - |
+| **Lifecycle hooks** | Rollout-safe pre/post up/down | - | - |
 | **Secrets from anywhere** | 1Password, Vault, AWS | - | - |
 | **Multi-project management** | Single daemon | Per-project | Per-project |
 | **Production observability** | Prometheus, Loki, OTEL | - | - |
@@ -257,8 +258,9 @@ Key features:
 21. [Observability](#21-observability)
 22. [Daemon Management](#22-daemon-management)
 23. [CLI Reference](#23-cli-reference)
-24. [Appendix A: Plugin Interface](#appendix-a-plugin-interface)
-25. [Appendix B: Comparison with Alternatives](#appendix-b-comparison-with-alternatives)
+24. [Lifecycle Hooks](#24-lifecycle-hooks)
+25. [Appendix A: Plugin Interface](#appendix-a-plugin-interface)
+26. [Appendix B: Comparison with Alternatives](#appendix-b-comparison-with-alternatives)
 
 ---
 
@@ -325,6 +327,7 @@ defaults: { ... }      # OPTIONAL
 proxy: { ... }         # OPTIONAL
 environment: { ... }   # OPTIONAL
 observability: { ... } # OPTIONAL
+hooks: { ... }         # OPTIONAL
 services: { ... }      # REQUIRED
 ```
 
@@ -335,6 +338,7 @@ services: { ... }      # REQUIRED
 | `proxy` | object | OPTIONAL | Proxy configuration |
 | `environment` | object | OPTIONAL | Global environment configuration |
 | `observability` | object | OPTIONAL | Observability configuration (see [Section 22](#22-observability)) |
+| `hooks` | object | OPTIONAL | Global lifecycle hooks (see [Section 24](#24-lifecycle-hooks)) |
 | `services` | object | REQUIRED | Service definitions |
 
 ---
@@ -811,6 +815,7 @@ services:
     environment: { ... }      # OPTIONAL
     build: { ... }            # OPTIONAL
     restart: <string>         # OPTIONAL
+    hooks: { ... }            # OPTIONAL - lifecycle hooks
     expose: { ... }           # OPTIONAL - cross-source sharing
     uses: [ ... ]             # OPTIONAL - cross-source dependencies
 ```
@@ -834,6 +839,7 @@ Service names MUST:
 | `environment` | object | OPTIONAL | `{}` | Environment plugin configuration |
 | `build` | object | OPTIONAL | - | Build configuration |
 | `restart` | string | OPTIONAL | `never` | Restart policy |
+| `hooks` | object | OPTIONAL | - | Lifecycle hooks (see [Section 24](#24-lifecycle-hooks)) |
 | `expose` | object | OPTIONAL | - | Make service available to other sources. See [Section 18](#18-service-exposure) |
 | `uses` | array | OPTIONAL | `[]` | Declare dependencies on exposed services. See [Section 18](#18-service-exposure) |
 
@@ -2183,22 +2189,29 @@ impl ParsePlugin for PortsManagerPlugin {
 4. Collect all expose declarations
    - Validate expose names are globally unique
 5. Build combined dependency graph (including cross-source uses)
-6. Start services in topological order:
+6. Run global pre-up hooks (if configured)
+   - If any hook fails with on_failure: abort, stop startup
+7. Start services in topological order:
    For each service:
    a. Resolve uses dependencies (wait for exposed services)
    b. Inject exposed variables
    c. Load environment via env plugins
-   d. Run build command (if configured)
-   e. Start runner plugin
-   f. Wait for health check plugin (if configured)
-   g. Register route in unified proxy
-7. Start unified proxy server
-8. Connect to signaling server (if configured)
-9. Enter supervision loop:
-   - Monitor service health
-   - Restart crashed services (per restart policy)
-   - Handle SIGTERM/SIGINT gracefully
-   - Process remote control commands
+   d. Run per-service pre-up hooks (if configured)
+   e. Run build command (if configured)
+   f. Start runner plugin
+   g. Wait for health check plugin (if configured)
+   h. Run per-service post-up hooks (if configured)
+      - For blue-green: runs BEFORE traffic switch (see Section 24.6)
+      - On failure: rollback per on_failure policy
+   i. Register route in unified proxy
+8. Run global post-up hooks (if configured)
+9. Start unified proxy server
+10. Connect to signaling server (if configured)
+11. Enter supervision loop:
+    - Monitor service health
+    - Restart crashed services (per restart policy)
+    - Handle SIGTERM/SIGINT gracefully
+    - Process remote control commands
 ```
 
 ### 16.3 Request Flow
@@ -2237,9 +2250,14 @@ Client Request
 2. Disconnect from signaling server
 3. Stop accepting new proxy connections
 4. Drain existing connections (30s timeout)
-5. Send SIGTERM to all services (reverse dependency order, respecting cross-source uses)
-6. Wait for graceful shutdown (10s per service)
-7. Send SIGKILL to remaining processes
+5. Run global pre-down hooks (if configured)
+6. For each service (reverse dependency order, respecting cross-source uses):
+   a. Run per-service pre-down hooks (if configured)
+   b. Send SIGTERM to service
+   c. Wait for graceful shutdown (10s per service)
+   d. Send SIGKILL if still running
+   e. Run per-service post-down hooks (if configured)
+7. Run global post-down hooks (if configured)
 8. Unload plugins
 9. Remove socket and PID file
 10. Exit
@@ -3812,6 +3830,682 @@ Complete reference for all Hive CLI commands.
 
 ---
 
+## 24. Lifecycle Hooks
+
+Lifecycle hooks allow running one-shot tasks at specific points during service startup and shutdown. Hooks exist at two levels: **global** (around the entire stack) and **per-service** (around individual service lifecycle). Hook steps can use any runner plugin (script, docker, compose, etc.) - the same plugin system used by services.
+
+### 24.1 Hook Events
+
+| Event | Level | When it runs |
+|-------|-------|-------------|
+| `pre-up` | Global | Before any service starts |
+| `pre-up` | Per-service | After dependencies are healthy, before runner starts |
+| `post-up` | Per-service | After health check passes (before traffic switch for blue-green) |
+| `post-up` | Global | After all services are healthy and routes registered |
+| `pre-down` | Global | Before any service stops |
+| `pre-down` | Per-service | Before sending SIGTERM to the service process |
+| `post-down` | Per-service | After service process has exited |
+| `post-down` | Global | After all services have stopped |
+
+### 24.2 Global Hooks
+
+Global hooks run around the entire stack lifecycle. Defined at the top level of the configuration.
+
+Each hook step uses either `run` (shorthand for script runner) or `runner` (explicit runner plugin):
+
+```yaml
+hooks:
+  pre-up:
+    # Shorthand: run = script runner
+    - run: <string>               # REQUIRED (mutually exclusive with runner)
+      working_dir: <string>       # OPTIONAL - working directory
+      on_failure: <string>        # OPTIONAL - abort | warn (default: abort)
+      timeout: <duration>         # OPTIONAL - max execution time (default: 60s)
+      environment:                # OPTIONAL - additional env vars
+        KEY: value
+
+    # Explicit: any runner plugin
+    - runner:                     # REQUIRED (mutually exclusive with run)
+        type: <plugin-name>
+        <plugin-name>:
+          <plugin-specific-options>
+      on_failure: <string>        # OPTIONAL
+      timeout: <duration>         # OPTIONAL
+      environment:                # OPTIONAL
+        KEY: value
+  post-up:
+    - run: <string>
+      on_failure: <string>        # Default: warn
+  pre-down:
+    - run: <string>
+      on_failure: <string>        # Default: warn
+  post-down:
+    - run: <string>
+      on_failure: <string>        # Default: warn
+```
+
+**Example - Database migrations before stack starts:**
+```yaml
+hooks:
+  pre-up:
+    - run: |
+        set -e
+        echo "Running database migrations..."
+        cd crates/adi-auth
+        cargo run --bin migrate -- up
+        cd ../adi-platform-api
+        cargo run --bin migrate -- up
+      on_failure: abort
+      timeout: 120s
+  post-up:
+    - run: echo "All services ready"
+      on_failure: warn
+```
+
+### 24.3 Per-Service Hooks
+
+Per-service hooks run around individual service lifecycle. Defined within a service definition.
+
+```yaml
+services:
+  auth:
+    hooks:
+      pre-up:
+        # Script shorthand
+        - run: <string>             # REQUIRED (mutually exclusive with runner)
+          working_dir: <string>     # OPTIONAL - defaults to service working_dir or project root
+          on_failure: <string>      # OPTIONAL - abort | warn | retry (default: abort)
+          timeout: <duration>       # OPTIONAL - default: 60s
+          retries: <integer>        # OPTIONAL - retry count when on_failure: retry (default: 3)
+          retry_delay: <duration>   # OPTIONAL - delay between retries (default: 5s)
+          environment:              # OPTIONAL
+            KEY: value
+
+        # Explicit runner plugin
+        - runner:                   # REQUIRED (mutually exclusive with run)
+            type: docker
+            docker:
+              image: flyway/flyway:latest
+              command: migrate
+          on_failure: abort
+          timeout: 180s
+
+      post-up:
+        - run: <string>
+          on_failure: <string>      # Default: abort (critical for rollout safety)
+      pre-down:
+        - run: <string>
+          on_failure: <string>      # Default: warn
+      post-down:
+        - run: <string>
+          on_failure: <string>      # Default: warn
+```
+
+### 24.4 Hook Step Types
+
+Each item in a hook event array is one of three step types:
+
+| Step Type | Description |
+|-----------|-------------|
+| `run` | Shorthand for the built-in script runner. Simplest form. |
+| `runner` | Explicit runner plugin. Any runner plugin (script, docker, compose, etc.). |
+| `parallel` | A group of steps that execute concurrently. |
+
+A step MUST have exactly one of `run`, `runner`, or `parallel`. They are mutually exclusive.
+
+#### Script Step (`run`)
+
+Shorthand for `runner: { type: script, script: { run: ... } }`.
+
+```yaml
+- run: <string>                   # REQUIRED - command or multi-line script
+  working_dir: <string>           # OPTIONAL - working directory
+  on_failure: <string>            # OPTIONAL - abort | warn | retry
+  timeout: <duration>             # OPTIONAL - default: 60s
+  retries: <integer>              # OPTIONAL - retry count (only with on_failure: retry)
+  retry_delay: <duration>         # OPTIONAL - delay between retries (default: 5s)
+  environment:                    # OPTIONAL - additional env vars
+    KEY: value
+```
+
+#### Runner Step (`runner`)
+
+Use any runner plugin. The hook runs as a **one-shot task** - the runner MUST start the process and wait for it to exit. This differs from service runners which manage long-running processes.
+
+```yaml
+- runner:                         # REQUIRED - runner plugin configuration
+    type: <plugin-name>
+    <plugin-name>:
+      <plugin-specific-options>
+  on_failure: <string>            # OPTIONAL
+  timeout: <duration>             # OPTIONAL - default: 60s
+  retries: <integer>              # OPTIONAL
+  retry_delay: <duration>         # OPTIONAL
+  environment:                    # OPTIONAL
+    KEY: value
+```
+
+Runner plugins in hook context:
+- `script` (built-in): Executes a command and waits for exit
+- `docker` (external): Runs `docker run` (not `docker start`) - container starts, runs to completion, exits
+- `compose` (external): Runs `docker-compose run` for one-shot execution
+- Any other runner: The plugin MUST support one-shot mode via its hook interface
+
+#### Parallel Step (`parallel`)
+
+A group of steps that execute **concurrently**. All steps inside start at the same time. The parallel group completes when all steps finish.
+
+```yaml
+- parallel:                       # REQUIRED - array of steps to run concurrently
+    - run: <string>               # Any step type (run, runner, or nested parallel)
+    - run: <string>
+    - runner:
+        type: docker
+        docker:
+          image: flyway/flyway
+          command: migrate
+  on_failure: <string>            # OPTIONAL - applies to the group as a whole
+  timeout: <duration>             # OPTIONAL - max time for entire group (default: 60s)
+```
+
+**Parallel failure semantics:**
+- If `on_failure: abort` (default for pre-up/post-up): the group fails if **any** step fails. Remaining running steps are cancelled.
+- If `on_failure: warn`: all steps run to completion regardless of individual failures. Failures are logged as warnings.
+- Individual steps inside `parallel` inherit the group's `on_failure` unless they override it.
+- `timeout` on the parallel group applies to the entire group, not individual steps. Individual steps can have their own `timeout`.
+
+### 24.5 Hook Step Fields Reference
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `run` | string | ONE OF | - | Script command (shorthand for script runner) |
+| `runner` | object | ONE OF | - | Explicit runner plugin configuration |
+| `parallel` | array | ONE OF | - | Group of steps to execute concurrently |
+| `working_dir` | string | OPTIONAL | Service `working_dir` or project root | Working directory (script steps only) |
+| `on_failure` | string | OPTIONAL | See below | Failure behavior: `abort`, `warn`, or `retry` |
+| `timeout` | duration | OPTIONAL | `60s` | Maximum execution time |
+| `retries` | integer | OPTIONAL | `3` | Number of retries (only when `on_failure: retry`) |
+| `retry_delay` | duration | OPTIONAL | `5s` | Delay between retries |
+| `environment` | object | OPTIONAL | `{}` | Additional environment variables |
+
+**Default `on_failure` by event:**
+
+| Event | Default `on_failure` | Rationale |
+|-------|---------------------|-----------|
+| `pre-up` | `abort` | Don't start a service that can't prepare its prerequisites |
+| `post-up` | `abort` | Don't commit a deployment that fails validation (rollout safety) |
+| `pre-down` | `warn` | Best-effort cleanup; don't block shutdown |
+| `post-down` | `warn` | Best-effort cleanup; service is already stopped |
+
+**`on_failure` options:**
+
+| Value | Behavior |
+|-------|----------|
+| `abort` | Stop the operation. For pre-up: service doesn't start. For post-up: triggers rollback (see 24.8). For global: halts remaining startup/shutdown. For parallel: cancel remaining steps. |
+| `warn` | Log a warning and continue. The operation proceeds despite the hook failure. |
+| `retry` | Retry the hook up to `retries` times with `retry_delay` between attempts. If all retries fail, behaves like `abort`. Not available for `parallel` groups (use on individual steps inside instead). |
+
+### 24.6 Execution Order
+
+**Full `adi hive up` sequence with hooks:**
+
+```
+1. Parse configuration, load plugins, validate
+2. Run global pre-up hooks (in order; parallel groups run concurrently)
+   - If any step fails (on_failure: abort): stop startup entirely
+3. Start services in topological order:
+   For each service:
+   a. Wait for dependencies to be healthy
+   b. Inject exposed variables, load environment
+   c. Run per-service pre-up hooks (in order; parallel groups run concurrently)
+      - If any step fails: skip this service (abort) or warn
+   d. Run build command (if configured)
+   e. Start runner plugin
+   f. Wait for health check (if configured)
+   g. Run per-service post-up hooks (in order; parallel groups run concurrently)
+      - If any step fails: rollback this service (see 24.8)
+   h. Register route in proxy (traffic switch for blue-green)
+4. Run global post-up hooks (in order; parallel groups run concurrently)
+   - Failures logged but don't roll back services
+```
+
+**Full `adi hive down` sequence with hooks:**
+
+```
+1. Run global pre-down hooks (in order; parallel groups run concurrently)
+   - Failures logged but don't block shutdown
+2. For each service (reverse dependency order):
+   a. Run per-service pre-down hooks (in order; parallel groups run concurrently)
+      - Failures logged but don't block service stop
+   b. Unregister route from proxy
+   c. Send SIGTERM, wait for graceful shutdown
+   d. Send SIGKILL if timeout exceeded
+   e. Run per-service post-down hooks (in order; parallel groups run concurrently)
+3. Run global post-down hooks (in order; parallel groups run concurrently)
+```
+
+**Step execution rules:**
+- Top-level steps within an event run **sequentially** in declaration order
+- Steps inside a `parallel` group run **concurrently**
+- If step N fails with `on_failure: abort`, steps N+1, N+2, etc. are skipped
+- Each step can use any runner plugin (script, docker, compose, etc.)
+
+### 24.7 Hook Runner Plugins
+
+Hook steps support the same runner plugins as services, but operate in **one-shot mode** - the runner starts a process/container, waits for it to complete, and reports success (exit code 0) or failure (non-zero exit code).
+
+#### Built-in: Script Runner
+
+The default and simplest runner. The `run` shorthand always uses this.
+
+```yaml
+# Shorthand
+- run: cargo run --bin migrate -- up
+  working_dir: crates/adi-auth
+
+# Equivalent explicit form
+- runner:
+    type: script
+    script:
+      run: cargo run --bin migrate -- up
+      working_dir: crates/adi-auth
+```
+
+#### External: Docker Runner
+
+Runs a container to completion (`docker run --rm`). The container starts, executes, and exits. Non-zero exit code = failure.
+
+```yaml
+- runner:
+    type: docker
+    docker:
+      image: flyway/flyway:10
+      command: -url=jdbc:postgresql://host.docker.internal:5432/adi_auth migrate
+      volumes:
+        - ./crates/adi-auth/migrations:/flyway/sql
+      environment:
+        FLYWAY_USER: adi
+        FLYWAY_PASSWORD: adi
+  on_failure: abort
+  timeout: 180s
+```
+
+#### External: Compose Runner
+
+Runs a one-shot compose service (`docker-compose run --rm`).
+
+```yaml
+- runner:
+    type: compose
+    compose:
+      file: docker-compose.tools.yml
+      service: migrate
+      command: --target latest
+  timeout: 120s
+```
+
+#### Runner Plugin Interface for Hooks
+
+Runner plugins that support hooks MUST implement the `run_hook` method in addition to the standard `start`/`stop` methods:
+
+```rust
+pub trait RunnerPlugin: Send + Sync {
+    // ... existing service methods ...
+
+    /// Run a one-shot task (hook execution).
+    /// MUST block until the task completes and return the exit code.
+    /// Default implementation returns an error (plugin does not support hooks).
+    fn run_hook(&self, config: &HookRunnerConfig) -> Result<ExitStatus> {
+        Err(anyhow!("Runner plugin '{}' does not support hooks", self.name()))
+    }
+}
+```
+
+If a runner plugin does not implement `run_hook`, Hive MUST fail with a clear error at config validation time, not at runtime.
+
+### 24.8 Rollout Integration (Blue-Green Safety)
+
+Hooks are fully integrated with rollout strategies. For blue-green deployments, `post-up` hooks act as an **additional validation gate** - the traffic switch only happens if both the health check AND all post-up hooks pass.
+
+**Blue-green with hooks sequence:**
+
+```
+State: blue (8012) is active, deploying to green (8013)
+
+1. Run per-service pre-up hooks
+   - If FAIL: abort deployment, blue continues serving
+2. Start new instance on green (8013)
+3. Wait for health check to pass
+4. Wait for healthy_duration
+5. Run per-service post-up hooks (new instance running, old still active)
+   - If FAIL: kill green instance, blue continues serving (rollback)
+   - Log error, deployment failed
+6. If ALL post-up hooks PASS:
+   - Switch proxy to green (8013)
+   - Run per-service pre-down hooks on OLD blue instance
+   - Stop blue instance
+   - Run per-service post-down hooks on OLD blue instance
+```
+
+**Blue-green hook failure diagram:**
+
+```
+Time    Blue (8012)          Hive Proxy           Green (8013)
+-----------------------------------------------------------------
+  0     [running] <--------- [route:blue]
+  1     [running] <--------- [route:blue]         [pre-up hooks...]
+  2     [running] <--------- [route:blue]         [starting...]
+  3     [running] <--------- [route:blue]         [healthy ~]
+  4     [running] <--------- [route:blue]         [post-up hooks...]
+  5     [running] <--------- [route:blue]         [post-up FAIL x]
+  6     [running] <--------- [route:blue]         [killed]
+
+Result: Blue continues serving, deployment aborted safely
+```
+
+**For recreate rollout** with `post-up` hook failure:
+- The new instance is stopped
+- Service returns to "not running" state
+- Error is logged
+
+This ensures hooks never leave the system in a broken state - either the full deployment succeeds (including hooks), or it rolls back cleanly.
+
+### 24.9 Hook Environment
+
+Hooks inherit the service's full environment (global + service-level environment plugins). Additionally, Hive injects these variables:
+
+| Variable | Description |
+|----------|-------------|
+| `HIVE_HOOK_EVENT` | Current hook event: `pre-up`, `post-up`, `pre-down`, `post-down` |
+| `HIVE_SERVICE_NAME` | Service name (per-service hooks only) |
+| `HIVE_SERVICE_FQN` | Fully qualified name `source:service` (per-service hooks only) |
+| `HIVE_SOURCE_NAME` | Source name |
+| `HIVE_ROLLOUT_TYPE` | Rollout type: `recreate`, `blue-green`, etc. (per-service only) |
+| `HIVE_ROLLOUT_COLOR` | Active color for blue-green: `blue` or `green` (blue-green only) |
+
+Hook-level `environment` overrides service/global environment.
+
+### 24.10 Examples
+
+**Example - Service with migrations and seed data:**
+```yaml
+services:
+  auth:
+    runner:
+      type: script
+      script:
+        run: cargo run -p adi-auth-http
+        working_dir: crates/adi-auth
+    hooks:
+      pre-up:
+        - run: cargo run --bin migrate -- up
+          working_dir: crates/adi-auth
+          on_failure: abort
+          timeout: 120s
+      post-up:
+        - run: ./scripts/verify-auth-service.sh
+          on_failure: abort
+    depends_on:
+      - postgres
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8012
+    proxy:
+      host: adi.local
+      path: /api/auth
+```
+
+**Example - Blue-green with smoke test:**
+```yaml
+services:
+  api:
+    runner:
+      type: script
+      script:
+        run: cargo run --bin api-server
+    hooks:
+      post-up:
+        - run: |
+            set -e
+            # Smoke test the new instance before traffic switch
+            curl -sf http://localhost:${HIVE_PORT_HTTP}/health || exit 1
+            curl -sf http://localhost:${HIVE_PORT_HTTP}/api/v1/status || exit 1
+            echo "Smoke tests passed"
+          on_failure: abort
+          timeout: 30s
+      pre-down:
+        - run: |
+            echo "Draining connections for $HIVE_SERVICE_NAME..."
+            curl -sf -X POST http://localhost:${HIVE_PORT_HTTP}/admin/drain
+          on_failure: warn
+          timeout: 15s
+    rollout:
+      type: blue-green
+      blue-green:
+        ports:
+          http:
+            blue: 8080
+            green: 8081
+        healthy_duration: 10s
+    proxy:
+      host: api.example.com
+      path: /
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+```
+
+**Example - Global hooks for shared infrastructure:**
+```yaml
+hooks:
+  pre-up:
+    - run: |
+        set -e
+        echo "Checking Docker is available..."
+        docker info > /dev/null 2>&1 || { echo "Docker is not running"; exit 1; }
+      on_failure: abort
+      timeout: 10s
+    - run: |
+        echo "Creating databases..."
+        psql -h localhost -U adi -c "CREATE DATABASE IF NOT EXISTS adi_auth;"
+        psql -h localhost -U adi -c "CREATE DATABASE IF NOT EXISTS adi_platform;"
+      on_failure: warn
+  post-down:
+    - run: echo "Stack stopped at $(date)"
+      on_failure: warn
+
+services:
+  postgres:
+    runner:
+      type: docker
+      docker:
+        image: postgres:15
+    # ...
+```
+
+**Example - Hook with retries (flaky external dependency):**
+```yaml
+services:
+  api:
+    hooks:
+      pre-up:
+        - run: |
+            # Wait for external service to be available
+            curl -sf https://external-api.example.com/health
+          on_failure: retry
+          retries: 5
+          retry_delay: 10s
+          timeout: 15s
+```
+
+**Example - Docker runner hook (Flyway migrations):**
+```yaml
+services:
+  auth:
+    runner:
+      type: script
+      script:
+        run: cargo run -p adi-auth-http
+    hooks:
+      pre-up:
+        - runner:
+            type: docker
+            docker:
+              image: flyway/flyway:10
+              command: -url=jdbc:postgresql://host.docker.internal:5432/adi_auth migrate
+              volumes:
+                - ./crates/adi-auth/migrations:/flyway/sql
+              environment:
+                FLYWAY_USER: adi
+                FLYWAY_PASSWORD: adi
+          on_failure: abort
+          timeout: 180s
+    depends_on:
+      - postgres
+```
+
+**Example - Parallel builds before stack starts:**
+```yaml
+hooks:
+  pre-up:
+    # Build all services concurrently
+    - parallel:
+        - run: cargo build -p adi-auth-http --release
+          working_dir: crates/adi-auth
+        - run: cargo build -p adi-platform-api --release
+          working_dir: crates/adi-platform-api
+        - run: cargo build -p adi-api-proxy --release
+          working_dir: crates/adi-api-proxy/http
+      on_failure: abort
+      timeout: 600s
+
+    # Sequential: run migrations after all builds succeed
+    - run: |
+        set -e
+        cd crates/adi-auth && cargo run --bin migrate -- up
+        cd ../adi-platform-api && cargo run --bin migrate -- up
+      on_failure: abort
+      timeout: 120s
+```
+
+**Example - Mixed parallel with different runners:**
+```yaml
+services:
+  api:
+    hooks:
+      pre-up:
+        - parallel:
+            # Script: run local migrations
+            - run: cargo run --bin migrate -- up
+              working_dir: crates/adi-auth
+            # Docker: run Flyway migrations
+            - runner:
+                type: docker
+                docker:
+                  image: flyway/flyway:10
+                  command: migrate
+                  volumes:
+                    - ./migrations/platform:/flyway/sql
+            # Script: seed test data
+            - run: ./scripts/seed-data.sh
+          on_failure: abort
+          timeout: 300s
+      post-up:
+        # Smoke tests run in parallel after service is healthy
+        - parallel:
+            - run: curl -sf http://localhost:${HIVE_PORT_HTTP}/api/v1/users
+            - run: curl -sf http://localhost:${HIVE_PORT_HTTP}/api/v1/status
+            - run: curl -sf http://localhost:${HIVE_PORT_HTTP}/health
+          on_failure: abort
+          timeout: 30s
+```
+
+### 24.11 SQLite Schema
+
+```sql
+-- Hook steps (shared structure for global and per-service hooks)
+-- step_type determines which fields are used:
+--   'script'   -> run, working_dir
+--   'runner'   -> runner_type, runner_config
+--   'parallel' -> parallel_group_id (links to child steps)
+
+-- Global hooks
+CREATE TABLE global_hooks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event TEXT NOT NULL,               -- 'pre-up', 'post-up', 'pre-down', 'post-down'
+    sort_order INTEGER NOT NULL,       -- Execution order within event
+    step_type TEXT NOT NULL DEFAULT 'script',  -- 'script', 'runner', 'parallel'
+    run TEXT,                          -- Command (step_type = 'script')
+    working_dir TEXT,                  -- Working directory (step_type = 'script')
+    runner_type TEXT,                  -- Plugin name (step_type = 'runner')
+    runner_config JSON,               -- Plugin config (step_type = 'runner')
+    parallel_group_id INTEGER,        -- Links to global_hook_parallel_steps (step_type = 'parallel')
+    on_failure TEXT DEFAULT 'abort',   -- 'abort', 'warn', 'retry'
+    timeout_ms INTEGER DEFAULT 60000,
+    retries INTEGER DEFAULT 3,
+    retry_delay_ms INTEGER DEFAULT 5000,
+    environment JSON
+);
+
+-- Steps within a global parallel group
+CREATE TABLE global_hook_parallel_steps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER NOT NULL,         -- Matches global_hooks.parallel_group_id
+    step_type TEXT NOT NULL DEFAULT 'script',
+    run TEXT,
+    working_dir TEXT,
+    runner_type TEXT,
+    runner_config JSON,
+    on_failure TEXT,                    -- Inherits from parent if NULL
+    timeout_ms INTEGER,
+    retries INTEGER,
+    retry_delay_ms INTEGER,
+    environment JSON
+);
+
+-- Per-service hooks
+CREATE TABLE service_hooks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_name TEXT NOT NULL REFERENCES services(name) ON DELETE CASCADE,
+    event TEXT NOT NULL,               -- 'pre-up', 'post-up', 'pre-down', 'post-down'
+    sort_order INTEGER NOT NULL,       -- Execution order within event
+    step_type TEXT NOT NULL DEFAULT 'script',
+    run TEXT,
+    working_dir TEXT,
+    runner_type TEXT,
+    runner_config JSON,
+    parallel_group_id INTEGER,         -- Links to service_hook_parallel_steps
+    on_failure TEXT DEFAULT 'abort',
+    timeout_ms INTEGER DEFAULT 60000,
+    retries INTEGER DEFAULT 3,
+    retry_delay_ms INTEGER DEFAULT 5000,
+    environment JSON,
+    UNIQUE(service_name, event, sort_order)
+);
+
+-- Steps within a per-service parallel group
+CREATE TABLE service_hook_parallel_steps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER NOT NULL,         -- Matches service_hooks.parallel_group_id
+    step_type TEXT NOT NULL DEFAULT 'script',
+    run TEXT,
+    working_dir TEXT,
+    runner_type TEXT,
+    runner_config JSON,
+    on_failure TEXT,
+    timeout_ms INTEGER,
+    retries INTEGER,
+    retry_delay_ms INTEGER,
+    environment JSON
+);
+```
+
+---
+
 ## Appendix A: Plugin Interface
 
 Plugins MUST implement a specific trait depending on their type. See `crates/hive/core/src/plugins/` for trait definitions.
@@ -3824,6 +4518,16 @@ pub trait RunnerPlugin: Send + Sync {
     fn start(&self, config: &ServiceConfig) -> Result<RunningService>;
     fn stop(&self, service: &RunningService) -> Result<()>;
     fn logs(&self, service: &RunningService) -> Result<LogStream>;
+
+    /// Run a one-shot task for lifecycle hooks.
+    /// MUST block until the task completes and return the exit status.
+    /// Plugins that do not support hooks should return an error.
+    fn run_hook(&self, config: &HookRunnerConfig) -> Result<ExitStatus> {
+        Err(anyhow!("Runner '{}' does not support hooks", self.name()))
+    }
+
+    /// Whether this runner supports one-shot hook execution.
+    fn supports_hooks(&self) -> bool { false }
 }
 ```
 
@@ -3860,6 +4564,8 @@ pub trait HealthPlugin: Send + Sync {
 | Dependencies | + | + | + |
 | Restart policies | + | + | + |
 | Build step | + | - | + |
+| **Lifecycle hooks** | - | - | + (pre/post up/down) |
+| **Rollout-safe hooks** | - | - | + (blue-green aware) |
 | Plugin architecture | - | - | + |
 | Environment plugins | - | - | + |
 | ports-manager integration | - | - | + |
@@ -3885,3 +4591,4 @@ pub trait HealthPlugin: Send + Sync {
 | 0.3.0-draft | 2026-01-25 | Replaced log plugins with comprehensive observability system |
 | 0.4.0-draft | 2026-01-26 | Added Daemon Management (Section 22), CLI Reference (Section 23), updated TL;DR |
 | 0.5.0-draft | 2026-01-26 | Added "Why Hive?" section with value proposition and feature comparison |
+| 0.6.0-draft | 2026-01-27 | Added Lifecycle Hooks (Section 24) with rollout-safe blue-green integration |

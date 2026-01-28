@@ -218,6 +218,11 @@ services:
       script:
         run: cargo run --bin adi-logging-service
         working_dir: crates/adi-logging-service
+    hooks:
+      pre-up:
+        - run: cargo run --bin logging-migrate --features migrate all
+          working_dir: crates/lib/lib-logging-core
+          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -250,6 +255,11 @@ services:
       script:
         run: cargo run -p adi-auth-http
         working_dir: crates/adi-auth
+    hooks:
+      pre-up:
+        - run: cargo run --bin adi-auth-migrate -- run
+          working_dir: crates/adi-auth/cli
+          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -289,6 +299,11 @@ services:
       script:
         run: cargo run --bin adi-platform-api
         working_dir: crates/adi-platform-api
+    hooks:
+      pre-up:
+        - run: cargo run --bin adi-platform-migrate all
+          working_dir: crates/adi-platform-api
+          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -412,6 +427,11 @@ services:
       script:
         run: cargo run
         working_dir: crates/adi-analytics-ingestion
+    hooks:
+      pre-up:
+        - run: cargo run --bin analytics-migrate --features migrate all
+          working_dir: crates/lib/lib-analytics-core
+          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -475,6 +495,11 @@ services:
       script:
         run: cargo run --bin adi-api-proxy
         working_dir: crates/adi-api-proxy/http
+    hooks:
+      pre-up:
+        - run: cargo run --bin adi-api-proxy-migrate
+          working_dir: crates/adi-api-proxy/http
+          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -513,6 +538,11 @@ services:
       script:
         run: cargo run --bin adi-balance-api
         working_dir: crates/adi-balance-api
+    hooks:
+      pre-up:
+        - run: cargo run --bin adi-balance-migrate all
+          working_dir: crates/adi-balance-api
+          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -545,6 +575,11 @@ services:
       script:
         run: cargo run --bin adi-credentials-api
         working_dir: crates/adi-credentials-api
+    hooks:
+      pre-up:
+        - run: cargo run --bin adi-credentials-migrate all
+          working_dir: crates/adi-credentials-api
+          timeout: "120s"
     rollout:
       type: recreate
       recreate:

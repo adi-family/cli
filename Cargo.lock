@@ -5483,6 +5483,7 @@ dependencies = [
  "http 1.4.0",
  "serde",
  "serde_json",
+ "serde_yaml",
  "tokio",
  "tracing",
 ]
@@ -5670,6 +5671,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -5685,6 +5687,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -5698,6 +5701,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
