@@ -6808,8 +6808,8 @@ dependencies = [
  "anyhow",
  "chrono",
  "dotenvy",
- "lib-migrations-core 0.1.0 (git+https://github.com/adi-family/lib-migrations-core.git)",
- "lib-migrations-sql",
+ "lib-migrations-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lib-migrations-sql 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -6818,6 +6818,7 @@ dependencies = [
  "tokio",
  "tokio-test",
  "tracing",
+ "tracing-subscriber",
  "uuid",
 ]
 
@@ -7138,7 +7139,7 @@ dependencies = [
  "dotenvy",
  "http 1.4.0",
  "lib-migrations-core 0.1.0 (git+https://github.com/adi-family/lib-migrations-core.git)",
- "lib-migrations-sql",
+ "lib-migrations-sql 0.1.0 (git+https://github.com/adi-family/lib-migrations-sql.git)",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -7194,6 +7195,17 @@ name = "lib-migrations-core"
 version = "0.1.0"
 source = "git+https://github.com/adi-family/lib-migrations-core.git#cf2fdcca764eb1978f4c99991feaa96ca94efedf"
 dependencies = [
+ "thiserror 2.0.17",
+]
+
+[[package]]
+name = "lib-migrations-sql"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb759712cc2eccf23174ec3b2554fc49c38c20e48726fcd4a2b5ce45a977add1"
+dependencies = [
+ "lib-migrations-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusqlite",
  "thiserror 2.0.17",
 ]
 
