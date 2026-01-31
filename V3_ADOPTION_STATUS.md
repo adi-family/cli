@@ -10,7 +10,7 @@
 Unifying plugin ABIs by replacing FFI-safe v2 with native Rust async traits v3.
 
 **Goal:** Migrate 86+ plugins from v2 → v3
-**Progress:** 9/86 plugins migrated (10%)
+**Progress:** 13/86 plugins migrated (15%)
 **Infrastructure:** 100% complete ✅
 
 ---
@@ -54,16 +54,17 @@ Unifying plugin ABIs by replacing FFI-safe v2 with native Rust async traits v3.
 
 ## In Progress
 
-### Phase 3: Core Infrastructure (0% - Next)
+### Phase 3: Core Infrastructure (100% ✅)
 
-**Task:** Update adi-cli to load v3 plugins
+**Task:** Update adi-cli to load v3 plugins - COMPLETE
 
-**Requirements:**
-- [ ] Add PluginManagerV3 to PluginRuntime
-- [ ] Detect v3 vs v2 based on manifest api_version
-- [ ] Load v3 plugins via LoadedPluginV3
-- [ ] Dispatch CLI commands to v3 plugins
-- [ ] Support both v2 and v3 during transition
+**Completed:**
+- [x] Add PluginManagerV3 to PluginRuntime
+- [x] Detect v3 vs v2 based on manifest api_version
+- [x] Load v3 plugins via LoadedPluginV3
+- [x] Dispatch CLI commands to v3 plugins
+- [x] Support both v2 and v3 during transition
+- [x] Add plugin_create_cli export for CLI-providing v3 plugins
 
 ---
 
@@ -96,10 +97,10 @@ Unifying plugin ABIs by replacing FFI-safe v2 with native Rust async traits v3.
 | `adi.agent-loop` | CLI + HTTP | 🔲 Pending | Medium |
 | `adi.knowledgebase` | CLI + HTTP | 🔲 Pending | Low |
 | `adi.api-proxy` | CLI + HTTP | 🔲 Pending | Low |
-| `adi.workflow` | CLI | 🔲 Pending | Low |
-| `adi.audio` | CLI | 🔲 Pending | Low |
+| `adi.workflow` | CLI | ✅ Migrated | Low |
+| `adi.audio` | CLI | ✅ Migrated | Low |
 | `adi.coolify` | CLI | 🔲 Pending | Low |
-| `adi.linter` | CLI | 🔲 Pending | Low |
+| `adi.linter` | CLI | ✅ Migrated | Low |
 | `adi.embed` | Service | 🔲 Pending | Low |
 
 **Estimated time:** 10 plugins × 30-60 min = 5-10 hours
@@ -161,7 +162,7 @@ Unifying plugin ABIs by replacing FFI-safe v2 with native Rust async traits v3.
 | Plugin | Services | Status |
 |--------|----------|--------|
 | `adi.llm.uzu` | CLI | 🔲 Pending |
-| `adi.browser-debug` | CLI | 🔲 Pending |
+| `adi.browser-debug` | CLI | ✅ Migrated |
 | Others | Various | 🔲 Pending |
 
 ---
