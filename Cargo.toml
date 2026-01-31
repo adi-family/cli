@@ -31,6 +31,7 @@ members = [
     "crates/lib/lib-i18n-core",
     "crates/lib/lib-mcp-core",
     "crates/lib/lib-plugin-abi-orchestration",
+    "crates/lib/lib-webrtc-manager",
 
     # Indexer components (flat submodules)
     "crates/lib/lib-embed",
@@ -123,6 +124,9 @@ members = [
     # Logging
     "crates/lib/lib-logging-core",
     "crates/adi-logging-service",
+
+    # Platform API
+    "crates/adi-platform-api",
 
     # Tools
     "crates/tool-generate-heartbit",
