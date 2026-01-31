@@ -23,6 +23,7 @@ members = [
 
     # Shared libraries
     "crates/lib/lib-cli-common",
+    "crates/lib/lib-daemon-core",
     "crates/lib/lib-http-common",
     "crates/lib/lib-migrations",
     "crates/lib/lib-typespec-api",

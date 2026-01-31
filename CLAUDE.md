@@ -86,6 +86,7 @@ Several components follow a standard multi-crate structure within a single direc
 - `crates/adi-cli` - Component installer/manager
 - `crates/lib-embed` - Shared embedding library
 - `crates/lib-cli-common` - Common CLI utilities
+- `crates/lib-daemon-core` - Generic daemon management library (PID files, Unix sockets, IPC, shutdown coordination)
 - `crates/lib-migrations` - Database migration framework
 - `crates/adi-indexer/core` - Code indexer core library
 - `crates/adi-indexer/cli` - Code indexer CLI

@@ -109,35 +109,51 @@ Plugin ABI is physically located within the hive component tree but is logically
 
 ---
 
-### 4. Should daemon functionality be core's responsibility or a separate crate?
+### 4. ~~Should daemon functionality be core's responsibility or a separate crate?~~ ✅ COMPLETED
 
-**Evidence:**
-- core/src/daemon.rs: 1,304 lines - largest file in hive-core
-- Daemon manages: Unix socket control, PID files, source registry, proxy server, observability
-- plugin/src/lib.rs (lines 374-950): CLI commands delegate heavily to daemon client
-- Daemon mode vs. standalone mode creates two execution paths
+**Decision:** Extracted generic daemon infrastructure to `lib-daemon-core`, kept hive-specific logic in hive-core
 
-**Current State:**
-The daemon is a core concept in hive-core but adds significant complexity. Non-daemon usage (simple `hive up`) pays the cost of daemon infrastructure being compiled in.
+**Implementation:**
+- ✅ Created new crate: `crates/lib/lib-daemon-core`
+- ✅ Provides reusable daemon infrastructure:
+  - PID file management with stale file detection
+  - Unix socket server/client utilities
+  - IPC protocol framework (request/response traits)
+  - Graceful shutdown coordinator with signal handling
+  - Auto-cleanup (RAII for PID files and sockets)
+- ✅ Refactored `hive-core` to use `lib-daemon-core`:
+  - Replaced manual PID file handling with `PidFile` struct
+  - Replaced manual socket handling with `UnixSocketServer`/`UnixSocketClient`
+  - Replaced `mpsc` shutdown with `ShutdownCoordinator`
+  - Kept hive-specific logic: `DaemonRequest`/`DaemonResponse`, source management, proxy, observability
+- ✅ All tests passing, builds successfully
 
-**Architecture Tension:**
+**Architecture:**
 ```
-hive-core = base library  (what it claims to be)
-   vs.
-hive-core = daemon + library  (what it actually is)
+lib-daemon-core (generic infrastructure)
+    ↓
+adi-hive-core (hive-specific daemon logic)
+    ↓
+adi-hive-http (daemon binary)
 ```
 
-**Options to Consider:**
-1. **Extract to adi-hive-daemon crate** - Core becomes pure library, daemon wraps it
-2. **Keep in core** - Daemon mode is fundamental to hive's design
-3. **Make daemon a feature flag** - Compile-time opt-out for embedded use cases
+**Rationale:**
+- Generic daemon patterns (PID files, Unix sockets) are reusable across ADI components
+- Clear separation: infrastructure vs. business logic
+- Other services (future: adi-task-daemon, adi-agent-daemon) can reuse lib-daemon-core
+- Reduced code duplication and improved maintainability
+- Hive-specific logic (sources, services, proxy, observability) remains in hive-core
 
-**Questions for Reviewer:**
-- Will hive-core ever be embedded in non-daemon contexts (Wasm, mobile, minimal CLI)?
-- Is daemon mode the "happy path" and standalone mode is fallback?
-- Should daemon orchestration logic be reusable by other ADI components?
+**Files Changed (5 total):**
+- Created: `crates/lib/lib-daemon-core/` (new crate with 6 modules)
+- Updated: `crates/hive/core/src/daemon.rs` (refactored to use lib-daemon-core)
+- Updated: `crates/hive/core/Cargo.toml` (added lib-daemon-core dependency)
+- Updated: `Cargo.toml` (added lib-daemon-core to workspace)
+- Created: `crates/lib/lib-daemon-core/CLAUDE.md` (documentation)
 
-**Impact:** High - Affects core API surface and execution model
+**Status:** ✅ **COMPLETED** - Generic daemon infrastructure extracted, hive refactored successfully
+
+**Impact:** Completed successfully - Clean separation achieved, zero breaking changes, all builds passing
 
 ---
 

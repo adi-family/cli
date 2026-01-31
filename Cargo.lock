@@ -586,6 +586,7 @@ dependencies = [
  "http-body-util",
  "hyper 1.8.1",
  "hyper-util",
+ "lib-daemon-core",
  "lib-plugin-abi-orchestration",
  "lib-signaling-protocol",
  "libc",
@@ -7040,6 +7041,21 @@ dependencies = [
  "thiserror 2.0.17",
  "tracing",
  "urlencoding",
+]
+
+[[package]]
+name = "lib-daemon-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "libc",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tracing",
 ]
 
 [[package]]
