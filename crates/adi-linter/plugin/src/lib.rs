@@ -66,3 +66,8 @@ impl CliCommands for LinterPlugin {
 pub fn plugin_create() -> Box<dyn Plugin> {
     Box::new(LinterPlugin)
 }
+
+#[no_mangle]
+pub fn plugin_create_cli() -> Box<dyn CliCommands> {
+    Box::new(LinterPlugin)
+}

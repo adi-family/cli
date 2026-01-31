@@ -310,3 +310,8 @@ fn handle_convert(input: &str, output: &str) -> Result<CliResult> {
 pub fn plugin_create() -> Box<dyn Plugin> {
     Box::new(AudioPlugin)
 }
+
+#[no_mangle]
+pub fn plugin_create_cli() -> Box<dyn CliCommands> {
+    Box::new(AudioPlugin)
+}

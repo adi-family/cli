@@ -54,3 +54,8 @@ impl CliCommands for BrowserDebugPlugin {
 pub fn plugin_create() -> Box<dyn Plugin> {
     Box::new(BrowserDebugPlugin)
 }
+
+#[no_mangle]
+pub fn plugin_create_cli() -> Box<dyn CliCommands> {
+    Box::new(BrowserDebugPlugin)
+}
