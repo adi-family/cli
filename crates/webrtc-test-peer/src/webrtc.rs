@@ -2,7 +2,7 @@
 //!
 //! Manages RTCPeerConnection lifecycle, ICE candidates, and data channels.
 
-use lib_tarminal_sync::SignalingMessage;
+use lib_signaling_protocol::SignalingMessage;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, broadcast};

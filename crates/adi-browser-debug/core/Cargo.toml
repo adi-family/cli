@@ -30,5 +30,5 @@ chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 tracing = "0.1"
 
-# Re-export shared types
-lib-tarminal-sync = { path = "../../lib/lib-tarminal-sync" }
+# Signaling protocol
+lib-signaling-protocol = { path = "../../lib/lib-signaling-protocol" }

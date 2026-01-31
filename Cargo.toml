@@ -29,6 +29,7 @@ members = [
     "crates/lib/lib-task-store",
     "crates/lib/lib-i18n-core",
     "crates/lib/lib-mcp-core",
+    "crates/lib/lib-plugin-abi-orchestration",
 
     # Indexer components (flat submodules)
     "crates/lib/lib-embed",
@@ -69,7 +70,6 @@ members = [
     "crates/hive/core",
     "crates/hive/http",
     "crates/hive/ssl",
-    "crates/hive/orchestrator",
 
     # Hive plugins
     "crates/hive/plugins/abi",
@@ -104,6 +104,7 @@ members = [
     "crates/hive/plugins/proxy-rewrite",
     "crates/hive/plugins/proxy-auth-api-key",
     "crates/hive/plugins/proxy-auth-oidc",
+    "crates/hive/plugins/orchestrator",
 
     # Tarminal components (flat submodules)
     "crates/lib/lib-misc-color",
@@ -113,6 +114,7 @@ members = [
     "crates/lib/lib-json-tree",
     "crates/lib/lib-terminal-grid",
     "crates/lib/lib-iced-ui",
+    "crates/lib/lib-signaling-protocol",
     "crates/lib/lib-tarminal-sync",
 
     # Analytics

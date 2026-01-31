@@ -28,7 +28,7 @@ pub use signaling::{SignalingClient, SignalingEvent, ConnectionState};
 pub use webrtc::{WebRtcManager, WebRtcEvent, DataChannelMsg};
 pub use handlers::{PtyHandler, SilkHandler, FileSystemHandler, MessageHandler};
 
-use lib_tarminal_sync::SignalingMessage;
+use lib_signaling_protocol::SignalingMessage;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 

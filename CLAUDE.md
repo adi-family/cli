@@ -38,6 +38,26 @@ See `NEXT_STEPS_I18N.md` for detailed status and remaining work.
 7. External commands (9 messages) - Dynamic command dispatch
 8. Common (9 messages) - Shared UI elements
 
+## Plugin ABI Architecture
+
+The project uses a **split plugin ABI architecture** with domain-specific ABIs:
+
+### General Plugin ABI
+- **lib-plugin-abi** (`crates/lib/lib-plugin-abi`) - General CLI/HTTP/MCP plugins
+- Used by: adi-cli, general-purpose plugins
+- Features: CLI commands, HTTP services, MCP tools, service registry
+
+### Orchestration Plugin ABI
+- **lib-plugin-abi-orchestration** (`crates/lib/lib-plugin-abi-orchestration`) - Orchestration-specific plugins
+- Used by: Hive orchestrator, orchestration plugins
+- Categories: Runner, Env, Health, Proxy, Obs (observability), Rollout
+- Wrapper: `hive-plugin-abi` re-exports for backwards compatibility
+
+### Design Principle
+- **Split by domain**: Each ABI targets specific use cases (CLI vs orchestration)
+- **Shared when appropriate**: Common orchestration concerns are in lib-plugin-abi-orchestration
+- **Extensible**: New orchestrators can reuse lib-plugin-abi-orchestration
+
 ## Multi-Crate Component Architecture
 Several components follow a standard multi-crate structure within a single directory:
 
@@ -97,7 +117,8 @@ Several components follow a standard multi-crate structure within a single direc
 - `crates/lib-iced-ui` - Reusable iced UI components
 - `crates/lib-client-github` - GitHub API client library
 - `crates/lib-client-openrouter` - OpenRouter API client library
-- `crates/lib-tarminal-sync` - Client-agnostic sync protocol for Tarminal
+- `crates/lib-signaling-protocol` - WebSocket signaling protocol (device pairing, cocoon spawning, WebRTC, SSL, browser debug) - used by hive, cocoon, signaling-server, platform-api
+- `crates/lib-tarminal-sync` - Terminal CRDT sync protocol (version vectors, grid deltas) - used by Tarminal terminal emulator only
 - `crates/tarminal-signaling-server` - WebSocket signaling server for device pairing
 - `crates/adi-platform-api` - Unified Platform API (tasks, integrations, orchestration)
 - `crates/lib-analytics-core` - Analytics event tracking and persistence library

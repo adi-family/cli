@@ -18,8 +18,8 @@ path = "src/lib.rs"
 default = []
 
 [dependencies]
-# Shared message types
-lib-tarminal-sync = { path = "../lib/lib-tarminal-sync" }
+# Signaling protocol
+lib-signaling-protocol = { path = "../lib/lib-signaling-protocol" }
 
 # Async runtime
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "time", "signal"] }

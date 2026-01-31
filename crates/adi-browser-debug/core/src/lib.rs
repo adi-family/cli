@@ -5,8 +5,8 @@
 pub mod client;
 pub mod token;
 
-// Re-export key types from lib-tarminal-sync
-pub use lib_tarminal_sync::{
+// Re-export key types from signaling protocol
+pub use lib_signaling_protocol::{
     BrowserDebugTab, ConsoleEntry, ConsoleFilters, ConsoleLevel, NetworkEventData,
     NetworkEventType, NetworkFilters, NetworkRequest, SignalingMessage,
 };

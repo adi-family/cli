@@ -3,7 +3,7 @@
 //! Handles device registration and message routing.
 
 use futures::{SinkExt, StreamExt};
-use lib_tarminal_sync::SignalingMessage;
+use lib_signaling_protocol::SignalingMessage;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, broadcast};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
