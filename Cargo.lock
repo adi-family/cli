@@ -1251,19 +1251,20 @@ dependencies = [
 
 [[package]]
 name = "adi-workflow-plugin"
-version = "0.1.6"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
+ "async-trait",
  "atty",
  "dialoguer 0.11.0",
  "dirs 5.0.1",
  "glob",
- "lib-plugin-abi",
+ "lib-plugin-abi-v3",
  "minijinja",
  "once_cell",
  "regex",
  "serde",
  "serde_json",
+ "tokio",
  "toml 0.8.23",
 ]
 

@@ -1,8 +1,8 @@
-//! ADI Workflow Plugin
+//! ADI Workflow Plugin (v3)
 //!
 //! Run workflows defined in TOML files with interactive prompts and templating.
 
-mod cli;
+mod cli_impl;
 mod discovery;
 mod executor;
 mod options;
@@ -11,118 +11,74 @@ mod prelude;
 mod prompts;
 mod template;
 
-use abi_stable::std_types::{ROption, RResult, RStr, RString, RVec};
-use lib_plugin_abi::{
-    PluginContext, PluginError, PluginInfo, PluginVTable, ServiceDescriptor, ServiceError,
-    ServiceHandle, ServiceMethod, ServiceVTable, ServiceVersion,
-};
-use std::ffi::c_void;
+use lib_plugin_abi_v3::*;
+use lib_plugin_abi_v3::cli::{CliCommand, CliCommands, CliContext, CliResult};
 
-const SERVICE_CLI: &str = "adi.workflow.cli";
+pub struct WorkflowPlugin;
 
-// === Plugin VTable Implementation ===
-
-extern "C" fn plugin_info() -> PluginInfo {
-    PluginInfo::new(
-        "adi.workflow",
-        "ADI Workflow",
-        env!("CARGO_PKG_VERSION"),
-        "core",
-    )
-    .with_author("ADI Team")
-    .with_description("Run workflows defined in TOML files")
-    .with_min_host_version("0.8.0")
-}
-
-extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
-    unsafe {
-        let host = (*ctx).host();
-
-        // Register CLI commands service
-        let cli_descriptor =
-            ServiceDescriptor::new(SERVICE_CLI, ServiceVersion::new(1, 0, 0), "adi.workflow")
-                .with_description("CLI commands for workflow execution");
-
-        let cli_handle = ServiceHandle::new(
-            SERVICE_CLI,
-            ctx as *const c_void,
-            &CLI_SERVICE_VTABLE as *const ServiceVTable,
-        );
-
-        if let Err(code) = host.register_svc(cli_descriptor, cli_handle) {
-            host.error(&format!("Failed to register CLI service: {}", code));
-            return code;
+#[async_trait]
+impl Plugin for WorkflowPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            id: "adi.workflow".to_string(),
+            name: "ADI Workflow".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            plugin_type: PluginType::Core,
+            author: Some("ADI Team".to_string()),
+            description: Some("Run workflows defined in TOML files with interactive prompts".to_string()),
         }
-
-        host.info("ADI Workflow plugin initialized");
     }
 
-    0
+    async fn init(&mut self, _ctx: &PluginContext) -> Result<()> {
+        Ok(())
+    }
+
+    async fn shutdown(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
-extern "C" fn plugin_cleanup(_ctx: *mut PluginContext) {}
+#[async_trait]
+impl CliCommands for WorkflowPlugin {
+    async fn list_commands(&self) -> Vec<CliCommand> {
+        vec![
+            CliCommand {
+                name: "run".to_string(),
+                description: "Run a workflow by name".to_string(),
+                usage: "workflow run <name> [--arg=value]".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "list".to_string(),
+                description: "List available workflows".to_string(),
+                usage: "workflow list".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "show".to_string(),
+                description: "Show workflow definition".to_string(),
+                usage: "workflow show <name>".to_string(),
+                has_subcommands: false,
+            },
+        ]
+    }
 
-extern "C" fn handle_message(
-    _ctx: *mut PluginContext,
-    msg_type: RStr<'_>,
-    _msg_data: RStr<'_>,
-) -> RResult<RString, PluginError> {
-    RResult::RErr(PluginError::new(
-        -1,
-        format!("Unknown message type: {}", msg_type.as_str()),
-    ))
+    async fn run_command(&self, ctx: &CliContext) -> Result<CliResult> {
+        // Convert context to JSON format expected by cli_impl::run_command
+        let context_json = serde_json::json!({
+            "command": &ctx.command,
+            "args": &ctx.args,
+            "cwd": &ctx.cwd,
+        });
+
+        match cli_impl::run_command(&context_json.to_string()) {
+            Ok(output) => Ok(CliResult::success(output)),
+            Err(e) => Ok(CliResult::error(e.to_string())),
+        }
+    }
 }
-
-// === Plugin Entry Point ===
-
-static PLUGIN_VTABLE: PluginVTable = PluginVTable {
-    info: plugin_info,
-    init: plugin_init,
-    update: ROption::RNone,
-    cleanup: plugin_cleanup,
-    handle_message: ROption::RSome(handle_message),
-};
 
 #[no_mangle]
-pub extern "C" fn plugin_entry() -> *const PluginVTable {
-    &PLUGIN_VTABLE
-}
-
-// === CLI Service VTable ===
-
-static CLI_SERVICE_VTABLE: ServiceVTable = ServiceVTable {
-    invoke: cli_invoke,
-    list_methods: cli_list_methods,
-};
-
-extern "C" fn cli_invoke(
-    _handle: *const c_void,
-    method: RStr<'_>,
-    args: RStr<'_>,
-) -> RResult<RString, ServiceError> {
-    match method.as_str() {
-        "run_command" => {
-            let result = cli::run_command(args.as_str());
-            match result {
-                Ok(output) => RResult::ROk(RString::from(output)),
-                Err(e) => RResult::RErr(ServiceError::invocation_error(e)),
-            }
-        }
-        "list_commands" => {
-            let commands = cli::list_commands();
-            RResult::ROk(RString::from(
-                serde_json::to_string(&commands).unwrap_or_default(),
-            ))
-        }
-        _ => RResult::RErr(ServiceError::method_not_found(method.as_str())),
-    }
-}
-
-extern "C" fn cli_list_methods(_handle: *const c_void) -> RVec<ServiceMethod> {
-    vec![
-        ServiceMethod::new("run_command").with_description("Run a CLI command"),
-        ServiceMethod::new("list_commands").with_description("List available commands"),
-    ]
-    .into_iter()
-    .collect()
+pub fn plugin_create() -> Box<dyn Plugin> {
+    Box::new(WorkflowPlugin)
 }
