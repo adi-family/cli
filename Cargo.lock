@@ -591,6 +591,7 @@ dependencies = [
  "hyper 1.8.1",
  "hyper-util",
  "lib-daemon-core",
+ "lib-hive-daemon-client",
  "lib-plugin-abi-orchestration",
  "lib-signaling-protocol",
  "lib-webrtc-manager",
@@ -832,6 +833,7 @@ dependencies = [
 name = "adi-lang-cpp"
 version = "0.1.0"
 dependencies = [
+ "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "serde",
@@ -845,6 +847,7 @@ dependencies = [
 name = "adi-lang-csharp"
 version = "0.1.0"
 dependencies = [
+ "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -858,6 +861,7 @@ dependencies = [
 name = "adi-lang-go"
 version = "0.1.0"
 dependencies = [
+ "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "serde",
@@ -870,6 +874,7 @@ dependencies = [
 name = "adi-lang-java"
 version = "0.1.0"
 dependencies = [
+ "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -883,6 +888,7 @@ dependencies = [
 name = "adi-lang-lua"
 version = "0.1.0"
 dependencies = [
+ "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -896,6 +902,7 @@ dependencies = [
 name = "adi-lang-php"
 version = "0.1.0"
 dependencies = [
+ "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -909,6 +916,7 @@ dependencies = [
 name = "adi-lang-python"
 version = "0.1.0"
 dependencies = [
+ "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "serde",
@@ -935,6 +943,7 @@ dependencies = [
 name = "adi-lang-rust"
 version = "0.1.0"
 dependencies = [
+ "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -948,6 +957,7 @@ dependencies = [
 name = "adi-lang-swift"
 version = "0.1.0"
 dependencies = [
+ "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -961,6 +971,7 @@ dependencies = [
 name = "adi-lang-typescript"
 version = "0.1.0"
 dependencies = [
+ "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "serde",
@@ -7099,6 +7110,21 @@ dependencies = [
  "thiserror 2.0.17",
  "toml 0.8.23",
  "tracing",
+]
+
+[[package]]
+name = "lib-hive-daemon-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "dirs 5.0.1",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

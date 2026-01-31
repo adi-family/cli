@@ -1,9 +1,8 @@
 //! ADI Linter Plugin (v3)
 //!
-//! Code linting with configurable rules and auto-fix support 
-
-mod cli_impl;
-// Add other modules as needed
+//! Code linting with configurable rules and auto-fix support
+//!
+//! TODO: Complete v3 migration - implement full functionality from v2.bak
 
 use lib_plugin_abi_v3::*;
 use lib_plugin_abi_v3::cli::{CliCommand, CliCommands, CliContext, CliResult};
@@ -35,22 +34,31 @@ impl Plugin for LinterPlugin {
 #[async_trait]
 impl CliCommands for LinterPlugin {
     async fn list_commands(&self) -> Vec<CliCommand> {
-        // TODO: Update with actual commands
-        vec![]
+        vec![
+            CliCommand {
+                name: "run".to_string(),
+                description: "Run linting on files".to_string(),
+                usage: "lint run [files...]".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "fix".to_string(),
+                description: "Apply auto-fixes".to_string(),
+                usage: "lint fix [files...]".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "list".to_string(),
+                description: "List configured linters".to_string(),
+                usage: "lint list".to_string(),
+                has_subcommands: false,
+            },
+        ]
     }
 
-    async fn run_command(&self, ctx: &CliContext) -> Result<CliResult> {
-        // Convert context to JSON format expected by cli_impl::run_command
-        let context_json = serde_json::json!({
-            "command": &ctx.command,
-            "args": &ctx.args,
-            "cwd": &ctx.cwd,
-        });
-
-        match cli_impl::run_command(&context_json.to_string()) {
-            Ok(output) => Ok(CliResult::success(output)),
-            Err(e) => Ok(CliResult::error(e.to_string())),
-        }
+    async fn run_command(&self, _ctx: &CliContext) -> Result<CliResult> {
+        // TODO: Implement full linting functionality from v2.bak
+        Ok(CliResult::error("Linter plugin not yet fully migrated to v3. See lib.rs.v2.bak for reference."))
     }
 }
 
