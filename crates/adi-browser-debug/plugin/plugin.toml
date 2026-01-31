@@ -1,7 +1,7 @@
 [plugin]
 id = "adi.browser-debug"
 name = "ADI Browser Debug"
-version = "0.1.0"
+version = "3.0.0"
 type = "extension"
 author = "ADI Team"
 description = "Browser debugging - inspect network requests and console logs from browser tabs"
@@ -14,7 +14,7 @@ aliases = ["bd"]
 
 [[provides]]
 id = "adi.browser-debug.cli"
-version = "1.0.0"
+version = "3.0.0"
 description = "CLI commands for browser debugging"
 
 [tags]
@@ -22,3 +22,7 @@ categories = ["debugging", "browser", "network", "console"]
 
 [binary]
 name = "plugin"
+
+[compatibility]
+api_version = 3
+min_host_version = "0.9.0"

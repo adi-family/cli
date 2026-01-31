@@ -1,0 +1,23 @@
+[package]
+name = "adi-coolify-plugin"
+version = "0.8.4"
+edition = "2021"
+license = "BSL-1.0"
+description = "ADI Coolify plugin providing CLI commands for Coolify deployment management"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+async-trait = "0.1"
+tokio = { version = "1.0", features = ["full"] }
+adi-coolify-core = { path = "../core" }
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+lib-plugin-host = { path = "../../lib/lib-plugin-host" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+once_cell = "1.21"
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+dirs = "5"

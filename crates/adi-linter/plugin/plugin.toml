@@ -1,7 +1,7 @@
 [plugin]
 id = "adi.linter"
 name = "ADI Linter"
-version = "0.8.9"
+version = "3.0.0"
 type = "core"
 author = "ADI Team"
 description = "Code linting with configurable rules and auto-fix support"
@@ -14,7 +14,7 @@ aliases = ["l"]
 
 [[provides]]
 id = "adi.linter.cli"
-version = "1.0.0"
+version = "3.0.0"
 description = "CLI commands for code linting"
 
 [tags]
@@ -22,3 +22,7 @@ categories = ["linting", "code-quality", "static-analysis"]
 
 [binary]
 name = "plugin"
+
+[compatibility]
+api_version = 3
+min_host_version = "0.9.0"

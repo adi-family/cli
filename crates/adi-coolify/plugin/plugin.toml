@@ -1,7 +1,7 @@
 [plugin]
 id = "adi.coolify"
 name = "ADI Coolify"
-version = "0.8.4"
+version = "3.0.0"
 type = "core"
 author = "ADI Team"
 description = "Coolify deployment management - deploy, monitor, and manage services"
@@ -18,7 +18,7 @@ aliases = ["deploy"]
 
 [[provides]]
 id = "adi.coolify.cli"
-version = "1.0.0"
+version = "3.0.0"
 description = "CLI commands for Coolify deployment management"
 
 [tags]

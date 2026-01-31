@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.lang.typescript"
+name = "TypeScript/JavaScript Language Support"
+version = "0.1.0"
+type = "lang"
+author = "ADI Team"
+description = "Language support for TypeScript and JavaScript with tree-sitter parsing"
+min_host_version = "0.8.0"
+
+[[provides]]
+id = "adi.indexer.lang"
+version = "1.0.0"
+
+[binary]
+name = "plugin"
+
+[language]
+id = "typescript"
+extensions = ["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"]
+
+[tags]
+categories = ["language", "typescript", "javascript", "parsing"]

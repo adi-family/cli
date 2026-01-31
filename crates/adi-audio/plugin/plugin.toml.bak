@@ -1,0 +1,23 @@
+[plugin]
+id = "adi.audio"
+name = "ADI Audio"
+version = "0.5.0"
+type = "core"
+author = "ADI Team"
+description = "Audio processing toolkit: WAV I/O, high-pass filter, parametric EQ, compression, loudness normalization"
+min_host_version = "0.8.0"
+
+[cli]
+command = "audio"
+description = "Audio processing: WAV analysis, filters, EQ, compression, normalization"
+
+[[provides]]
+id = "adi.audio.cli"
+version = "1.0.0"
+description = "CLI commands for audio processing"
+
+[binary]
+name = "plugin"
+
+[tags]
+categories = ["audio", "dsp", "wav", "mastering", "eq", "compression"]

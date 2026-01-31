@@ -1,0 +1,22 @@
+[plugin]
+id = "adi.lang.cpp"
+name = "C/C++ Language Support"
+version = "0.1.0"
+type = "lang"
+author = "ADI Team"
+description = "Language support for C and C++ with tree-sitter parsing"
+min_host_version = "0.8.0"
+
+[[provides]]
+id = "adi.indexer.lang"
+version = "1.0.0"
+
+[binary]
+name = "plugin"
+
+[language]
+id = "cpp"
+extensions = ["cpp", "cc", "cxx", "c++", "hpp", "hh", "hxx", "h++", "c", "h"]
+
+[tags]
+categories = ["language", "cpp", "c", "parsing"]

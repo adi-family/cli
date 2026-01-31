@@ -1,0 +1,28 @@
+[plugin]
+id = "adi.coolify"
+name = "ADI Coolify"
+version = "0.8.4"
+type = "core"
+author = "ADI Team"
+description = "Coolify deployment management - deploy, monitor, and manage services"
+min_host_version = "0.8.0"
+
+[compatibility]
+# English translation is always installed as base language
+depends_on = ["adi.coolify.en-US"]
+
+[cli]
+command = "coolify"
+description = "Coolify deployment management - deploy and monitor services"
+aliases = ["deploy"]
+
+[[provides]]
+id = "adi.coolify.cli"
+version = "1.0.0"
+description = "CLI commands for Coolify deployment management"
+
+[tags]
+categories = ["deployment", "devops", "coolify", "infrastructure"]
+
+[binary]
+name = "plugin"

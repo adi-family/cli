@@ -214,13 +214,14 @@ dependencies = [
 
 [[package]]
 name = "adi-audio-plugin"
-version = "0.5.0"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
  "adi-audio-core",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 [package]
 name = "adi-linter-plugin"
-version = "0.8.9"
+version = "3.0.0"
 edition = "2021"
 license = "BSL-1.0"
 description = "ADI Linter plugin providing CLI commands for code linting"
@@ -10,9 +10,10 @@ authors = ["ADI Team"]
 crate-type = ["cdylib"]
 
 [dependencies]
-lib-plugin-abi = { path = "../../lib/lib-plugin-abi" }
+async-trait = "0.1"
+tokio = { version = "1.0", features = ["full"] }
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
 adi-linter-core = { path = "../core" }
-abi_stable = "0.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 once_cell = "1.21"

@@ -1,151 +1,60 @@
-//! Go Language Support Plugin
+//! Go Language Support Plugin (v3)
+//!
+//! Language support for Go with tree-sitter parsing 
 
-mod analyzer;
+mod cli_impl;
+// Add other modules as needed
 
-use abi_stable::std_types::{ROption, RResult, RStr, RString, RVec};
-use lib_indexer_lang_abi::{
-    ExtractRequest, GrammarPathResponse, LanguageInfoAbi, METHOD_EXTRACT_REFERENCES,
-    METHOD_EXTRACT_SYMBOLS, METHOD_GET_GRAMMAR_PATH, METHOD_GET_INFO,
-};
-use lib_plugin_abi::{
-    PluginContext, PluginInfo, PluginVTable, ServiceDescriptor, ServiceError, ServiceHandle,
-    ServiceMethod, ServiceVTable, ServiceVersion,
-};
-use std::ffi::c_void;
+use lib_plugin_abi_v3::*;
+use lib_plugin_abi_v3::cli::{CliCommand, CliCommands, CliContext, CliResult};
 
-const LANGUAGE: &str = "go";
-const SERVICE_ID: &str = "adi.indexer.lang.go";
+pub struct GoLangPlugin;
 
-extern "C" fn plugin_info() -> PluginInfo {
-    PluginInfo::new(
-        "adi.lang.go",
-        "Go Language Support",
-        env!("CARGO_PKG_VERSION"),
-        "language",
-    )
-    .with_author("ADI Team")
-    .with_description("Go language parsing and analysis for ADI indexer")
-    .with_min_host_version("0.8.0")
-}
-
-extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
-    unsafe {
-        let host = (*ctx).host();
-
-        let descriptor =
-            ServiceDescriptor::new(SERVICE_ID, ServiceVersion::new(1, 0, 0), "adi.lang.go")
-                .with_description("Go language analyzer for code indexing");
-        let handle = ServiceHandle::new(
-            SERVICE_ID,
-            ctx as *const c_void,
-            &ANALYZER_SERVICE_VTABLE as *const ServiceVTable,
-        );
-
-        if let Err(code) = host.register_svc(descriptor, handle) {
-            host.error(&format!("Failed to register Go analyzer service: {}", code));
-            return code;
+#[async_trait]
+impl Plugin for GoLangPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            id: "adi.lang.go".to_string(),
+            name: "Go Language Support".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            plugin_type: PluginType::Core,
+            author: Some("ADI Team".to_string()),
+            description: Some("Language support for Go with tree-sitter parsing ".to_string()),
         }
-
-        host.info("Go language plugin initialized");
     }
-    0
+
+    async fn init(&mut self, _ctx: &PluginContext) -> Result<()> {
+        Ok(())
+    }
+
+    async fn shutdown(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
-extern "C" fn plugin_cleanup(_ctx: *mut PluginContext) {}
+#[async_trait]
+impl CliCommands for GoLangPlugin {
+    async fn list_commands(&self) -> Vec<CliCommand> {
+        // TODO: Update with actual commands
+        vec![]
+    }
 
-static PLUGIN_VTABLE: PluginVTable = PluginVTable {
-    info: plugin_info,
-    init: plugin_init,
-    update: ROption::RNone,
-    cleanup: plugin_cleanup,
-    handle_message: ROption::RNone,
-};
+    async fn run_command(&self, ctx: &CliContext) -> Result<CliResult> {
+        // Convert context to JSON format expected by cli_impl::run_command
+        let context_json = serde_json::json!({
+            "command": &ctx.command,
+            "args": &ctx.args,
+            "cwd": &ctx.cwd,
+        });
+
+        match cli_impl::run_command(&context_json.to_string()) {
+            Ok(output) => Ok(CliResult::success(output)),
+            Err(e) => Ok(CliResult::error(e.to_string())),
+        }
+    }
+}
 
 #[no_mangle]
-pub extern "C" fn plugin_entry() -> *const PluginVTable {
-    &PLUGIN_VTABLE
-}
-
-static ANALYZER_SERVICE_VTABLE: ServiceVTable = ServiceVTable {
-    invoke: analyzer_invoke,
-    list_methods: analyzer_list_methods,
-};
-
-extern "C" fn analyzer_invoke(
-    _handle: *const c_void,
-    method: RStr<'_>,
-    args: RStr<'_>,
-) -> RResult<RString, ServiceError> {
-    match method.as_str() {
-        METHOD_GET_GRAMMAR_PATH => {
-            let response = GrammarPathResponse {
-                path: "builtin".to_string(),
-            };
-            match serde_json::to_string(&response) {
-                Ok(json) => RResult::ROk(RString::from(json)),
-                Err(e) => {
-                    RResult::RErr(ServiceError::invocation_error(format!("JSON error: {}", e)))
-                }
-            }
-        }
-        METHOD_EXTRACT_SYMBOLS => {
-            let request: ExtractRequest = match serde_json::from_str(args.as_str()) {
-                Ok(r) => r,
-                Err(e) => {
-                    return RResult::RErr(ServiceError::invocation_error(format!(
-                        "Invalid request: {}",
-                        e
-                    )))
-                }
-            };
-            let symbols = analyzer::extract_symbols(&request.source);
-            match serde_json::to_string(&symbols) {
-                Ok(json) => RResult::ROk(RString::from(json)),
-                Err(e) => {
-                    RResult::RErr(ServiceError::invocation_error(format!("JSON error: {}", e)))
-                }
-            }
-        }
-        METHOD_EXTRACT_REFERENCES => {
-            let request: ExtractRequest = match serde_json::from_str(args.as_str()) {
-                Ok(r) => r,
-                Err(e) => {
-                    return RResult::RErr(ServiceError::invocation_error(format!(
-                        "Invalid request: {}",
-                        e
-                    )))
-                }
-            };
-            let references = analyzer::extract_references(&request.source);
-            match serde_json::to_string(&references) {
-                Ok(json) => RResult::ROk(RString::from(json)),
-                Err(e) => {
-                    RResult::RErr(ServiceError::invocation_error(format!("JSON error: {}", e)))
-                }
-            }
-        }
-        METHOD_GET_INFO => {
-            let info = LanguageInfoAbi::new(LANGUAGE, env!("CARGO_PKG_VERSION"))
-                .with_extensions(["go"])
-                .with_display_name("Go");
-            match serde_json::to_string(&info) {
-                Ok(json) => RResult::ROk(RString::from(json)),
-                Err(e) => {
-                    RResult::RErr(ServiceError::invocation_error(format!("JSON error: {}", e)))
-                }
-            }
-        }
-        _ => RResult::RErr(ServiceError::method_not_found(method.as_str())),
-    }
-}
-
-extern "C" fn analyzer_list_methods(_handle: *const c_void) -> RVec<ServiceMethod> {
-    vec![
-        ServiceMethod::new(METHOD_GET_GRAMMAR_PATH).with_description("Get grammar path"),
-        ServiceMethod::new(METHOD_EXTRACT_SYMBOLS).with_description("Extract symbols"),
-        ServiceMethod::new(METHOD_EXTRACT_REFERENCES).with_description("Extract references"),
-        ServiceMethod::new(METHOD_GET_INFO).with_description("Get language info"),
-    ]
-    .into_iter()
-    .collect()
+pub fn plugin_create() -> Box<dyn Plugin> {
+    Box::new(GoLangPlugin)
 }
