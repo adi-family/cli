@@ -7,12 +7,13 @@
 //! 4. Adds trace headers to responses
 
 // Use the appropriate axum version based on features
-#[cfg(feature = "axum")]
+// axum-08-compat takes precedence if both are enabled
+#[cfg(all(feature = "axum", not(feature = "axum-08-compat")))]
 use axum_07 as axum;
 #[cfg(feature = "axum-08-compat")]
 use axum_08 as axum;
 
-#[cfg(feature = "axum")]
+#[cfg(all(feature = "axum", not(feature = "axum-08-compat")))]
 use tower_04 as tower;
 #[cfg(feature = "axum-08-compat")]
 use tower_05 as tower;
