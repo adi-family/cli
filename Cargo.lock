@@ -217,6 +217,7 @@ name = "adi-audio-plugin"
 version = "3.0.0"
 dependencies = [
  "adi-audio-core",
+ "anyhow",
  "async-trait",
  "lib-plugin-abi-v3",
  "serde",
@@ -299,11 +300,11 @@ dependencies = [
 
 [[package]]
 name = "adi-browser-debug-plugin"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
  "adi-browser-debug-core",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "once_cell",
  "serde",
  "serde_json",
@@ -532,17 +533,18 @@ dependencies = [
 
 [[package]]
 name = "adi-coolify-plugin"
-version = "0.8.4"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
  "adi-coolify-core",
+ "async-trait",
  "dirs 5.0.1",
- "lib-plugin-abi",
+ "lib-plugin-abi-v3",
  "lib-plugin-host",
  "once_cell",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "tokio",
  "toml 0.8.23",
 ]
 
@@ -830,7 +832,6 @@ dependencies = [
 name = "adi-lang-cpp"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "serde",
@@ -844,7 +845,6 @@ dependencies = [
 name = "adi-lang-csharp"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -858,7 +858,6 @@ dependencies = [
 name = "adi-lang-go"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "serde",
@@ -871,7 +870,6 @@ dependencies = [
 name = "adi-lang-java"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -885,7 +883,6 @@ dependencies = [
 name = "adi-lang-lua"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -899,7 +896,6 @@ dependencies = [
 name = "adi-lang-php"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -913,7 +909,6 @@ dependencies = [
 name = "adi-lang-python"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "serde",
@@ -938,9 +933,8 @@ dependencies = [
 
 [[package]]
 name = "adi-lang-rust"
-version = "0.8.9"
+version = "0.1.0"
 dependencies = [
- "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -954,7 +948,6 @@ dependencies = [
 name = "adi-lang-swift"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "once_cell",
@@ -968,7 +961,6 @@ dependencies = [
 name = "adi-lang-typescript"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
  "lib-indexer-lang-abi",
  "lib-plugin-abi",
  "serde",
@@ -1004,11 +996,11 @@ dependencies = [
 
 [[package]]
 name = "adi-linter-plugin"
-version = "0.8.9"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
  "adi-linter-core",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "once_cell",
  "serde",
  "serde_json",

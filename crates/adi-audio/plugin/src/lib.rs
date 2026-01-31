@@ -10,11 +10,11 @@ use lib_plugin_abi_v3::*;
 use lib_plugin_abi_v3::cli::{CliCommand, CliCommands, CliContext, CliResult};
 
 use adi_audio_core::{
-    apply_preset_with_stats, Compressor, CompressorSettings, EqBand, EqBandType, HighPassFilter,
-    Limiter, LoudnessAnalyzer, Normalizer, ParametricEq, Preset, WavReader, WavWriter,
+    Compressor, CompressorSettings, EqBand, EqBandType,
+    HighPassFilter, LoudnessAnalyzer, Normalizer, ParametricEq, Preset, WavReader,
+    WavWriter,
 };
 use serde_json::json;
-use std::path::Path;
 
 pub struct AudioPlugin;
 
@@ -164,36 +164,45 @@ impl CliCommands for AudioPlugin {
 
 // Command handlers
 fn handle_info(file: &str) -> Result<CliResult> {
-    let reader = WavReader::open(file)
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to open file: {}", e)))?;
+    let buffer = WavReader::read(file)
+        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read file: {}", e)))?;
+
+    let analyzer = LoudnessAnalyzer::new(buffer.sample_rate);
+    let lufs = analyzer.measure_lufs(&buffer.samples);
+    let peak = buffer.samples.iter().fold(0.0f32, |max, &s| max.max(s.abs()));
 
     let info = json!({
-        "channels": reader.spec().channels,
-        "sample_rate": reader.spec().sample_rate,
-        "bits_per_sample": reader.spec().bits_per_sample,
-        "duration_secs": reader.duration() as f64 / reader.spec().sample_rate as f64,
+        "channels": buffer.channels,
+        "sample_rate": buffer.sample_rate,
+        "duration_secs": buffer.duration_seconds(),
+        "loudness_lufs": lufs,
+        "peak": peak,
     });
 
     Ok(CliResult::success(serde_json::to_string_pretty(&info).unwrap()))
 }
 
 fn handle_preset(preset_name: &str, input: &str, output: &str) -> Result<CliResult> {
-    let preset = match preset_name {
-        "web-sfx" => Preset::web_sfx(),
-        "podcast" => Preset::podcast(),
-        "music-master" => Preset::music_master(),
-        _ => return Ok(CliResult::error(&format!("Unknown preset: {}", preset_name))),
-    };
+    let preset = Preset::from_str(preset_name)
+        .ok_or_else(|| PluginError::Other(anyhow::anyhow!("Unknown preset: {}", preset_name)))?;
 
-    match apply_preset_with_stats(&preset, input, output) {
-        Ok(stats) => Ok(CliResult::success(format!("Processed successfully\n{}", serde_json::to_string_pretty(&stats).unwrap()))),
-        Err(e) => Ok(CliResult::error(&format!("Processing failed: {}", e))),
-    }
+    let buffer = WavReader::read(input)
+        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read input: {}", e)))?;
+
+    let (output_buffer, stats) = adi_audio_core::apply_preset_with_stats(&buffer, preset);
+
+    WavWriter::write(output, &output_buffer)
+        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to write output: {}", e)))?;
+
+    Ok(CliResult::success(format!("Processed successfully\n{}", serde_json::to_string_pretty(&stats).unwrap())))
 }
 
 fn handle_presets() -> Result<CliResult> {
-    let presets = vec!["web-sfx", "podcast", "music-master"];
-    Ok(CliResult::success(presets.join("\n")))
+    let mut output = String::from("Available Presets:\n\n");
+    for preset in Preset::all() {
+        output.push_str(&format!("  {:<20} {}\n", preset.name(), preset.description()));
+    }
+    Ok(CliResult::success(output))
 }
 
 fn handle_process(input: &str, output: &str) -> Result<CliResult> {
@@ -201,97 +210,97 @@ fn handle_process(input: &str, output: &str) -> Result<CliResult> {
 }
 
 fn handle_highpass(input: &str, output: &str, freq: f32) -> Result<CliResult> {
-    let mut reader = WavReader::open(input)
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to open input: {}", e)))?;
-    let mut writer = WavWriter::create(output, reader.spec())
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to create output: {}", e)))?;
+    let mut buffer = WavReader::read(input)
+        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read input: {}", e)))?;
 
-    let mut filter = HighPassFilter::new(freq, reader.spec().sample_rate);
-    let mut samples = reader.read_all()
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read samples: {}", e)))?;
+    let mut filter = HighPassFilter::new(freq, buffer.sample_rate as f32);
 
-    filter.process(&mut samples);
-    writer.write_all(&samples)
+    for sample in buffer.samples.iter_mut() {
+        *sample = filter.process(*sample);
+    }
+
+    WavWriter::write(output, &buffer)
         .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to write output: {}", e)))?;
 
     Ok(CliResult::success(format!("Applied high-pass filter ({} Hz)", freq)))
 }
 
 fn handle_eq(input: &str, output: &str) -> Result<CliResult> {
-    let mut reader = WavReader::open(input)
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to open input: {}", e)))?;
-    let mut writer = WavWriter::create(output, reader.spec())
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to create output: {}", e)))?;
+    let mut buffer = WavReader::read(input)
+        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read input: {}", e)))?;
 
     let bands = vec![
-        EqBand::new(EqBandType::LowShelf, 100.0, 0.7, 2.0),
-        EqBand::new(EqBandType::Peak, 1000.0, 1.0, -3.0),
-        EqBand::new(EqBandType::HighShelf, 8000.0, 0.7, 1.0),
+        EqBand::new(EqBandType::LowShelf, 100.0, 2.0, 0.7),
+        EqBand::new(EqBandType::Peak, 1000.0, -3.0, 1.0),
+        EqBand::new(EqBandType::HighShelf, 8000.0, 1.0, 0.7),
     ];
 
-    let mut eq = ParametricEq::new(bands, reader.spec().sample_rate);
-    let mut samples = reader.read_all()
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read samples: {}", e)))?;
+    let mut eq = ParametricEq::new(buffer.sample_rate as f32);
+    for band in bands {
+        eq.add_band(band);
+    }
 
-    eq.process(&mut samples);
-    writer.write_all(&samples)
+    for sample in buffer.samples.iter_mut() {
+        *sample = eq.process(*sample);
+    }
+
+    WavWriter::write(output, &buffer)
         .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to write output: {}", e)))?;
 
     Ok(CliResult::success("Applied parametric EQ"))
 }
 
 fn handle_compress(input: &str, output: &str) -> Result<CliResult> {
-    let mut reader = WavReader::open(input)
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to open input: {}", e)))?;
-    let mut writer = WavWriter::create(output, reader.spec())
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to create output: {}", e)))?;
+    let mut buffer = WavReader::read(input)
+        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read input: {}", e)))?;
 
     let settings = CompressorSettings {
-        threshold: -20.0,
+        threshold_db: -20.0,
         ratio: 4.0,
         attack_ms: 5.0,
         release_ms: 100.0,
         knee_db: 6.0,
+        makeup_gain_db: 0.0,
     };
 
-    let mut compressor = Compressor::new(settings, reader.spec().sample_rate);
-    let mut samples = reader.read_all()
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read samples: {}", e)))?;
+    let mut compressor = Compressor::new(settings, buffer.sample_rate as f32);
 
-    compressor.process(&mut samples);
-    writer.write_all(&samples)
+    for sample in buffer.samples.iter_mut() {
+        *sample = compressor.process(*sample);
+    }
+
+    WavWriter::write(output, &buffer)
         .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to write output: {}", e)))?;
 
     Ok(CliResult::success("Applied compression"))
 }
 
 fn handle_normalize(input: &str, output: &str, target_lufs: f32) -> Result<CliResult> {
-    let mut reader = WavReader::open(input)
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to open input: {}", e)))?;
-    let mut writer = WavWriter::create(output, reader.spec())
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to create output: {}", e)))?;
+    let mut buffer = WavReader::read(input)
+        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read input: {}", e)))?;
 
-    let mut normalizer = Normalizer::new(target_lufs);
-    let mut samples = reader.read_all()
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read samples: {}", e)))?;
+    // Measure current loudness
+    let analyzer = LoudnessAnalyzer::new(buffer.sample_rate);
+    let current_lufs = analyzer.measure_lufs(&buffer.samples);
+    let gain_db = target_lufs - current_lufs;
 
-    normalizer.process(&mut samples);
-    writer.write_all(&samples)
+    // Apply gain
+    let normalizer = Normalizer::new(gain_db);
+    for sample in buffer.samples.iter_mut() {
+        *sample = normalizer.process(*sample);
+    }
+
+    WavWriter::write(output, &buffer)
         .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to write output: {}", e)))?;
 
-    Ok(CliResult::success(format!("Normalized to {} LUFS", target_lufs)))
+    Ok(CliResult::success(format!("Normalized to {} LUFS (gain: {:.2} dB)", target_lufs, gain_db)))
 }
 
 fn handle_convert(input: &str, output: &str) -> Result<CliResult> {
-    let reader = WavReader::open(input)
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to open input: {}", e)))?;
-    let mut writer = WavWriter::create(output, reader.spec())
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to create output: {}", e)))?;
+    let buffer = WavReader::read(input)
+        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read input: {}", e)))?;
 
-    let samples = reader.read_all()
-        .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to read samples: {}", e)))?;
-
-    writer.write_all(&samples)
+    WavWriter::write(output, &buffer)
         .map_err(|e| PluginError::Other(anyhow::anyhow!("Failed to write output: {}", e)))?;
 
     Ok(CliResult::success("Converted successfully"))
