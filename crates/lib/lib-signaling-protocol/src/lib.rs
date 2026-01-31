@@ -504,10 +504,32 @@ pub struct HiveInfo {
 /// Available cocoon image/kind that a Hive can spawn
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CocoonKind {
-    /// Unique identifier (e.g., "linux", "linux-cuda", "macos")
+    /// Unique identifier (e.g., "linux", "linux-cuda", "macos", "native")
     pub id: String,
-    /// Docker image to use
+
+    /// Runner type: "docker" (default), "script", "podman"
+    #[serde(default = "default_runner_type")]
+    pub runner_type: String,
+
+    /// Runner configuration (JSON object)
+    /// - For docker: { "image": "registry/cocoon:tag" }
+    /// - For script: { "command": "cocoon-worker", "args": ["--kind", "{kind}"] }
+    /// - For podman: { "image": "registry/cocoon:tag" }
+    #[serde(default = "default_runner_config")]
+    pub runner_config: serde_json::Value,
+
+    /// DEPRECATED: Docker image to use (kept for backward compatibility)
+    /// Use runner_config instead
+    #[serde(default)]
     pub image: String,
+}
+
+fn default_runner_type() -> String {
+    "docker".to_string()
+}
+
+fn default_runner_config() -> serde_json::Value {
+    serde_json::json!({})
 }
 
 /// WebRTC session information
