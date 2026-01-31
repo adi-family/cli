@@ -11,7 +11,7 @@ name = "adi-indexer-cli"
 path = "src/main.rs"
 
 [dependencies]
-adi-indexer-core = { path = "../core" }
+adi-indexer-core = { path = "../core", features = ["fastembed"] }
 clap = { version = "4.5", features = ["derive"] }
 tokio = { version = "1.49", features = ["full"] }
 anyhow = "1.0"

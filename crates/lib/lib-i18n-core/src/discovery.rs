@@ -1,5 +1,5 @@
 use crate::error::{I18nError, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// Translation service information discovered from plugin registry
@@ -18,7 +18,7 @@ pub struct TranslationServiceInfo {
 }
 
 /// Metadata returned from translation service's get_metadata() method
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct TranslationMetadata {
     plugin_id: String,
     language: String,

@@ -11,7 +11,7 @@ name = "adi-indexer-http"
 path = "src/main.rs"
 
 [dependencies]
-adi-indexer-core = { path = "../core" }
+adi-indexer-core = { path = "../core", features = ["fastembed"] }
 axum = "0.7"
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
