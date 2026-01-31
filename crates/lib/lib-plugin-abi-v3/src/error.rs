@@ -1,0 +1,46 @@
+//! Error types for plugin ABI
+
+use thiserror::Error;
+
+/// Plugin error type
+#[derive(Error, Debug)]
+pub enum PluginError {
+    /// Plugin initialization failed
+    #[error("Plugin initialization failed: {0}")]
+    InitFailed(String),
+
+    /// Plugin not found
+    #[error("Plugin not found: {0}")]
+    NotFound(String),
+
+    /// Service not provided by plugin
+    #[error("Service not provided by plugin")]
+    ServiceNotProvided,
+
+    /// Command execution failed
+    #[error("Command execution failed: {0}")]
+    CommandFailed(String),
+
+    /// HTTP request failed
+    #[error("HTTP request failed: {0}")]
+    HttpRequestFailed(String),
+
+    /// Health check failed
+    #[error("Health check failed: {0}")]
+    HealthCheckFailed(String),
+
+    /// IO error
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+
+    /// Serialization error
+    #[error("Serialization error: {0}")]
+    Serialization(#[from] serde_json::Error),
+
+    /// Generic error
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
+}
+
+/// Plugin result type
+pub type Result<T> = std::result::Result<T, PluginError>;
