@@ -1,23 +1,22 @@
 //! Ruby language analyzer implementation.
 
-use lib_indexer_lang_abi::{
-    LocationAbi, ParsedReferenceAbi, ParsedSymbolAbi, ReferenceKindAbi, SymbolKindAbi,
-    VisibilityAbi,
+use lib_plugin_abi_v3::lang::{
+    Location, ParsedReference, ParsedSymbol, ReferenceKind, SymbolKind, Visibility,
 };
 use tree_sitter::{Node, Parser, Tree};
 
-pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
+pub fn extract_symbols(source: &str) -> Vec<ParsedSymbol> {
     let tree = match parse_ruby(source) {
         Some(t) => t,
         None => return vec![],
     };
     let mut symbols = Vec::new();
-    let mut visibility = VisibilityAbi::Public;
+    let mut visibility = Visibility::Public;
     extract_ruby_symbols(tree.root_node(), source, &mut symbols, &mut visibility);
     symbols
 }
 
-pub fn extract_references(source: &str) -> Vec<ParsedReferenceAbi> {
+pub fn extract_references(source: &str) -> Vec<ParsedReference> {
     let tree = match parse_ruby(source) {
         Some(t) => t,
         None => return vec![],
@@ -39,10 +38,10 @@ fn node_text<'a>(node: Node<'a>, source: &'a str) -> String {
     source[node.byte_range()].to_string()
 }
 
-fn node_location(node: Node) -> LocationAbi {
+fn node_location(node: Node) -> Location {
     let start = node.start_position();
     let end = node.end_position();
-    LocationAbi::new(
+    Location::new(
         start.row as u32,
         start.column as u32,
         end.row as u32,
@@ -86,15 +85,15 @@ fn extract_method_signature(node: Node, source: &str) -> String {
 fn extract_ruby_symbols(
     node: Node,
     source: &str,
-    symbols: &mut Vec<ParsedSymbolAbi>,
-    current_visibility: &mut VisibilityAbi,
+    symbols: &mut Vec<ParsedSymbol>,
+    current_visibility: &mut Visibility,
 ) {
     match node.kind() {
         "class" => {
             if let Some(symbol) = parse_ruby_class(node, source) {
                 symbols.push(symbol);
             }
-            let mut class_visibility = VisibilityAbi::Public;
+            let mut class_visibility = Visibility::Public;
             for i in 0..node.child_count() {
                 if let Some(child) = node.child(i) {
                     extract_ruby_symbols(child, source, symbols, &mut class_visibility);
@@ -106,7 +105,7 @@ fn extract_ruby_symbols(
             if let Some(symbol) = parse_ruby_module(node, source) {
                 symbols.push(symbol);
             }
-            let mut mod_visibility = VisibilityAbi::Public;
+            let mut mod_visibility = Visibility::Public;
             for i in 0..node.child_count() {
                 if let Some(child) = node.child(i) {
                     extract_ruby_symbols(child, source, symbols, &mut mod_visibility);
@@ -127,9 +126,9 @@ fn extract_ruby_symbols(
         "identifier" => {
             let text = node_text(node, source);
             match text.as_str() {
-                "private" => *current_visibility = VisibilityAbi::Private,
-                "protected" => *current_visibility = VisibilityAbi::Protected,
-                "public" => *current_visibility = VisibilityAbi::Public,
+                "private" => *current_visibility = Visibility::Private,
+                "protected" => *current_visibility = Visibility::Protected,
+                "public" => *current_visibility = Visibility::Public,
                 _ => {}
             }
         }
@@ -148,82 +147,78 @@ fn extract_ruby_symbols(
     }
 }
 
-fn parse_ruby_class(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_ruby_class(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Class, node_location(node))
-            .with_visibility(VisibilityAbi::Public)
+        ParsedSymbol::new(name_text, SymbolKind::Class, node_location(node))
+            .with_visibility(Visibility::Public)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_ruby_module(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_ruby_module(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Module, node_location(node))
-            .with_visibility(VisibilityAbi::Public)
+        ParsedSymbol::new(name_text, SymbolKind::Module, node_location(node))
+            .with_visibility(Visibility::Public)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_ruby_method(
-    node: Node,
-    source: &str,
-    visibility: VisibilityAbi,
-) -> Option<ParsedSymbolAbi> {
+fn parse_ruby_method(node: Node, source: &str, visibility: Visibility) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let signature = extract_method_signature(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Method, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Method, node_location(node))
             .with_signature(signature)
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_ruby_singleton_method(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_ruby_singleton_method(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let signature = extract_method_signature(node, source);
 
     Some(
-        ParsedSymbolAbi::new(
+        ParsedSymbol::new(
             format!("self.{}", name_text),
-            SymbolKindAbi::Method,
+            SymbolKind::Method,
             node_location(node),
         )
         .with_signature(signature)
-        .with_visibility(VisibilityAbi::Public)
+        .with_visibility(Visibility::Public)
         .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_ruby_constant(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_ruby_constant(node: Node, source: &str) -> Option<ParsedSymbol> {
     let left = node.child_by_field_name("left")?;
     if left.kind() == "constant" {
         let name_text = node_text(left, source);
         let doc_comment = extract_doc_comment(node, source);
 
         return Some(
-            ParsedSymbolAbi::new(name_text, SymbolKindAbi::Constant, node_location(node))
-                .with_visibility(VisibilityAbi::Public)
+            ParsedSymbol::new(name_text, SymbolKind::Constant, node_location(node))
+                .with_visibility(Visibility::Public)
                 .with_doc_comment_opt(doc_comment),
         );
     }
     None
 }
 
-fn collect_ruby_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenceAbi>) {
+fn collect_ruby_references(node: Node, source: &str, refs: &mut Vec<ParsedReference>) {
     match node.kind() {
         "call" | "method_call" => {
             if let Some(method) = node.child_by_field_name("method") {
@@ -231,16 +226,16 @@ fn collect_ruby_references(node: Node, source: &str, refs: &mut Vec<ParsedRefere
                 // Handle require/require_relative as imports
                 if name == "require" || name == "require_relative" {
                     if let Some(arg) = node.child_by_field_name("arguments") {
-                        refs.push(ParsedReferenceAbi::new(
+                        refs.push(ParsedReference::new(
                             node_text(arg, source),
-                            ReferenceKindAbi::Import,
+                            ReferenceKind::Import,
                             node_location(arg),
                         ));
                     }
                 } else if !is_common_method(&name) {
-                    refs.push(ParsedReferenceAbi::new(
+                    refs.push(ParsedReference::new(
                         name,
-                        ReferenceKindAbi::Call,
+                        ReferenceKind::Call,
                         node_location(method),
                     ));
                 }
@@ -251,9 +246,9 @@ fn collect_ruby_references(node: Node, source: &str, refs: &mut Vec<ParsedRefere
             let parent = node.parent();
             if let Some(p) = parent {
                 if p.kind() != "class" && p.kind() != "module" {
-                    refs.push(ParsedReferenceAbi::new(
+                    refs.push(ParsedReference::new(
                         name,
-                        ReferenceKindAbi::TypeReference,
+                        ReferenceKind::TypeReference,
                         node_location(node),
                     ));
                 }
@@ -261,17 +256,17 @@ fn collect_ruby_references(node: Node, source: &str, refs: &mut Vec<ParsedRefere
         }
         "scope_resolution" => {
             let name = node_text(node, source);
-            refs.push(ParsedReferenceAbi::new(
+            refs.push(ParsedReference::new(
                 name,
-                ReferenceKindAbi::TypeReference,
+                ReferenceKind::TypeReference,
                 node_location(node),
             ));
         }
         "superclass" => {
             let name = node_text(node, source);
-            refs.push(ParsedReferenceAbi::new(
+            refs.push(ParsedReference::new(
                 name,
-                ReferenceKindAbi::Inheritance,
+                ReferenceKind::Inheritance,
                 node_location(node),
             ));
         }
@@ -316,7 +311,7 @@ trait WithDocCommentOpt {
     fn with_doc_comment_opt(self, doc: Option<String>) -> Self;
 }
 
-impl WithDocCommentOpt for ParsedSymbolAbi {
+impl WithDocCommentOpt for ParsedSymbol {
     fn with_doc_comment_opt(self, doc: Option<String>) -> Self {
         match doc {
             Some(d) => self.with_doc_comment(d),

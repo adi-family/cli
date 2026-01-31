@@ -1,12 +1,11 @@
 //! Swift language analyzer implementation.
 
-use lib_indexer_lang_abi::{
-    LocationAbi, ParsedReferenceAbi, ParsedSymbolAbi, ReferenceKindAbi, SymbolKindAbi,
-    VisibilityAbi,
+use lib_plugin_abi_v3::lang::{
+    Location, ParsedReference, ParsedSymbol, ReferenceKind, SymbolKind, Visibility,
 };
 use tree_sitter::{Node, Parser, Tree};
 
-pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
+pub fn extract_symbols(source: &str) -> Vec<ParsedSymbol> {
     let tree = match parse_swift(source) {
         Some(t) => t,
         None => return vec![],
@@ -16,7 +15,7 @@ pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
     symbols
 }
 
-pub fn extract_references(source: &str) -> Vec<ParsedReferenceAbi> {
+pub fn extract_references(source: &str) -> Vec<ParsedReference> {
     let tree = match parse_swift(source) {
         Some(t) => t,
         None => return vec![],
@@ -38,10 +37,10 @@ fn node_text<'a>(node: Node<'a>, source: &'a str) -> String {
     source[node.byte_range()].to_string()
 }
 
-fn node_location(node: Node) -> LocationAbi {
+fn node_location(node: Node) -> Location {
     let start = node.start_position();
     let end = node.end_position();
-    LocationAbi::new(
+    Location::new(
         start.row as u32,
         start.column as u32,
         end.row as u32,
@@ -88,7 +87,7 @@ fn extract_doc_comment(node: Node, source: &str) -> Option<String> {
     }
 }
 
-fn extract_visibility(node: Node, source: &str) -> VisibilityAbi {
+fn extract_visibility(node: Node, source: &str) -> Visibility {
     for i in 0..node.child_count() {
         if let Some(child) = node.child(i) {
             if child.kind() == "modifiers" {
@@ -96,11 +95,11 @@ fn extract_visibility(node: Node, source: &str) -> VisibilityAbi {
                     if let Some(modifier) = child.child(j) {
                         let text = node_text(modifier, source);
                         match text.as_str() {
-                            "public" => return VisibilityAbi::Public,
-                            "private" => return VisibilityAbi::Private,
-                            "fileprivate" => return VisibilityAbi::Private,
-                            "internal" => return VisibilityAbi::Internal,
-                            "open" => return VisibilityAbi::Public,
+                            "public" => return Visibility::Public,
+                            "private" => return Visibility::Private,
+                            "fileprivate" => return Visibility::Private,
+                            "internal" => return Visibility::Internal,
+                            "open" => return Visibility::Public,
                             _ => {}
                         }
                     }
@@ -108,7 +107,7 @@ fn extract_visibility(node: Node, source: &str) -> VisibilityAbi {
             }
         }
     }
-    VisibilityAbi::Internal
+    Visibility::Internal
 }
 
 fn extract_function_signature(node: Node, source: &str) -> String {
@@ -120,7 +119,7 @@ fn extract_function_signature(node: Node, source: &str) -> String {
     }
 }
 
-fn extract_swift_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn extract_swift_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol>) {
     match node.kind() {
         "class_declaration" => {
             if let Some(symbol) = parse_swift_class(node, source) {
@@ -180,59 +179,59 @@ fn extract_swift_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbo
     }
 }
 
-fn parse_swift_class(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_swift_class(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let visibility = extract_visibility(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Class, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Class, node_location(node))
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_swift_struct(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_swift_struct(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let visibility = extract_visibility(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Struct, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Struct, node_location(node))
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_swift_protocol(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_swift_protocol(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let visibility = extract_visibility(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Interface, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Interface, node_location(node))
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_swift_enum(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_swift_enum(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let visibility = extract_visibility(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Enum, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Enum, node_location(node))
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_swift_function(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_swift_function(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
@@ -240,14 +239,14 @@ fn parse_swift_function(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
     let signature = extract_function_signature(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Function, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Function, node_location(node))
             .with_signature(signature)
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_swift_property(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_swift_property(node: Node, source: &str) -> Option<ParsedSymbol> {
     for i in 0..node.child_count() {
         if let Some(child) = node.child(i) {
             if child.kind() == "pattern" {
@@ -256,7 +255,7 @@ fn parse_swift_property(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
                 let visibility = extract_visibility(node, source);
 
                 return Some(
-                    ParsedSymbolAbi::new(name_text, SymbolKindAbi::Property, node_location(node))
+                    ParsedSymbol::new(name_text, SymbolKind::Property, node_location(node))
                         .with_visibility(visibility)
                         .with_doc_comment_opt(doc_comment),
                 );
@@ -266,15 +265,15 @@ fn parse_swift_property(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
     None
 }
 
-fn parse_swift_init(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_swift_init(node: Node, source: &str) -> Option<ParsedSymbol> {
     let doc_comment = extract_doc_comment(node, source);
     let visibility = extract_visibility(node, source);
     let signature = extract_function_signature(node, source);
 
     Some(
-        ParsedSymbolAbi::new(
+        ParsedSymbol::new(
             "init".to_string(),
-            SymbolKindAbi::Constructor,
+            SymbolKind::Constructor,
             node_location(node),
         )
         .with_signature(signature)
@@ -283,36 +282,36 @@ fn parse_swift_init(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
     )
 }
 
-fn parse_swift_deinit(node: Node) -> ParsedSymbolAbi {
-    ParsedSymbolAbi::new(
+fn parse_swift_deinit(node: Node) -> ParsedSymbol {
+    ParsedSymbol::new(
         "deinit".to_string(),
-        SymbolKindAbi::Destructor,
+        SymbolKind::Destructor,
         node_location(node),
     )
-    .with_visibility(VisibilityAbi::Internal)
+    .with_visibility(Visibility::Internal)
 }
 
-fn parse_swift_typealias(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_swift_typealias(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let visibility = extract_visibility(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Type, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Type, node_location(node))
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_swift_extension(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_swift_extension(node: Node, source: &str) -> Option<ParsedSymbol> {
     for i in 0..node.child_count() {
         if let Some(child) = node.child(i) {
             if child.kind() == "user_type" || child.kind() == "type_identifier" {
                 let name_text = format!("extension {}", node_text(child, source));
-                return Some(ParsedSymbolAbi::new(
+                return Some(ParsedSymbol::new(
                     name_text,
-                    SymbolKindAbi::Class,
+                    SymbolKind::Class,
                     node_location(node),
                 ));
             }
@@ -321,15 +320,15 @@ fn parse_swift_extension(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
     None
 }
 
-fn collect_swift_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenceAbi>) {
+fn collect_swift_references(node: Node, source: &str, refs: &mut Vec<ParsedReference>) {
     match node.kind() {
         "call_expression" => {
             if let Some(func) = node.child(0) {
                 let name = extract_call_name(func, source);
                 if !name.is_empty() && !is_common_function(&name) {
-                    refs.push(ParsedReferenceAbi::new(
+                    refs.push(ParsedReference::new(
                         name,
-                        ReferenceKindAbi::Call,
+                        ReferenceKind::Call,
                         node_location(func),
                     ));
                 }
@@ -337,9 +336,9 @@ fn collect_swift_references(node: Node, source: &str, refs: &mut Vec<ParsedRefer
         }
         "navigation_expression" => {
             if let Some(suffix) = node.child_by_field_name("suffix") {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     node_text(suffix, source),
-                    ReferenceKindAbi::FieldAccess,
+                    ReferenceKind::FieldAccess,
                     node_location(suffix),
                 ));
             }
@@ -347,9 +346,9 @@ fn collect_swift_references(node: Node, source: &str, refs: &mut Vec<ParsedRefer
         "user_type" | "type_identifier" => {
             let name = node_text(node, source);
             if !is_primitive_type(&name) {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     name,
-                    ReferenceKindAbi::TypeReference,
+                    ReferenceKind::TypeReference,
                     node_location(node),
                 ));
             }
@@ -358,9 +357,9 @@ fn collect_swift_references(node: Node, source: &str, refs: &mut Vec<ParsedRefer
             for i in 0..node.child_count() {
                 if let Some(child) = node.child(i) {
                     if child.kind() == "identifier" {
-                        refs.push(ParsedReferenceAbi::new(
+                        refs.push(ParsedReference::new(
                             node_text(child, source),
-                            ReferenceKindAbi::Import,
+                            ReferenceKind::Import,
                             node_location(child),
                         ));
                     }
@@ -371,9 +370,9 @@ fn collect_swift_references(node: Node, source: &str, refs: &mut Vec<ParsedRefer
             for i in 0..node.child_count() {
                 if let Some(child) = node.child(i) {
                     if child.kind() == "user_type" || child.kind() == "type_identifier" {
-                        refs.push(ParsedReferenceAbi::new(
+                        refs.push(ParsedReference::new(
                             node_text(child, source),
-                            ReferenceKindAbi::Inheritance,
+                            ReferenceKind::Inheritance,
                             node_location(child),
                         ));
                     }
@@ -452,7 +451,7 @@ trait WithDocCommentOpt {
     fn with_doc_comment_opt(self, doc: Option<String>) -> Self;
 }
 
-impl WithDocCommentOpt for ParsedSymbolAbi {
+impl WithDocCommentOpt for ParsedSymbol {
     fn with_doc_comment_opt(self, doc: Option<String>) -> Self {
         match doc {
             Some(d) => self.with_doc_comment(d),

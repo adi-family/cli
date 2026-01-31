@@ -1,4 +1,4 @@
-//! ADI Indexer Plugin
+//! ADI Indexer Plugin (v3 ABI)
 //!
 //! Provides MCP tools and resources for code indexing and semantic search.
 //!
@@ -7,22 +7,32 @@
 
 mod mcp;
 
-use abi_stable::std_types::{ROption, RResult, RStr, RString};
-use lib_plugin_abi::{
-    PluginContext, PluginError, PluginInfo, PluginVTable, ServiceDescriptor, ServiceHandle,
-    ServiceVTable, ServiceVersion, SERVICE_MCP_RESOURCES, SERVICE_MCP_TOOLS,
+use lib_plugin_abi_v3::{
+    async_trait,
+    mcp::{McpResource, McpResourceContent, McpResources, McpTool, McpToolResult, McpTools},
+    Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult,
+    SERVICE_MCP_RESOURCES, SERVICE_MCP_TOOLS,
 };
-use lib_plugin_host::current_service_registry;
 use once_cell::sync::OnceCell;
-use std::ffi::c_void;
+use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
+use tokio::sync::RwLock;
 
 /// Global tokio runtime for async operations.
 static RUNTIME: OnceCell<Runtime> = OnceCell::new();
 
-/// Plugin state stored in context user_data.
+fn get_runtime() -> &'static Runtime {
+    RUNTIME.get_or_init(|| {
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .expect("Failed to create tokio runtime")
+    })
+}
+
+/// Plugin state
 struct PluginState {
     project_path: PathBuf,
     indexer: Option<Arc<adi_indexer_core::Adi>>,
@@ -37,199 +47,107 @@ impl Default for PluginState {
     }
 }
 
-// === Plugin VTable Implementation ===
+// ============================================================================
+// PLUGIN IMPLEMENTATION
+// ============================================================================
 
-extern "C" fn plugin_info() -> PluginInfo {
-    PluginInfo::new(
-        "adi.indexer",
-        "ADI Indexer",
-        env!("CARGO_PKG_VERSION"),
-        "core",
-    )
-    .with_author("ADI Team")
-    .with_description("Code indexer with semantic search and symbol analysis")
-    .with_min_host_version("0.8.0")
+/// ADI Indexer Plugin
+pub struct IndexerPlugin {
+    state: Arc<RwLock<PluginState>>,
 }
 
-extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
-    // Initialize tokio runtime
-    let _ = RUNTIME.get_or_init(|| {
-        tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .expect("Failed to create tokio runtime")
-    });
-
-    // Create plugin state
-    let state = Box::new(PluginState::default());
-
-    // Store state in context
-    unsafe {
-        (*ctx).set_user_data(state);
-
-        // Get host vtable
-        let host = (*ctx).host();
-
-        // Register MCP tools service
-        let tools_descriptor = ServiceDescriptor::new(
-            SERVICE_MCP_TOOLS,
-            ServiceVersion::new(1, 0, 0),
-            "adi.indexer",
-        )
-        .with_description("MCP tools for code search and analysis");
-
-        let tools_handle = ServiceHandle::new(
-            SERVICE_MCP_TOOLS,
-            ctx as *const c_void,
-            &MCP_TOOLS_VTABLE as *const ServiceVTable,
-        );
-
-        if let Err(code) = host.register_svc(tools_descriptor, tools_handle) {
-            host.error(&format!("Failed to register MCP tools service: {}", code));
-            return code;
+impl IndexerPlugin {
+    pub fn new() -> Self {
+        Self {
+            state: Arc::new(RwLock::new(PluginState::default())),
         }
-
-        // Register MCP resources service
-        let resources_descriptor = ServiceDescriptor::new(
-            SERVICE_MCP_RESOURCES,
-            ServiceVersion::new(1, 0, 0),
-            "adi.indexer",
-        )
-        .with_description("MCP resources for accessing indexed data");
-
-        let resources_handle = ServiceHandle::new(
-            SERVICE_MCP_RESOURCES,
-            ctx as *const c_void,
-            &MCP_RESOURCES_VTABLE as *const ServiceVTable,
-        );
-
-        if let Err(code) = host.register_svc(resources_descriptor, resources_handle) {
-            host.error(&format!(
-                "Failed to register MCP resources service: {}",
-                code
-            ));
-            return code;
-        }
-
-        host.info("ADI Indexer plugin initialized");
-    }
-
-    0
-}
-
-extern "C" fn plugin_cleanup(ctx: *mut PluginContext) {
-    unsafe {
-        // Take and drop the state
-        let _state: Option<Box<PluginState>> = (*ctx).take_user_data();
     }
 }
 
-// === Plugin Entry Point ===
+impl Default for IndexerPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
-static PLUGIN_VTABLE: PluginVTable = PluginVTable {
-    info: plugin_info,
-    init: plugin_init,
-    update: ROption::RNone,
-    cleanup: plugin_cleanup,
-    handle_message: ROption::RSome(handle_message),
-};
+#[async_trait]
+impl Plugin for IndexerPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            id: "adi.indexer".to_string(),
+            name: "ADI Indexer".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            plugin_type: PluginType::Core,
+            author: Some("ADI Team".to_string()),
+            description: Some(
+                "Code indexer with semantic search and symbol analysis".to_string(),
+            ),
+            category: None,
+        }
+    }
+
+    async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
+        // Initialize tokio runtime
+        let _ = get_runtime();
+        Ok(())
+    }
+
+    async fn shutdown(&self) -> PluginResult<()> {
+        Ok(())
+    }
+
+    fn provides(&self) -> Vec<&'static str> {
+        vec![SERVICE_MCP_TOOLS, SERVICE_MCP_RESOURCES]
+    }
+}
+
+// ============================================================================
+// MCP TOOLS IMPLEMENTATION
+// ============================================================================
+
+#[async_trait]
+impl McpTools for IndexerPlugin {
+    async fn list_tools(&self) -> Vec<McpTool> {
+        mcp::list_tools()
+    }
+
+    async fn call_tool(&self, name: &str, arguments: Value) -> PluginResult<McpToolResult> {
+        mcp::call_tool(&self.state, name, arguments).await
+    }
+}
+
+// ============================================================================
+// MCP RESOURCES IMPLEMENTATION
+// ============================================================================
+
+#[async_trait]
+impl McpResources for IndexerPlugin {
+    async fn list_resources(&self) -> Vec<McpResource> {
+        mcp::list_resources(&self.state).await
+    }
+
+    async fn read_resource(&self, uri: &str) -> PluginResult<McpResourceContent> {
+        mcp::read_resource(&self.state, uri).await
+    }
+}
+
+// ============================================================================
+// PLUGIN ENTRY POINT
+// ============================================================================
 
 #[no_mangle]
-pub extern "C" fn plugin_entry() -> *const PluginVTable {
-    &PLUGIN_VTABLE
+pub fn plugin_create() -> Box<dyn Plugin> {
+    Box::new(IndexerPlugin::new())
 }
 
-// === Message Handler ===
-
-extern "C" fn handle_message(
-    ctx: *mut PluginContext,
-    msg_type: RStr<'_>,
-    msg_data: RStr<'_>,
-) -> RResult<RString, PluginError> {
-    match msg_type.as_str() {
-        "set_project_path" => {
-            unsafe {
-                if let Some(state) = (*ctx).user_data_mut::<PluginState>() {
-                    state.project_path = PathBuf::from(msg_data.as_str());
-
-                    // Get the service registry from thread-local
-                    let service_registry = match current_service_registry() {
-                        Some(sr) => sr,
-                        None => {
-                            return RResult::RErr(PluginError::new(
-                                3,
-                                "Service registry not available",
-                            ));
-                        }
-                    };
-
-                    // Initialize the indexer for the new path
-                    let runtime = RUNTIME.get().unwrap();
-                    let path = state.project_path.clone();
-                    match runtime.block_on(async {
-                        adi_indexer_core::Adi::open_with_plugins(&path, service_registry).await
-                    }) {
-                        Ok(adi) => {
-                            state.indexer = Some(Arc::new(adi));
-                            RResult::ROk(RString::from("ok"))
-                        }
-                        Err(e) => RResult::RErr(PluginError::new(
-                            1,
-                            format!("Failed to open indexer: {}", e),
-                        )),
-                    }
-                } else {
-                    RResult::RErr(PluginError::new(2, "Plugin not initialized"))
-                }
-            }
-        }
-        _ => RResult::RErr(PluginError::new(
-            -1,
-            format!("Unknown message type: {}", msg_type.as_str()),
-        )),
-    }
+/// Create MCP tools service (for service discovery)
+#[no_mangle]
+pub fn plugin_create_mcp_tools() -> Box<dyn McpTools> {
+    Box::new(IndexerPlugin::new())
 }
 
-// === MCP Tools Service ===
-
-static MCP_TOOLS_VTABLE: ServiceVTable = ServiceVTable {
-    invoke: mcp_tools_invoke,
-    list_methods: mcp_tools_list_methods,
-};
-
-extern "C" fn mcp_tools_invoke(
-    handle: *const c_void,
-    method: RStr<'_>,
-    args: RStr<'_>,
-) -> RResult<RString, lib_plugin_abi::ServiceError> {
-    let ctx = handle as *mut PluginContext;
-    mcp::invoke_tool(ctx, method.as_str(), args.as_str())
-}
-
-extern "C" fn mcp_tools_list_methods(
-    _handle: *const c_void,
-) -> abi_stable::std_types::RVec<lib_plugin_abi::ServiceMethod> {
-    mcp::list_tools()
-}
-
-// === MCP Resources Service ===
-
-static MCP_RESOURCES_VTABLE: ServiceVTable = ServiceVTable {
-    invoke: mcp_resources_invoke,
-    list_methods: mcp_resources_list_methods,
-};
-
-extern "C" fn mcp_resources_invoke(
-    handle: *const c_void,
-    method: RStr<'_>,
-    args: RStr<'_>,
-) -> RResult<RString, lib_plugin_abi::ServiceError> {
-    let ctx = handle as *mut PluginContext;
-    mcp::invoke_resource(ctx, method.as_str(), args.as_str())
-}
-
-extern "C" fn mcp_resources_list_methods(
-    _handle: *const c_void,
-) -> abi_stable::std_types::RVec<lib_plugin_abi::ServiceMethod> {
-    mcp::list_resources()
+/// Create MCP resources service (for service discovery)
+#[no_mangle]
+pub fn plugin_create_mcp_resources() -> Box<dyn McpResources> {
+    Box::new(IndexerPlugin::new())
 }

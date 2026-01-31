@@ -1,12 +1,11 @@
 //! Lua language analyzer implementation.
 
-use lib_indexer_lang_abi::{
-    LocationAbi, ParsedReferenceAbi, ParsedSymbolAbi, ReferenceKindAbi, SymbolKindAbi,
-    VisibilityAbi,
+use lib_plugin_abi_v3::lang::{
+    Location, ParsedReference, ParsedSymbol, ReferenceKind, SymbolKind, Visibility,
 };
 use tree_sitter::{Node, Parser, Tree};
 
-pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
+pub fn extract_symbols(source: &str) -> Vec<ParsedSymbol> {
     let tree = match parse_lua(source) {
         Some(t) => t,
         None => return vec![],
@@ -16,7 +15,7 @@ pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
     symbols
 }
 
-pub fn extract_references(source: &str) -> Vec<ParsedReferenceAbi> {
+pub fn extract_references(source: &str) -> Vec<ParsedReference> {
     let tree = match parse_lua(source) {
         Some(t) => t,
         None => return vec![],
@@ -38,10 +37,10 @@ fn node_text<'a>(node: Node<'a>, source: &'a str) -> String {
     source[node.byte_range()].to_string()
 }
 
-fn node_location(node: Node) -> LocationAbi {
+fn node_location(node: Node) -> Location {
     let start = node.start_position();
     let end = node.end_position();
-    LocationAbi::new(
+    Location::new(
         start.row as u32,
         start.column as u32,
         end.row as u32,
@@ -94,7 +93,7 @@ fn extract_function_signature(node: Node, source: &str) -> String {
     }
 }
 
-fn extract_lua_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn extract_lua_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol>) {
     match node.kind() {
         "function_declaration" => {
             if let Some(symbol) = parse_lua_function(node, source) {
@@ -122,35 +121,35 @@ fn extract_lua_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolA
     }
 }
 
-fn parse_lua_function(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_lua_function(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let signature = extract_function_signature(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Function, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Function, node_location(node))
             .with_signature(signature)
-            .with_visibility(VisibilityAbi::Public)
+            .with_visibility(Visibility::Public)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_lua_local_function(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_lua_local_function(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let signature = extract_function_signature(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Function, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Function, node_location(node))
             .with_signature(signature)
-            .with_visibility(VisibilityAbi::Private)
+            .with_visibility(Visibility::Private)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_lua_variables(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn parse_lua_variables(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol>) {
     let is_local = node.kind() == "local_variable_declaration";
     let doc_comment = extract_doc_comment(node, source);
 
@@ -158,21 +157,17 @@ fn parse_lua_variables(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolA
         if let Some(child) = node.child(i) {
             if child.kind() == "variable_list" || child.kind() == "identifier" {
                 let visibility = if is_local {
-                    VisibilityAbi::Private
+                    Visibility::Private
                 } else {
-                    VisibilityAbi::Public
+                    Visibility::Public
                 };
 
                 if child.kind() == "identifier" {
                     let name_text = node_text(child, source);
                     symbols.push(
-                        ParsedSymbolAbi::new(
-                            name_text,
-                            SymbolKindAbi::Variable,
-                            node_location(child),
-                        )
-                        .with_visibility(visibility)
-                        .with_doc_comment_opt(doc_comment.clone()),
+                        ParsedSymbol::new(name_text, SymbolKind::Variable, node_location(child))
+                            .with_visibility(visibility)
+                            .with_doc_comment_opt(doc_comment.clone()),
                     );
                 } else {
                     for j in 0..child.child_count() {
@@ -180,9 +175,9 @@ fn parse_lua_variables(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolA
                             if var.kind() == "identifier" {
                                 let name_text = node_text(var, source);
                                 symbols.push(
-                                    ParsedSymbolAbi::new(
+                                    ParsedSymbol::new(
                                         name_text,
-                                        SymbolKindAbi::Variable,
+                                        SymbolKind::Variable,
                                         node_location(var),
                                     )
                                     .with_visibility(visibility)
@@ -197,7 +192,7 @@ fn parse_lua_variables(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolA
     }
 }
 
-fn parse_lua_assignment(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn parse_lua_assignment(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol>) {
     // Check if right side is a function expression - then it's a function assignment
     let mut is_function = false;
     for i in 0..node.child_count() {
@@ -229,14 +224,10 @@ fn parse_lua_assignment(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol
                     if let Some(var) = child.child(j) {
                         let name_text = node_text(var, source);
                         symbols.push(
-                            ParsedSymbolAbi::new(
-                                name_text,
-                                SymbolKindAbi::Function,
-                                node_location(node),
-                            )
-                            .with_signature(signature.clone())
-                            .with_visibility(VisibilityAbi::Public)
-                            .with_doc_comment_opt(doc_comment.clone()),
+                            ParsedSymbol::new(name_text, SymbolKind::Function, node_location(node))
+                                .with_signature(signature.clone())
+                                .with_visibility(Visibility::Public)
+                                .with_doc_comment_opt(doc_comment.clone()),
                         );
                     }
                 }
@@ -245,15 +236,15 @@ fn parse_lua_assignment(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol
     }
 }
 
-fn collect_lua_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenceAbi>) {
+fn collect_lua_references(node: Node, source: &str, refs: &mut Vec<ParsedReference>) {
     match node.kind() {
         "function_call" => {
             if let Some(name) = node.child_by_field_name("name") {
                 let name_text = extract_function_call_name(name, source);
                 if !name_text.is_empty() && !is_builtin_function(&name_text) {
-                    refs.push(ParsedReferenceAbi::new(
+                    refs.push(ParsedReference::new(
                         name_text,
-                        ReferenceKindAbi::Call,
+                        ReferenceKind::Call,
                         node_location(name),
                     ));
                 }
@@ -261,18 +252,18 @@ fn collect_lua_references(node: Node, source: &str, refs: &mut Vec<ParsedReferen
         }
         "method_index_expression" => {
             if let Some(method) = node.child_by_field_name("method") {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     node_text(method, source),
-                    ReferenceKindAbi::Call,
+                    ReferenceKind::Call,
                     node_location(method),
                 ));
             }
         }
         "dot_index_expression" | "bracket_index_expression" => {
             if let Some(field) = node.child_by_field_name("field") {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     node_text(field, source),
-                    ReferenceKindAbi::FieldAccess,
+                    ReferenceKind::FieldAccess,
                     node_location(field),
                 ));
             }
@@ -288,9 +279,9 @@ fn collect_lua_references(node: Node, source: &str, refs: &mut Vec<ParsedReferen
                 {
                     let name = node_text(node, source);
                     if !is_keyword(&name) {
-                        refs.push(ParsedReferenceAbi::new(
+                        refs.push(ParsedReference::new(
                             name,
-                            ReferenceKindAbi::VariableReference,
+                            ReferenceKind::VariableReference,
                             node_location(node),
                         ));
                     }
@@ -381,7 +372,7 @@ trait WithDocCommentOpt {
     fn with_doc_comment_opt(self, doc: Option<String>) -> Self;
 }
 
-impl WithDocCommentOpt for ParsedSymbolAbi {
+impl WithDocCommentOpt for ParsedSymbol {
     fn with_doc_comment_opt(self, doc: Option<String>) -> Self {
         match doc {
             Some(d) => self.with_doc_comment(d),

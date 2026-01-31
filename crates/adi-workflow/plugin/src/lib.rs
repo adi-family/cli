@@ -26,6 +26,7 @@ impl Plugin for WorkflowPlugin {
             plugin_type: PluginType::Core,
             author: Some("ADI Team".to_string()),
             description: Some("Run workflows defined in TOML files with interactive prompts".to_string()),
+            category: None,
         }
     }
 

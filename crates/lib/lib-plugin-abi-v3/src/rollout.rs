@@ -1,10 +1,9 @@
 //! Rollout strategy plugin trait
 
-use crate::{Plugin, Result};
+use crate::{runner::ProcessHandle, Plugin, Result};
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
-use std::time::Duration;
 
 /// Rollout strategy plugin trait
 ///
@@ -22,51 +21,48 @@ pub trait RolloutStrategy: Plugin {
     async fn rollback(&self, ctx: &RolloutContext) -> Result<()>;
 }
 
-/// Rollout step
-#[derive(Debug, Clone)]
-pub enum RolloutStep {
-    /// Stop a service instance
-    Stop { instance: String },
-
-    /// Start a service instance
-    Start { instance: String },
-
-    /// Wait for instance to be healthy
-    WaitHealthy {
-        instance: String,
-        timeout: Duration,
-    },
-
-    /// Switch traffic from one instance to another
-    SwitchTraffic { from: String, to: String },
-
-    /// Wait for a duration
-    Wait { duration: Duration },
-
-    /// Run a custom command
-    Command {
-        command: String,
-        args: Vec<String>,
-    },
+/// A single step in the rollout process
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RolloutStep {
+    /// Step ID
+    pub id: String,
+    /// Step type
+    pub step_type: RolloutStepType,
+    /// Step description
+    pub description: String,
+    /// Step configuration
+    pub config: Value,
 }
 
-/// Rollout context
+/// Types of rollout steps
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RolloutStepType {
+    /// Stop existing process
+    Stop,
+    /// Start new process
+    Start,
+    /// Wait for health check
+    WaitHealthy,
+    /// Switch traffic
+    SwitchTraffic,
+    /// Wait for a duration
+    Wait,
+    /// Run a custom command
+    Command,
+}
+
+/// Context for rollout execution
 #[derive(Debug, Clone)]
 pub struct RolloutContext {
     /// Service name
     pub service_name: String,
-
-    /// Old version
-    pub old_version: String,
-
-    /// New version
-    pub new_version: String,
-
-    /// Running instances
-    pub instances: HashMap<String, crate::runner::ProcessHandle>,
-
-    /// Additional metadata
-    pub metadata: HashMap<String, String>,
+    /// Current process handle (if any)
+    pub current_handle: Option<ProcessHandle>,
+    /// New process handle (if started)
+    pub new_handle: Option<ProcessHandle>,
+    /// Rollout configuration
+    pub config: Value,
 }
 
 /// Rollout step result
@@ -74,24 +70,27 @@ pub struct RolloutContext {
 pub struct RolloutStepResult {
     /// Whether the step succeeded
     pub success: bool,
-
+    /// Updated context (e.g., with new process handle)
+    pub context: RolloutContext,
     /// Optional message
     pub message: Option<String>,
 }
 
 impl RolloutStepResult {
     /// Create a successful result
-    pub fn success() -> Self {
+    pub fn success(context: RolloutContext) -> Self {
         Self {
             success: true,
+            context,
             message: None,
         }
     }
 
     /// Create a failed result
-    pub fn failed(message: impl Into<String>) -> Self {
+    pub fn failure(context: RolloutContext, message: impl Into<String>) -> Self {
         Self {
             success: false,
+            context,
             message: Some(message.into()),
         }
     }

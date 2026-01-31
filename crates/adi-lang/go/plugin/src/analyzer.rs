@@ -1,12 +1,11 @@
 //! Go language analyzer implementation.
 
-use lib_indexer_lang_abi::{
-    LocationAbi, ParsedReferenceAbi, ParsedSymbolAbi, ReferenceKindAbi, SymbolKindAbi,
-    VisibilityAbi,
+use lib_plugin_abi_v3::lang::{
+    Location, ParsedReference, ParsedSymbol, ReferenceKind, SymbolKind, Visibility,
 };
 use tree_sitter::{Node, Parser, Tree};
 
-pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
+pub fn extract_symbols(source: &str) -> Vec<ParsedSymbol> {
     let tree = match parse_go(source) {
         Some(t) => t,
         None => return vec![],
@@ -16,7 +15,7 @@ pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
     symbols
 }
 
-pub fn extract_references(source: &str) -> Vec<ParsedReferenceAbi> {
+pub fn extract_references(source: &str) -> Vec<ParsedReference> {
     let tree = match parse_go(source) {
         Some(t) => t,
         None => return vec![],
@@ -36,10 +35,10 @@ fn node_text(node: Node, source: &str) -> String {
     source[node.byte_range()].to_string()
 }
 
-fn node_location(node: Node) -> LocationAbi {
+fn node_location(node: Node) -> Location {
     let start = node.start_position();
     let end = node.end_position();
-    LocationAbi::new(
+    Location::new(
         start.row as u32,
         start.column as u32,
         end.row as u32,
@@ -49,33 +48,29 @@ fn node_location(node: Node) -> LocationAbi {
     )
 }
 
-fn detect_visibility(name: &str) -> VisibilityAbi {
+fn detect_visibility(name: &str) -> Visibility {
     if name
         .chars()
         .next()
         .map(|c| c.is_uppercase())
         .unwrap_or(false)
     {
-        VisibilityAbi::Public
+        Visibility::Public
     } else {
-        VisibilityAbi::Private
+        Visibility::Private
     }
 }
 
-fn extract_go_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn extract_go_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol>) {
     match node.kind() {
         "function_declaration" => {
             if let Some(name) = node.child_by_field_name("name") {
                 let name_text = node_text(name, source);
                 let sig = extract_function_signature(node, source);
                 symbols.push(
-                    ParsedSymbolAbi::new(
-                        name_text.clone(),
-                        SymbolKindAbi::Function,
-                        node_location(node),
-                    )
-                    .with_signature(sig)
-                    .with_visibility(detect_visibility(&name_text)),
+                    ParsedSymbol::new(name_text.clone(), SymbolKind::Function, node_location(node))
+                        .with_signature(sig)
+                        .with_visibility(detect_visibility(&name_text)),
                 );
             }
         }
@@ -93,7 +88,7 @@ fn extract_go_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAb
                     format!("{}.{}", receiver, name_text)
                 };
                 symbols.push(
-                    ParsedSymbolAbi::new(full_name, SymbolKindAbi::Method, node_location(node))
+                    ParsedSymbol::new(full_name, SymbolKind::Method, node_location(node))
                         .with_visibility(detect_visibility(&name_text)),
                 );
             }
@@ -106,9 +101,9 @@ fn extract_go_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAb
                             let name_text = node_text(name, source);
                             let type_node = child.child_by_field_name("type");
                             let kind = match type_node.map(|t| t.kind()) {
-                                Some("struct_type") => SymbolKindAbi::Struct,
-                                Some("interface_type") => SymbolKindAbi::Interface,
-                                _ => SymbolKindAbi::Type,
+                                Some("struct_type") => SymbolKind::Struct,
+                                Some("interface_type") => SymbolKind::Interface,
+                                _ => SymbolKind::Type,
                             };
                             let mut children = Vec::new();
                             if let Some(type_def) = type_node {
@@ -120,9 +115,9 @@ fn extract_go_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAb
                                                     if let Some(field_name) =
                                                         field.child_by_field_name("name")
                                                     {
-                                                        children.push(ParsedSymbolAbi::new(
+                                                        children.push(ParsedSymbol::new(
                                                             node_text(field_name, source),
-                                                            SymbolKindAbi::Field,
+                                                            SymbolKind::Field,
                                                             node_location(field),
                                                         ));
                                                     }
@@ -137,9 +132,9 @@ fn extract_go_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAb
                                                 if let Some(method_name) =
                                                     member.child_by_field_name("name")
                                                 {
-                                                    children.push(ParsedSymbolAbi::new(
+                                                    children.push(ParsedSymbol::new(
                                                         node_text(method_name, source),
-                                                        SymbolKindAbi::Method,
+                                                        SymbolKind::Method,
                                                         node_location(member),
                                                     ));
                                                 }
@@ -149,7 +144,7 @@ fn extract_go_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAb
                                 }
                             }
                             symbols.push(
-                                ParsedSymbolAbi::new(name_text.clone(), kind, node_location(child))
+                                ParsedSymbol::new(name_text.clone(), kind, node_location(child))
                                     .with_visibility(detect_visibility(&name_text))
                                     .with_children(children),
                             );
@@ -165,12 +160,12 @@ fn extract_go_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAb
                         if let Some(name) = child.child_by_field_name("name") {
                             let name_text = node_text(name, source);
                             let kind = if node.kind() == "const_declaration" {
-                                SymbolKindAbi::Constant
+                                SymbolKind::Constant
                             } else {
-                                SymbolKindAbi::Variable
+                                SymbolKind::Variable
                             };
                             symbols.push(
-                                ParsedSymbolAbi::new(name_text.clone(), kind, node_location(child))
+                                ParsedSymbol::new(name_text.clone(), kind, node_location(child))
                                     .with_visibility(detect_visibility(&name_text)),
                             );
                         }
@@ -204,15 +199,15 @@ fn extract_function_signature(node: Node, source: &str) -> String {
     format!("func {}{}{}", name, params, result)
 }
 
-fn collect_go_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenceAbi>) {
+fn collect_go_references(node: Node, source: &str, refs: &mut Vec<ParsedReference>) {
     match node.kind() {
         "call_expression" => {
             if let Some(func) = node.child_by_field_name("function") {
                 let name = node_text(func, source);
                 if !is_builtin(&name) {
-                    refs.push(ParsedReferenceAbi::new(
+                    refs.push(ParsedReference::new(
                         name,
-                        ReferenceKindAbi::Call,
+                        ReferenceKind::Call,
                         node_location(func),
                     ));
                 }
@@ -224,17 +219,17 @@ fn collect_go_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenc
                     if child.kind() == "import_spec" {
                         if let Some(path) = child.child_by_field_name("path") {
                             let import_path = node_text(path, source).trim_matches('"').to_string();
-                            refs.push(ParsedReferenceAbi::new(
+                            refs.push(ParsedReference::new(
                                 import_path,
-                                ReferenceKindAbi::Import,
+                                ReferenceKind::Import,
                                 node_location(path),
                             ));
                         }
                     } else if child.kind() == "interpreted_string_literal" {
                         let import_path = node_text(child, source).trim_matches('"').to_string();
-                        refs.push(ParsedReferenceAbi::new(
+                        refs.push(ParsedReference::new(
                             import_path,
-                            ReferenceKindAbi::Import,
+                            ReferenceKind::Import,
                             node_location(child),
                         ));
                     }
@@ -244,18 +239,18 @@ fn collect_go_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenc
         "type_identifier" => {
             let name = node_text(node, source);
             if !is_primitive(&name) {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     name,
-                    ReferenceKindAbi::TypeReference,
+                    ReferenceKind::TypeReference,
                     node_location(node),
                 ));
             }
         }
         "selector_expression" => {
             if let Some(field) = node.child_by_field_name("field") {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     node_text(field, source),
-                    ReferenceKindAbi::FieldAccess,
+                    ReferenceKind::FieldAccess,
                     node_location(field),
                 ));
             }

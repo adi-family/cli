@@ -1,288 +1,211 @@
-//! MCP tools and resources implementation.
+//! MCP tools and resources implementation for v3 ABI.
 
-use abi_stable::std_types::{RResult, RString, RVec};
-use lib_plugin_abi::{PluginContext, ServiceError, ServiceMethod};
+use adi_indexer_core::SymbolId;
+use lib_plugin_abi_v3::{
+    mcp::{McpResource, McpResourceContent, McpTool, McpToolResult},
+    PluginError, Result as PluginResult,
+};
 use serde_json::{json, Value};
+use std::path::Path;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
-use crate::{PluginState, RUNTIME};
+use crate::PluginState;
 
-/// Invoke an MCP tool.
-pub fn invoke_tool(
-    ctx: *mut PluginContext,
-    method: &str,
-    args: &str,
-) -> RResult<RString, ServiceError> {
-    let runtime = match RUNTIME.get() {
-        Some(rt) => rt,
-        None => return RResult::RErr(ServiceError::internal("Runtime not initialized")),
-    };
+// ============================================================================
+// MCP TOOLS
+// ============================================================================
 
-    let result = runtime.block_on(async {
-        match method {
-            "list_tools" => Ok(list_tools_json()),
-            "call_tool" => {
-                let params: Value = serde_json::from_str(args)
-                    .map_err(|e| ServiceError::invocation_error(format!("Invalid args: {}", e)))?;
-
-                let tool_name = params
-                    .get("name")
-                    .and_then(|v| v.as_str())
-                    .ok_or_else(|| ServiceError::invocation_error("Missing tool name"))?;
-
-                let tool_args = params.get("args").cloned().unwrap_or(json!({}));
-
-                call_tool_impl(ctx, tool_name, &tool_args).await
-            }
-            _ => Err(ServiceError::method_not_found(method)),
-        }
-    });
-
-    match result {
-        Ok(s) => RResult::ROk(RString::from(s)),
-        Err(e) => RResult::RErr(e),
-    }
-}
-
-/// Invoke an MCP resource method.
-pub fn invoke_resource(
-    ctx: *mut PluginContext,
-    method: &str,
-    args: &str,
-) -> RResult<RString, ServiceError> {
-    let runtime = match RUNTIME.get() {
-        Some(rt) => rt,
-        None => return RResult::RErr(ServiceError::internal("Runtime not initialized")),
-    };
-
-    let result = runtime.block_on(async {
-        match method {
-            "list_resources" => Ok(list_resources_json(ctx)),
-            "read_resource" => {
-                let params: Value = serde_json::from_str(args)
-                    .map_err(|e| ServiceError::invocation_error(format!("Invalid args: {}", e)))?;
-
-                let uri = params
-                    .get("uri")
-                    .and_then(|v| v.as_str())
-                    .ok_or_else(|| ServiceError::invocation_error("Missing uri"))?;
-
-                read_resource_impl(ctx, uri).await
-            }
-            _ => Err(ServiceError::method_not_found(method)),
-        }
-    });
-
-    match result {
-        Ok(s) => RResult::ROk(RString::from(s)),
-        Err(e) => RResult::RErr(e),
-    }
-}
-
-/// List available MCP tools.
-pub fn list_tools() -> RVec<ServiceMethod> {
-    let tools = vec![
-        ServiceMethod::new("list_tools").with_description("List all available tools"),
-        ServiceMethod::new("call_tool")
-            .with_description("Call a tool by name with arguments")
-            .with_parameters_schema(r#"{"type":"object","properties":{"name":{"type":"string"},"args":{"type":"object"}},"required":["name"]}"#),
-    ];
-    tools.into_iter().collect()
-}
-
-/// List available MCP resources.
-pub fn list_resources() -> RVec<ServiceMethod> {
-    let methods = vec![
-        ServiceMethod::new("list_resources").with_description("List all available resources"),
-        ServiceMethod::new("read_resource")
-            .with_description("Read a resource by URI")
-            .with_parameters_schema(
-                r#"{"type":"object","properties":{"uri":{"type":"string"}},"required":["uri"]}"#,
-            ),
-    ];
-    methods.into_iter().collect()
-}
-
-/// Get tools list as JSON.
-fn list_tools_json() -> String {
-    let tools = json!([
-        {
-            "name": "search",
-            "description": "Semantic search for code symbols using natural language. Returns symbols ranked by relevance.",
-            "inputSchema": {
+/// List all available MCP tools
+pub fn list_tools() -> Vec<McpTool> {
+    vec![
+        McpTool {
+            name: "search".to_string(),
+            description: "Semantic search for code symbols using natural language. Returns symbols ranked by relevance.".to_string(),
+            input_schema: json!({
                 "type": "object",
                 "properties": {
                     "query": { "type": "string", "description": "Natural language search query" },
                     "limit": { "type": "integer", "default": 10, "minimum": 1, "maximum": 100 }
                 },
                 "required": ["query"]
-            }
+            }),
         },
-        {
-            "name": "search_symbols",
-            "description": "Full-text search for symbols by name.",
-            "inputSchema": {
+        McpTool {
+            name: "search_symbols".to_string(),
+            description: "Full-text search for symbols by name.".to_string(),
+            input_schema: json!({
                 "type": "object",
                 "properties": {
                     "query": { "type": "string" },
                     "limit": { "type": "integer", "default": 10 }
                 },
                 "required": ["query"]
-            }
+            }),
         },
-        {
-            "name": "search_files",
-            "description": "Full-text search for files by path or name.",
-            "inputSchema": {
+        McpTool {
+            name: "search_files".to_string(),
+            description: "Full-text search for files by path or name.".to_string(),
+            input_schema: json!({
                 "type": "object",
                 "properties": {
                     "query": { "type": "string" },
                     "limit": { "type": "integer", "default": 10 }
                 },
                 "required": ["query"]
-            }
+            }),
         },
-        {
-            "name": "get_symbol",
-            "description": "Get detailed information about a specific symbol by its ID.",
-            "inputSchema": {
+        McpTool {
+            name: "get_symbol".to_string(),
+            description: "Get detailed information about a specific symbol by its ID.".to_string(),
+            input_schema: json!({
                 "type": "object",
                 "properties": {
                     "id": { "type": "integer", "description": "Symbol ID" }
                 },
                 "required": ["id"]
-            }
+            }),
         },
-        {
-            "name": "get_file",
-            "description": "Get file information including all symbols defined in it.",
-            "inputSchema": {
+        McpTool {
+            name: "get_file".to_string(),
+            description: "Get file information including all symbols defined in it.".to_string(),
+            input_schema: json!({
                 "type": "object",
                 "properties": {
                     "path": { "type": "string", "description": "File path relative to project root" }
                 },
                 "required": ["path"]
-            }
+            }),
         },
-        {
-            "name": "get_callers",
-            "description": "Find all symbols that call/reference a given symbol.",
-            "inputSchema": {
+        McpTool {
+            name: "get_callers".to_string(),
+            description: "Find all symbols that call/reference a given symbol.".to_string(),
+            input_schema: json!({
                 "type": "object",
                 "properties": {
                     "id": { "type": "integer", "description": "Symbol ID to find callers for" }
                 },
                 "required": ["id"]
-            }
+            }),
         },
-        {
-            "name": "get_callees",
-            "description": "Find all symbols that a given symbol calls/references.",
-            "inputSchema": {
+        McpTool {
+            name: "get_callees".to_string(),
+            description: "Find all symbols that a given symbol calls/references.".to_string(),
+            input_schema: json!({
                 "type": "object",
                 "properties": {
                     "id": { "type": "integer", "description": "Symbol ID to find callees for" }
                 },
                 "required": ["id"]
-            }
+            }),
         },
-        {
-            "name": "get_symbol_usage",
-            "description": "Get complete usage statistics for a symbol.",
-            "inputSchema": {
+        McpTool {
+            name: "get_symbol_usage".to_string(),
+            description: "Get complete usage statistics for a symbol.".to_string(),
+            input_schema: json!({
                 "type": "object",
                 "properties": {
                     "id": { "type": "integer", "description": "Symbol ID" }
                 },
                 "required": ["id"]
-            }
+            }),
         },
-        {
-            "name": "get_tree",
-            "description": "Get the complete project structure as a hierarchical tree.",
-            "inputSchema": { "type": "object", "properties": {} }
+        McpTool {
+            name: "get_tree".to_string(),
+            description: "Get the complete project structure as a hierarchical tree.".to_string(),
+            input_schema: json!({ "type": "object", "properties": {} }),
         },
-        {
-            "name": "index",
-            "description": "Index or re-index the project.",
-            "inputSchema": { "type": "object", "properties": {} }
+        McpTool {
+            name: "index".to_string(),
+            description: "Index or re-index the project.".to_string(),
+            input_schema: json!({ "type": "object", "properties": {} }),
         },
-        {
-            "name": "status",
-            "description": "Get current indexing status.",
-            "inputSchema": { "type": "object", "properties": {} }
-        }
-    ]);
-    serde_json::to_string(&tools).unwrap_or_else(|_| "[]".to_string())
+        McpTool {
+            name: "status".to_string(),
+            description: "Get current indexing status.".to_string(),
+            input_schema: json!({ "type": "object", "properties": {} }),
+        },
+        McpTool {
+            name: "set_project_path".to_string(),
+            description: "Set the project path for indexing.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "Path to the project root" }
+                },
+                "required": ["path"]
+            }),
+        },
+    ]
 }
 
-/// Get resources list as JSON.
-fn list_resources_json(ctx: *mut PluginContext) -> String {
-    let mut resources = vec![
-        json!({
-            "uri": "adi://status",
-            "name": "Index Status",
-            "description": "Current indexing status and statistics",
-            "mimeType": "application/json"
-        }),
-        json!({
-            "uri": "adi://tree",
-            "name": "Project Tree",
-            "description": "Hierarchical view of all indexed files and symbols",
-            "mimeType": "application/json"
-        }),
-        json!({
-            "uri": "adi://config",
-            "name": "Configuration",
-            "description": "Current ADI configuration",
-            "mimeType": "application/json"
-        }),
-    ];
+/// Call an MCP tool
+pub async fn call_tool(
+    state: &Arc<RwLock<PluginState>>,
+    name: &str,
+    args: Value,
+) -> PluginResult<McpToolResult> {
+    match name {
+        "set_project_path" => {
+            let path = args
+                .get("path")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| PluginError::CommandFailed("Missing path".to_string()))?;
 
-    // Add indexed files as resources
-    unsafe {
-        if let Some(state) = (*(ctx as *const PluginContext)).user_data::<PluginState>() {
-            if let Some(indexer) = &state.indexer {
-                if let Ok(tree) = indexer.get_tree() {
-                    for file_node in tree.files.iter().take(100) {
-                        let path_str = file_node.path.to_string_lossy();
-                        resources.push(json!({
-                            "uri": format!("adi://file/{}", path_str),
-                            "name": file_node.path.file_name()
-                                .map(|n| n.to_string_lossy().to_string())
-                                .unwrap_or_else(|| path_str.to_string()),
-                            "description": format!("{} file with {} symbols",
-                                file_node.language.as_str(),
-                                file_node.symbols.len()
-                            ),
-                            "mimeType": "application/json"
-                        }));
-                    }
+            let mut state = state.write().await;
+            state.project_path = std::path::PathBuf::from(path);
+
+            // Initialize the indexer for the new path
+            // Get the plugin manager from thread-local storage for plugin support
+            let plugin_manager = match lib_plugin_host::current_plugin_manager() {
+                Some(pm) => pm,
+                None => {
+                    return Err(PluginError::CommandFailed(
+                        "Plugin manager not available".to_string(),
+                    ));
                 }
+            };
+
+            match adi_indexer_core::Adi::open_with_plugins(
+                state.project_path.as_path(),
+                plugin_manager,
+            )
+            .await
+            {
+                Ok(adi) => {
+                    state.indexer = Some(Arc::new(adi));
+                    Ok(McpToolResult::text("ok"))
+                }
+                Err(e) => Err(PluginError::CommandFailed(format!(
+                    "Failed to open indexer: {}",
+                    e
+                ))),
             }
+        }
+        _ => {
+            // All other tools require an initialized indexer
+            let state = state.read().await;
+            let indexer = state
+                .indexer
+                .as_ref()
+                .ok_or_else(|| {
+                    PluginError::CommandFailed(
+                        "Indexer not initialized. Call set_project_path first.".to_string(),
+                    )
+                })?
+                .clone();
+
+            call_tool_impl(&indexer, name, &args).await
         }
     }
-
-    serde_json::to_string(&resources).unwrap_or_else(|_| "[]".to_string())
 }
 
-/// Call a tool implementation.
+/// Call a tool with an initialized indexer
 async fn call_tool_impl(
-    ctx: *mut PluginContext,
+    indexer: &adi_indexer_core::Adi,
     tool_name: &str,
     args: &Value,
-) -> Result<String, ServiceError> {
-    let indexer = unsafe {
-        let state = (*(ctx as *const PluginContext)).user_data::<PluginState>();
-        match state.and_then(|s| s.indexer.clone()) {
-            Some(i) => i,
-            None => {
-                return Err(ServiceError::invocation_error(
-                    "Indexer not initialized. Set project path first.",
-                ))
-            }
-        }
-    };
-
+) -> PluginResult<McpToolResult> {
     match tool_name {
         "search" => {
             let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
@@ -293,9 +216,9 @@ async fn call_tool_impl(
                 .search(query, limit)
                 .await
                 .map(|results| {
-                    tool_result(&serde_json::to_string_pretty(&results).unwrap_or_default())
+                    McpToolResult::json(&results).unwrap_or_else(|_| McpToolResult::text("[]"))
                 })
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))
         }
         "search_symbols" => {
             let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
@@ -305,9 +228,9 @@ async fn call_tool_impl(
                 .search_symbols(query, limit)
                 .await
                 .map(|results| {
-                    tool_result(&serde_json::to_string_pretty(&results).unwrap_or_default())
+                    McpToolResult::json(&results).unwrap_or_else(|_| McpToolResult::text("[]"))
                 })
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))
         }
         "search_files" => {
             let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
@@ -317,80 +240,84 @@ async fn call_tool_impl(
                 .search_files(query, limit)
                 .await
                 .map(|results| {
-                    tool_result(&serde_json::to_string_pretty(&results).unwrap_or_default())
+                    McpToolResult::json(&results).unwrap_or_else(|_| McpToolResult::text("[]"))
                 })
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))
         }
         "get_symbol" => {
             let id = args
                 .get("id")
                 .and_then(|v| v.as_i64())
-                .ok_or_else(|| ServiceError::invocation_error("Missing symbol id"))?;
+                .ok_or_else(|| PluginError::CommandFailed("Missing symbol id".to_string()))?;
 
             indexer
-                .get_symbol(adi_indexer_core::SymbolId(id))
+                .get_symbol(SymbolId(id))
                 .map(|symbol| {
-                    tool_result(&serde_json::to_string_pretty(&symbol).unwrap_or_default())
+                    McpToolResult::json(&symbol).unwrap_or_else(|_| McpToolResult::text("{}"))
                 })
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))
         }
         "get_file" => {
             let path = args
                 .get("path")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| ServiceError::invocation_error("Missing file path"))?;
+                .ok_or_else(|| PluginError::CommandFailed("Missing file path".to_string()))?;
 
             indexer
-                .get_file(std::path::Path::new(path))
-                .map(|info| tool_result(&serde_json::to_string_pretty(&info).unwrap_or_default()))
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))
+                .get_file(Path::new(path))
+                .map(|info| {
+                    McpToolResult::json(&info).unwrap_or_else(|_| McpToolResult::text("{}"))
+                })
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))
         }
         "get_callers" => {
             let id = args
                 .get("id")
                 .and_then(|v| v.as_i64())
-                .ok_or_else(|| ServiceError::invocation_error("Missing symbol id"))?;
+                .ok_or_else(|| PluginError::CommandFailed("Missing symbol id".to_string()))?;
 
             indexer
-                .get_callers(adi_indexer_core::SymbolId(id))
+                .get_callers(SymbolId(id))
                 .map(|callers| {
-                    tool_result(&serde_json::to_string_pretty(&callers).unwrap_or_default())
+                    McpToolResult::json(&callers).unwrap_or_else(|_| McpToolResult::text("[]"))
                 })
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))
         }
         "get_callees" => {
             let id = args
                 .get("id")
                 .and_then(|v| v.as_i64())
-                .ok_or_else(|| ServiceError::invocation_error("Missing symbol id"))?;
+                .ok_or_else(|| PluginError::CommandFailed("Missing symbol id".to_string()))?;
 
             indexer
-                .get_callees(adi_indexer_core::SymbolId(id))
+                .get_callees(SymbolId(id))
                 .map(|callees| {
-                    tool_result(&serde_json::to_string_pretty(&callees).unwrap_or_default())
+                    McpToolResult::json(&callees).unwrap_or_else(|_| McpToolResult::text("[]"))
                 })
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))
         }
         "get_symbol_usage" => {
             let id = args
                 .get("id")
                 .and_then(|v| v.as_i64())
-                .ok_or_else(|| ServiceError::invocation_error("Missing symbol id"))?;
+                .ok_or_else(|| PluginError::CommandFailed("Missing symbol id".to_string()))?;
 
             indexer
-                .get_symbol_usage(adi_indexer_core::SymbolId(id))
-                .map(|usage| tool_result(&serde_json::to_string_pretty(&usage).unwrap_or_default()))
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))
+                .get_symbol_usage(SymbolId(id))
+                .map(|usage| {
+                    McpToolResult::json(&usage).unwrap_or_else(|_| McpToolResult::text("{}"))
+                })
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))
         }
         "get_tree" => indexer
             .get_tree()
-            .map(|tree| tool_result(&serde_json::to_string_pretty(&tree).unwrap_or_default()))
-            .map_err(|e| ServiceError::invocation_error(e.to_string())),
+            .map(|tree| McpToolResult::json(&tree).unwrap_or_else(|_| McpToolResult::text("{}")))
+            .map_err(|e| PluginError::CommandFailed(e.to_string())),
         "index" => indexer
             .index()
             .await
             .map(|progress| {
-                tool_result(&format!(
+                McpToolResult::text(format!(
                     "Indexed {} files with {} symbols. Errors: {}",
                     progress.files_processed,
                     progress.symbols_indexed,
@@ -401,130 +328,151 @@ async fn call_tool_impl(
                     }
                 ))
             })
-            .map_err(|e| ServiceError::invocation_error(e.to_string())),
+            .map_err(|e| PluginError::CommandFailed(e.to_string())),
         "status" => indexer
             .status()
-            .map(|status| tool_result(&serde_json::to_string_pretty(&status).unwrap_or_default()))
-            .map_err(|e| ServiceError::invocation_error(e.to_string())),
-        _ => Err(ServiceError::invocation_error(format!(
+            .map(|status| {
+                McpToolResult::json(&status).unwrap_or_else(|_| McpToolResult::text("{}"))
+            })
+            .map_err(|e| PluginError::CommandFailed(e.to_string())),
+        _ => Err(PluginError::CommandFailed(format!(
             "Unknown tool: {}",
             tool_name
         ))),
     }
 }
 
-/// Read a resource.
-async fn read_resource_impl(ctx: *mut PluginContext, uri: &str) -> Result<String, ServiceError> {
-    let indexer = unsafe {
-        let state = (*(ctx as *const PluginContext)).user_data::<PluginState>();
-        match state.and_then(|s| s.indexer.clone()) {
-            Some(i) => i,
-            None => {
-                return Err(ServiceError::invocation_error(
-                    "Indexer not initialized. Set project path first.",
-                ))
+// ============================================================================
+// MCP RESOURCES
+// ============================================================================
+
+/// List all available MCP resources
+pub async fn list_resources(state: &Arc<RwLock<PluginState>>) -> Vec<McpResource> {
+    let mut resources = vec![
+        McpResource {
+            uri: "adi://status".to_string(),
+            name: "Index Status".to_string(),
+            description: "Current indexing status and statistics".to_string(),
+            mime_type: "application/json".to_string(),
+        },
+        McpResource {
+            uri: "adi://tree".to_string(),
+            name: "Project Tree".to_string(),
+            description: "Hierarchical view of all indexed files and symbols".to_string(),
+            mime_type: "application/json".to_string(),
+        },
+        McpResource {
+            uri: "adi://config".to_string(),
+            name: "Configuration".to_string(),
+            description: "Current ADI configuration".to_string(),
+            mime_type: "application/json".to_string(),
+        },
+    ];
+
+    // Add indexed files as resources
+    let state = state.read().await;
+    if let Some(indexer) = &state.indexer {
+        if let Ok(tree) = indexer.get_tree() {
+            for file_node in tree.files.iter().take(100) {
+                let path_str = file_node.path.to_string_lossy();
+                resources.push(McpResource {
+                    uri: format!("adi://file/{}", path_str),
+                    name: file_node
+                        .path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| path_str.to_string()),
+                    description: format!(
+                        "{} file with {} symbols",
+                        file_node.language.as_str(),
+                        file_node.symbols.len()
+                    ),
+                    mime_type: "application/json".to_string(),
+                });
             }
         }
-    };
+    }
 
-    let content = match uri {
+    resources
+}
+
+/// Read an MCP resource
+pub async fn read_resource(
+    state: &Arc<RwLock<PluginState>>,
+    uri: &str,
+) -> PluginResult<McpResourceContent> {
+    let state = state.read().await;
+    let indexer = state.indexer.as_ref().ok_or_else(|| {
+        PluginError::CommandFailed(
+            "Indexer not initialized. Call set_project_path first.".to_string(),
+        )
+    })?;
+
+    match uri {
         "adi://status" => {
             let status = indexer
                 .status()
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))?;
-            json!({
-                "uri": uri,
-                "mimeType": "application/json",
-                "text": serde_json::to_string_pretty(&status).unwrap_or_default()
-            })
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))?;
+            let content = serde_json::to_string_pretty(&status)?;
+            Ok(McpResourceContent::text(uri, content, "application/json"))
         }
         "adi://tree" => {
             let tree = indexer
                 .get_tree()
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))?;
-            json!({
-                "uri": uri,
-                "mimeType": "application/json",
-                "text": serde_json::to_string_pretty(&tree).unwrap_or_default()
-            })
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))?;
+            let content = serde_json::to_string_pretty(&tree)?;
+            Ok(McpResourceContent::text(uri, content, "application/json"))
         }
         "adi://config" => {
             let config = indexer.config();
-            json!({
-                "uri": uri,
-                "mimeType": "application/json",
-                "text": serde_json::to_string_pretty(&config).unwrap_or_default()
-            })
+            let content = serde_json::to_string_pretty(&config)?;
+            Ok(McpResourceContent::text(uri, content, "application/json"))
         }
         _ if uri.starts_with("adi://file/") => {
             let path = uri.strip_prefix("adi://file/").unwrap();
             let file_info = indexer
-                .get_file(std::path::Path::new(path))
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))?;
+                .get_file(Path::new(path))
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))?;
 
             // Read actual file content
             let full_path = indexer.project_path().join(path);
             let file_content = std::fs::read_to_string(&full_path).ok();
 
-            let content_text = if let Some(content) = file_content {
+            let content_obj = if let Some(content) = file_content {
                 json!({
                     "file": file_info.file,
                     "symbols": file_info.symbols,
                     "content": content
                 })
-                .to_string()
             } else {
-                serde_json::to_string_pretty(&file_info).unwrap_or_default()
+                serde_json::to_value(&file_info)?
             };
 
-            json!({
-                "uri": uri,
-                "mimeType": "application/json",
-                "text": content_text
-            })
+            let content = serde_json::to_string_pretty(&content_obj)?;
+            Ok(McpResourceContent::text(uri, content, "application/json"))
         }
         _ if uri.starts_with("adi://symbol/") => {
             let id_str = uri.strip_prefix("adi://symbol/").unwrap();
             let id: i64 = id_str
                 .parse()
-                .map_err(|_| ServiceError::invocation_error("Invalid symbol ID"))?;
+                .map_err(|_| PluginError::CommandFailed("Invalid symbol ID".to_string()))?;
 
             let symbol = indexer
-                .get_symbol(adi_indexer_core::SymbolId(id))
-                .map_err(|e| ServiceError::invocation_error(e.to_string()))?;
-            let usage = indexer
-                .get_symbol_usage(adi_indexer_core::SymbolId(id))
-                .ok();
+                .get_symbol(SymbolId(id))
+                .map_err(|e| PluginError::CommandFailed(e.to_string()))?;
+            let usage = indexer.get_symbol_usage(SymbolId(id)).ok();
 
             let content_obj = json!({
                 "symbol": symbol,
                 "usage": usage
             });
 
-            json!({
-                "uri": uri,
-                "mimeType": "application/json",
-                "text": serde_json::to_string_pretty(&content_obj).unwrap_or_default()
-            })
+            let content = serde_json::to_string_pretty(&content_obj)?;
+            Ok(McpResourceContent::text(uri, content, "application/json"))
         }
-        _ => {
-            return Err(ServiceError::invocation_error(format!(
-                "Unknown resource URI: {}",
-                uri
-            )))
-        }
-    };
-
-    Ok(serde_json::to_string(&content).unwrap_or_else(|_| "{}".to_string()))
-}
-
-/// Format a tool result.
-fn tool_result(text: &str) -> String {
-    let result = json!({
-        "content": [{
-            "type": "text",
-            "text": text
-        }]
-    });
-    serde_json::to_string(&result).unwrap_or_else(|_| "{}".to_string())
+        _ => Err(PluginError::CommandFailed(format!(
+            "Unknown resource URI: {}",
+            uri
+        ))),
+    }
 }

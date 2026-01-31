@@ -19,6 +19,7 @@ impl Plugin for BrowserDebugPlugin {
             plugin_type: PluginType::Core,
             author: Some("ADI Team".to_string()),
             description: Some("Browser debugging - inspect network requests and console logs from browser tabs ".to_string()),
+            category: None,
         }
     }
 

@@ -1,11 +1,59 @@
 //! C/C++ language analyzer implementation.
 
-use lib_indexer_lang_abi::{
-    LocationAbi, ParsedReferenceAbi, ParsedSymbolAbi, ReferenceKindAbi, SymbolKindAbi,
-};
 use tree_sitter::{Node, Parser, Tree};
 
-pub fn extract_symbols(source: &str, is_cpp: bool) -> Vec<ParsedSymbolAbi> {
+/// Internal symbol kind (ABI-independent)
+#[derive(Debug, Clone, Copy)]
+pub enum InternalSymbolKind {
+    Function,
+    Method,
+    Class,
+    Struct,
+    Enum,
+    Namespace,
+    Field,
+}
+
+/// Internal reference kind (ABI-independent)
+#[derive(Debug, Clone, Copy)]
+pub enum InternalReferenceKind {
+    Call,
+    Import,
+    TypeReference,
+    FieldAccess,
+    Inheritance,
+}
+
+/// Internal location (ABI-independent)
+#[derive(Debug, Clone)]
+pub struct InternalLocation {
+    pub start_line: u32,
+    pub start_col: u32,
+    pub end_line: u32,
+    pub end_col: u32,
+    pub start_byte: u32,
+    pub end_byte: u32,
+}
+
+/// Internal symbol (ABI-independent)
+#[derive(Debug, Clone)]
+pub struct InternalSymbol {
+    pub name: String,
+    pub kind: InternalSymbolKind,
+    pub location: InternalLocation,
+    pub signature: Option<String>,
+    pub children: Vec<InternalSymbol>,
+}
+
+/// Internal reference (ABI-independent)
+#[derive(Debug, Clone)]
+pub struct InternalReference {
+    pub name: String,
+    pub kind: InternalReferenceKind,
+    pub location: InternalLocation,
+}
+
+pub fn extract_symbols(source: &str, is_cpp: bool) -> Vec<InternalSymbol> {
     let tree = match parse(source, is_cpp) {
         Some(t) => t,
         None => return vec![],
@@ -15,7 +63,7 @@ pub fn extract_symbols(source: &str, is_cpp: bool) -> Vec<ParsedSymbolAbi> {
     symbols
 }
 
-pub fn extract_references(source: &str, is_cpp: bool) -> Vec<ParsedReferenceAbi> {
+pub fn extract_references(source: &str, is_cpp: bool) -> Vec<InternalReference> {
     let tree = match parse(source, is_cpp) {
         Some(t) => t,
         None => return vec![],
@@ -40,29 +88,32 @@ fn node_text(node: Node, source: &str) -> String {
     source[node.byte_range()].to_string()
 }
 
-fn node_location(node: Node) -> LocationAbi {
+fn node_location(node: Node) -> InternalLocation {
     let start = node.start_position();
     let end = node.end_position();
-    LocationAbi::new(
-        start.row as u32,
-        start.column as u32,
-        end.row as u32,
-        end.column as u32,
-        node.start_byte() as u32,
-        node.end_byte() as u32,
-    )
+    InternalLocation {
+        start_line: start.row as u32,
+        start_col: start.column as u32,
+        end_line: end.row as u32,
+        end_col: end.column as u32,
+        start_byte: node.start_byte() as u32,
+        end_byte: node.end_byte() as u32,
+    }
 }
 
-fn extract_cpp_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn extract_cpp_symbols(node: Node, source: &str, symbols: &mut Vec<InternalSymbol>) {
     match node.kind() {
         "function_definition" => {
             if let Some(declarator) = node.child_by_field_name("declarator") {
                 if let Some(name) = extract_function_name(declarator, source) {
                     let sig = extract_signature(node, source);
-                    symbols.push(
-                        ParsedSymbolAbi::new(name, SymbolKindAbi::Function, node_location(node))
-                            .with_signature(sig),
-                    );
+                    symbols.push(InternalSymbol {
+                        name,
+                        kind: InternalSymbolKind::Function,
+                        location: node_location(node),
+                        signature: Some(sig),
+                        children: vec![],
+                    });
                 }
             }
         }
@@ -72,14 +123,13 @@ fn extract_cpp_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolA
                 if let Some(body) = node.child_by_field_name("body") {
                     collect_class_members(body, source, &mut children);
                 }
-                symbols.push(
-                    ParsedSymbolAbi::new(
-                        node_text(name, source),
-                        SymbolKindAbi::Class,
-                        node_location(node),
-                    )
-                    .with_children(children),
-                );
+                symbols.push(InternalSymbol {
+                    name: node_text(name, source),
+                    kind: InternalSymbolKind::Class,
+                    location: node_location(node),
+                    signature: None,
+                    children,
+                });
             }
         }
         "struct_specifier" => {
@@ -88,32 +138,35 @@ fn extract_cpp_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolA
                 if let Some(body) = node.child_by_field_name("body") {
                     collect_class_members(body, source, &mut children);
                 }
-                symbols.push(
-                    ParsedSymbolAbi::new(
-                        node_text(name, source),
-                        SymbolKindAbi::Struct,
-                        node_location(node),
-                    )
-                    .with_children(children),
-                );
+                symbols.push(InternalSymbol {
+                    name: node_text(name, source),
+                    kind: InternalSymbolKind::Struct,
+                    location: node_location(node),
+                    signature: None,
+                    children,
+                });
             }
         }
         "enum_specifier" => {
             if let Some(name) = node.child_by_field_name("name") {
-                symbols.push(ParsedSymbolAbi::new(
-                    node_text(name, source),
-                    SymbolKindAbi::Enum,
-                    node_location(node),
-                ));
+                symbols.push(InternalSymbol {
+                    name: node_text(name, source),
+                    kind: InternalSymbolKind::Enum,
+                    location: node_location(node),
+                    signature: None,
+                    children: vec![],
+                });
             }
         }
         "namespace_definition" => {
             if let Some(name) = node.child_by_field_name("name") {
-                symbols.push(ParsedSymbolAbi::new(
-                    node_text(name, source),
-                    SymbolKindAbi::Namespace,
-                    node_location(node),
-                ));
+                symbols.push(InternalSymbol {
+                    name: node_text(name, source),
+                    kind: InternalSymbolKind::Namespace,
+                    location: node_location(node),
+                    signature: None,
+                    children: vec![],
+                });
             }
         }
         "template_declaration" => {
@@ -131,18 +184,20 @@ fn extract_cpp_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolA
     }
 }
 
-fn collect_class_members(body: Node, source: &str, children: &mut Vec<ParsedSymbolAbi>) {
+fn collect_class_members(body: Node, source: &str, children: &mut Vec<InternalSymbol>) {
     for i in 0..body.child_count() {
         if let Some(child) = body.child(i) {
             match child.kind() {
                 "function_definition" | "declaration" => {
                     if let Some(declarator) = child.child_by_field_name("declarator") {
                         if let Some(name) = extract_function_name(declarator, source) {
-                            children.push(ParsedSymbolAbi::new(
+                            children.push(InternalSymbol {
                                 name,
-                                SymbolKindAbi::Method,
-                                node_location(child),
-                            ));
+                                kind: InternalSymbolKind::Method,
+                                location: node_location(child),
+                                signature: None,
+                                children: vec![],
+                            });
                         }
                     }
                 }
@@ -150,11 +205,13 @@ fn collect_class_members(body: Node, source: &str, children: &mut Vec<ParsedSymb
                     for j in 0..child.child_count() {
                         if let Some(field) = child.child(j) {
                             if field.kind() == "field_identifier" {
-                                children.push(ParsedSymbolAbi::new(
-                                    node_text(field, source),
-                                    SymbolKindAbi::Field,
-                                    node_location(field),
-                                ));
+                                children.push(InternalSymbol {
+                                    name: node_text(field, source),
+                                    kind: InternalSymbolKind::Field,
+                                    location: node_location(field),
+                                    signature: None,
+                                    children: vec![],
+                                });
                             }
                         }
                     }
@@ -206,17 +263,17 @@ fn extract_signature(node: Node, source: &str) -> String {
     }
 }
 
-fn collect_cpp_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenceAbi>) {
+fn collect_cpp_references(node: Node, source: &str, refs: &mut Vec<InternalReference>) {
     match node.kind() {
         "call_expression" => {
             if let Some(func) = node.child_by_field_name("function") {
                 let name = node_text(func, source);
                 if !is_builtin(&name) {
-                    refs.push(ParsedReferenceAbi::new(
+                    refs.push(InternalReference {
                         name,
-                        ReferenceKindAbi::Call,
-                        node_location(func),
-                    ));
+                        kind: InternalReferenceKind::Call,
+                        location: node_location(func),
+                    });
                 }
             }
         }
@@ -225,30 +282,30 @@ fn collect_cpp_references(node: Node, source: &str, refs: &mut Vec<ParsedReferen
                 let include = node_text(path, source)
                     .trim_matches(|c| c == '"' || c == '<' || c == '>')
                     .to_string();
-                refs.push(ParsedReferenceAbi::new(
-                    include,
-                    ReferenceKindAbi::Import,
-                    node_location(path),
-                ));
+                refs.push(InternalReference {
+                    name: include,
+                    kind: InternalReferenceKind::Import,
+                    location: node_location(path),
+                });
             }
         }
         "type_identifier" => {
             let name = node_text(node, source);
             if !is_primitive(&name) {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(InternalReference {
                     name,
-                    ReferenceKindAbi::TypeReference,
-                    node_location(node),
-                ));
+                    kind: InternalReferenceKind::TypeReference,
+                    location: node_location(node),
+                });
             }
         }
         "field_expression" => {
             if let Some(field) = node.child_by_field_name("field") {
-                refs.push(ParsedReferenceAbi::new(
-                    node_text(field, source),
-                    ReferenceKindAbi::FieldAccess,
-                    node_location(field),
-                ));
+                refs.push(InternalReference {
+                    name: node_text(field, source),
+                    kind: InternalReferenceKind::FieldAccess,
+                    location: node_location(field),
+                });
             }
         }
         "class_specifier" | "struct_specifier" => {
@@ -257,11 +314,11 @@ fn collect_cpp_references(node: Node, source: &str, refs: &mut Vec<ParsedReferen
                     if let Some(child) = base.child(i) {
                         if child.kind() == "base_class_clause" {
                             if let Some(type_node) = child.child_by_field_name("type") {
-                                refs.push(ParsedReferenceAbi::new(
-                                    node_text(type_node, source),
-                                    ReferenceKindAbi::Inheritance,
-                                    node_location(type_node),
-                                ));
+                                refs.push(InternalReference {
+                                    name: node_text(type_node, source),
+                                    kind: InternalReferenceKind::Inheritance,
+                                    location: node_location(type_node),
+                                });
                             }
                         }
                     }

@@ -3,20 +3,13 @@
 //! Provides text embedding services using fastembed/ONNX for local ML inference.
 //! Other plugins can use the adi.embed service for generating embeddings.
 
-use abi_stable::std_types::{ROption, RResult, RStr, RString, RVec};
-use lib_plugin_abi::{
-    PluginContext, PluginError, PluginInfo, PluginVTable, ServiceDescriptor, ServiceError,
-    ServiceHandle, ServiceMethod, ServiceVTable, ServiceVersion,
-};
-
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
+use lib_plugin_abi_v3::{
+    async_trait, Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult,
+};
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use std::ffi::c_void;
 use std::sync::Mutex;
-
-/// Service ID for embedding operations
-const SERVICE_EMBED: &str = "adi.embed";
 
 /// Global embedder instance
 static EMBEDDER: OnceCell<Mutex<TextEmbedding>> = OnceCell::new();
@@ -49,192 +42,111 @@ struct ModelInfoResponse {
     provider: String,
 }
 
-// === Plugin VTable Implementation ===
+/// Embed Plugin
+pub struct EmbedPlugin;
 
-extern "C" fn plugin_info() -> PluginInfo {
-    PluginInfo::new("adi.embed", "ADI Embed", env!("CARGO_PKG_VERSION"), "core")
-        .with_author("ADI Team")
-        .with_description("Text embedding service using fastembed/ONNX")
-        .with_min_host_version("0.8.0")
+impl EmbedPlugin {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Default for EmbedPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 fn get_cache_dir() -> Option<std::path::PathBuf> {
     directories::ProjectDirs::from("com", "adi", "adi").map(|dirs| dirs.cache_dir().join("models"))
 }
 
-extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
-    // Initialize the embedder
-    let cache_dir = get_cache_dir();
-
-    let mut init_options = InitOptions::new(EmbeddingModel::JinaEmbeddingsV2BaseCode);
-
-    if let Some(cache) = cache_dir {
-        let _ = std::fs::create_dir_all(&cache);
-        init_options = init_options.with_cache_dir(cache);
+#[async_trait]
+impl Plugin for EmbedPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            id: "adi.embed".to_string(),
+            name: "ADI Embed".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            plugin_type: PluginType::Core,
+            author: Some("ADI Team".to_string()),
+            description: Some("Text embedding service using fastembed/ONNX".to_string()),
+            category: None,
+        }
     }
 
-    match TextEmbedding::try_new(init_options) {
-        Ok(model) => {
-            let _ = EMBEDDER.set(Mutex::new(model));
+    async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
+        // Initialize the embedder
+        let cache_dir = get_cache_dir();
+
+        let mut init_options = InitOptions::new(EmbeddingModel::JinaEmbeddingsV2BaseCode);
+
+        if let Some(cache) = cache_dir {
+            let _ = std::fs::create_dir_all(&cache);
+            init_options = init_options.with_cache_dir(cache);
         }
-        Err(e) => {
-            unsafe {
-                let host = (*ctx).host();
-                host.error(&format!("Failed to initialize embedding model: {}", e));
+
+        match TextEmbedding::try_new(init_options) {
+            Ok(model) => {
+                let _ = EMBEDDER.set(Mutex::new(model));
+                Ok(())
             }
-            return -1;
+            Err(e) => Err(lib_plugin_abi_v3::PluginError::InitFailed(format!(
+                "Failed to initialize embedding model: {}",
+                e
+            ))),
         }
     }
 
-    unsafe {
-        let host = (*ctx).host();
+    async fn shutdown(&self) -> PluginResult<()> {
+        Ok(())
+    }
 
-        // Register embedding service
-        let embed_descriptor =
-            ServiceDescriptor::new(SERVICE_EMBED, ServiceVersion::new(1, 0, 0), "adi.embed")
-                .with_description("Text embedding service");
+    fn provides(&self) -> Vec<&'static str> {
+        // This plugin provides an embedding service, not CLI commands
+        vec![]
+    }
+}
 
-        let embed_handle = ServiceHandle::new(
-            SERVICE_EMBED,
-            ctx as *const c_void,
-            &EMBED_SERVICE_VTABLE as *const ServiceVTable,
-        );
+// === Public API for embedding ===
 
-        if let Err(code) = host.register_svc(embed_descriptor, embed_handle) {
-            host.error(&format!("Failed to register embed service: {}", code));
-            return code;
+impl EmbedPlugin {
+    /// Generate embeddings for the given texts
+    pub fn embed(&self, texts: Vec<String>) -> Result<Vec<Vec<f32>>, String> {
+        if texts.is_empty() {
+            return Ok(vec![]);
         }
 
-        host.info("ADI Embed plugin initialized");
+        let embedder = EMBEDDER
+            .get()
+            .ok_or_else(|| "Embedder not initialized".to_string())?;
+
+        let model = embedder
+            .lock()
+            .map_err(|e| format!("Lock error: {}", e))?;
+
+        model
+            .embed(texts, None)
+            .map_err(|e| format!("Embedding error: {}", e))
     }
 
-    0
-}
+    /// Get the embedding dimensions
+    pub fn dimensions(&self) -> u32 {
+        DIMENSIONS
+    }
 
-extern "C" fn plugin_cleanup(_ctx: *mut PluginContext) {}
-
-extern "C" fn handle_message(
-    _ctx: *mut PluginContext,
-    msg_type: RStr<'_>,
-    _msg_data: RStr<'_>,
-) -> RResult<RString, PluginError> {
-    match msg_type.as_str() {
-        "ping" => RResult::ROk(RString::from("pong")),
-        _ => RResult::RErr(PluginError::new(
-            -1,
-            format!("Unknown message type: {}", msg_type.as_str()),
-        )),
+    /// Get model information
+    pub fn model_info(&self) -> ModelInfoResponse {
+        ModelInfoResponse {
+            model_name: MODEL_NAME.to_string(),
+            dimensions: DIMENSIONS,
+            provider: "fastembed".to_string(),
+        }
     }
 }
 
-// === Plugin Entry Point ===
-
-static PLUGIN_VTABLE: PluginVTable = PluginVTable {
-    info: plugin_info,
-    init: plugin_init,
-    update: ROption::RNone,
-    cleanup: plugin_cleanup,
-    handle_message: ROption::RSome(handle_message),
-};
-
+/// Create the plugin instance (v3 entry point)
 #[no_mangle]
-pub extern "C" fn plugin_entry() -> *const PluginVTable {
-    &PLUGIN_VTABLE
+pub fn plugin_create() -> Box<dyn Plugin> {
+    Box::new(EmbedPlugin::new())
 }
-
-// === Embed Service Implementation ===
-
-extern "C" fn embed_invoke(
-    _handle: *const c_void,
-    method: RStr<'_>,
-    args: RStr<'_>,
-) -> RResult<RString, ServiceError> {
-    match method.as_str() {
-        "embed" => handle_embed(args.as_str()),
-        "dimensions" => handle_dimensions(),
-        "model_info" => handle_model_info(),
-        _ => RResult::RErr(ServiceError::new(
-            -1,
-            format!("Unknown method: {}", method.as_str()),
-        )),
-    }
-}
-
-fn handle_embed(args: &str) -> RResult<RString, ServiceError> {
-    let request: EmbedRequest = match serde_json::from_str(args) {
-        Ok(r) => r,
-        Err(e) => {
-            return RResult::RErr(ServiceError::new(-1, format!("Invalid request: {}", e)));
-        }
-    };
-
-    if request.texts.is_empty() {
-        let response = EmbedResponse { embeddings: vec![] };
-        return RResult::ROk(RString::from(serde_json::to_string(&response).unwrap()));
-    }
-
-    let embedder = match EMBEDDER.get() {
-        Some(e) => e,
-        None => {
-            return RResult::RErr(ServiceError::new(
-                -1,
-                "Embedder not initialized".to_string(),
-            ));
-        }
-    };
-
-    let model = match embedder.lock() {
-        Ok(m) => m,
-        Err(e) => {
-            return RResult::RErr(ServiceError::new(-1, format!("Lock error: {}", e)));
-        }
-    };
-
-    match model.embed(request.texts, None) {
-        Ok(embeddings) => {
-            let response = EmbedResponse { embeddings };
-            RResult::ROk(RString::from(serde_json::to_string(&response).unwrap()))
-        }
-        Err(e) => RResult::RErr(ServiceError::new(-1, format!("Embedding error: {}", e))),
-    }
-}
-
-fn handle_dimensions() -> RResult<RString, ServiceError> {
-    let response = DimensionsResponse {
-        dimensions: DIMENSIONS,
-    };
-    RResult::ROk(RString::from(serde_json::to_string(&response).unwrap()))
-}
-
-fn handle_model_info() -> RResult<RString, ServiceError> {
-    let response = ModelInfoResponse {
-        model_name: MODEL_NAME.to_string(),
-        dimensions: DIMENSIONS,
-        provider: "fastembed".to_string(),
-    };
-    RResult::ROk(RString::from(serde_json::to_string(&response).unwrap()))
-}
-
-extern "C" fn embed_list_methods(_handle: *const c_void) -> RVec<ServiceMethod> {
-    vec![
-        ServiceMethod::new("embed")
-            .with_description("Generate embeddings for texts")
-            .with_parameters_schema(r#"{"texts": ["string"]}"#)
-            .with_returns_schema(r#"{"embeddings": [[f32]]}"#),
-        ServiceMethod::new("dimensions")
-            .with_description("Get embedding dimensions")
-            .with_returns_schema(r#"{"dimensions": u32}"#),
-        ServiceMethod::new("model_info")
-            .with_description("Get model information")
-            .with_returns_schema(
-                r#"{"model_name": "string", "dimensions": u32, "provider": "string"}"#,
-            ),
-    ]
-    .into_iter()
-    .collect()
-}
-
-static EMBED_SERVICE_VTABLE: ServiceVTable = ServiceVTable {
-    invoke: embed_invoke,
-    list_methods: embed_list_methods,
-};

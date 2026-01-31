@@ -10,10 +10,11 @@ description = "ADI Knowledgebase plugin providing MCP tools for knowledge graph 
 crate-type = ["cdylib"]
 
 [dependencies]
-lib-plugin-abi = { path = "../../lib/lib-plugin-abi" }
-adi-knowledgebase-core = { path = "../core", features = ["fastembed"] }
-abi_stable.workspace = true
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+lib-plugin-host = { path = "../../lib/lib-plugin-host" }
+adi-knowledgebase-core = { path = "../core" }
+async-trait = "0.1"
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 once_cell = "1.21"
-tokio = { workspace = true, features = ["rt-multi-thread"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "sync"] }

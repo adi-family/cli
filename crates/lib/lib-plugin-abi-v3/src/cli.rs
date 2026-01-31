@@ -123,6 +123,11 @@ impl CliContext {
             .and_then(|v| v.as_bool())
             .unwrap_or(false)
     }
+
+    /// Get all options as a JSON Value
+    pub fn options_as_json(&self) -> Value {
+        serde_json::to_value(&self.options).unwrap_or(Value::Object(Default::default()))
+    }
 }
 
 /// CLI command result

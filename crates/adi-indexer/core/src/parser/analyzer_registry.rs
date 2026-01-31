@@ -2,22 +2,22 @@
 
 use std::sync::Arc;
 
-use lib_plugin_host::ServiceRegistry;
+use lib_plugin_host::PluginManagerV3;
 
 use super::plugin_adapter::PluginAnalyzerAdapter;
 use super::treesitter::analyzers::{generic::GenericAnalyzer, LanguageAnalyzer};
 use crate::types::Language;
 
 /// Registry for language analyzers.
-/// Looks up analyzers from plugin services, falling back to GenericAnalyzer.
+/// Looks up analyzers from plugin manager, falling back to GenericAnalyzer.
 pub struct AnalyzerRegistry {
-    service_registry: Option<Arc<ServiceRegistry>>,
+    plugin_manager: Option<Arc<PluginManagerV3>>,
 }
 
 impl AnalyzerRegistry {
     /// Create a new analyzer registry.
-    pub fn new(service_registry: Option<Arc<ServiceRegistry>>) -> Self {
-        Self { service_registry }
+    pub fn new(plugin_manager: Option<Arc<PluginManagerV3>>) -> Self {
+        Self { plugin_manager }
     }
 
     /// Get an analyzer for a language.
@@ -32,21 +32,17 @@ impl AnalyzerRegistry {
         Box::new(GenericAnalyzer::new(lang))
     }
 
-    /// Try to get an analyzer from a plugin service.
+    /// Try to get an analyzer from a plugin.
     fn try_plugin_analyzer(&self, lang: Language) -> Option<Box<dyn LanguageAnalyzer>> {
-        let registry = self.service_registry.as_ref()?;
-
-        let service_id = lib_indexer_lang_abi::service_id(lang.as_str());
-        let handle = registry.lookup(&service_id)?;
-
-        Some(Box::new(PluginAnalyzerAdapter::new(handle, lang)))
+        let manager = self.plugin_manager.as_ref()?;
+        let plugin = manager.get_language_analyzer(lang.as_str())?;
+        Some(Box::new(PluginAnalyzerAdapter::new(plugin, lang)))
     }
 
     /// Check if a plugin analyzer is available for a language.
     pub fn has_plugin_analyzer(&self, lang: Language) -> bool {
-        if let Some(ref registry) = self.service_registry {
-            let service_id = lib_indexer_lang_abi::service_id(lang.as_str());
-            return registry.has_service(&service_id);
+        if let Some(ref manager) = self.plugin_manager {
+            return manager.has_language_analyzer(lang.as_str());
         }
         false
     }

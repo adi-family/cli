@@ -14,8 +14,8 @@ pub struct I18n {
     current_language: String,
     /// Fallback language (typically "en-US")
     fallback_language: String,
-    /// Service registry for discovering translation plugins
-    service_registry: Arc<dyn ServiceRegistry>,
+    /// Service registry for discovering translation plugins (optional for standalone mode)
+    service_registry: Option<Arc<dyn ServiceRegistry>>,
     /// Namespace for translation keys (e.g., "cli", "tasks")
     namespace: Option<String>,
 }
@@ -39,7 +39,7 @@ impl std::fmt::Debug for I18n {
 unsafe impl Send for I18n {}
 
 impl I18n {
-    /// Create a new I18n instance
+    /// Create a new I18n instance with service registry for plugin-based discovery
     ///
     /// # Arguments
     /// * `service_registry` - Service registry from plugin host
@@ -48,7 +48,21 @@ impl I18n {
             bundles: HashMap::new(),
             current_language: "en-US".to_string(),
             fallback_language: "en-US".to_string(),
-            service_registry,
+            service_registry: Some(service_registry),
+            namespace: None,
+        }
+    }
+
+    /// Create a new standalone I18n instance without plugin discovery
+    ///
+    /// Use this when loading translations directly via `load_embedded()` without
+    /// going through the plugin service registry.
+    pub fn new_standalone() -> Self {
+        Self {
+            bundles: HashMap::new(),
+            current_language: "en-US".to_string(),
+            fallback_language: "en-US".to_string(),
+            service_registry: None,
             namespace: None,
         }
     }
@@ -65,10 +79,17 @@ impl I18n {
     ///
     /// Scans the service registry for translation services matching the namespace
     /// and loads their Fluent messages into bundles.
+    ///
+    /// Returns Ok(()) immediately if no service registry is configured (standalone mode).
     pub fn discover_translations(&mut self) -> Result<()> {
+        let service_registry = match &self.service_registry {
+            Some(registry) => registry,
+            None => return Ok(()), // Standalone mode - no discovery needed
+        };
+
         let namespace = self.namespace.as_deref().unwrap_or("cli");
 
-        let services = discover_translation_services(&self.service_registry, namespace)?;
+        let services = discover_translation_services(service_registry, namespace)?;
 
         tracing::info!("Discovered {} translation services", services.len());
 
@@ -92,9 +113,12 @@ impl I18n {
 
     /// Load a specific translation service by ID
     fn load_translation_service(&mut self, service_id: &str, language: &str) -> Result<()> {
+        let service_registry = self.service_registry.as_ref().ok_or_else(|| {
+            I18nError::ServiceRegistryError("No service registry configured".to_string())
+        })?;
+
         // Lookup service
-        let service = self
-            .service_registry
+        let service = service_registry
             .lookup_service(service_id)
             .map_err(|e: I18nError| I18nError::ServiceRegistryError(e.to_string()))?;
 
@@ -326,5 +350,34 @@ mod tests {
         let result = i18n.get_with_args("hello", args);
         assert!(result.contains("Hello"));
         assert!(result.contains("World"));
+    }
+
+    #[test]
+    fn test_i18n_standalone() {
+        let mut i18n = I18n::new_standalone();
+
+        // Load embedded translations directly
+        i18n.load_embedded("en-US", "hello = Hello, { $name }!")
+            .unwrap();
+        i18n.load_embedded("de-DE", "hello = Hallo, { $name }!")
+            .unwrap();
+
+        // discover_translations should succeed (no-op in standalone mode)
+        i18n.discover_translations().unwrap();
+
+        // Test English
+        i18n.set_language("en-US").unwrap();
+        let mut args = HashMap::new();
+        args.insert(
+            "name".to_string(),
+            fluent_bundle::FluentValue::from("World"),
+        );
+        let result = i18n.get_with_args("hello", args.clone());
+        assert!(result.contains("Hello"));
+
+        // Test German
+        i18n.set_language("de-DE").unwrap();
+        let result = i18n.get_with_args("hello", args);
+        assert!(result.contains("Hallo"));
     }
 }

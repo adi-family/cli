@@ -19,6 +19,7 @@ impl Plugin for LinterPlugin {
             plugin_type: PluginType::Core,
             author: Some("ADI Team".to_string()),
             description: Some("Code linting with configurable rules and auto-fix support ".to_string()),
+            category: None,
         }
     }
 

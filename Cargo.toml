@@ -30,7 +30,7 @@ members = [
     "crates/lib/lib-task-store",
     "crates/lib/lib-i18n-core",
     "crates/lib/lib-mcp-core",
-    "crates/lib/lib-plugin-abi-orchestration",
+    # Removed: lib-plugin-abi-orchestration (migrated to lib-plugin-abi-v3)
     "crates/lib/lib-webrtc-manager",
 
     # Indexer components (flat submodules)
@@ -181,9 +181,6 @@ members = [
     "crates/adi-knowledgebase/plugin",
     "crates/adi-agent-loop/plugin",
     "crates/adi-linter/plugin",
-    "crates/adi-coolify/core",
-    "crates/adi-coolify/http",
-    "crates/adi-coolify/plugin",
     "crates/adi-workflow/plugin",
     "crates/adi-api-proxy/plugin",
     "crates/hive/plugin",
@@ -211,17 +208,6 @@ members = [
     "crates/adi-workflow/langs/ja",
     "crates/adi-workflow/langs/ko",
     "crates/adi-workflow/langs/ru",
-
-    # Coolify translation plugins
-    "crates/adi-coolify/lang/en",
-    "crates/adi-coolify/lang/uk",
-    "crates/adi-coolify/lang/zh",
-    "crates/adi-coolify/lang/es",
-    "crates/adi-coolify/lang/fr",
-    "crates/adi-coolify/lang/de",
-    "crates/adi-coolify/lang/ja",
-    "crates/adi-coolify/lang/ko",
-    "crates/adi-coolify/lang/ru",
 
     # Translation plugins
     "crates/adi-cli/plugins/en-US",
@@ -455,6 +441,7 @@ futures = "0.3"
 glob = "0.3"
 regex = "1"
 fastrand = "2"
+tempfile = "3"
 
 # Auth
 jsonwebtoken = "9"

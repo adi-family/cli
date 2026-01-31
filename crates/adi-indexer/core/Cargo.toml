@@ -18,11 +18,9 @@ lib-embed = { path = "../../lib/lib-embed" }
 lib-cli-common = { path = "../../lib/lib-cli-common" }
 lib-migrations = { path = "../../lib/lib-migrations" }
 
-# Plugin system
-lib-plugin-abi = { path = "../../lib/lib-plugin-abi" }
+# Plugin system (v3 ABI)
 lib-plugin-host = { path = "../../lib/lib-plugin-host" }
-lib-indexer-lang-abi = { path = "../../lib/lib-indexer-lang-abi" }
-libloading = "0.8"
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
 
 # Error handling
 thiserror = "2"

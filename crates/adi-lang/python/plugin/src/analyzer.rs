@@ -1,12 +1,11 @@
 //! Python language analyzer implementation.
 
-use lib_indexer_lang_abi::{
-    LocationAbi, ParsedReferenceAbi, ParsedSymbolAbi, ReferenceKindAbi, SymbolKindAbi,
-    VisibilityAbi,
+use lib_plugin_abi_v3::lang::{
+    Location, ParsedReference, ParsedSymbol, ReferenceKind, SymbolKind, Visibility,
 };
 use tree_sitter::{Node, Parser, Tree};
 
-pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
+pub fn extract_symbols(source: &str) -> Vec<ParsedSymbol> {
     let tree = match parse_python(source) {
         Some(t) => t,
         None => return vec![],
@@ -16,7 +15,7 @@ pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
     symbols
 }
 
-pub fn extract_references(source: &str) -> Vec<ParsedReferenceAbi> {
+pub fn extract_references(source: &str) -> Vec<ParsedReference> {
     let tree = match parse_python(source) {
         Some(t) => t,
         None => return vec![],
@@ -38,10 +37,10 @@ fn node_text(node: Node, source: &str) -> String {
     source[node.byte_range()].to_string()
 }
 
-fn node_location(node: Node) -> LocationAbi {
+fn node_location(node: Node) -> Location {
     let start = node.start_position();
     let end = node.end_position();
-    LocationAbi::new(
+    Location::new(
         start.row as u32,
         start.column as u32,
         end.row as u32,
@@ -51,17 +50,17 @@ fn node_location(node: Node) -> LocationAbi {
     )
 }
 
-fn detect_visibility(name: &str) -> VisibilityAbi {
+fn detect_visibility(name: &str) -> Visibility {
     if name.starts_with("__") && !name.ends_with("__") {
-        VisibilityAbi::Private
+        Visibility::Private
     } else if name.starts_with('_') {
-        VisibilityAbi::Protected
+        Visibility::Protected
     } else {
-        VisibilityAbi::Public
+        Visibility::Public
     }
 }
 
-fn extract_python_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn extract_python_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol>) {
     match node.kind() {
         "function_definition" => {
             if let Some(name) = node.child_by_field_name("name") {
@@ -69,13 +68,9 @@ fn extract_python_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymb
                 let is_async = node.children(&mut node.walk()).any(|c| c.kind() == "async");
                 let sig = extract_function_signature(node, source, is_async);
                 symbols.push(
-                    ParsedSymbolAbi::new(
-                        name_text.clone(),
-                        SymbolKindAbi::Function,
-                        node_location(node),
-                    )
-                    .with_signature(sig)
-                    .with_visibility(detect_visibility(&name_text)),
+                    ParsedSymbol::new(name_text.clone(), SymbolKind::Function, node_location(node))
+                        .with_signature(sig)
+                        .with_visibility(detect_visibility(&name_text)),
                 );
             }
         }
@@ -90,9 +85,9 @@ fn extract_python_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymb
                                 if let Some(method_name) = child.child_by_field_name("name") {
                                     let method_name_text = node_text(method_name, source);
                                     children.push(
-                                        ParsedSymbolAbi::new(
+                                        ParsedSymbol::new(
                                             method_name_text.clone(),
-                                            SymbolKindAbi::Method,
+                                            SymbolKind::Method,
                                             node_location(child),
                                         )
                                         .with_visibility(detect_visibility(&method_name_text)),
@@ -103,7 +98,7 @@ fn extract_python_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymb
                     }
                 }
                 symbols.push(
-                    ParsedSymbolAbi::new(name_text, SymbolKindAbi::Class, node_location(node))
+                    ParsedSymbol::new(name_text, SymbolKind::Class, node_location(node))
                         .with_children(children),
                 );
             }
@@ -140,15 +135,15 @@ fn extract_function_signature(node: Node, source: &str, is_async: bool) -> Strin
     format!("{}{}{}{}", prefix, name, params, ret)
 }
 
-fn collect_python_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenceAbi>) {
+fn collect_python_references(node: Node, source: &str, refs: &mut Vec<ParsedReference>) {
     match node.kind() {
         "call" => {
             if let Some(func) = node.child_by_field_name("function") {
                 let name = node_text(func, source);
                 if !is_builtin(&name) {
-                    refs.push(ParsedReferenceAbi::new(
+                    refs.push(ParsedReference::new(
                         name,
-                        ReferenceKindAbi::Call,
+                        ReferenceKind::Call,
                         node_location(func),
                     ));
                 }
@@ -156,9 +151,9 @@ fn collect_python_references(node: Node, source: &str, refs: &mut Vec<ParsedRefe
         }
         "import_statement" | "import_from_statement" => {
             if let Some(module) = node.child_by_field_name("module_name") {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     node_text(module, source),
-                    ReferenceKindAbi::Import,
+                    ReferenceKind::Import,
                     node_location(module),
                 ));
             }
@@ -168,9 +163,9 @@ fn collect_python_references(node: Node, source: &str, refs: &mut Vec<ParsedRefe
                 for i in 0..superclasses.child_count() {
                     if let Some(child) = superclasses.child(i) {
                         if child.kind() == "identifier" || child.kind() == "attribute" {
-                            refs.push(ParsedReferenceAbi::new(
+                            refs.push(ParsedReference::new(
                                 node_text(child, source),
-                                ReferenceKindAbi::Inheritance,
+                                ReferenceKind::Inheritance,
                                 node_location(child),
                             ));
                         }
@@ -180,9 +175,9 @@ fn collect_python_references(node: Node, source: &str, refs: &mut Vec<ParsedRefe
         }
         "attribute" => {
             if let Some(attr) = node.child_by_field_name("attribute") {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     node_text(attr, source),
-                    ReferenceKindAbi::FieldAccess,
+                    ReferenceKind::FieldAccess,
                     node_location(attr),
                 ));
             }

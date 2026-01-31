@@ -114,13 +114,13 @@ dependencies = [
 name = "adi-agent-loop-plugin"
 version = "0.8.8"
 dependencies = [
- "abi_stable",
  "adi-agent-loop-core",
  "anyhow",
  "async-trait",
  "console 0.15.11",
  "dialoguer 0.11.0",
- "lib-plugin-abi",
+ "lib-plugin-abi-v3",
+ "once_cell",
  "serde",
  "serde_json",
  "tokio",
@@ -192,9 +192,8 @@ dependencies = [
 name = "adi-api-proxy-plugin"
 version = "0.8.4"
 dependencies = [
- "abi_stable",
  "console 0.15.11",
- "lib-plugin-abi",
+ "lib-plugin-abi-v3",
  "once_cell",
  "reqwest 0.12.28",
  "serde",
@@ -329,7 +328,6 @@ dependencies = [
  "indicatif 0.18.3",
  "lib-client-github",
  "lib-i18n-core",
- "lib-plugin-abi",
  "lib-plugin-abi-v3",
  "lib-plugin-host",
  "lib-plugin-manifest",
@@ -437,134 +435,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "adi-coolify-core"
-version = "0.8.4"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "tokio",
- "tokio-test",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "adi-coolify-http"
-version = "0.8.4"
-dependencies = [
- "adi-coolify-core",
- "anyhow",
- "axum 0.7.9",
- "lib-http-common",
- "serde",
- "serde_json",
- "tokio",
- "tower 0.4.13",
- "tower-http 0.5.2",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "adi-coolify-lang-de"
-version = "0.8.4"
-dependencies = [
- "abi_stable",
- "lib-plugin-abi",
-]
-
-[[package]]
-name = "adi-coolify-lang-en"
-version = "0.8.4"
-dependencies = [
- "abi_stable",
- "lib-plugin-abi",
-]
-
-[[package]]
-name = "adi-coolify-lang-es"
-version = "0.8.4"
-dependencies = [
- "abi_stable",
- "lib-plugin-abi",
-]
-
-[[package]]
-name = "adi-coolify-lang-fr"
-version = "0.8.4"
-dependencies = [
- "abi_stable",
- "lib-plugin-abi",
-]
-
-[[package]]
-name = "adi-coolify-lang-ja"
-version = "0.8.4"
-dependencies = [
- "abi_stable",
- "lib-plugin-abi",
-]
-
-[[package]]
-name = "adi-coolify-lang-ko"
-version = "0.8.4"
-dependencies = [
- "abi_stable",
- "lib-plugin-abi",
-]
-
-[[package]]
-name = "adi-coolify-lang-ru"
-version = "0.8.4"
-dependencies = [
- "abi_stable",
- "lib-plugin-abi",
-]
-
-[[package]]
-name = "adi-coolify-lang-uk"
-version = "0.8.4"
-dependencies = [
- "abi_stable",
- "lib-plugin-abi",
-]
-
-[[package]]
-name = "adi-coolify-lang-zh"
-version = "0.8.4"
-dependencies = [
- "abi_stable",
- "lib-plugin-abi",
-]
-
-[[package]]
-name = "adi-coolify-plugin"
-version = "3.0.0"
-dependencies = [
- "adi-coolify-core",
- "async-trait",
- "dirs 5.0.1",
- "lib-plugin-abi-v3",
- "lib-plugin-host",
- "once_cell",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tokio",
- "toml 0.8.23",
-]
-
-[[package]]
 name = "adi-embed-plugin"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
  "directories",
  "fastembed",
- "lib-plugin-abi",
+ "lib-plugin-abi-v3",
  "once_cell",
  "serde",
  "serde_json",
@@ -601,7 +477,7 @@ dependencies = [
  "hyper-util",
  "lib-daemon-core",
  "lib-hive-daemon-client",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "lib-signaling-protocol",
  "lib-webrtc-manager",
  "libc",
@@ -643,10 +519,9 @@ dependencies = [
 name = "adi-hive-plugin"
 version = "0.1.15"
 dependencies = [
- "abi_stable",
  "adi-hive-core",
  "dirs 5.0.1",
- "lib-plugin-abi",
+ "lib-plugin-abi-v3",
  "libc",
  "nix 0.29.0",
  "once_cell",
@@ -715,11 +590,9 @@ dependencies = [
  "ignore",
  "lib-cli-common",
  "lib-embed",
- "lib-indexer-lang-abi",
  "lib-migrations",
- "lib-plugin-abi",
+ "lib-plugin-abi-v3",
  "lib-plugin-host",
- "libloading 0.8.9",
  "memmap2",
  "notify 6.1.1",
  "rusqlite",
@@ -758,9 +631,9 @@ dependencies = [
 name = "adi-indexer-plugin"
 version = "0.8.10"
 dependencies = [
- "abi_stable",
  "adi-indexer-core",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "lib-plugin-host",
  "once_cell",
  "serde",
@@ -829,9 +702,10 @@ dependencies = [
 name = "adi-knowledgebase-plugin"
 version = "0.8.4"
 dependencies = [
- "abi_stable",
  "adi-knowledgebase-core",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "lib-plugin-host",
  "once_cell",
  "serde",
  "serde_json",
@@ -842,11 +716,8 @@ dependencies = [
 name = "adi-lang-cpp"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-indexer-lang-abi",
- "lib-plugin-abi",
- "serde",
- "serde_json",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "tree-sitter",
  "tree-sitter-c",
  "tree-sitter-cpp",
@@ -856,10 +727,8 @@ dependencies = [
 name = "adi-lang-csharp"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-indexer-lang-abi",
- "lib-plugin-abi",
- "once_cell",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tree-sitter",
@@ -870,11 +739,8 @@ dependencies = [
 name = "adi-lang-go"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-indexer-lang-abi",
- "lib-plugin-abi",
- "serde",
- "serde_json",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "tree-sitter",
  "tree-sitter-go",
 ]
@@ -883,12 +749,8 @@ dependencies = [
 name = "adi-lang-java"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-indexer-lang-abi",
- "lib-plugin-abi",
- "once_cell",
- "serde",
- "serde_json",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "tree-sitter",
  "tree-sitter-java",
 ]
@@ -897,12 +759,8 @@ dependencies = [
 name = "adi-lang-lua"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-indexer-lang-abi",
- "lib-plugin-abi",
- "once_cell",
- "serde",
- "serde_json",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "tree-sitter",
  "tree-sitter-lua",
 ]
@@ -911,12 +769,8 @@ dependencies = [
 name = "adi-lang-php"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-indexer-lang-abi",
- "lib-plugin-abi",
- "once_cell",
- "serde",
- "serde_json",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "tree-sitter",
  "tree-sitter-php",
 ]
@@ -925,11 +779,8 @@ dependencies = [
 name = "adi-lang-python"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-indexer-lang-abi",
- "lib-plugin-abi",
- "serde",
- "serde_json",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "tree-sitter",
  "tree-sitter-python",
 ]
@@ -938,10 +789,8 @@ dependencies = [
 name = "adi-lang-ruby"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-indexer-lang-abi",
- "lib-plugin-abi",
- "once_cell",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tree-sitter",
@@ -952,9 +801,8 @@ dependencies = [
 name = "adi-lang-rust"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-indexer-lang-abi",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "once_cell",
  "serde",
  "serde_json",
@@ -966,12 +814,8 @@ dependencies = [
 name = "adi-lang-swift"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-indexer-lang-abi",
- "lib-plugin-abi",
- "once_cell",
- "serde",
- "serde_json",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "tree-sitter",
  "tree-sitter-swift",
 ]
@@ -980,9 +824,8 @@ dependencies = [
 name = "adi-lang-typescript"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-indexer-lang-abi",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tree-sitter",
@@ -1031,8 +874,7 @@ dependencies = [
 name = "adi-llm-extract-plugin"
 version = "0.1.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "lib-plugin-abi-v3",
  "lib-plugin-manifest",
  "serde",
  "serde_json",
@@ -1157,92 +999,101 @@ dependencies = [
 name = "adi-tasks-plugin"
 version = "0.8.8"
 dependencies = [
- "abi_stable",
  "adi-tasks-core",
- "lib-plugin-abi",
- "once_cell",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "adi-workflow-lang-de"
+version = "3.0.0"
+dependencies = [
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "adi-workflow-lang-de"
-version = "1.0.0"
-dependencies = [
- "abi_stable",
- "lib-plugin-abi",
- "serde_json",
-]
-
-[[package]]
 name = "adi-workflow-lang-en"
-version = "1.0.0"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "adi-workflow-lang-es"
-version = "1.0.0"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "adi-workflow-lang-fr"
-version = "1.0.0"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "adi-workflow-lang-ja"
-version = "1.0.0"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "adi-workflow-lang-ko"
-version = "1.0.0"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "adi-workflow-lang-ru"
-version = "1.0.0"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "adi-workflow-lang-uk"
-version = "1.0.0"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "adi-workflow-lang-zh"
-version = "1.0.0"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "serde",
  "serde_json",
 ]
 
@@ -3219,15 +3070,13 @@ dependencies = [
 name = "cocoon"
 version = "0.2.7"
 dependencies = [
- "abi_stable",
  "base64 0.22.1",
  "chrono",
  "futures",
  "glob",
  "inquire",
- "lib-plugin-abi",
+ "lib-plugin-abi-v3",
  "lib-signaling-protocol",
- "once_cell",
  "portable-pty",
  "rand 0.8.5",
  "reqwest 0.11.27",
@@ -5308,7 +5157,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tokio",
@@ -5323,7 +5172,7 @@ dependencies = [
  "async-trait",
  "aws-config",
  "aws-sdk-secretsmanager",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tokio",
@@ -5336,9 +5185,11 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
+ "tempfile",
+ "tokio",
  "tracing",
 ]
 
@@ -5348,7 +5199,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5362,7 +5213,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tokio",
@@ -5373,13 +5224,11 @@ dependencies = [
 name = "hive-health-grpc"
 version = "0.8.4"
 dependencies = [
- "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -5388,7 +5237,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5401,7 +5250,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "sqlx",
@@ -5413,28 +5262,24 @@ dependencies = [
 name = "hive-health-postgres"
 version = "0.8.4"
 dependencies = [
- "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tokio",
  "tokio-postgres",
- "tracing",
 ]
 
 [[package]]
 name = "hive-health-redis"
 version = "0.8.4"
 dependencies = [
- "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "redis",
  "serde",
  "serde_json",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -5443,7 +5288,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tokio",
@@ -5457,7 +5302,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "dirs 5.0.1",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tracing",
@@ -5470,7 +5315,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5484,7 +5329,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tokio",
@@ -5498,7 +5343,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
 ]
@@ -5524,10 +5369,11 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "sha2",
+ "tokio",
  "tracing",
 ]
 
@@ -5538,10 +5384,11 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.22.1",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "shellexpand",
+ "tokio",
  "tracing",
 ]
 
@@ -5552,7 +5399,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "jsonwebtoken",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5567,7 +5414,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "jsonwebtoken",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5581,7 +5428,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "sha2",
@@ -5597,9 +5444,10 @@ dependencies = [
  "async-trait",
  "brotli",
  "flate2",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
+ "tokio",
  "tracing",
 ]
 
@@ -5609,9 +5457,10 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -5620,9 +5469,10 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
+ "tokio",
  "tracing",
  "uuid",
 ]
@@ -5634,9 +5484,10 @@ dependencies = [
  "anyhow",
  "async-trait",
  "ipnetwork",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
+ "tokio",
  "tracing",
 ]
 
@@ -5646,7 +5497,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tokio",
@@ -5659,10 +5510,11 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "regex",
  "serde",
  "serde_json",
+ "tokio",
  "tracing",
 ]
 
@@ -5672,9 +5524,10 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
+ "tokio",
  "tracing",
 ]
 
@@ -5684,7 +5537,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tracing",
@@ -5696,7 +5549,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tokio",
@@ -5712,7 +5565,7 @@ dependencies = [
  "async-trait",
  "bollard",
  "futures",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tokio",
@@ -5726,7 +5579,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "lib-plugin-abi-orchestration",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "tokio",
@@ -7113,10 +6966,12 @@ version = "0.8.4"
 dependencies = [
  "fastembed",
  "lib-cli-common",
+ "lib-plugin-abi-v3",
  "lib-plugin-host",
  "serde",
  "serde_json",
  "thiserror 2.0.17",
+ "tokio",
  "toml 0.8.23",
  "tracing",
 ]
@@ -7291,21 +7146,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lib-plugin-abi-orchestration"
-version = "0.8.4"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "http 1.4.0",
- "serde",
- "serde_json",
- "serde_yaml",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "lib-plugin-abi-v3"
 version = "3.0.0"
 dependencies = [
@@ -7314,21 +7154,21 @@ dependencies = [
  "axum 0.7.9",
  "bytes",
  "chrono",
+ "regex",
  "serde",
  "serde_json",
+ "serde_yaml",
  "thiserror 2.0.17",
  "tokio",
  "tokio-test",
+ "tracing",
 ]
 
 [[package]]
 name = "lib-plugin-host"
 version = "0.8.4"
 dependencies = [
- "abi_stable",
- "anyhow",
  "dirs 5.0.1",
- "lib-plugin-abi",
  "lib-plugin-abi-v3",
  "lib-plugin-manifest",
  "lib-plugin-registry",
@@ -12482,11 +12322,10 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 name = "tsp-gen-plugin"
 version = "0.2.2"
 dependencies = [
- "abi_stable",
- "anyhow",
+ "async-trait",
  "chrono",
  "ctrlc",
- "lib-plugin-abi",
+ "lib-plugin-abi-v3",
  "lib-typespec-api",
  "notify 8.2.0",
  "serde",

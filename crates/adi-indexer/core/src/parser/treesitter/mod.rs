@@ -6,7 +6,7 @@ pub mod analyzers;
 
 use std::sync::Arc;
 
-use lib_plugin_host::ServiceRegistry;
+use lib_plugin_host::PluginManagerV3;
 use tree_sitter::Parser as TsParser;
 
 use crate::error::{Error, Result};
@@ -25,11 +25,11 @@ pub struct TreeSitterParser {
 
 impl TreeSitterParser {
     /// Create a new parser with plugin support.
-    /// Requires a service registry with language plugins registered.
-    pub fn new(service_registry: Arc<ServiceRegistry>) -> Self {
+    /// Requires a plugin manager with language plugins registered.
+    pub fn new(plugin_manager: Arc<PluginManagerV3>) -> Self {
         Self {
-            grammar_registry: GrammarRegistry::new(Some(service_registry.clone())),
-            analyzer_registry: AnalyzerRegistry::new(Some(service_registry)),
+            grammar_registry: GrammarRegistry::new(Some(plugin_manager.clone())),
+            analyzer_registry: AnalyzerRegistry::new(Some(plugin_manager)),
         }
     }
 

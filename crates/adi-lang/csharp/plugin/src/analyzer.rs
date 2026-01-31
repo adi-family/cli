@@ -1,12 +1,11 @@
 //! C# language analyzer implementation.
 
-use lib_indexer_lang_abi::{
-    LocationAbi, ParsedReferenceAbi, ParsedSymbolAbi, ReferenceKindAbi, SymbolKindAbi,
-    VisibilityAbi,
+use lib_plugin_abi_v3::lang::{
+    Location, ParsedReference, ParsedSymbol, ReferenceKind, SymbolKind, Visibility,
 };
 use tree_sitter::{Node, Parser, Tree};
 
-pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
+pub fn extract_symbols(source: &str) -> Vec<ParsedSymbol> {
     let tree = match parse_csharp(source) {
         Some(t) => t,
         None => return vec![],
@@ -16,7 +15,7 @@ pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
     symbols
 }
 
-pub fn extract_references(source: &str) -> Vec<ParsedReferenceAbi> {
+pub fn extract_references(source: &str) -> Vec<ParsedReference> {
     let tree = match parse_csharp(source) {
         Some(t) => t,
         None => return vec![],
@@ -38,10 +37,10 @@ fn node_text<'a>(node: Node<'a>, source: &'a str) -> String {
     source[node.byte_range()].to_string()
 }
 
-fn node_location(node: Node) -> LocationAbi {
+fn node_location(node: Node) -> Location {
     let start = node.start_position();
     let end = node.end_position();
-    LocationAbi::new(
+    Location::new(
         start.row as u32,
         start.column as u32,
         end.row as u32,
@@ -79,20 +78,20 @@ fn extract_doc_comment(node: Node, source: &str) -> Option<String> {
     }
 }
 
-fn extract_visibility(node: Node, source: &str) -> VisibilityAbi {
+fn extract_visibility(node: Node, source: &str) -> Visibility {
     for i in 0..node.child_count() {
         if let Some(child) = node.child(i) {
             let text = node_text(child, source);
             match text.as_str() {
-                "public" => return VisibilityAbi::Public,
-                "private" => return VisibilityAbi::Private,
-                "protected" => return VisibilityAbi::Protected,
-                "internal" => return VisibilityAbi::Internal,
+                "public" => return Visibility::Public,
+                "private" => return Visibility::Private,
+                "protected" => return Visibility::Protected,
+                "internal" => return Visibility::Internal,
                 _ => {}
             }
         }
     }
-    VisibilityAbi::Private
+    Visibility::Private
 }
 
 fn extract_method_signature(node: Node, source: &str) -> String {
@@ -106,7 +105,7 @@ fn extract_method_signature(node: Node, source: &str) -> String {
     }
 }
 
-fn extract_csharp_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn extract_csharp_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol>) {
     match node.kind() {
         "class_declaration" => {
             if let Some(symbol) = parse_csharp_class(node, source) {
@@ -161,74 +160,59 @@ fn extract_csharp_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymb
     }
 }
 
-fn parse_csharp_class(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_csharp_class(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let visibility = extract_visibility(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Class, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Class, node_location(node))
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_csharp_struct(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_csharp_struct(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let visibility = extract_visibility(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Struct, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Struct, node_location(node))
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_csharp_interface(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_csharp_interface(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let visibility = extract_visibility(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Interface, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Interface, node_location(node))
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_csharp_enum(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_csharp_enum(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let visibility = extract_visibility(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Enum, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Enum, node_location(node))
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_csharp_method(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
-    let name = node.child_by_field_name("name")?;
-    let name_text = node_text(name, source);
-    let doc_comment = extract_doc_comment(node, source);
-    let visibility = extract_visibility(node, source);
-    let signature = extract_method_signature(node, source);
-
-    Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Method, node_location(node))
-            .with_signature(signature)
-            .with_visibility(visibility)
-            .with_doc_comment_opt(doc_comment),
-    )
-}
-
-fn parse_csharp_constructor(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_csharp_method(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
@@ -236,27 +220,42 @@ fn parse_csharp_constructor(node: Node, source: &str) -> Option<ParsedSymbolAbi>
     let signature = extract_method_signature(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Constructor, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Method, node_location(node))
             .with_signature(signature)
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_csharp_property(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_csharp_constructor(node: Node, source: &str) -> Option<ParsedSymbol> {
+    let name = node.child_by_field_name("name")?;
+    let name_text = node_text(name, source);
+    let doc_comment = extract_doc_comment(node, source);
+    let visibility = extract_visibility(node, source);
+    let signature = extract_method_signature(node, source);
+
+    Some(
+        ParsedSymbol::new(name_text, SymbolKind::Constructor, node_location(node))
+            .with_signature(signature)
+            .with_visibility(visibility)
+            .with_doc_comment_opt(doc_comment),
+    )
+}
+
+fn parse_csharp_property(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let visibility = extract_visibility(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Property, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Property, node_location(node))
             .with_visibility(visibility)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_csharp_fields(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn parse_csharp_fields(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol>) {
     let visibility = extract_visibility(node, source);
     let doc_comment = extract_doc_comment(node, source);
 
@@ -268,9 +267,9 @@ fn parse_csharp_fields(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolA
                         if declarator.kind() == "variable_declarator" {
                             if let Some(name) = declarator.child_by_field_name("name") {
                                 symbols.push(
-                                    ParsedSymbolAbi::new(
+                                    ParsedSymbol::new(
                                         node_text(name, source),
-                                        SymbolKindAbi::Field,
+                                        SymbolKind::Field,
                                         node_location(declarator),
                                     )
                                     .with_visibility(visibility)
@@ -285,26 +284,26 @@ fn parse_csharp_fields(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolA
     }
 }
 
-fn parse_csharp_namespace(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_csharp_namespace(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
 
-    Some(ParsedSymbolAbi::new(
+    Some(ParsedSymbol::new(
         name_text,
-        SymbolKindAbi::Namespace,
+        SymbolKind::Namespace,
         node_location(node),
     ))
 }
 
-fn collect_csharp_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenceAbi>) {
+fn collect_csharp_references(node: Node, source: &str, refs: &mut Vec<ParsedReference>) {
     match node.kind() {
         "invocation_expression" => {
             if let Some(expr) = node.child(0) {
                 let name = extract_invocation_name(expr, source);
                 if !name.is_empty() && !is_common_method(&name) {
-                    refs.push(ParsedReferenceAbi::new(
+                    refs.push(ParsedReference::new(
                         name,
-                        ReferenceKindAbi::Call,
+                        ReferenceKind::Call,
                         node_location(expr),
                     ));
                 }
@@ -312,9 +311,9 @@ fn collect_csharp_references(node: Node, source: &str, refs: &mut Vec<ParsedRefe
         }
         "object_creation_expression" => {
             if let Some(type_node) = node.child_by_field_name("type") {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     node_text(type_node, source),
-                    ReferenceKindAbi::Call,
+                    ReferenceKind::Call,
                     node_location(type_node),
                 ));
             }
@@ -325,9 +324,9 @@ fn collect_csharp_references(node: Node, source: &str, refs: &mut Vec<ParsedRefe
                 if p.kind() == "type" || p.kind() == "base_list" {
                     let name = node_text(node, source);
                     if !is_primitive_type(&name) {
-                        refs.push(ParsedReferenceAbi::new(
+                        refs.push(ParsedReference::new(
                             name,
-                            ReferenceKindAbi::TypeReference,
+                            ReferenceKind::TypeReference,
                             node_location(node),
                         ));
                     }
@@ -336,18 +335,18 @@ fn collect_csharp_references(node: Node, source: &str, refs: &mut Vec<ParsedRefe
         }
         "member_access_expression" => {
             if let Some(name) = node.child_by_field_name("name") {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     node_text(name, source),
-                    ReferenceKindAbi::FieldAccess,
+                    ReferenceKind::FieldAccess,
                     node_location(name),
                 ));
             }
         }
         "using_directive" => {
             if let Some(name) = node.child_by_field_name("name") {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     node_text(name, source),
-                    ReferenceKindAbi::Import,
+                    ReferenceKind::Import,
                     node_location(name),
                 ));
             }
@@ -356,9 +355,9 @@ fn collect_csharp_references(node: Node, source: &str, refs: &mut Vec<ParsedRefe
             for i in 0..node.child_count() {
                 if let Some(child) = node.child(i) {
                     if child.kind() == "identifier" || child.kind() == "generic_name" {
-                        refs.push(ParsedReferenceAbi::new(
+                        refs.push(ParsedReference::new(
                             node_text(child, source),
-                            ReferenceKindAbi::Inheritance,
+                            ReferenceKind::Inheritance,
                             node_location(child),
                         ));
                     }
@@ -439,7 +438,7 @@ trait WithDocCommentOpt {
     fn with_doc_comment_opt(self, doc: Option<String>) -> Self;
 }
 
-impl WithDocCommentOpt for ParsedSymbolAbi {
+impl WithDocCommentOpt for ParsedSymbol {
     fn with_doc_comment_opt(self, doc: Option<String>) -> Self {
         match doc {
             Some(d) => self.with_doc_comment(d),

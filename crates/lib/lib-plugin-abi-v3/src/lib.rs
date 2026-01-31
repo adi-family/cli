@@ -71,18 +71,25 @@ pub use async_trait::async_trait;
 mod core;
 pub use core::*;
 
-// Service traits
+// Service traits (CLI plugins)
 pub mod cli;
 pub mod http;
 pub mod mcp;
 
-// Orchestration traits
+// Language analyzer traits (Indexer plugins)
+pub mod lang;
+
+// Embedding traits (Embedder plugins)
+pub mod embed;
+
+// Orchestration traits (Hive plugins)
 pub mod runner;
 pub mod health;
 pub mod env;
 pub mod proxy;
 pub mod obs;
 pub mod rollout;
+pub mod hooks;
 
 // Error handling
 mod error;
@@ -90,3 +97,27 @@ pub use error::{PluginError, Result};
 
 // Common utilities
 pub mod utils;
+
+/// Plugin API version. Bump on breaking changes.
+pub const PLUGIN_API_VERSION: u32 = 3;
+
+/// Symbol name that plugins must export.
+pub const PLUGIN_ENTRY_SYMBOL: &str = "plugin_create";
+
+/// Type alias for the plugin entry function.
+pub type PluginCreateFn = fn() -> Box<dyn Plugin>;
+
+// Service type identifiers for capability discovery
+pub const SERVICE_CLI_COMMANDS: &str = "cli.commands";
+pub const SERVICE_HTTP_ROUTES: &str = "http.routes";
+pub const SERVICE_MCP_TOOLS: &str = "mcp.tools";
+pub const SERVICE_MCP_RESOURCES: &str = "mcp.resources";
+pub const SERVICE_MCP_PROMPTS: &str = "mcp.prompts";
+pub const SERVICE_LANGUAGE_ANALYZER: &str = "indexer.lang";
+pub const SERVICE_EMBEDDER: &str = "indexer.embed";
+pub const SERVICE_RUNNER: &str = "orchestration.runner";
+pub const SERVICE_HEALTH_CHECK: &str = "orchestration.health";
+pub const SERVICE_ENV_PROVIDER: &str = "orchestration.env";
+pub const SERVICE_PROXY_MIDDLEWARE: &str = "orchestration.proxy";
+pub const SERVICE_OBSERVABILITY_SINK: &str = "orchestration.obs";
+pub const SERVICE_ROLLOUT_STRATEGY: &str = "orchestration.rollout";

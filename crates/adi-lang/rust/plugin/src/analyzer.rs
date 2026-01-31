@@ -1,13 +1,12 @@
 //! Rust language analyzer implementation.
 
-use lib_indexer_lang_abi::{
-    LocationAbi, ParsedReferenceAbi, ParsedSymbolAbi, ReferenceKindAbi, SymbolKindAbi,
-    VisibilityAbi,
+use lib_plugin_abi_v3::lang::{
+    Location, ParsedReference, ParsedSymbol, ReferenceKind, SymbolKind, Visibility,
 };
 use tree_sitter::{Node, Parser, Tree};
 
 /// Extract symbols from Rust source code.
-pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
+pub fn extract_symbols(source: &str) -> Vec<ParsedSymbol> {
     let tree = match parse_rust(source) {
         Some(t) => t,
         None => return vec![],
@@ -19,7 +18,7 @@ pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
 }
 
 /// Extract references from Rust source code.
-pub fn extract_references(source: &str) -> Vec<ParsedReferenceAbi> {
+pub fn extract_references(source: &str) -> Vec<ParsedReference> {
     let tree = match parse_rust(source) {
         Some(t) => t,
         None => return vec![],
@@ -42,10 +41,10 @@ fn node_text<'a>(node: Node<'a>, source: &'a str) -> String {
     source[node.byte_range()].to_string()
 }
 
-fn node_location(node: Node) -> LocationAbi {
+fn node_location(node: Node) -> Location {
     let start = node.start_position();
     let end = node.end_position();
-    LocationAbi::new(
+    Location::new(
         start.row as u32,
         start.column as u32,
         end.row as u32,
@@ -100,7 +99,7 @@ fn extract_function_signature(node: Node, source: &str) -> String {
     }
 }
 
-fn extract_rust_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn extract_rust_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol>) {
     match node.kind() {
         "function_item" => {
             if let Some(symbol) = parse_rust_function(node, source) {
@@ -155,21 +154,21 @@ fn extract_rust_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol
     }
 }
 
-fn parse_rust_function(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_rust_function(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
     let signature = extract_function_signature(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Function, node_location(node))
+        ParsedSymbol::new(name_text, SymbolKind::Function, node_location(node))
             .with_signature(signature)
-            .with_visibility(VisibilityAbi::Unknown)
+            .with_visibility(Visibility::Unknown)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_rust_struct(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_rust_struct(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
@@ -181,9 +180,9 @@ fn parse_rust_struct(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
                 if child.kind() == "field_declaration" {
                     if let Some(field_name) = child.child_by_field_name("name") {
                         children.push(
-                            ParsedSymbolAbi::new(
+                            ParsedSymbol::new(
                                 node_text(field_name, source),
-                                SymbolKindAbi::Field,
+                                SymbolKind::Field,
                                 node_location(child),
                             )
                             .with_doc_comment_opt(extract_doc_comment(child, source)),
@@ -195,26 +194,26 @@ fn parse_rust_struct(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
     }
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Struct, node_location(node))
-            .with_visibility(VisibilityAbi::Unknown)
+        ParsedSymbol::new(name_text, SymbolKind::Struct, node_location(node))
+            .with_visibility(Visibility::Unknown)
             .with_doc_comment_opt(doc_comment)
             .with_children(children),
     )
 }
 
-fn parse_rust_enum(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_rust_enum(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Enum, node_location(node))
-            .with_visibility(VisibilityAbi::Unknown)
+        ParsedSymbol::new(name_text, SymbolKind::Enum, node_location(node))
+            .with_visibility(Visibility::Unknown)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_rust_trait(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_rust_trait(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
@@ -226,9 +225,9 @@ fn parse_rust_trait(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
                 if child.kind() == "function_signature_item" || child.kind() == "function_item" {
                     if let Some(method_name) = child.child_by_field_name("name") {
                         children.push(
-                            ParsedSymbolAbi::new(
+                            ParsedSymbol::new(
                                 node_text(method_name, source),
-                                SymbolKindAbi::Method,
+                                SymbolKind::Method,
                                 node_location(child),
                             )
                             .with_signature(extract_function_signature(child, source))
@@ -241,14 +240,14 @@ fn parse_rust_trait(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
     }
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Trait, node_location(node))
-            .with_visibility(VisibilityAbi::Unknown)
+        ParsedSymbol::new(name_text, SymbolKind::Trait, node_location(node))
+            .with_visibility(Visibility::Unknown)
             .with_doc_comment_opt(doc_comment)
             .with_children(children),
     )
 }
 
-fn parse_rust_impl(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn parse_rust_impl(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol>) {
     let type_name = if let Some(trait_node) = node.child_by_field_name("trait") {
         if let Some(type_node) = node.child_by_field_name("type") {
             format!(
@@ -271,9 +270,9 @@ fn parse_rust_impl(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>)
                 if child.kind() == "function_item" {
                     if let Some(method_name) = child.child_by_field_name("name") {
                         symbols.push(
-                            ParsedSymbolAbi::new(
+                            ParsedSymbol::new(
                                 format!("{}::{}", type_name, node_text(method_name, source)),
-                                SymbolKindAbi::Method,
+                                SymbolKind::Method,
                                 node_location(child),
                             )
                             .with_signature(extract_function_signature(child, source))
@@ -286,63 +285,63 @@ fn parse_rust_impl(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>)
     }
 }
 
-fn parse_rust_mod(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_rust_mod(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Module, node_location(node))
-            .with_visibility(VisibilityAbi::Unknown)
+        ParsedSymbol::new(name_text, SymbolKind::Module, node_location(node))
+            .with_visibility(Visibility::Unknown)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_rust_const(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_rust_const(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Constant, node_location(node))
-            .with_visibility(VisibilityAbi::Unknown)
+        ParsedSymbol::new(name_text, SymbolKind::Constant, node_location(node))
+            .with_visibility(Visibility::Unknown)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_rust_type_alias(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_rust_type_alias(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Type, node_location(node))
-            .with_visibility(VisibilityAbi::Unknown)
+        ParsedSymbol::new(name_text, SymbolKind::Type, node_location(node))
+            .with_visibility(Visibility::Unknown)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn parse_rust_macro(node: Node, source: &str) -> Option<ParsedSymbolAbi> {
+fn parse_rust_macro(node: Node, source: &str) -> Option<ParsedSymbol> {
     let name = node.child_by_field_name("name")?;
     let name_text = node_text(name, source);
     let doc_comment = extract_doc_comment(node, source);
 
     Some(
-        ParsedSymbolAbi::new(name_text, SymbolKindAbi::Macro, node_location(node))
-            .with_visibility(VisibilityAbi::Unknown)
+        ParsedSymbol::new(name_text, SymbolKind::Macro, node_location(node))
+            .with_visibility(Visibility::Unknown)
             .with_doc_comment_opt(doc_comment),
     )
 }
 
-fn collect_rust_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenceAbi>) {
+fn collect_rust_references(node: Node, source: &str, refs: &mut Vec<ParsedReference>) {
     match node.kind() {
         "call_expression" => {
             if let Some(func) = node.child_by_field_name("function") {
                 let name = extract_call_name(func, source);
                 if !name.is_empty() && !is_builtin(&name) {
-                    refs.push(ParsedReferenceAbi::new(
+                    refs.push(ParsedReference::new(
                         name,
-                        ReferenceKindAbi::Call,
+                        ReferenceKind::Call,
                         node_location(func),
                     ));
                 }
@@ -351,9 +350,9 @@ fn collect_rust_references(node: Node, source: &str, refs: &mut Vec<ParsedRefere
         "method_call_expression" => {
             if let Some(method) = node.child_by_field_name("name") {
                 let name = node_text(method, source);
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     name,
-                    ReferenceKindAbi::Call,
+                    ReferenceKind::Call,
                     node_location(method),
                 ));
             }
@@ -362,9 +361,9 @@ fn collect_rust_references(node: Node, source: &str, refs: &mut Vec<ParsedRefere
             if let Some(macro_node) = node.child_by_field_name("macro") {
                 let name = node_text(macro_node, source);
                 if !is_std_macro(&name) {
-                    refs.push(ParsedReferenceAbi::new(
+                    refs.push(ParsedReference::new(
                         name,
-                        ReferenceKindAbi::MacroInvocation,
+                        ReferenceKind::MacroInvocation,
                         node_location(macro_node),
                     ));
                 }
@@ -376,27 +375,27 @@ fn collect_rust_references(node: Node, source: &str, refs: &mut Vec<ParsedRefere
         "type_identifier" => {
             let name = node_text(node, source);
             if !is_primitive_type(&name) {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     name,
-                    ReferenceKindAbi::TypeReference,
+                    ReferenceKind::TypeReference,
                     node_location(node),
                 ));
             }
         }
         "scoped_type_identifier" => {
             let name = node_text(node, source);
-            refs.push(ParsedReferenceAbi::new(
+            refs.push(ParsedReference::new(
                 name,
-                ReferenceKindAbi::TypeReference,
+                ReferenceKind::TypeReference,
                 node_location(node),
             ));
         }
         "field_expression" => {
             if let Some(field) = node.child_by_field_name("field") {
                 let name = node_text(field, source);
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     name,
-                    ReferenceKindAbi::FieldAccess,
+                    ReferenceKind::FieldAccess,
                     node_location(field),
                 ));
             }
@@ -404,9 +403,9 @@ fn collect_rust_references(node: Node, source: &str, refs: &mut Vec<ParsedRefere
         "impl_item" => {
             if let Some(trait_node) = node.child_by_field_name("trait") {
                 let trait_name = node_text(trait_node, source);
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     trait_name,
-                    ReferenceKindAbi::Inheritance,
+                    ReferenceKind::Inheritance,
                     node_location(trait_node),
                 ));
             }
@@ -421,13 +420,8 @@ fn collect_rust_references(node: Node, source: &str, refs: &mut Vec<ParsedRefere
     }
 }
 
-fn extract_use_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenceAbi>) {
-    fn collect_use_paths(
-        node: Node,
-        source: &str,
-        prefix: &str,
-        refs: &mut Vec<ParsedReferenceAbi>,
-    ) {
+fn extract_use_references(node: Node, source: &str, refs: &mut Vec<ParsedReference>) {
+    fn collect_use_paths(node: Node, source: &str, prefix: &str, refs: &mut Vec<ParsedReference>) {
         match node.kind() {
             "identifier" | "type_identifier" => {
                 let name = node_text(node, source);
@@ -436,17 +430,17 @@ fn extract_use_references(node: Node, source: &str, refs: &mut Vec<ParsedReferen
                 } else {
                     format!("{}::{}", prefix, name)
                 };
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     full_name,
-                    ReferenceKindAbi::Import,
+                    ReferenceKind::Import,
                     node_location(node),
                 ));
             }
             "scoped_identifier" => {
                 let full_path = node_text(node, source);
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     full_path,
-                    ReferenceKindAbi::Import,
+                    ReferenceKind::Import,
                     node_location(node),
                 ));
             }
@@ -572,7 +566,7 @@ trait WithDocCommentOpt {
     fn with_doc_comment_opt(self, doc: Option<String>) -> Self;
 }
 
-impl WithDocCommentOpt for ParsedSymbolAbi {
+impl WithDocCommentOpt for ParsedSymbol {
     fn with_doc_comment_opt(self, doc: Option<String>) -> Self {
         match doc {
             Some(d) => self.with_doc_comment(d),

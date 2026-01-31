@@ -1,262 +1,230 @@
-//! ADI Tasks Plugin
+//! ADI Tasks Plugin (v3 ABI)
 //!
 //! Provides CLI commands for task management with dependency tracking.
 
-use abi_stable::std_types::{ROption, RResult, RStr, RString, RVec};
-use lib_plugin_abi::{
-    PluginContext, PluginError, PluginInfo, PluginVTable, ServiceDescriptor, ServiceError,
-    ServiceHandle, ServiceMethod, ServiceVTable, ServiceVersion,
+use lib_plugin_abi_v3::{
+    async_trait,
+    cli::{CliCommand, CliCommands, CliContext, CliResult},
+    Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult, SERVICE_CLI_COMMANDS,
 };
-
-/// Plugin-specific CLI service ID
-const SERVICE_CLI: &str = "adi.tasks.cli";
-use once_cell::sync::OnceCell;
 use serde_json::json;
-use std::ffi::c_void;
-use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 use adi_tasks_core::{CreateTask, TaskId, TaskManager, TaskStatus};
 
-static TASKS: OnceCell<Option<TaskManager>> = OnceCell::new();
+// Local result type for command implementations
+type CmdResult = std::result::Result<String, String>;
 
-// === Plugin VTable Implementation ===
-
-extern "C" fn plugin_info() -> PluginInfo {
-    PluginInfo::new("adi.tasks", "ADI Tasks", env!("CARGO_PKG_VERSION"), "core")
-        .with_author("ADI Team")
-        .with_description("Task management with dependency tracking")
-        .with_min_host_version("0.8.0")
+/// ADI Tasks Plugin
+pub struct TasksPlugin {
+    /// Task manager instance
+    tasks: Arc<RwLock<Option<TaskManager>>>,
 }
 
-extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
-    let _ = TASKS.set(TaskManager::open_global().ok());
-
-    unsafe {
-        let host = (*ctx).host();
-
-        // Register CLI commands service
-        let cli_descriptor =
-            ServiceDescriptor::new(SERVICE_CLI, ServiceVersion::new(1, 0, 0), "adi.tasks")
-                .with_description("CLI commands for task management");
-
-        let cli_handle = ServiceHandle::new(
-            SERVICE_CLI,
-            ctx as *const c_void,
-            &CLI_SERVICE_VTABLE as *const ServiceVTable,
-        );
-
-        if let Err(code) = host.register_svc(cli_descriptor, cli_handle) {
-            host.error(&format!(
-                "Failed to register CLI commands service: {}",
-                code
-            ));
-            return code;
+impl TasksPlugin {
+    /// Create a new tasks plugin
+    pub fn new() -> Self {
+        Self {
+            tasks: Arc::new(RwLock::new(None)),
         }
-
-        host.info("ADI Tasks plugin initialized");
-    }
-
-    0
-}
-
-extern "C" fn plugin_cleanup(_ctx: *mut PluginContext) {}
-
-extern "C" fn handle_message(
-    _ctx: *mut PluginContext,
-    msg_type: RStr<'_>,
-    msg_data: RStr<'_>,
-) -> RResult<RString, PluginError> {
-    match msg_type.as_str() {
-        "set_project_path" => {
-            let path = PathBuf::from(msg_data.as_str());
-            match TaskManager::open(&path) {
-                Ok(_) => RResult::ROk(RString::from("ok")),
-                Err(e) => {
-                    RResult::RErr(PluginError::new(1, format!("Failed to open tasks: {}", e)))
-                }
-            }
-        }
-        _ => RResult::RErr(PluginError::new(
-            -1,
-            format!("Unknown message type: {}", msg_type.as_str()),
-        )),
     }
 }
 
-// === Plugin Entry Point ===
+impl Default for TasksPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
-static PLUGIN_VTABLE: PluginVTable = PluginVTable {
-    info: plugin_info,
-    init: plugin_init,
-    update: ROption::RNone,
-    cleanup: plugin_cleanup,
-    handle_message: ROption::RSome(handle_message),
-};
+#[async_trait]
+impl Plugin for TasksPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            id: "adi.tasks".to_string(),
+            name: "ADI Tasks".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            plugin_type: PluginType::Core,
+            author: Some("ADI Team".to_string()),
+            description: Some("Task management with dependency tracking".to_string()),
+            category: None,
+        }
+    }
 
+    async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
+        // Initialize task manager
+        let manager = TaskManager::open_global().ok();
+        *self.tasks.write().await = manager;
+        Ok(())
+    }
+
+    async fn shutdown(&self) -> PluginResult<()> {
+        Ok(())
+    }
+
+    fn provides(&self) -> Vec<&'static str> {
+        vec![SERVICE_CLI_COMMANDS]
+    }
+}
+
+#[async_trait]
+impl CliCommands for TasksPlugin {
+    async fn list_commands(&self) -> Vec<CliCommand> {
+        vec![
+            CliCommand {
+                name: "list".to_string(),
+                description: "List all tasks".to_string(),
+                usage: "list [--status <status>] [--ready] [--blocked]".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "add".to_string(),
+                description: "Add a new task".to_string(),
+                usage: "add <title> [--description <desc>]".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "show".to_string(),
+                description: "Show task details".to_string(),
+                usage: "show <id>".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "status".to_string(),
+                description: "Update task status".to_string(),
+                usage: "status <id> <status>".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "delete".to_string(),
+                description: "Delete a task".to_string(),
+                usage: "delete <id> [--force]".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "depend".to_string(),
+                description: "Add dependency".to_string(),
+                usage: "depend <task-id> <depends-on-id>".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "undepend".to_string(),
+                description: "Remove dependency".to_string(),
+                usage: "undepend <task-id> <depends-on-id>".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "graph".to_string(),
+                description: "Show dependency graph".to_string(),
+                usage: "graph [--format <text|dot|json>]".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "search".to_string(),
+                description: "Search tasks".to_string(),
+                usage: "search <query> [--limit <n>]".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "blocked".to_string(),
+                description: "Show blocked tasks".to_string(),
+                usage: "blocked".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "cycles".to_string(),
+                description: "Detect dependency cycles".to_string(),
+                usage: "cycles".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "stats".to_string(),
+                description: "Show task statistics".to_string(),
+                usage: "stats".to_string(),
+                has_subcommands: false,
+            },
+        ]
+    }
+
+    async fn run_command(&self, ctx: &CliContext) -> PluginResult<CliResult> {
+        let tasks_guard = self.tasks.read().await;
+        let tasks = tasks_guard.as_ref().ok_or_else(|| {
+            lib_plugin_abi_v3::PluginError::CommandFailed("Tasks not initialized".to_string())
+        })?;
+
+        let subcommand = ctx.subcommand.as_deref().unwrap_or("");
+
+        let result = match subcommand {
+            "list" => cmd_list(tasks, ctx),
+            "add" => cmd_add(tasks, ctx),
+            "show" => cmd_show(tasks, ctx),
+            "status" => cmd_status(tasks, ctx),
+            "delete" => cmd_delete(tasks, ctx),
+            "depend" => cmd_depend(tasks, ctx),
+            "undepend" => cmd_undepend(tasks, ctx),
+            "graph" => cmd_graph(tasks, ctx),
+            "search" => cmd_search(tasks, ctx),
+            "blocked" => cmd_blocked(tasks),
+            "cycles" => cmd_cycles(tasks),
+            "stats" => cmd_stats(tasks),
+            "" => Ok(get_help()),
+            _ => Err(format!("Unknown command: {}", subcommand)),
+        };
+
+        match result {
+            Ok(output) => Ok(CliResult::success(output)),
+            Err(e) => Ok(CliResult::error(e)),
+        }
+    }
+}
+
+// === Plugin Entry Points ===
+
+/// Create the plugin instance (v3 entry point)
 #[no_mangle]
-pub extern "C" fn plugin_entry() -> *const PluginVTable {
-    &PLUGIN_VTABLE
+pub fn plugin_create() -> Box<dyn Plugin> {
+    Box::new(TasksPlugin::new())
 }
 
-// === CLI Service VTable ===
-
-static CLI_SERVICE_VTABLE: ServiceVTable = ServiceVTable {
-    invoke: cli_invoke,
-    list_methods: cli_list_methods,
-};
-
-extern "C" fn cli_invoke(
-    _handle: *const c_void,
-    method: RStr<'_>,
-    args: RStr<'_>,
-) -> RResult<RString, ServiceError> {
-    match method.as_str() {
-        "run_command" => {
-            let result = run_cli_command(args.as_str());
-            match result {
-                Ok(output) => RResult::ROk(RString::from(output)),
-                Err(e) => RResult::RErr(ServiceError::invocation_error(e)),
-            }
-        }
-        "list_commands" => {
-            let commands = json!([
-                {"name": "list", "description": "List all tasks", "usage": "list [--status <status>] [--ready] [--blocked]"},
-                {"name": "add", "description": "Add a new task", "usage": "add <title> [--description <desc>]"},
-                {"name": "show", "description": "Show task details", "usage": "show <id>"},
-                {"name": "status", "description": "Update task status", "usage": "status <id> <status>"},
-                {"name": "delete", "description": "Delete a task", "usage": "delete <id> [--force]"},
-                {"name": "depend", "description": "Add dependency", "usage": "depend <task-id> <depends-on-id>"},
-                {"name": "undepend", "description": "Remove dependency", "usage": "undepend <task-id> <depends-on-id>"},
-                {"name": "graph", "description": "Show dependency graph", "usage": "graph [--format <text|dot|json>]"},
-                {"name": "search", "description": "Search tasks", "usage": "search <query> [--limit <n>]"},
-                {"name": "blocked", "description": "Show blocked tasks", "usage": "blocked"},
-                {"name": "cycles", "description": "Detect dependency cycles", "usage": "cycles"},
-                {"name": "stats", "description": "Show task statistics", "usage": "stats"}
-            ]);
-            RResult::ROk(RString::from(
-                serde_json::to_string(&commands).unwrap_or_default(),
-            ))
-        }
-        _ => RResult::RErr(ServiceError::method_not_found(method.as_str())),
-    }
-}
-
-extern "C" fn cli_list_methods(_handle: *const c_void) -> RVec<ServiceMethod> {
-    vec![
-        ServiceMethod::new("run_command").with_description("Run a CLI command"),
-        ServiceMethod::new("list_commands").with_description("List available commands"),
-    ]
-    .into_iter()
-    .collect()
-}
-
-fn run_cli_command(context_json: &str) -> Result<String, String> {
-    let context: serde_json::Value =
-        serde_json::from_str(context_json).map_err(|e| format!("Invalid context: {}", e))?;
-
-    let tasks = TASKS
-        .get()
-        .and_then(|t| t.as_ref())
-        .ok_or_else(|| "Tasks not initialized".to_string())?;
-
-    // Parse command and args from context
-    let args: Vec<String> = context
-        .get("args")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let subcommand = args.first().map(|s| s.as_str()).unwrap_or("");
-    let cmd_args: Vec<&str> = args.iter().skip(1).map(|s| s.as_str()).collect();
-
-    // Parse options from remaining args (--key value format)
-    let mut options = serde_json::Map::new();
-    let mut i = 0;
-    while i < cmd_args.len() {
-        if cmd_args[i].starts_with("--") {
-            let key = cmd_args[i].trim_start_matches("--");
-            if i + 1 < cmd_args.len() && !cmd_args[i + 1].starts_with("--") {
-                options.insert(key.to_string(), json!(cmd_args[i + 1]));
-                i += 2;
-            } else {
-                options.insert(key.to_string(), json!(true));
-                i += 1;
-            }
-        } else {
-            i += 1;
-        }
-    }
-
-    // Get positional args (non-option args after subcommand)
-    let positional: Vec<&str> = cmd_args
-        .iter()
-        .filter(|a| !a.starts_with("--"))
-        .copied()
-        .collect();
-
-    let options_value = serde_json::Value::Object(options);
-
-    match subcommand {
-        "list" => cmd_list(tasks, &options_value),
-        "add" => cmd_add(tasks, &positional, &options_value),
-        "show" => cmd_show(tasks, &positional),
-        "status" => cmd_status(tasks, &positional),
-        "delete" => cmd_delete(tasks, &positional, &options_value),
-        "depend" => cmd_depend(tasks, &positional),
-        "undepend" => cmd_undepend(tasks, &positional),
-        "graph" => cmd_graph(tasks, &options_value),
-        "search" => cmd_search(tasks, &positional, &options_value),
-        "blocked" => cmd_blocked(tasks),
-        "cycles" => cmd_cycles(tasks),
-        "stats" => cmd_stats(tasks),
-        "" => {
-            let help = "ADI Tasks - Task management with dependency tracking\n\n\
-                        Commands:\n  \
-                        list     List all tasks\n  \
-                        add      Add a new task\n  \
-                        show     Show task details\n  \
-                        status   Update task status\n  \
-                        delete   Delete a task\n  \
-                        depend   Add dependency\n  \
-                        undepend Remove dependency\n  \
-                        graph    Show dependency graph\n  \
-                        search   Search tasks\n  \
-                        blocked  Show blocked tasks\n  \
-                        cycles   Detect dependency cycles\n  \
-                        stats    Show task statistics\n\n\
-                        Usage: adi run adi.tasks <command> [args]";
-            Ok(help.to_string())
-        }
-        _ => Err(format!("Unknown command: {}", subcommand)),
-    }
+/// Create the CLI commands interface (for separate trait object)
+#[no_mangle]
+pub fn plugin_create_cli() -> Box<dyn CliCommands> {
+    Box::new(TasksPlugin::new())
 }
 
 // === Command Implementations ===
 
-fn cmd_list(tasks: &TaskManager, options: &serde_json::Value) -> Result<String, String> {
-    let status_filter = options.get("status").and_then(|v| v.as_str());
-    let ready = options
-        .get("ready")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-    let blocked = options
-        .get("blocked")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-    let format = options
-        .get("format")
-        .and_then(|v| v.as_str())
-        .unwrap_or("text");
+fn get_help() -> String {
+    "ADI Tasks - Task management with dependency tracking\n\n\
+     Commands:\n  \
+     list     List all tasks\n  \
+     add      Add a new task\n  \
+     show     Show task details\n  \
+     status   Update task status\n  \
+     delete   Delete a task\n  \
+     depend   Add dependency\n  \
+     undepend Remove dependency\n  \
+     graph    Show dependency graph\n  \
+     search   Search tasks\n  \
+     blocked  Show blocked tasks\n  \
+     cycles   Detect dependency cycles\n  \
+     stats    Show task statistics\n\n\
+     Usage: adi tasks <command> [args]"
+        .to_string()
+}
+
+fn cmd_list(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
+    let status_filter: Option<String> = ctx.option("status");
+    let ready = ctx.has_flag("ready");
+    let blocked = ctx.has_flag("blocked");
+    let format: Option<String> = ctx.option("format");
+    let format = format.as_deref().unwrap_or("text");
 
     let task_list = if ready {
         tasks.get_ready().map_err(|e| e.to_string())?
     } else if blocked {
         tasks.get_blocked().map_err(|e| e.to_string())?
-    } else if let Some(status_str) = status_filter {
+    } else if let Some(ref status_str) = status_filter {
         let status: TaskStatus = status_str
             .parse()
             .map_err(|_| format!("Invalid status: {}", status_str))?;
@@ -295,20 +263,14 @@ fn cmd_list(tasks: &TaskManager, options: &serde_json::Value) -> Result<String, 
     Ok(output.trim_end().to_string())
 }
 
-fn cmd_add(
-    tasks: &TaskManager,
-    args: &[&str],
-    options: &serde_json::Value,
-) -> Result<String, String> {
-    if args.is_empty() {
-        return Err("Missing title. Usage: add <title> [--description <desc>]".to_string());
-    }
+fn cmd_add(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
+    let title = ctx.arg(0).ok_or_else(|| {
+        "Missing title. Usage: add <title> [--description <desc>]".to_string()
+    })?;
 
-    let title = args[0];
-    let description = options.get("description").and_then(|v| v.as_str());
-    let depends_on: Vec<i64> = options
-        .get("depends-on")
-        .and_then(|v| v.as_str())
+    let description: Option<String> = ctx.option("description");
+    let depends_on_str: Option<String> = ctx.option("depends-on");
+    let depends_on: Vec<i64> = depends_on_str
         .map(|s| {
             s.split(',')
                 .filter_map(|id| id.trim().parse().ok())
@@ -318,7 +280,7 @@ fn cmd_add(
 
     let mut input = CreateTask::new(title);
     if let Some(desc) = description {
-        input = input.with_description(desc.to_string());
+        input = input.with_description(desc);
     }
     if !depends_on.is_empty() {
         input = input.with_dependencies(depends_on.into_iter().map(TaskId).collect());
@@ -328,12 +290,12 @@ fn cmd_add(
     Ok(format!("Created task #{}: {}", id.0, title))
 }
 
-fn cmd_show(tasks: &TaskManager, args: &[&str]) -> Result<String, String> {
-    if args.is_empty() {
-        return Err("Missing task ID. Usage: show <id>".to_string());
-    }
+fn cmd_show(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
+    let id_str = ctx
+        .arg(0)
+        .ok_or_else(|| "Missing task ID. Usage: show <id>".to_string())?;
+    let id: i64 = id_str.parse().map_err(|_| "Invalid task ID")?;
 
-    let id: i64 = args[0].parse().map_err(|_| "Invalid task ID")?;
     let task_with_deps = tasks
         .get_task_with_dependencies(TaskId(id))
         .map_err(|e| e.to_string())?;
@@ -351,11 +313,7 @@ fn cmd_show(tasks: &TaskManager, args: &[&str]) -> Result<String, String> {
         output.push_str(&format!("  Linked symbol: #{}\n", symbol_id));
     }
 
-    let scope = if task.is_global() {
-        "global"
-    } else {
-        "project"
-    };
+    let scope = if task.is_global() { "global" } else { "project" };
     output.push_str(&format!("  Scope: {}\n", scope));
 
     if !task_with_deps.depends_on.is_empty() {
@@ -375,15 +333,18 @@ fn cmd_show(tasks: &TaskManager, args: &[&str]) -> Result<String, String> {
     Ok(output.trim_end().to_string())
 }
 
-fn cmd_status(tasks: &TaskManager, args: &[&str]) -> Result<String, String> {
-    if args.len() < 2 {
-        return Err("Missing arguments. Usage: status <id> <status>".to_string());
-    }
+fn cmd_status(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
+    let id_str = ctx.arg(0).ok_or_else(|| {
+        "Missing arguments. Usage: status <id> <status>".to_string()
+    })?;
+    let status_str = ctx.arg(1).ok_or_else(|| {
+        "Missing arguments. Usage: status <id> <status>".to_string()
+    })?;
 
-    let id: i64 = args[0].parse().map_err(|_| "Invalid task ID")?;
-    let status: TaskStatus = args[1]
+    let id: i64 = id_str.parse().map_err(|_| "Invalid task ID")?;
+    let status: TaskStatus = status_str
         .parse()
-        .map_err(|_| format!("Invalid status: {}", args[1]))?;
+        .map_err(|_| format!("Invalid status: {}", status_str))?;
 
     tasks
         .update_status(TaskId(id), status)
@@ -391,20 +352,12 @@ fn cmd_status(tasks: &TaskManager, args: &[&str]) -> Result<String, String> {
     Ok(format!("Task #{} status updated to {:?}", id, status))
 }
 
-fn cmd_delete(
-    tasks: &TaskManager,
-    args: &[&str],
-    options: &serde_json::Value,
-) -> Result<String, String> {
-    if args.is_empty() {
-        return Err("Missing task ID. Usage: delete <id> [--force]".to_string());
-    }
-
-    let id: i64 = args[0].parse().map_err(|_| "Invalid task ID")?;
-    let force = options
-        .get("force")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
+fn cmd_delete(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
+    let id_str = ctx
+        .arg(0)
+        .ok_or_else(|| "Missing task ID. Usage: delete <id> [--force]".to_string())?;
+    let id: i64 = id_str.parse().map_err(|_| "Invalid task ID")?;
+    let force = ctx.has_flag("force");
 
     let task = tasks.get_task(TaskId(id)).map_err(|e| e.to_string())?;
 
@@ -419,13 +372,16 @@ fn cmd_delete(
     Ok(format!("Deleted task #{}: {}", id, task.title))
 }
 
-fn cmd_depend(tasks: &TaskManager, args: &[&str]) -> Result<String, String> {
-    if args.len() < 2 {
-        return Err("Missing arguments. Usage: depend <task-id> <depends-on-id>".to_string());
-    }
+fn cmd_depend(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
+    let task_id_str = ctx.arg(0).ok_or_else(|| {
+        "Missing arguments. Usage: depend <task-id> <depends-on-id>".to_string()
+    })?;
+    let depends_on_str = ctx.arg(1).ok_or_else(|| {
+        "Missing arguments. Usage: depend <task-id> <depends-on-id>".to_string()
+    })?;
 
-    let task_id: i64 = args[0].parse().map_err(|_| "Invalid task ID")?;
-    let depends_on: i64 = args[1].parse().map_err(|_| "Invalid depends-on ID")?;
+    let task_id: i64 = task_id_str.parse().map_err(|_| "Invalid task ID")?;
+    let depends_on: i64 = depends_on_str.parse().map_err(|_| "Invalid depends-on ID")?;
 
     tasks
         .add_dependency(TaskId(task_id), TaskId(depends_on))
@@ -436,13 +392,16 @@ fn cmd_depend(tasks: &TaskManager, args: &[&str]) -> Result<String, String> {
     ))
 }
 
-fn cmd_undepend(tasks: &TaskManager, args: &[&str]) -> Result<String, String> {
-    if args.len() < 2 {
-        return Err("Missing arguments. Usage: undepend <task-id> <depends-on-id>".to_string());
-    }
+fn cmd_undepend(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
+    let task_id_str = ctx.arg(0).ok_or_else(|| {
+        "Missing arguments. Usage: undepend <task-id> <depends-on-id>".to_string()
+    })?;
+    let depends_on_str = ctx.arg(1).ok_or_else(|| {
+        "Missing arguments. Usage: undepend <task-id> <depends-on-id>".to_string()
+    })?;
 
-    let task_id: i64 = args[0].parse().map_err(|_| "Invalid task ID")?;
-    let depends_on: i64 = args[1].parse().map_err(|_| "Invalid depends-on ID")?;
+    let task_id: i64 = task_id_str.parse().map_err(|_| "Invalid task ID")?;
+    let depends_on: i64 = depends_on_str.parse().map_err(|_| "Invalid depends-on ID")?;
 
     tasks
         .remove_dependency(TaskId(task_id), TaskId(depends_on))
@@ -453,11 +412,9 @@ fn cmd_undepend(tasks: &TaskManager, args: &[&str]) -> Result<String, String> {
     ))
 }
 
-fn cmd_graph(tasks: &TaskManager, options: &serde_json::Value) -> Result<String, String> {
-    let format = options
-        .get("format")
-        .and_then(|v| v.as_str())
-        .unwrap_or("text");
+fn cmd_graph(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
+    let format: Option<String> = ctx.option("format");
+    let format = format.as_deref().unwrap_or("text");
     let all_tasks = tasks.list().map_err(|e| e.to_string())?;
 
     if format == "json" {
@@ -515,11 +472,7 @@ fn cmd_graph(tasks: &TaskManager, options: &serde_json::Value) -> Result<String,
 
         let deps = tasks.get_dependencies(task.id).map_err(|e| e.to_string())?;
         for (i, dep) in deps.iter().enumerate() {
-            let prefix = if i == deps.len() - 1 {
-                "  └─"
-            } else {
-                "  ├─"
-            };
+            let prefix = if i == deps.len() - 1 { "  └─" } else { "  ├─" };
             output.push_str(&format!(
                 "{} depends on #{}: {}\n",
                 prefix, dep.id.0, dep.title
@@ -529,21 +482,13 @@ fn cmd_graph(tasks: &TaskManager, options: &serde_json::Value) -> Result<String,
     Ok(output.trim_end().to_string())
 }
 
-fn cmd_search(
-    tasks: &TaskManager,
-    args: &[&str],
-    options: &serde_json::Value,
-) -> Result<String, String> {
-    if args.is_empty() {
-        return Err("Missing query. Usage: search <query> [--limit <n>]".to_string());
-    }
+fn cmd_search(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
+    let query = ctx
+        .arg(0)
+        .ok_or_else(|| "Missing query. Usage: search <query> [--limit <n>]".to_string())?;
 
-    let query = args[0];
-    let limit = options
-        .get("limit")
-        .and_then(|v| v.as_str())
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(10usize);
+    let limit: Option<usize> = ctx.option("limit");
+    let limit = limit.unwrap_or(10);
 
     let results = tasks.search(query, limit).map_err(|e| e.to_string())?;
 
@@ -565,7 +510,7 @@ fn cmd_search(
     Ok(output.trim_end().to_string())
 }
 
-fn cmd_blocked(tasks: &TaskManager) -> Result<String, String> {
+fn cmd_blocked(tasks: &TaskManager) -> CmdResult {
     let blocked = tasks.get_blocked().map_err(|e| e.to_string())?;
 
     if blocked.is_empty() {
@@ -592,7 +537,7 @@ fn cmd_blocked(tasks: &TaskManager) -> Result<String, String> {
     Ok(output.trim_end().to_string())
 }
 
-fn cmd_cycles(tasks: &TaskManager) -> Result<String, String> {
+fn cmd_cycles(tasks: &TaskManager) -> CmdResult {
     let cycles = tasks.detect_cycles().map_err(|e| e.to_string())?;
 
     if cycles.is_empty() {
@@ -616,16 +561,13 @@ fn cmd_cycles(tasks: &TaskManager) -> Result<String, String> {
     Ok(output.trim_end().to_string())
 }
 
-fn cmd_stats(tasks: &TaskManager) -> Result<String, String> {
+fn cmd_stats(tasks: &TaskManager) -> CmdResult {
     let status = tasks.status().map_err(|e| e.to_string())?;
 
     let mut output = String::from("Task Statistics\n\n");
     output.push_str(&format!("  Total tasks:     {}\n", status.total_tasks));
     output.push_str(&format!("  Todo:            {}\n", status.todo_count));
-    output.push_str(&format!(
-        "  In Progress:     {}\n",
-        status.in_progress_count
-    ));
+    output.push_str(&format!("  In Progress:     {}\n", status.in_progress_count));
     output.push_str(&format!("  Done:            {}\n", status.done_count));
     output.push_str(&format!("  Blocked:         {}\n", status.blocked_count));
     output.push_str(&format!("  Cancelled:       {}\n", status.cancelled_count));

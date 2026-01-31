@@ -2,189 +2,198 @@
 
 mod analyzer;
 
-use abi_stable::std_types::{ROption, RResult, RStr, RString, RVec};
-use lib_indexer_lang_abi::{
-    ExtractRequest, GrammarPathResponse, LanguageInfoAbi, METHOD_EXTRACT_REFERENCES,
-    METHOD_EXTRACT_SYMBOLS, METHOD_GET_GRAMMAR_PATH, METHOD_GET_INFO,
+use lib_plugin_abi_v3::{
+    async_trait,
+    lang::{
+        LanguageAnalyzer, LanguageInfo, Location, ParsedReference, ParsedSymbol, ReferenceKind,
+        SymbolKind, Visibility,
+    },
+    Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult,
+    SERVICE_LANGUAGE_ANALYZER,
 };
-use lib_plugin_abi::{
-    PluginContext, PluginInfo, PluginVTable, ServiceDescriptor, ServiceError, ServiceHandle,
-    ServiceMethod, ServiceVTable, ServiceVersion,
-};
-use std::ffi::c_void;
 
-const LANGUAGE: &str = "cpp";
-const SERVICE_ID: &str = "adi.indexer.lang.cpp";
+/// C++ Language Analyzer Plugin
+pub struct CppAnalyzer;
 
-extern "C" fn plugin_info() -> PluginInfo {
-    PluginInfo::new(
-        "adi.lang.cpp",
-        "C/C++ Language Support",
-        env!("CARGO_PKG_VERSION"),
-        "language",
-    )
-    .with_author("ADI Team")
-    .with_description("C and C++ language parsing and analysis")
-    .with_min_host_version("0.8.0")
-}
-
-extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
-    unsafe {
-        let host = (*ctx).host();
-
-        // Register C++ service
-        let cpp_descriptor =
-            ServiceDescriptor::new(SERVICE_ID, ServiceVersion::new(1, 0, 0), "adi.lang.cpp")
-                .with_description("C++ language analyzer");
-        let cpp_handle = ServiceHandle::new(
-            SERVICE_ID,
-            ctx as *const c_void,
-            &CPP_ANALYZER_VTABLE as *const ServiceVTable,
-        );
-        if let Err(code) = host.register_svc(cpp_descriptor, cpp_handle) {
-            host.error(&format!("Failed to register C++ analyzer: {}", code));
-            return code;
+#[async_trait]
+impl Plugin for CppAnalyzer {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            id: "adi.lang.cpp".to_string(),
+            name: "C++ Language Support".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            plugin_type: PluginType::Extension,
+            author: Some("ADI Team".to_string()),
+            description: Some("C++ language parsing and analysis".to_string()),
+            category: None,
         }
-
-        // Register C service
-        let c_descriptor = ServiceDescriptor::new(
-            "adi.indexer.lang.c",
-            ServiceVersion::new(1, 0, 0),
-            "adi.lang.cpp",
-        )
-        .with_description("C language analyzer");
-        let c_handle = ServiceHandle::new(
-            "adi.indexer.lang.c",
-            ctx as *const c_void,
-            &C_ANALYZER_VTABLE as *const ServiceVTable,
-        );
-        if let Err(code) = host.register_svc(c_descriptor, c_handle) {
-            host.error(&format!("Failed to register C analyzer: {}", code));
-            return code;
-        }
-
-        host.info("C/C++ language plugin initialized");
     }
-    0
+
+    async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
+        Ok(())
+    }
+
+    async fn shutdown(&self) -> PluginResult<()> {
+        Ok(())
+    }
+
+    fn provides(&self) -> Vec<&'static str> {
+        vec![SERVICE_LANGUAGE_ANALYZER]
+    }
 }
 
-extern "C" fn plugin_cleanup(_ctx: *mut PluginContext) {}
+#[async_trait]
+impl LanguageAnalyzer for CppAnalyzer {
+    fn language_info(&self) -> LanguageInfo {
+        LanguageInfo::new("cpp", "C++")
+            .with_extensions(["cpp", "cc", "cxx", "hpp", "hh", "hxx"])
+            .with_version(env!("CARGO_PKG_VERSION"))
+    }
 
-static PLUGIN_VTABLE: PluginVTable = PluginVTable {
-    info: plugin_info,
-    init: plugin_init,
-    update: ROption::RNone,
-    cleanup: plugin_cleanup,
-    handle_message: ROption::RNone,
-};
+    async fn extract_symbols(&self, source: &str) -> PluginResult<Vec<ParsedSymbol>> {
+        Ok(analyzer::extract_symbols(source, true)
+            .into_iter()
+            .map(convert_symbol)
+            .collect())
+    }
+
+    async fn extract_references(&self, source: &str) -> PluginResult<Vec<ParsedReference>> {
+        Ok(analyzer::extract_references(source, true)
+            .into_iter()
+            .map(convert_reference)
+            .collect())
+    }
+
+    fn tree_sitter_language(&self) -> *const () {
+        &tree_sitter_cpp::LANGUAGE as *const _ as *const ()
+    }
+}
+
+/// C Language Analyzer Plugin
+pub struct CAnalyzer;
+
+#[async_trait]
+impl Plugin for CAnalyzer {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            id: "adi.lang.c".to_string(),
+            name: "C Language Support".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            plugin_type: PluginType::Extension,
+            author: Some("ADI Team".to_string()),
+            description: Some("C language parsing and analysis".to_string()),
+            category: None,
+        }
+    }
+
+    async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
+        Ok(())
+    }
+
+    async fn shutdown(&self) -> PluginResult<()> {
+        Ok(())
+    }
+
+    fn provides(&self) -> Vec<&'static str> {
+        vec![SERVICE_LANGUAGE_ANALYZER]
+    }
+}
+
+#[async_trait]
+impl LanguageAnalyzer for CAnalyzer {
+    fn language_info(&self) -> LanguageInfo {
+        LanguageInfo::new("c", "C")
+            .with_extensions(["c", "h"])
+            .with_version(env!("CARGO_PKG_VERSION"))
+    }
+
+    async fn extract_symbols(&self, source: &str) -> PluginResult<Vec<ParsedSymbol>> {
+        Ok(analyzer::extract_symbols(source, false)
+            .into_iter()
+            .map(convert_symbol)
+            .collect())
+    }
+
+    async fn extract_references(&self, source: &str) -> PluginResult<Vec<ParsedReference>> {
+        Ok(analyzer::extract_references(source, false)
+            .into_iter()
+            .map(convert_reference)
+            .collect())
+    }
+
+    fn tree_sitter_language(&self) -> *const () {
+        &tree_sitter_c::LANGUAGE as *const _ as *const ()
+    }
+}
+
+// Helper functions to convert from internal types to v3 ABI types
+
+fn convert_symbol(sym: analyzer::InternalSymbol) -> ParsedSymbol {
+    let location = Location::new(
+        sym.location.start_line,
+        sym.location.start_col,
+        sym.location.end_line,
+        sym.location.end_col,
+        sym.location.start_byte,
+        sym.location.end_byte,
+    );
+
+    let mut result = ParsedSymbol::new(sym.name, convert_symbol_kind(sym.kind), location)
+        .with_visibility(Visibility::Unknown);
+
+    if let Some(sig) = sym.signature {
+        result = result.with_signature(sig);
+    }
+
+    if !sym.children.is_empty() {
+        result = result.with_children(sym.children.into_iter().map(convert_symbol).collect());
+    }
+
+    result
+}
+
+fn convert_reference(r: analyzer::InternalReference) -> ParsedReference {
+    let location = Location::new(
+        r.location.start_line,
+        r.location.start_col,
+        r.location.end_line,
+        r.location.end_col,
+        r.location.start_byte,
+        r.location.end_byte,
+    );
+
+    ParsedReference::new(r.name, convert_reference_kind(r.kind), location)
+}
+
+fn convert_symbol_kind(kind: analyzer::InternalSymbolKind) -> SymbolKind {
+    match kind {
+        analyzer::InternalSymbolKind::Function => SymbolKind::Function,
+        analyzer::InternalSymbolKind::Method => SymbolKind::Method,
+        analyzer::InternalSymbolKind::Class => SymbolKind::Class,
+        analyzer::InternalSymbolKind::Struct => SymbolKind::Struct,
+        analyzer::InternalSymbolKind::Enum => SymbolKind::Enum,
+        analyzer::InternalSymbolKind::Namespace => SymbolKind::Namespace,
+        analyzer::InternalSymbolKind::Field => SymbolKind::Field,
+    }
+}
+
+fn convert_reference_kind(kind: analyzer::InternalReferenceKind) -> ReferenceKind {
+    match kind {
+        analyzer::InternalReferenceKind::Call => ReferenceKind::Call,
+        analyzer::InternalReferenceKind::Import => ReferenceKind::Import,
+        analyzer::InternalReferenceKind::TypeReference => ReferenceKind::TypeReference,
+        analyzer::InternalReferenceKind::FieldAccess => ReferenceKind::FieldAccess,
+        analyzer::InternalReferenceKind::Inheritance => ReferenceKind::Inheritance,
+    }
+}
 
 #[no_mangle]
-pub extern "C" fn plugin_entry() -> *const PluginVTable {
-    &PLUGIN_VTABLE
+pub fn plugin_create() -> Box<dyn Plugin> {
+    Box::new(CppAnalyzer)
 }
 
-static CPP_ANALYZER_VTABLE: ServiceVTable = ServiceVTable {
-    invoke: cpp_analyzer_invoke,
-    list_methods: analyzer_list_methods,
-};
-
-static C_ANALYZER_VTABLE: ServiceVTable = ServiceVTable {
-    invoke: c_analyzer_invoke,
-    list_methods: analyzer_list_methods,
-};
-
-extern "C" fn cpp_analyzer_invoke(
-    _handle: *const c_void,
-    method: RStr<'_>,
-    args: RStr<'_>,
-) -> RResult<RString, ServiceError> {
-    analyzer_invoke_impl(method.as_str(), args.as_str(), true)
-}
-
-extern "C" fn c_analyzer_invoke(
-    _handle: *const c_void,
-    method: RStr<'_>,
-    args: RStr<'_>,
-) -> RResult<RString, ServiceError> {
-    analyzer_invoke_impl(method.as_str(), args.as_str(), false)
-}
-
-fn analyzer_invoke_impl(method: &str, args: &str, is_cpp: bool) -> RResult<RString, ServiceError> {
-    match method {
-        METHOD_GET_GRAMMAR_PATH => {
-            let response = GrammarPathResponse {
-                path: "builtin".to_string(),
-            };
-            match serde_json::to_string(&response) {
-                Ok(json) => RResult::ROk(RString::from(json)),
-                Err(e) => {
-                    RResult::RErr(ServiceError::invocation_error(format!("JSON error: {}", e)))
-                }
-            }
-        }
-        METHOD_EXTRACT_SYMBOLS => {
-            let request: ExtractRequest = match serde_json::from_str(args) {
-                Ok(r) => r,
-                Err(e) => {
-                    return RResult::RErr(ServiceError::invocation_error(format!(
-                        "Invalid request: {}",
-                        e
-                    )))
-                }
-            };
-            let symbols = analyzer::extract_symbols(&request.source, is_cpp);
-            match serde_json::to_string(&symbols) {
-                Ok(json) => RResult::ROk(RString::from(json)),
-                Err(e) => {
-                    RResult::RErr(ServiceError::invocation_error(format!("JSON error: {}", e)))
-                }
-            }
-        }
-        METHOD_EXTRACT_REFERENCES => {
-            let request: ExtractRequest = match serde_json::from_str(args) {
-                Ok(r) => r,
-                Err(e) => {
-                    return RResult::RErr(ServiceError::invocation_error(format!(
-                        "Invalid request: {}",
-                        e
-                    )))
-                }
-            };
-            let references = analyzer::extract_references(&request.source, is_cpp);
-            match serde_json::to_string(&references) {
-                Ok(json) => RResult::ROk(RString::from(json)),
-                Err(e) => {
-                    RResult::RErr(ServiceError::invocation_error(format!("JSON error: {}", e)))
-                }
-            }
-        }
-        METHOD_GET_INFO => {
-            let (lang, exts, display) = if is_cpp {
-                ("cpp", vec!["cpp", "cc", "cxx", "hpp", "hh", "hxx"], "C++")
-            } else {
-                ("c", vec!["c", "h"], "C")
-            };
-            let info = LanguageInfoAbi::new(lang, env!("CARGO_PKG_VERSION"))
-                .with_extensions(exts)
-                .with_display_name(display);
-            match serde_json::to_string(&info) {
-                Ok(json) => RResult::ROk(RString::from(json)),
-                Err(e) => {
-                    RResult::RErr(ServiceError::invocation_error(format!("JSON error: {}", e)))
-                }
-            }
-        }
-        _ => RResult::RErr(ServiceError::method_not_found(method)),
-    }
-}
-
-extern "C" fn analyzer_list_methods(_handle: *const c_void) -> RVec<ServiceMethod> {
-    vec![
-        ServiceMethod::new(METHOD_GET_GRAMMAR_PATH).with_description("Get grammar path"),
-        ServiceMethod::new(METHOD_EXTRACT_SYMBOLS).with_description("Extract symbols"),
-        ServiceMethod::new(METHOD_EXTRACT_REFERENCES).with_description("Extract references"),
-        ServiceMethod::new(METHOD_GET_INFO).with_description("Get language info"),
-    ]
-    .into_iter()
-    .collect()
+/// Additional entry point for C analyzer
+#[no_mangle]
+pub fn plugin_create_c() -> Box<dyn Plugin> {
+    Box::new(CAnalyzer)
 }

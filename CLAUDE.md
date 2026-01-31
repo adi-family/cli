@@ -40,22 +40,25 @@ See `NEXT_STEPS_I18N.md` for detailed status and remaining work.
 
 ## Plugin ABI Architecture
 
-The project uses a **split plugin ABI architecture** with domain-specific ABIs:
+The project uses a **unified v3 plugin ABI** with backward compatibility for v2 plugins:
 
-### General Plugin ABI
-- **lib-plugin-abi** (`crates/lib/lib-plugin-abi`) - General CLI/HTTP/MCP plugins
-- Used by: adi-cli, general-purpose plugins
-- Features: CLI commands, HTTP services, MCP tools, service registry
+### Unified v3 ABI (Current)
+- **lib-plugin-abi-v3** (`crates/lib/lib-plugin-abi-v3`) - Unified plugin interface
+- Used by: All new plugins (CLI, HTTP, MCP, orchestration, language analyzers)
+- Features: Native Rust async traits, type-safe contexts, zero FFI overhead
+- Service traits: `CliCommands`, `HttpRoutes`, `McpTools`, `Runner`, `HealthCheck`, `EnvProvider`, `ProxyMiddleware`, `ObservabilitySink`, `RolloutStrategy`, `LanguageAnalyzer`
 
-### Orchestration Plugin ABI
-- **lib-plugin-abi-orchestration** (`crates/lib/lib-plugin-abi-orchestration`) - Orchestration-specific plugins
-- Used by: Hive orchestrator, all orchestration plugins
-- Categories: Runner, Env, Health, Proxy, Obs (observability), Rollout
+### Legacy v2 ABI (Backward Compatibility)
+- **lib-plugin-abi** (`crates/lib/lib-plugin-abi`) - Legacy FFI-safe ABI
+- Used internally by: `lib-plugin-host` for loading v2 plugins
+- Access: `lib_plugin_host::lib_plugin_abi` re-export
+- Status: Deprecated, kept for backward compatibility
 
-### Design Principle
-- **Split by domain**: Each ABI targets specific use cases (CLI vs orchestration)
-- **Shared library**: Common orchestration concerns in lib-plugin-abi-orchestration
-- **Extensible**: New orchestrators can reuse lib-plugin-abi-orchestration
+### Migration Status
+- ✅ All 79+ plugins migrated to v3
+- ✅ `lib-plugin-abi-orchestration` removed (merged into v3)
+- ✅ Direct v2 dependencies isolated to `lib-plugin-host`
+- See `TODO_PLUGIN_ABI_MIGRATION.md` for details
 
 ## Multi-Crate Component Architecture
 Several components follow a standard multi-crate structure within a single directory:

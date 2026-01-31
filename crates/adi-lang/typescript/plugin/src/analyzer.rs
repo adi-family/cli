@@ -1,12 +1,9 @@
 //! TypeScript/JavaScript language analyzer implementation.
 
-use lib_indexer_lang_abi::{
-    LocationAbi, ParsedReferenceAbi, ParsedSymbolAbi, ReferenceKindAbi, SymbolKindAbi,
-    VisibilityAbi,
-};
+use lib_plugin_abi_v3::lang::{Location, ParsedReference, ParsedSymbol, ReferenceKind, SymbolKind};
 use tree_sitter::{Node, Parser, Tree};
 
-pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
+pub fn extract_symbols(source: &str) -> Vec<ParsedSymbol> {
     let tree = match parse_typescript(source) {
         Some(t) => t,
         None => return vec![],
@@ -16,7 +13,7 @@ pub fn extract_symbols(source: &str) -> Vec<ParsedSymbolAbi> {
     symbols
 }
 
-pub fn extract_references(source: &str) -> Vec<ParsedReferenceAbi> {
+pub fn extract_references(source: &str) -> Vec<ParsedReference> {
     let tree = match parse_typescript(source) {
         Some(t) => t,
         None => return vec![],
@@ -38,10 +35,10 @@ fn node_text(node: Node, source: &str) -> String {
     source[node.byte_range()].to_string()
 }
 
-fn node_location(node: Node) -> LocationAbi {
+fn node_location(node: Node) -> Location {
     let start = node.start_position();
     let end = node.end_position();
-    LocationAbi::new(
+    Location::new(
         start.row as u32,
         start.column as u32,
         end.row as u32,
@@ -51,14 +48,14 @@ fn node_location(node: Node) -> LocationAbi {
     )
 }
 
-fn extract_ts_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAbi>) {
+fn extract_ts_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbol>) {
     match node.kind() {
         "function_declaration" | "function" => {
             if let Some(name) = node.child_by_field_name("name") {
                 let name_text = node_text(name, source);
                 let sig = extract_function_signature(node, source);
                 symbols.push(
-                    ParsedSymbolAbi::new(name_text, SymbolKindAbi::Function, node_location(node))
+                    ParsedSymbol::new(name_text, SymbolKind::Function, node_location(node))
                         .with_signature(sig),
                 );
             }
@@ -72,9 +69,9 @@ fn extract_ts_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAb
                         if let Some(child) = body.child(i) {
                             if child.kind() == "method_definition" {
                                 if let Some(method_name) = child.child_by_field_name("name") {
-                                    children.push(ParsedSymbolAbi::new(
+                                    children.push(ParsedSymbol::new(
                                         node_text(method_name, source),
-                                        SymbolKindAbi::Method,
+                                        SymbolKind::Method,
                                         node_location(child),
                                     ));
                                 }
@@ -83,34 +80,34 @@ fn extract_ts_symbols(node: Node, source: &str, symbols: &mut Vec<ParsedSymbolAb
                     }
                 }
                 symbols.push(
-                    ParsedSymbolAbi::new(name_text, SymbolKindAbi::Class, node_location(node))
+                    ParsedSymbol::new(name_text, SymbolKind::Class, node_location(node))
                         .with_children(children),
                 );
             }
         }
         "interface_declaration" => {
             if let Some(name) = node.child_by_field_name("name") {
-                symbols.push(ParsedSymbolAbi::new(
+                symbols.push(ParsedSymbol::new(
                     node_text(name, source),
-                    SymbolKindAbi::Interface,
+                    SymbolKind::Interface,
                     node_location(node),
                 ));
             }
         }
         "type_alias_declaration" => {
             if let Some(name) = node.child_by_field_name("name") {
-                symbols.push(ParsedSymbolAbi::new(
+                symbols.push(ParsedSymbol::new(
                     node_text(name, source),
-                    SymbolKindAbi::Type,
+                    SymbolKind::Type,
                     node_location(node),
                 ));
             }
         }
         "enum_declaration" => {
             if let Some(name) = node.child_by_field_name("name") {
-                symbols.push(ParsedSymbolAbi::new(
+                symbols.push(ParsedSymbol::new(
                     node_text(name, source),
-                    SymbolKindAbi::Enum,
+                    SymbolKind::Enum,
                     node_location(node),
                 ));
             }
@@ -139,15 +136,15 @@ fn extract_function_signature(node: Node, source: &str) -> String {
     parts.join("")
 }
 
-fn collect_ts_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenceAbi>) {
+fn collect_ts_references(node: Node, source: &str, refs: &mut Vec<ParsedReference>) {
     match node.kind() {
         "call_expression" => {
             if let Some(func) = node.child_by_field_name("function") {
                 let name = node_text(func, source);
                 if !is_builtin(&name) {
-                    refs.push(ParsedReferenceAbi::new(
+                    refs.push(ParsedReference::new(
                         name,
-                        ReferenceKindAbi::Call,
+                        ReferenceKind::Call,
                         node_location(func),
                     ));
                 }
@@ -158,9 +155,9 @@ fn collect_ts_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenc
                 let module = node_text(source_node, source)
                     .trim_matches(|c| c == '"' || c == '\'')
                     .to_string();
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     module,
-                    ReferenceKindAbi::Import,
+                    ReferenceKind::Import,
                     node_location(source_node),
                 ));
             }
@@ -168,18 +165,18 @@ fn collect_ts_references(node: Node, source: &str, refs: &mut Vec<ParsedReferenc
         "type_identifier" => {
             let name = node_text(node, source);
             if !is_primitive(&name) {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     name,
-                    ReferenceKindAbi::TypeReference,
+                    ReferenceKind::TypeReference,
                     node_location(node),
                 ));
             }
         }
         "member_expression" => {
             if let Some(prop) = node.child_by_field_name("property") {
-                refs.push(ParsedReferenceAbi::new(
+                refs.push(ParsedReference::new(
                     node_text(prop, source),
-                    ReferenceKindAbi::FieldAccess,
+                    ReferenceKind::FieldAccess,
                     node_location(prop),
                 ));
             }

@@ -11,8 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # Plugin ABI
-lib-plugin-abi.workspace = true
-abi_stable.workspace = true
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
 
 # Serialization
 serde.workspace = true

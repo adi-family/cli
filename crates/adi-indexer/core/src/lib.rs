@@ -35,7 +35,7 @@ use crate::parser::Parser;
 use crate::search::VectorIndex;
 use crate::storage::Storage;
 use lib_embed::PluginEmbedder;
-use lib_plugin_host::ServiceRegistry;
+use lib_plugin_host::PluginManagerV3;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -54,13 +54,13 @@ pub struct Adi {
 
 impl Adi {
     /// Open an indexer with plugin support.
-    /// Requires a ServiceRegistry with language plugins (adi-lang-*) and adi.embed registered.
+    /// Requires a PluginManagerV3 with language plugins (adi-lang-*) and adi.embed registered.
     ///
     /// Uses the adi.embed plugin for embeddings (much smaller binary).
     /// Install with: `adi plugin install adi.embed`
     pub async fn open_with_plugins(
         project_path: &Path,
-        service_registry: Arc<ServiceRegistry>,
+        plugin_manager: Arc<PluginManagerV3>,
     ) -> Result<Self> {
         let config = Config::load(project_path)?;
         let adi_dir = project_path.join(".adi");
@@ -71,8 +71,8 @@ impl Adi {
         std::fs::create_dir_all(adi_dir.join("cache"))?;
 
         let storage = SqliteStorage::open(&adi_dir.join("tree/index.sqlite"))?;
-        let embedder = PluginEmbedder::new(service_registry.clone())?;
-        let parser = parser::TreeSitterParser::new(service_registry);
+        let embedder = PluginEmbedder::new(plugin_manager.clone())?;
+        let parser = parser::TreeSitterParser::new(plugin_manager);
         let index = search::usearch::UsearchIndex::open(&adi_dir.join("tree/embeddings"))?;
 
         Ok(Self {
@@ -90,7 +90,7 @@ impl Adi {
     pub async fn open_with_embedder(
         project_path: &Path,
         embedder: Arc<dyn Embedder>,
-        service_registry: Arc<ServiceRegistry>,
+        plugin_manager: Arc<PluginManagerV3>,
     ) -> Result<Self> {
         let config = Config::load(project_path)?;
         let adi_dir = project_path.join(".adi");
@@ -101,7 +101,7 @@ impl Adi {
         std::fs::create_dir_all(adi_dir.join("cache"))?;
 
         let storage = SqliteStorage::open(&adi_dir.join("tree/index.sqlite"))?;
-        let parser = parser::TreeSitterParser::new(service_registry);
+        let parser = parser::TreeSitterParser::new(plugin_manager);
         let index = search::usearch::UsearchIndex::open(&adi_dir.join("tree/embeddings"))?;
 
         Ok(Self {

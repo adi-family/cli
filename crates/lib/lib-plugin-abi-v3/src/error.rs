@@ -17,6 +17,10 @@ pub enum PluginError {
     #[error("Service not provided by plugin")]
     ServiceNotProvided,
 
+    /// Configuration error
+    #[error("Configuration error: {0}")]
+    Config(String),
+
     /// Command execution failed
     #[error("Command execution failed: {0}")]
     CommandFailed(String),
@@ -28,6 +32,14 @@ pub enum PluginError {
     /// Health check failed
     #[error("Health check failed: {0}")]
     HealthCheckFailed(String),
+
+    /// Runtime error
+    #[error("Runtime error: {0}")]
+    Runtime(String),
+
+    /// Internal error (alias for Runtime, for compatibility)
+    #[error("Internal error: {0}")]
+    Internal(String),
 
     /// IO error
     #[error("IO error: {0}")]

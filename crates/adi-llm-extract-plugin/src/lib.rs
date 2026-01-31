@@ -3,225 +3,108 @@
 //! Extracts LLM-friendly documentation from ADI plugins.
 //! Outputs markdown suitable for claude.md or similar AI context files.
 
-use abi_stable::std_types::{ROption, RResult, RStr, RString, RVec};
-use lib_plugin_abi::{
-    PluginContext, PluginError, PluginInfo, PluginVTable, ServiceDescriptor, ServiceError,
-    ServiceHandle, ServiceMethod, ServiceVTable, ServiceVersion,
+use lib_plugin_abi_v3::{
+    async_trait,
+    cli::{CliCommand, CliCommands, CliContext, CliResult},
+    Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult, SERVICE_CLI_COMMANDS,
 };
 use lib_plugin_manifest::PluginManifest;
 use serde_json::json;
-use std::ffi::c_void;
 use std::path::PathBuf;
 
-const SERVICE_CLI: &str = "adi.llm-extract.cli";
+/// LLM Extract Plugin
+pub struct LlmExtractPlugin;
 
-// === Plugin VTable Implementation ===
-
-extern "C" fn plugin_info() -> PluginInfo {
-    PluginInfo::new(
-        "adi.llm-extract",
-        "ADI LLM Extract",
-        env!("CARGO_PKG_VERSION"),
-        "core",
-    )
-    .with_author("ADI Team")
-    .with_description("Extract LLM-friendly documentation from plugins")
-    .with_min_host_version("0.8.0")
-}
-
-extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
-    unsafe {
-        let host = (*ctx).host();
-
-        let cli_descriptor =
-            ServiceDescriptor::new(SERVICE_CLI, ServiceVersion::new(1, 0, 0), "adi.llm-extract")
-                .with_description("CLI commands for LLM documentation extraction");
-
-        let cli_handle = ServiceHandle::new(
-            SERVICE_CLI,
-            ctx as *const c_void,
-            &CLI_SERVICE_VTABLE as *const ServiceVTable,
-        );
-
-        if let Err(code) = host.register_svc(cli_descriptor, cli_handle) {
-            host.error(&format!("Failed to register CLI service: {}", code));
-            return code;
-        }
-
-        host.info("ADI LLM Extract plugin initialized");
-    }
-    0
-}
-
-extern "C" fn plugin_cleanup(_ctx: *mut PluginContext) {}
-
-extern "C" fn handle_message(
-    _ctx: *mut PluginContext,
-    msg_type: RStr<'_>,
-    _msg_data: RStr<'_>,
-) -> RResult<RString, PluginError> {
-    RResult::RErr(PluginError::new(
-        -1,
-        format!("Unknown message type: {}", msg_type.as_str()),
-    ))
-}
-
-// === Plugin Entry Point ===
-
-static PLUGIN_VTABLE: PluginVTable = PluginVTable {
-    info: plugin_info,
-    init: plugin_init,
-    update: ROption::RNone,
-    cleanup: plugin_cleanup,
-    handle_message: ROption::RSome(handle_message),
-};
-
-#[no_mangle]
-pub extern "C" fn plugin_entry() -> *const PluginVTable {
-    &PLUGIN_VTABLE
-}
-
-// === CLI Service VTable ===
-
-static CLI_SERVICE_VTABLE: ServiceVTable = ServiceVTable {
-    invoke: cli_invoke,
-    list_methods: cli_list_methods,
-};
-
-extern "C" fn cli_invoke(
-    _handle: *const c_void,
-    method: RStr<'_>,
-    args: RStr<'_>,
-) -> RResult<RString, ServiceError> {
-    match method.as_str() {
-        "run_command" => {
-            let result = run_cli_command(args.as_str());
-            match result {
-                Ok(output) => RResult::ROk(RString::from(output)),
-                Err(e) => RResult::RErr(ServiceError::invocation_error(e)),
-            }
-        }
-        "list_commands" => {
-            let commands = json!([
-                {
-                    "name": "extract",
-                    "description": "Extract LLM documentation from a plugin",
-                    "usage": "extract <plugin-id> [--format <json|md>]",
-                    "examples": [
-                        "adi llm-extract extract adi.tasks",
-                        "adi llm-extract extract adi.linter --format json"
-                    ]
-                },
-                {
-                    "name": "all",
-                    "description": "Extract docs from all installed plugins",
-                    "usage": "all [--format <json|md>]",
-                    "examples": [
-                        "adi llm-extract all",
-                        "adi llm-extract all --format json"
-                    ]
-                }
-            ]);
-            RResult::ROk(RString::from(
-                serde_json::to_string(&commands).unwrap_or_default(),
-            ))
-        }
-        "llm_extract" => {
-            let info = get_self_llm_info();
-            RResult::ROk(RString::from(
-                serde_json::to_string_pretty(&info).unwrap_or_default(),
-            ))
-        }
-        _ => RResult::RErr(ServiceError::method_not_found(method.as_str())),
+impl LlmExtractPlugin {
+    pub fn new() -> Self {
+        Self
     }
 }
 
-extern "C" fn cli_list_methods(_handle: *const c_void) -> RVec<ServiceMethod> {
-    vec![
-        ServiceMethod::new("run_command").with_description("Run a CLI command"),
-        ServiceMethod::new("list_commands").with_description("List available commands"),
-        ServiceMethod::new("llm_extract").with_description("Get LLM-friendly documentation"),
-    ]
-    .into_iter()
-    .collect()
+impl Default for LlmExtractPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
-fn get_self_llm_info() -> serde_json::Value {
-    json!({
-        "plugin": {
-            "id": "adi.llm-extract",
-            "name": "ADI LLM Extract",
-            "description": "Extract LLM-friendly documentation from plugins for AI context files",
-            "categories": ["documentation", "llm", "tooling"]
-        },
-        "cli": {
-            "command": "llm-extract",
-            "aliases": ["llm"],
-            "usage": "adi llm-extract <command> [options]"
-        },
-        "commands": [
-            {
-                "name": "extract",
-                "description": "Extract LLM documentation from a plugin",
-                "usage": "extract <plugin-id> [--format <json|md>]",
-                "examples": ["adi llm-extract extract adi.tasks"]
+#[async_trait]
+impl Plugin for LlmExtractPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            id: "adi.llm-extract".to_string(),
+            name: "ADI LLM Extract".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            plugin_type: PluginType::Core,
+            author: Some("ADI Team".to_string()),
+            description: Some("Extract LLM-friendly documentation from plugins".to_string()),
+            category: None,
+        }
+    }
+
+    async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
+        Ok(())
+    }
+
+    async fn shutdown(&self) -> PluginResult<()> {
+        Ok(())
+    }
+
+    fn provides(&self) -> Vec<&'static str> {
+        vec![SERVICE_CLI_COMMANDS]
+    }
+}
+
+#[async_trait]
+impl CliCommands for LlmExtractPlugin {
+    async fn list_commands(&self) -> Vec<CliCommand> {
+        vec![
+            CliCommand {
+                name: "extract".to_string(),
+                description: "Extract LLM documentation from a plugin".to_string(),
+                usage: "extract <plugin-id> [--format <json|md>]".to_string(),
+                has_subcommands: false,
             },
-            {
-                "name": "all",
-                "description": "Extract docs from all installed plugins",
-                "usage": "all [--format <json|md>]",
-                "examples": ["adi llm-extract all"]
-            }
+            CliCommand {
+                name: "all".to_string(),
+                description: "Extract docs from all installed plugins".to_string(),
+                usage: "all [--format <json|md>]".to_string(),
+                has_subcommands: false,
+            },
         ]
-    })
-}
+    }
 
-fn run_cli_command(context_json: &str) -> Result<String, String> {
-    let context: serde_json::Value =
-        serde_json::from_str(context_json).map_err(|e| format!("Invalid context: {}", e))?;
+    async fn run_command(&self, ctx: &CliContext) -> PluginResult<CliResult> {
+        let subcommand = ctx.subcommand.as_deref().unwrap_or("");
+        let args: Vec<&str> = ctx.args.iter().map(|s| s.as_str()).collect();
+        let options = ctx.options_as_json();
 
-    let args: Vec<String> = context
-        .get("args")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default();
+        let result = match subcommand {
+            "extract" => cmd_extract(&args, &options),
+            "all" => cmd_all(&options),
+            "" | "help" => Ok(get_help()),
+            _ => Err(format!("Unknown command: {}", subcommand)),
+        };
 
-    let subcommand = args.first().map(|s| s.as_str()).unwrap_or("");
-    let cmd_args: Vec<&str> = args.iter().skip(1).map(|s| s.as_str()).collect();
-
-    // Parse options
-    let mut options = serde_json::Map::new();
-    let mut positional = Vec::new();
-    let mut i = 0;
-    while i < cmd_args.len() {
-        if cmd_args[i].starts_with("--") {
-            let key = cmd_args[i].trim_start_matches("--");
-            if i + 1 < cmd_args.len() && !cmd_args[i + 1].starts_with("--") {
-                options.insert(key.to_string(), json!(cmd_args[i + 1]));
-                i += 2;
-            } else {
-                options.insert(key.to_string(), json!(true));
-                i += 1;
-            }
-        } else {
-            positional.push(cmd_args[i]);
-            i += 1;
+        match result {
+            Ok(output) => Ok(CliResult::success(output)),
+            Err(e) => Ok(CliResult::error(e)),
         }
     }
-
-    let options_value = serde_json::Value::Object(options);
-
-    match subcommand {
-        "extract" => cmd_extract(&positional, &options_value),
-        "all" => cmd_all(&options_value),
-        "" => Ok(get_help()),
-        _ => Err(format!("Unknown command: {}", subcommand)),
-    }
 }
+
+/// Create the plugin instance (v3 entry point)
+#[no_mangle]
+pub fn plugin_create() -> Box<dyn Plugin> {
+    Box::new(LlmExtractPlugin::new())
+}
+
+/// Create the CLI commands interface
+#[no_mangle]
+pub fn plugin_create_cli() -> Box<dyn CliCommands> {
+    Box::new(LlmExtractPlugin::new())
+}
+
+// === Command Implementations ===
 
 fn get_help() -> String {
     r#"ADI LLM Extract - Extract plugin documentation for LLM consumption

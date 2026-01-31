@@ -1,7 +1,8 @@
 //! Health check plugin trait
 
-use crate::{Plugin, Result};
+use crate::{runner::RuntimeContext, Plugin, Result};
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -15,7 +16,7 @@ pub trait HealthCheck: Plugin {
 }
 
 /// Health check result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthResult {
     /// Whether the service is healthy
     pub healthy: bool,
@@ -62,7 +63,10 @@ impl HealthResult {
         self.response_time_ms = ms;
         self
     }
-}
 
-/// Runtime context (re-exported from runner module)
-pub use crate::runner::RuntimeContext;
+    /// Set message
+    pub fn with_message(mut self, message: impl Into<String>) -> Self {
+        self.message = Some(message.into());
+        self
+    }
+}

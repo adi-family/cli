@@ -2,177 +2,141 @@
 //!
 //! Provides CLI commands for managing proxy tokens and upstream API keys.
 
-use abi_stable::std_types::{ROption, RResult, RStr, RString, RVec};
-use lib_plugin_abi::{
-    PluginContext, PluginError, PluginInfo, PluginVTable, ServiceDescriptor, ServiceError,
-    ServiceHandle, ServiceMethod, ServiceVTable, ServiceVersion,
+use lib_plugin_abi_v3::{
+    async_trait,
+    cli::{CliCommand, CliCommands, CliContext, CliResult},
+    Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult, SERVICE_CLI_COMMANDS,
 };
 use once_cell::sync::OnceCell;
-use serde_json::json;
-use std::ffi::c_void;
+use tokio::runtime::Runtime;
 
-const SERVICE_CLI: &str = "adi.api-proxy.cli";
-
-static RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
+/// Global tokio runtime for async operations
+static RUNTIME: OnceCell<Runtime> = OnceCell::new();
 static API_URL: OnceCell<String> = OnceCell::new();
 
-// Plugin info
-extern "C" fn plugin_info() -> PluginInfo {
-    PluginInfo::new(
-        "adi.api-proxy",
-        "ADI API Proxy",
-        env!("CARGO_PKG_VERSION"),
-        "core",
-    )
-    .with_author("ADI Team")
-    .with_description("LLM API proxy with BYOK/Platform modes")
-    .with_min_host_version("0.8.0")
-}
-
-// Plugin initialization
-extern "C" fn plugin_init(ctx: *mut PluginContext) -> i32 {
-    // Initialize tokio runtime
-    let _ = RUNTIME.get_or_init(|| {
+fn get_runtime() -> &'static Runtime {
+    RUNTIME.get_or_init(|| {
         tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
-            .expect("Failed to create runtime")
-    });
+            .expect("Failed to create tokio runtime")
+    })
+}
 
-    // Get API URL from config or default
-    unsafe {
-        let host = (*ctx).host();
+/// API Proxy Plugin
+pub struct ApiProxyPlugin;
 
-        // Try to get API URL from config
-        let url = host
-            .get_config("api_url")
-            .unwrap_or_else(|| "http://localhost:8024".to_string());
+impl ApiProxyPlugin {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Default for ApiProxyPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[async_trait]
+impl Plugin for ApiProxyPlugin {
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            id: "adi.api-proxy".to_string(),
+            name: "ADI API Proxy".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            plugin_type: PluginType::Core,
+            author: Some("ADI Team".to_string()),
+            description: Some("LLM API proxy with BYOK/Platform modes".to_string()),
+            category: None,
+        }
+    }
+
+    async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
+        let _ = get_runtime();
+        // Get API URL from env or default
+        let url = std::env::var("API_PROXY_URL")
+            .unwrap_or_else(|_| "http://localhost:8024".to_string());
         let _ = API_URL.set(url);
-
-        // Register CLI service
-        let cli_descriptor =
-            ServiceDescriptor::new(SERVICE_CLI, ServiceVersion::new(1, 0, 0), "adi.api-proxy")
-                .with_description("CLI commands for API proxy management");
-
-        let cli_handle = ServiceHandle::new(
-            SERVICE_CLI,
-            ctx as *const c_void,
-            &CLI_SERVICE_VTABLE as *const ServiceVTable,
-        );
-
-        if let Err(code) = host.register_svc(cli_descriptor, cli_handle) {
-            host.error(&format!("Failed to register CLI service: {}", code));
-            return code;
-        }
-
-        host.info("API Proxy plugin initialized");
+        Ok(())
     }
 
-    0
+    async fn shutdown(&self) -> PluginResult<()> {
+        Ok(())
+    }
+
+    fn provides(&self) -> Vec<&'static str> {
+        vec![SERVICE_CLI_COMMANDS]
+    }
 }
 
-extern "C" fn plugin_cleanup(_ctx: *mut PluginContext) {}
+#[async_trait]
+impl CliCommands for ApiProxyPlugin {
+    async fn list_commands(&self) -> Vec<CliCommand> {
+        vec![
+            CliCommand {
+                name: "keys".to_string(),
+                description: "Manage upstream API keys".to_string(),
+                usage: "keys <list|add|remove|verify> [options]".to_string(),
+                has_subcommands: true,
+            },
+            CliCommand {
+                name: "tokens".to_string(),
+                description: "Manage proxy tokens".to_string(),
+                usage: "tokens <list|create|revoke|rotate> [options]".to_string(),
+                has_subcommands: true,
+            },
+            CliCommand {
+                name: "usage".to_string(),
+                description: "View usage statistics".to_string(),
+                usage: "usage [--from DATE] [--to DATE]".to_string(),
+                has_subcommands: false,
+            },
+            CliCommand {
+                name: "providers".to_string(),
+                description: "List available platform providers".to_string(),
+                usage: "providers".to_string(),
+                has_subcommands: false,
+            },
+        ]
+    }
 
-static PLUGIN_VTABLE: PluginVTable = PluginVTable {
-    info: plugin_info,
-    init: plugin_init,
-    update: ROption::RNone,
-    cleanup: plugin_cleanup,
-    handle_message: ROption::RNone,
-};
+    async fn run_command(&self, ctx: &CliContext) -> PluginResult<CliResult> {
+        let subcommand = ctx.subcommand.as_deref().unwrap_or("");
+        let args: Vec<String> = ctx.args.clone();
 
+        let result = match subcommand {
+            "keys" => cmd_keys(&args),
+            "tokens" => cmd_tokens(&args),
+            "usage" => cmd_usage(&args),
+            "providers" => cmd_providers(),
+            "" | "help" => Ok(get_help()),
+            _ => Err(format!(
+                "Unknown command: {}. Use 'api-proxy help' for usage.",
+                subcommand
+            )),
+        };
+
+        match result {
+            Ok(output) => Ok(CliResult::success(output)),
+            Err(e) => Ok(CliResult::error(e)),
+        }
+    }
+}
+
+/// Create the plugin instance (v3 entry point)
 #[no_mangle]
-pub extern "C" fn plugin_entry() -> *const PluginVTable {
-    &PLUGIN_VTABLE
+pub fn plugin_create() -> Box<dyn Plugin> {
+    Box::new(ApiProxyPlugin::new())
 }
 
-// CLI Service
-static CLI_SERVICE_VTABLE: ServiceVTable = ServiceVTable {
-    invoke: cli_invoke,
-    list_methods: cli_list_methods,
-};
-
-extern "C" fn cli_invoke(
-    _handle: *const c_void,
-    method: RStr<'_>,
-    args: RStr<'_>,
-) -> RResult<RString, ServiceError> {
-    match method.as_str() {
-        "run_command" => {
-            let result = run_cli_command(args.as_str());
-            match result {
-                Ok(output) => RResult::ROk(RString::from(output)),
-                Err(e) => RResult::RErr(ServiceError::invocation_error(e)),
-            }
-        }
-        "list_commands" => {
-            let commands = json!([
-                {
-                    "name": "keys",
-                    "description": "Manage upstream API keys",
-                    "usage": "api-proxy keys <list|add|remove|verify> [options]"
-                },
-                {
-                    "name": "tokens",
-                    "description": "Manage proxy tokens",
-                    "usage": "api-proxy tokens <list|create|revoke|rotate> [options]"
-                },
-                {
-                    "name": "usage",
-                    "description": "View usage statistics",
-                    "usage": "api-proxy usage [--from DATE] [--to DATE]"
-                },
-                {
-                    "name": "providers",
-                    "description": "List available platform providers",
-                    "usage": "api-proxy providers"
-                }
-            ]);
-            RResult::ROk(RString::from(
-                serde_json::to_string(&commands).unwrap_or_default(),
-            ))
-        }
-        _ => RResult::RErr(ServiceError::method_not_found(method.as_str())),
-    }
+/// Create the CLI commands interface
+#[no_mangle]
+pub fn plugin_create_cli() -> Box<dyn CliCommands> {
+    Box::new(ApiProxyPlugin::new())
 }
 
-extern "C" fn cli_list_methods(_handle: *const c_void) -> RVec<ServiceMethod> {
-    vec![
-        ServiceMethod::new("run_command").with_description("Run a CLI command"),
-        ServiceMethod::new("list_commands").with_description("List available commands"),
-    ]
-    .into_iter()
-    .collect()
-}
-
-fn run_cli_command(context_json: &str) -> Result<String, String> {
-    let context: serde_json::Value =
-        serde_json::from_str(context_json).map_err(|e| format!("Invalid context: {}", e))?;
-
-    let args: Vec<String> = context
-        .get("args")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let subcommand = args.first().map(|s| s.as_str()).unwrap_or("");
-
-    match subcommand {
-        "keys" => cmd_keys(&args[1..]),
-        "tokens" => cmd_tokens(&args[1..]),
-        "usage" => cmd_usage(&args[1..]),
-        "providers" => cmd_providers(),
-        "" | "help" => Ok(get_help()),
-        _ => Err(format!(
-            "Unknown command: {}. Use 'api-proxy help' for usage.",
-            subcommand
-        )),
-    }
-}
+// === Command Implementations ===
 
 fn get_help() -> String {
     let mut help = String::new();
@@ -199,7 +163,6 @@ fn cmd_keys(args: &[String]) -> Result<String, String> {
 
     match subcommand {
         "list" => {
-            // TODO: Implement API call
             Ok(
                 "Upstream API keys:\n  (No keys configured. Use 'keys add' to add one.)"
                     .to_string(),

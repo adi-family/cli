@@ -28,6 +28,7 @@ impl Plugin for AudioPlugin {
             plugin_type: PluginType::Core,
             author: Some("ADI Team".to_string()),
             description: Some("Audio processing: WAV I/O, filters, EQ, compression, normalization".to_string()),
+            category: None,
         }
     }
 

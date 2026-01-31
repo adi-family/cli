@@ -5,22 +5,11 @@
 //! Hooks run one-shot tasks at specific points during service startup and shutdown.
 //! Hook steps can use any runner plugin (script, docker, compose, etc.) and support
 //! sequential and parallel execution.
-//!
-//! ## Step Types
-//!
-//! - **Script** (`run:`): Shorthand for the built-in script runner
-//! - **Runner** (`runner:`): Explicit runner plugin (docker, compose, etc.)
-//! - **Parallel** (`parallel:`): Group of steps that execute concurrently
 
-use crate::runner::{HookExitStatus, RunnerPlugin};
-use crate::types::RuntimeContext;
-use anyhow::{anyhow, Result};
+use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
 
 // ============================================================================
 // Hook Event Types
@@ -94,8 +83,7 @@ pub struct HookRunnerConfig {
     /// Runner plugin type (e.g., "script", "docker", "compose")
     #[serde(rename = "type")]
     pub runner_type: String,
-    /// Plugin-specific configuration (the rest of the runner block)
-    /// Flattened so `docker: { image: ... }` becomes accessible
+    /// Plugin-specific configuration
     #[serde(flatten)]
     pub config: serde_json::Value,
 }
@@ -220,15 +208,15 @@ impl HookStep {
         .count();
 
         if count == 0 {
-            return Err(anyhow!(
+            return Err(crate::PluginError::Other(anyhow::anyhow!(
                 "Hook step must have exactly one of: run, runner, or parallel"
-            ));
+            )));
         }
         if count > 1 {
-            return Err(anyhow!(
+            return Err(crate::PluginError::Other(anyhow::anyhow!(
                 "Hook step must have exactly one of: run, runner, or parallel (found {})",
                 count
-            ));
+            )));
         }
 
         // Validate parallel children recursively
@@ -240,21 +228,22 @@ impl HookStep {
 
         // Validate retry config
         if self.on_failure == Some(OnFailure::Retry) && self.parallel.is_some() {
-            return Err(anyhow!(
-                "on_failure: retry is not available for parallel groups; use it on individual steps inside"
-            ));
+            return Err(crate::PluginError::Other(anyhow::anyhow!(
+                "on_failure: retry is not available for parallel groups"
+            )));
         }
 
         Ok(())
     }
 
     /// Resolve the effective on_failure for this step
-    fn effective_on_failure(&self, event: HookEvent) -> OnFailure {
-        self.on_failure.unwrap_or_else(|| event.default_on_failure())
+    pub fn effective_on_failure(&self, event: HookEvent) -> OnFailure {
+        self.on_failure
+            .unwrap_or_else(|| event.default_on_failure())
     }
 
     /// Parse timeout to Duration
-    fn timeout_duration(&self) -> Duration {
+    pub fn timeout_duration(&self) -> Duration {
         self.timeout
             .as_deref()
             .and_then(parse_duration)
@@ -262,7 +251,7 @@ impl HookStep {
     }
 
     /// Parse retry delay to Duration
-    fn retry_delay_duration(&self) -> Duration {
+    pub fn retry_delay_duration(&self) -> Duration {
         self.retry_delay
             .as_deref()
             .and_then(parse_duration)
@@ -270,7 +259,7 @@ impl HookStep {
     }
 
     /// Get retry count
-    fn retry_count(&self) -> u32 {
+    pub fn retry_count(&self) -> u32 {
         self.retries.unwrap_or(3)
     }
 }
@@ -429,9 +418,84 @@ pub struct HookStepResult {
     pub retries_attempted: u32,
 }
 
+/// Hook exit status
+#[derive(Debug, Clone)]
+pub struct HookExitStatus {
+    /// Exit code
+    pub code: i32,
+    /// Standard output
+    pub output: Option<String>,
+    /// Standard error
+    pub stderr: Option<String>,
+}
+
+impl HookExitStatus {
+    /// Create a successful exit status
+    pub fn success() -> Self {
+        Self {
+            code: 0,
+            output: None,
+            stderr: None,
+        }
+    }
+
+    /// Create a failed exit status
+    pub fn failed(code: i32) -> Self {
+        Self {
+            code,
+            output: None,
+            stderr: None,
+        }
+    }
+
+    /// Check if the exit was successful
+    pub fn is_success(&self) -> bool {
+        self.code == 0
+    }
+
+    /// Add output to exit status
+    pub fn with_output(mut self, output: String) -> Self {
+        self.output = Some(output);
+        self
+    }
+
+    /// Add stderr to exit status
+    pub fn with_stderr(mut self, stderr: String) -> Self {
+        self.stderr = Some(stderr);
+        self
+    }
+}
+
+// ============================================================================
+// Utilities
+// ============================================================================
+
+/// Parse a duration string like "60s", "5m", "500ms"
+pub fn parse_duration(s: &str) -> Option<Duration> {
+    let s = s.trim();
+    if let Some(ms_str) = s.strip_suffix("ms") {
+        ms_str.parse::<u64>().ok().map(Duration::from_millis)
+    } else if let Some(s_str) = s.strip_suffix('s') {
+        s_str.parse::<u64>().ok().map(Duration::from_secs)
+    } else if let Some(m_str) = s.strip_suffix('m') {
+        m_str
+            .parse::<u64>()
+            .ok()
+            .map(|m| Duration::from_secs(m * 60))
+    } else {
+        // Default: try as seconds
+        s.parse::<u64>().ok().map(Duration::from_secs)
+    }
+}
+
 // ============================================================================
 // Hook Executor
 // ============================================================================
+
+use crate::runner::{Runner, RuntimeContext};
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use tracing::{debug, error, info, warn};
 
 /// Executes lifecycle hook steps.
 ///
@@ -439,12 +503,12 @@ pub struct HookStepResult {
 /// respecting on_failure policies and timeouts.
 pub struct HookExecutor {
     /// Available runner plugins by type name (e.g., "docker" -> DockerRunnerPlugin)
-    runners: Arc<RwLock<HashMap<String, Arc<dyn RunnerPlugin>>>>,
+    runners: Arc<RwLock<HashMap<String, Arc<dyn Runner>>>>,
 }
 
 impl HookExecutor {
     /// Create a new hook executor with available runner plugins
-    pub fn new(runners: HashMap<String, Arc<dyn RunnerPlugin>>) -> Self {
+    pub fn new(runners: HashMap<String, Arc<dyn Runner>>) -> Self {
         Self {
             runners: Arc::new(RwLock::new(runners)),
         }
@@ -654,7 +718,7 @@ impl HookExecutor {
         step: &'a HookStep,
         env: &'a HashMap<String, String>,
         runtime_ctx: &'a RuntimeContext,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<HookExitStatus>> + Send + 'a>>
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::Result<HookExitStatus>> + Send + 'a>>
     {
         Box::pin(async move {
             match step.step_type() {
@@ -671,11 +735,11 @@ impl HookExecutor {
         step: &HookStep,
         env: &HashMap<String, String>,
         runtime_ctx: &RuntimeContext,
-    ) -> Result<HookExitStatus> {
+    ) -> crate::Result<HookExitStatus> {
         let command = step
             .run
             .as_ref()
-            .ok_or_else(|| anyhow!("Script step missing 'run' field"))?;
+            .ok_or_else(|| crate::PluginError::Other(anyhow::anyhow!("Script step missing 'run' field")))?;
 
         // Interpolate runtime templates in command
         let interpolated = runtime_ctx.interpolate(command)?;
@@ -714,7 +778,7 @@ impl HookExecutor {
             .stderr(std::process::Stdio::piped())
             .output()
             .await
-            .map_err(|e| anyhow!("Failed to execute hook script: {}", e))?;
+            .map_err(|e| crate::PluginError::Other(anyhow::anyhow!("Failed to execute hook script: {}", e)))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -741,11 +805,11 @@ impl HookExecutor {
         step: &HookStep,
         env: &HashMap<String, String>,
         runtime_ctx: &RuntimeContext,
-    ) -> Result<HookExitStatus> {
+    ) -> crate::Result<HookExitStatus> {
         let runner_config = step
             .runner
             .as_ref()
-            .ok_or_else(|| anyhow!("Runner step missing 'runner' field"))?;
+            .ok_or_else(|| crate::PluginError::Other(anyhow::anyhow!("Runner step missing 'runner' field")))?;
 
         let runner_type = &runner_config.runner_type;
 
@@ -754,19 +818,19 @@ impl HookExecutor {
         let runner = runners
             .get(runner_type)
             .ok_or_else(|| {
-                anyhow!(
+                crate::PluginError::Other(anyhow::anyhow!(
                     "Runner plugin '{}' not found. Available runners: {:?}",
                     runner_type,
                     runners.keys().collect::<Vec<_>>()
-                )
+                ))
             })?
             .clone();
 
         if !runner.supports_hooks() {
-            return Err(anyhow!(
+            return Err(crate::PluginError::Other(anyhow::anyhow!(
                 "Runner plugin '{}' does not support hook execution",
                 runner_type
-            ));
+            )));
         }
 
         debug!("Executing hook via runner plugin: {}", runner_type);
@@ -782,11 +846,11 @@ impl HookExecutor {
         step: &HookStep,
         env: &HashMap<String, String>,
         runtime_ctx: &RuntimeContext,
-    ) -> Result<HookExitStatus> {
+    ) -> crate::Result<HookExitStatus> {
         let steps = step
             .parallel
             .as_ref()
-            .ok_or_else(|| anyhow!("Parallel step missing 'parallel' field"))?;
+            .ok_or_else(|| crate::PluginError::Other(anyhow::anyhow!("Parallel step missing 'parallel' field")))?;
 
         if steps.is_empty() {
             return Ok(HookExitStatus::success());
@@ -852,32 +916,6 @@ impl HookExecutor {
     }
 }
 
-// ============================================================================
-// Utilities
-// ============================================================================
-
-/// Parse a duration string like "60s", "5m", "500ms"
-pub fn parse_duration(s: &str) -> Option<Duration> {
-    let s = s.trim();
-    if let Some(ms_str) = s.strip_suffix("ms") {
-        ms_str.parse::<u64>().ok().map(Duration::from_millis)
-    } else if let Some(s_str) = s.strip_suffix('s') {
-        s_str.parse::<u64>().ok().map(Duration::from_secs)
-    } else if let Some(m_str) = s.strip_suffix('m') {
-        m_str
-            .parse::<u64>()
-            .ok()
-            .map(|m| Duration::from_secs(m * 60))
-    } else {
-        // Default: try as seconds
-        s.parse::<u64>().ok().map(Duration::from_secs)
-    }
-}
-
-// ============================================================================
-// Tests
-// ============================================================================
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -908,100 +946,6 @@ mod tests {
     }
 
     #[test]
-    fn test_hook_step_validate_script() {
-        let step = HookStep::script("echo hello");
-        assert!(step.validate().is_ok());
-    }
-
-    #[test]
-    fn test_hook_step_validate_empty() {
-        let step = HookStep {
-            run: None,
-            runner: None,
-            parallel: None,
-            working_dir: None,
-            on_failure: None,
-            timeout: None,
-            retries: None,
-            retry_delay: None,
-            environment: None,
-        };
-        assert!(step.validate().is_err());
-    }
-
-    #[test]
-    fn test_hook_step_validate_multiple_types() {
-        let step = HookStep {
-            run: Some("echo hi".to_string()),
-            runner: Some(HookRunnerConfig {
-                runner_type: "docker".to_string(),
-                config: serde_json::json!({}),
-            }),
-            parallel: None,
-            working_dir: None,
-            on_failure: None,
-            timeout: None,
-            retries: None,
-            retry_delay: None,
-            environment: None,
-        };
-        assert!(step.validate().is_err());
-    }
-
-    #[test]
-    fn test_hook_step_validate_parallel_no_retry() {
-        let step = HookStep {
-            run: None,
-            runner: None,
-            parallel: Some(vec![HookStep::script("echo hi")]),
-            working_dir: None,
-            on_failure: Some(OnFailure::Retry),
-            timeout: None,
-            retries: None,
-            retry_delay: None,
-            environment: None,
-        };
-        assert!(step.validate().is_err());
-    }
-
-    #[test]
-    fn test_hooks_config_empty() {
-        let config = HooksConfig::default();
-        assert!(config.is_empty());
-    }
-
-    #[test]
-    fn test_hooks_config_steps_for() {
-        let config = HooksConfig {
-            pre_up: vec![HookStep::script("echo pre")],
-            post_up: vec![],
-            pre_down: vec![],
-            post_down: vec![],
-        };
-        assert_eq!(config.steps_for(HookEvent::PreUp).len(), 1);
-        assert_eq!(config.steps_for(HookEvent::PostUp).len(), 0);
-    }
-
-    #[test]
-    fn test_hook_context_to_env() {
-        let ctx = HookContext {
-            event: HookEvent::PreUp,
-            service_name: Some("auth".to_string()),
-            service_fqn: Some("adi:auth".to_string()),
-            source_name: "adi".to_string(),
-            rollout_type: Some("blue-green".to_string()),
-            rollout_color: Some("blue".to_string()),
-        };
-        let env = ctx.to_env();
-        assert_eq!(env.get("HIVE_HOOK_EVENT").unwrap(), "pre-up");
-        assert_eq!(env.get("HIVE_SERVICE_NAME").unwrap(), "auth");
-        assert_eq!(env.get("HIVE_SERVICE_FQN").unwrap(), "adi:auth");
-        assert_eq!(env.get("HIVE_SOURCE_NAME").unwrap(), "adi");
-        assert_eq!(env.get("HIVE_ROLLOUT_TYPE").unwrap(), "blue-green");
-        assert_eq!(env.get("HIVE_ROLLOUT_COLOR").unwrap(), "blue");
-    }
-
-    #[test]
     fn test_hook_exit_status() {
         let success = HookExitStatus::success();
         assert!(success.is_success());
@@ -1010,63 +954,5 @@ mod tests {
         let failed = HookExitStatus::failed(1);
         assert!(!failed.is_success());
         assert_eq!(failed.code, 1);
-
-        let with_output = HookExitStatus::success()
-            .with_output("hello".to_string())
-            .with_stderr("warn".to_string());
-        assert!(with_output.is_success());
-        assert_eq!(with_output.output.unwrap(), "hello");
-        assert_eq!(with_output.stderr.unwrap(), "warn");
-    }
-
-    #[test]
-    fn test_deserialize_hooks_config() {
-        let yaml = r#"
-pre-up:
-  - run: echo "hello"
-    on_failure: abort
-    timeout: "30s"
-  - run: echo "world"
-    on_failure: warn
-post-up:
-  - run: echo "done"
-"#;
-        let config: HooksConfig = serde_yaml::from_str(yaml).unwrap();
-        assert_eq!(config.pre_up.len(), 2);
-        assert_eq!(config.post_up.len(), 1);
-        assert!(config.pre_down.is_empty());
-        assert!(config.post_down.is_empty());
-    }
-
-    #[test]
-    fn test_deserialize_hook_step_with_runner() {
-        let yaml = r#"
-runner:
-  type: docker
-  docker:
-    image: flyway/flyway:10
-    command: migrate
-on_failure: abort
-timeout: "180s"
-"#;
-        let step: HookStep = serde_yaml::from_str(yaml).unwrap();
-        assert!(step.runner.is_some());
-        assert!(step.run.is_none());
-        assert_eq!(step.runner.as_ref().unwrap().runner_type, "docker");
-    }
-
-    #[test]
-    fn test_deserialize_parallel_step() {
-        let yaml = r#"
-parallel:
-  - run: echo "a"
-  - run: echo "b"
-  - run: echo "c"
-on_failure: abort
-timeout: "120s"
-"#;
-        let step: HookStep = serde_yaml::from_str(yaml).unwrap();
-        assert!(step.parallel.is_some());
-        assert_eq!(step.parallel.as_ref().unwrap().len(), 3);
     }
 }

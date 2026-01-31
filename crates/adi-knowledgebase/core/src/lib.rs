@@ -11,7 +11,7 @@ pub use types::*;
 #[cfg(feature = "fastembed")]
 use lib_embed::FastEmbedder;
 use lib_embed::{Embedder, PluginEmbedder};
-use lib_plugin_host::ServiceRegistry;
+use lib_plugin_host::PluginManagerV3;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -25,17 +25,17 @@ pub struct Knowledgebase {
 
 impl Knowledgebase {
     /// Open knowledgebase with plugin support.
-    /// Requires a ServiceRegistry with adi.embed registered.
+    /// Requires a PluginManagerV3 with an embedder plugin registered.
     ///
     /// Uses the adi.embed plugin for embeddings (much smaller binary).
     /// Install with: `adi plugin install adi.embed`
     pub async fn open_with_plugins(
         data_dir: &Path,
-        service_registry: Arc<ServiceRegistry>,
+        plugin_manager: Arc<PluginManagerV3>,
     ) -> Result<Self> {
         std::fs::create_dir_all(data_dir)?;
         let storage = Storage::open(data_dir)?;
-        let embedder = PluginEmbedder::new(service_registry)
+        let embedder = PluginEmbedder::new(plugin_manager)
             .map_err(|e| KnowledgebaseError::Embedding(e.to_string()))?;
 
         Ok(Self {
