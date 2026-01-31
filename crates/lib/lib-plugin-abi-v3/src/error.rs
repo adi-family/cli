@@ -37,6 +37,10 @@ pub enum PluginError {
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
 
+    /// UTF-8 conversion error
+    #[error("UTF-8 conversion error: {0}")]
+    Utf8(#[from] std::string::FromUtf8Error),
+
     /// Generic error
     #[error(transparent)]
     Other(#[from] anyhow::Error),

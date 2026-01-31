@@ -328,6 +328,7 @@ dependencies = [
  "lib-client-github",
  "lib-i18n-core",
  "lib-plugin-abi",
+ "lib-plugin-abi-v3",
  "lib-plugin-host",
  "lib-plugin-manifest",
  "lib-plugin-registry",
@@ -344,83 +345,83 @@ dependencies = [
 ]
 
 [[package]]
-name = "adi-cli-lang-de-de"
-version = "1.0.0"
+name = "adi-cli-lang-de-DE"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde_json",
 ]
 
 [[package]]
 name = "adi-cli-lang-en"
-version = "1.0.0"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde_json",
 ]
 
 [[package]]
-name = "adi-cli-lang-es-es"
-version = "1.0.0"
+name = "adi-cli-lang-es-ES"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde_json",
 ]
 
 [[package]]
-name = "adi-cli-lang-fr-fr"
-version = "1.0.0"
+name = "adi-cli-lang-fr-FR"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde_json",
 ]
 
 [[package]]
-name = "adi-cli-lang-ja-jp"
-version = "1.0.0"
+name = "adi-cli-lang-ja-JP"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde_json",
 ]
 
 [[package]]
-name = "adi-cli-lang-ko-kr"
-version = "1.0.0"
+name = "adi-cli-lang-ko-KR"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde_json",
 ]
 
 [[package]]
-name = "adi-cli-lang-ru-ru"
-version = "1.0.0"
+name = "adi-cli-lang-ru-RU"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde_json",
 ]
 
 [[package]]
-name = "adi-cli-lang-uk-ua"
-version = "1.0.0"
+name = "adi-cli-lang-uk-UA"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde_json",
 ]
 
 [[package]]
-name = "adi-cli-lang-zh-cn"
-version = "1.0.0"
+name = "adi-cli-lang-zh-CN"
+version = "3.0.0"
 dependencies = [
- "abi_stable",
- "lib-plugin-abi",
+ "async-trait",
+ "lib-plugin-abi-v3",
  "serde_json",
 ]
 
