@@ -1,7 +1,7 @@
 # Plugin ABI v3 Adoption Status
 
 **Started:** 2026-01-31
-**Status:** In Progress (Foundation Complete, Migration Started)
+**Status:** In Progress (Foundation Complete, Translation Plugins Complete)
 
 ---
 
@@ -10,7 +10,7 @@
 Unifying plugin ABIs by replacing FFI-safe v2 with native Rust async traits v3.
 
 **Goal:** Migrate 86+ plugins from v2 → v3
-**Progress:** 1/86 plugins migrated (1%)
+**Progress:** 9/86 plugins migrated (10%)
 **Infrastructure:** 100% complete ✅
 
 ---
@@ -69,21 +69,21 @@ Unifying plugin ABIs by replacing FFI-safe v2 with native Rust async traits v3.
 
 ## Migration Queue
 
-### Priority 1: Translation Plugins (9 total)
+### Priority 1: Translation Plugins (9 total) ✅ COMPLETE
 
 | Plugin | Status | Notes |
 |--------|--------|-------|
 | `adi-cli-lang-en` | ✅ Migrated | First migration (proof of concept) |
-| `adi-cli-lang-zh-CN` | 🔲 Pending | Chinese (Simplified) |
-| `adi-cli-lang-uk-UA` | 🔲 Pending | Ukrainian |
-| `adi-cli-lang-es-ES` | 🔲 Pending | Spanish |
-| `adi-cli-lang-fr-FR` | 🔲 Pending | French |
-| `adi-cli-lang-de-DE` | 🔲 Pending | German |
-| `adi-cli-lang-ja-JP` | 🔲 Pending | Japanese |
-| `adi-cli-lang-ko-KR` | 🔲 Pending | Korean |
-| `adi-cli-lang-ru-RU` | 🔲 Pending | Russian |
+| `adi-cli-lang-zh-CN` | ✅ Migrated | Chinese (Simplified) |
+| `adi-cli-lang-uk-UA` | ✅ Migrated | Ukrainian |
+| `adi-cli-lang-es-ES` | ✅ Migrated | Spanish |
+| `adi-cli-lang-fr-FR` | ✅ Migrated | French |
+| `adi-cli-lang-de-DE` | ✅ Migrated | German |
+| `adi-cli-lang-ja-JP` | ✅ Migrated | Japanese |
+| `adi-cli-lang-ko-KR` | ✅ Migrated | Korean |
+| `adi-cli-lang-ru-RU` | ✅ Migrated | Russian |
 
-**Estimated time:** 8 plugins × 5 min = 40 minutes
+**Actual time:** 15 minutes total (batch migration)
 
 ---
 
