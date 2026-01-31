@@ -151,7 +151,6 @@ members = [
     "crates/lib/lib-client/trello",
 
     # Plugin system
-    "crates/lib/lib-plugin-abi",
     "crates/lib/lib-plugin-manifest",
     "crates/lib/lib-plugin-verify",
     "crates/lib/lib-plugin-registry",
@@ -317,7 +316,6 @@ lib-client-asana = { path = "crates/lib/lib-client/asana" }
 lib-client-trello = { path = "crates/lib/lib-client/trello" }
 
 # Plugin system
-lib-plugin-abi = { path = "crates/lib/lib-plugin-abi" }
 lib-plugin-manifest = { path = "crates/lib/lib-plugin-manifest" }
 lib-plugin-verify = { path = "crates/lib/lib-plugin-verify" }
 lib-plugin-registry = { path = "crates/lib/lib-plugin-registry" }

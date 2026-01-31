@@ -7139,13 +7139,6 @@ name = "lib-misc-color"
 version = "0.8.3"
 
 [[package]]
-name = "lib-plugin-abi"
-version = "0.8.4"
-dependencies = [
- "abi_stable",
-]
-
-[[package]]
 name = "lib-plugin-abi-v3"
 version = "3.0.0"
 dependencies = [

@@ -76,9 +76,6 @@
 [submodule "crates/adi-tasks-plugin"]
 	path = crates/adi-tasks-plugin
 	url = https://github.com/adi-family/adi-tasks-plugin.git
-[submodule "crates/lib/lib-plugin-abi"]
-	path = crates/lib/lib-plugin-abi
-	url = https://github.com/adi-family/lib-plugin-abi.git
 [submodule "crates/lib/lib-plugin-host"]
 	path = crates/lib/lib-plugin-host
 	url = https://github.com/adi-family/lib-plugin-host.git

@@ -40,25 +40,18 @@ See `NEXT_STEPS_I18N.md` for detailed status and remaining work.
 
 ## Plugin ABI Architecture
 
-The project uses a **unified v3 plugin ABI** with backward compatibility for v2 plugins:
+The project uses a **unified v3 plugin ABI**:
 
-### Unified v3 ABI (Current)
+### Unified v3 ABI
 - **lib-plugin-abi-v3** (`crates/lib/lib-plugin-abi-v3`) - Unified plugin interface
-- Used by: All new plugins (CLI, HTTP, MCP, orchestration, language analyzers)
+- Used by: All plugins (CLI, HTTP, MCP, orchestration, language analyzers)
 - Features: Native Rust async traits, type-safe contexts, zero FFI overhead
 - Service traits: `CliCommands`, `HttpRoutes`, `McpTools`, `Runner`, `HealthCheck`, `EnvProvider`, `ProxyMiddleware`, `ObservabilitySink`, `RolloutStrategy`, `LanguageAnalyzer`
 
-### Legacy v2 ABI (Backward Compatibility)
-- **lib-plugin-abi** (`crates/lib/lib-plugin-abi`) - Legacy FFI-safe ABI
-- Used internally by: `lib-plugin-host` for loading v2 plugins
-- Access: `lib_plugin_host::lib_plugin_abi` re-export
-- Status: Deprecated, kept for backward compatibility
-
-### Migration Status
+### Migration Status: COMPLETE
 - ✅ All 79+ plugins migrated to v3
 - ✅ `lib-plugin-abi-orchestration` removed (merged into v3)
-- ✅ Direct v2 dependencies isolated to `lib-plugin-host`
-- See `TODO_PLUGIN_ABI_MIGRATION.md` for details
+- ✅ Legacy v2 ABI (`lib-plugin-abi`) removed from workspace
 
 ## Multi-Crate Component Architecture
 Several components follow a standard multi-crate structure within a single directory:
