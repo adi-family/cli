@@ -49,13 +49,12 @@ The project uses a **split plugin ABI architecture** with domain-specific ABIs:
 
 ### Orchestration Plugin ABI
 - **lib-plugin-abi-orchestration** (`crates/lib/lib-plugin-abi-orchestration`) - Orchestration-specific plugins
-- Used by: Hive orchestrator, orchestration plugins
+- Used by: Hive orchestrator, all orchestration plugins
 - Categories: Runner, Env, Health, Proxy, Obs (observability), Rollout
-- Wrapper: `hive-plugin-abi` re-exports for backwards compatibility
 
 ### Design Principle
 - **Split by domain**: Each ABI targets specific use cases (CLI vs orchestration)
-- **Shared when appropriate**: Common orchestration concerns are in lib-plugin-abi-orchestration
+- **Shared library**: Common orchestration concerns in lib-plugin-abi-orchestration
 - **Extensible**: New orchestrators can reuse lib-plugin-abi-orchestration
 
 ## Multi-Crate Component Architecture

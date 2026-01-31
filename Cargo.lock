@@ -578,7 +578,6 @@ dependencies = [
  "hive-health-tcp",
  "hive-obs-file",
  "hive-obs-stdout",
- "hive-plugin-abi",
  "hive-proxy-cors",
  "hive-proxy-rate-limit",
  "hive-runner-docker",
@@ -587,6 +586,7 @@ dependencies = [
  "http-body-util",
  "hyper 1.8.1",
  "hyper-util",
+ "lib-plugin-abi-orchestration",
  "lib-signaling-protocol",
  "libc",
  "prost",
@@ -5258,7 +5258,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tokio",
@@ -5273,7 +5273,7 @@ dependencies = [
  "async-trait",
  "aws-config",
  "aws-sdk-secretsmanager",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tokio",
@@ -5286,7 +5286,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tracing",
@@ -5298,7 +5298,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5312,7 +5312,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tokio",
@@ -5325,7 +5325,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tokio",
@@ -5338,7 +5338,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5351,7 +5351,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "sqlx",
@@ -5365,7 +5365,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tokio",
@@ -5379,7 +5379,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "redis",
  "serde",
  "serde_json",
@@ -5393,7 +5393,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tokio",
@@ -5407,7 +5407,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "dirs 5.0.1",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tracing",
@@ -5420,7 +5420,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5434,7 +5434,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tokio",
@@ -5448,7 +5448,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
 ]
@@ -5469,20 +5469,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "hive-plugin-abi"
-version = "0.8.4"
-dependencies = [
- "lib-plugin-abi-orchestration",
- "serde_yaml",
-]
-
-[[package]]
 name = "hive-proxy-auth-api-key"
 version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "sha2",
@@ -5496,7 +5488,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.22.1",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "shellexpand",
@@ -5509,8 +5501,8 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
  "jsonwebtoken",
+ "lib-plugin-abi-orchestration",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5524,8 +5516,8 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
  "jsonwebtoken",
+ "lib-plugin-abi-orchestration",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5539,7 +5531,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "sha2",
@@ -5555,7 +5547,7 @@ dependencies = [
  "async-trait",
  "brotli",
  "flate2",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tracing",
@@ -5567,7 +5559,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
 ]
@@ -5578,7 +5570,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tracing",
@@ -5591,8 +5583,8 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
  "ipnetwork",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tracing",
@@ -5604,7 +5596,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tokio",
@@ -5617,7 +5609,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "regex",
  "serde",
  "serde_json",
@@ -5630,7 +5622,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tracing",
@@ -5642,7 +5634,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tracing",
@@ -5654,7 +5646,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tokio",
@@ -5670,7 +5662,7 @@ dependencies = [
  "async-trait",
  "bollard",
  "futures",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tokio",
@@ -5684,7 +5676,7 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "hive-plugin-abi",
+ "lib-plugin-abi-orchestration",
  "serde",
  "serde_json",
  "tokio",

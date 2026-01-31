@@ -72,7 +72,6 @@ members = [
     "crates/hive/ssl",
 
     # Hive plugins
-    "crates/hive/plugins/abi",
     "crates/hive/plugins/runner-docker",
     "crates/hive/plugins/obs-stdout",
     "crates/hive/plugins/obs-file",
