@@ -70,19 +70,32 @@ let logging_client = lib_logging_core::from_env("service-name");
 - Could initialization be standardized through service templates or macros?
 - Is the current granularity of tracking appropriate or excessive?
 
-#### 3. Multi-Crate Component Boundary Inconsistency
+#### 3. Multi-Crate Component Boundary Inconsistency ✅ IN PROGRESS
 **Issue**: Varying approaches to component decomposition create architectural confusion
 
-**Current Patterns**:
-1. **Full Multi-Crate**: core + http + plugin + cli (adi-tasks, adi-indexer)
-2. **Partial Multi-Crate**: core + http + plugin (adi-agent-loop, adi-api-proxy) 
-3. **Standalone Services**: Single crates (adi-auth-core, adi-platform-api)
-4. **Flat Submodules**: Direct git submodules (adi-executor, tarminal-signaling-server)
+**Resolution**: Two distinct patterns based on component type:
 
-**Questions Requiring Human Decision**:
-- Should all components follow the same structural pattern?
-- What criteria determine when to split into multiple crates vs. single crate?
-- How should dependency directions be enforced (plugin → core ← http)?
+**1. User-Facing Components** (need plugin for `adi` CLI integration):
+- Pattern: `core` + `http` + `plugin` + optional `cli`
+- Examples: adi-tasks, adi-indexer, adi-agent-loop, hive
+
+**2. Backend Services** (no plugin, just HTTP API):
+- Pattern: `core` + `http` + `cli`
+- Examples: adi-platform-api, adi-balance-api, adi-credentials-api
+
+**Migration Progress**:
+- ✅ `adi-platform-api` - Migrated to core/http/cli pattern
+- ⏳ `adi-balance-api` - Pending migration
+- ⏳ `adi-credentials-api` - Pending migration
+- ⏳ `adi-logging-service` - Pending migration
+- ⏳ `tarminal-signaling-server` - Pending migration
+
+**Key Insight**: Backend services don't need plugins because:
+- Users don't interact with them via `adi` CLI
+- They run as standalone binaries on servers
+- The `cli/` crate handles migrations and server management
+
+**Dependencies flow:** `cli` → `core` ← `http` (both cli and http depend on core)
 
 ### MEDIUM SEVERITY
 

@@ -54,29 +54,55 @@ The project uses a **unified v3 plugin ABI**:
 - ✅ Legacy v2 ABI (`lib-plugin-abi`) removed from workspace
 
 ## Multi-Crate Component Architecture
-Several components follow a standard multi-crate structure within a single directory:
+
+### User-Facing Components (with plugin)
+Components that users interact with via `adi` CLI need a plugin:
 
 | Subdirectory | Purpose | Crate Type |
 |--------------|---------|------------|
 | `core/` | Business logic, types, traits | Library (`lib`) |
 | `http/` | REST API server (axum-based) | Binary |
-| `plugin/` | adi CLI plugin | Dynamic library (`cdylib`) |
+| `plugin/` | adi CLI plugin (`adi {component} ...`) | Dynamic library (`cdylib`) |
 | `cli/` | Standalone CLI (optional) | Binary |
 
-**Components using this pattern:**
-- `adi-agent-loop` (core, http, plugin) - Autonomous LLM agents with tool use
-- `adi-tasks` (core, cli, http, plugin) - Task management
-- `adi-indexer` (core, cli, http, plugin) - Code indexing
-- `adi-knowledgebase` (core, cli, http) - Graph DB + embeddings
-- `adi-api-proxy` (core, http, plugin) - LLM API proxy with BYOK/Platform modes
-- `hive` (core, http, plugin) - Cocoon container orchestration via WebSocket
+**Components:**
+- `adi-agent-loop` (core, http, plugin) - `adi agent run`
+- `adi-tasks` (core, cli, http, plugin) - `adi tasks list`
+- `adi-indexer` (core, cli, http, plugin) - `adi index`
+- `adi-knowledgebase` (core, cli, http, plugin) - `adi kb`
+- `adi-api-proxy` (core, http, plugin) - `adi proxy`
+- `hive` (core, http, plugin) - `adi hive`
+
+### Backend Services (no plugin)
+Services that run on servers and are called via HTTP don't need plugins:
+
+| Subdirectory | Purpose | Crate Type |
+|--------------|---------|------------|
+| `core/` | Business logic, types, storage | Library (`lib`) |
+| `http/` | REST API server (axum-based) | Binary |
+| `cli/` | Migrations + server management | Binary |
+
+**Components:**
+- `adi-platform-api` (core, http, cli) - Unified Platform API
+- `adi-balance-api` (core, http, cli) - Balance/transaction tracking
+- `adi-credentials-api` (core, http, cli) - Secure credentials storage
+- `adi-logging-service` (core, http, cli) - Centralized logging
+- `tarminal-signaling-server` (core, http, cli) - WebSocket signaling
+
+**Migration Status:**
+- ✅ `adi-platform-api` - Migrated to core/http/cli pattern
+- ⏳ `adi-balance-api` - Pending migration
+- ⏳ `adi-credentials-api` - Pending migration
+- ⏳ `adi-logging-service` - Pending migration
+- ⏳ `tarminal-signaling-server` - Pending migration
 
 **Naming convention:**
-- Core: `adi-{component}-core` (e.g., `adi-agent-loop-core`)
-- HTTP: `adi-{component}-http` (e.g., `adi-agent-loop-http`)
-- Plugin: `adi-{component}-plugin` (e.g., `adi-agent-loop-plugin`)
+- Core: `adi-{component}-core` (e.g., `adi-platform-api-core`)
+- HTTP: `adi-{component}-http` (e.g., `adi-platform-api-http`)
+- CLI: `adi-{component}-cli` (e.g., `adi-platform-api-cli`)
+- Plugin: `adi-{component}-plugin` (only for user-facing components)
 
-**Dependencies flow:** `plugin` → `core` ← `http` (both plugin and http depend on core)
+**Dependencies flow:** `cli` → `core` ← `http` (both cli and http depend on core)
 
 ## Submodules
 - `crates/adi-cli` - Component installer/manager
@@ -116,7 +142,9 @@ Several components follow a standard multi-crate structure within a single direc
 - `crates/lib-signaling-protocol` - WebSocket signaling protocol (device pairing, cocoon spawning, WebRTC, SSL, browser debug) - used by hive, cocoon, signaling-server, platform-api
 - `crates/lib-tarminal-sync` - Terminal CRDT sync protocol (version vectors, grid deltas) - used by Tarminal terminal emulator only
 - `crates/tarminal-signaling-server` - WebSocket signaling server for device pairing
-- `crates/adi-platform-api` - Unified Platform API (tasks, integrations, orchestration)
+- `crates/adi-platform-api/core` - Platform API core library (business logic, types, storage)
+- `crates/adi-platform-api/http` - Platform API HTTP server
+- `crates/adi-platform-api/cli` - Platform API CLI (migrations, server management)
 - `crates/lib-analytics-core` - Analytics event tracking and persistence library
 - `crates/adi-analytics-api` - Analytics API (metrics, dashboards, aggregates)
 - `crates/lib-logging-core` - Centralized logging client with distributed tracing

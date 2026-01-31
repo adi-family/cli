@@ -903,30 +903,64 @@ dependencies = [
 ]
 
 [[package]]
-name = "adi-platform-api"
+name = "adi-platform-api-cli"
+version = "0.2.0"
+dependencies = [
+ "adi-platform-api-core",
+ "anyhow",
+ "clap",
+ "dotenvy",
+ "lib-migrations-core 0.1.0 (git+https://github.com/adi-family/lib-migrations-core.git)",
+ "lib-migrations-sql 0.1.0 (git+https://github.com/adi-family/lib-migrations-sql.git)",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
+name = "adi-platform-api-core"
 version = "0.2.0"
 dependencies = [
  "anyhow",
  "axum 0.8.8",
  "chrono",
- "dotenvy",
- "futures",
  "hex",
  "jsonwebtoken",
  "lib-analytics-core",
- "lib-http-common",
  "lib-logging-core",
  "lib-migrations-core 0.1.0 (git+https://github.com/adi-family/lib-migrations-core.git)",
  "lib-migrations-sql 0.1.0 (git+https://github.com/adi-family/lib-migrations-sql.git)",
  "lib-signaling-protocol",
- "lib-webrtc-manager",
  "rand 0.8.5",
  "serde",
  "serde_json",
  "sqlx",
  "thiserror 2.0.17",
- "tokio",
  "tokio-test",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "adi-platform-api-http"
+version = "0.2.0"
+dependencies = [
+ "adi-platform-api-core",
+ "anyhow",
+ "axum 0.8.8",
+ "chrono",
+ "dotenvy",
+ "futures",
+ "jsonwebtoken",
+ "lib-analytics-core",
+ "lib-http-common",
+ "lib-logging-core",
+ "lib-signaling-protocol",
+ "lib-webrtc-manager",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.17",
+ "tokio",
  "tokio-tungstenite 0.24.0",
  "tower 0.5.2",
  "tower-http 0.6.8",

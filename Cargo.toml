@@ -125,8 +125,10 @@ members = [
     "crates/lib/lib-logging-core",
     "crates/adi-logging-service",
 
-    # Platform API
-    "crates/adi-platform-api",
+    # Platform API components
+    "crates/adi-platform-api/core",
+    "crates/adi-platform-api/http",
+    "crates/adi-platform-api/cli",
 
     # Tools
     "crates/tool-generate-heartbit",
@@ -243,6 +245,7 @@ adi-linter-core = { path = "crates/adi-linter/core" }
 adi-api-proxy-core = { path = "crates/adi-api-proxy/core" }
 adi-hive-core = { path = "crates/hive/core" }
 adi-audio-core = { path = "crates/adi-audio/core" }
+adi-platform-api-core = { path = "crates/adi-platform-api/core" }
 
 # Hive plugin system
 hive-plugin-abi = { path = "crates/hive/plugins/abi" }
