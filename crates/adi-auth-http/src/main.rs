@@ -7,7 +7,7 @@ use axum::{
     Json, Router,
 };
 use lib_http_common::version_header_layer;
-use lib_logging_core::{LoggingClient, trace_layer};
+use lib_logging_core::LoggingClient;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -91,7 +91,6 @@ async fn main() {
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),
         ))
-        .layer(trace_layer())
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive());
 

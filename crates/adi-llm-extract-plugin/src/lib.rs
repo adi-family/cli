@@ -323,8 +323,7 @@ fn extract_llm_info(
         "plugin": {
             "id": manifest.plugin.id,
             "name": manifest.plugin.name,
-            "description": manifest.plugin.description,
-            "categories": manifest.tags.categories
+            "description": manifest.plugin.description
         }
     });
 
