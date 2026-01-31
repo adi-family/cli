@@ -7276,16 +7276,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "lib-plugin-abi-v3"
+version = "3.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum 0.7.9",
+ "bytes",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tokio",
+ "tokio-test",
+]
+
+[[package]]
 name = "lib-plugin-host"
 version = "0.8.4"
 dependencies = [
  "abi_stable",
+ "anyhow",
  "dirs 5.0.1",
  "lib-plugin-abi",
+ "lib-plugin-abi-v3",
  "lib-plugin-manifest",
  "lib-plugin-registry",
  "lib-plugin-verify",
  "libloading 0.8.9",
+ "serde_json",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
