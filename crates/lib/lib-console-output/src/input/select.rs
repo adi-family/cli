@@ -17,6 +17,9 @@ pub struct Select<T: Clone> {
     default: Option<usize>,
     /// Enable filtering/autocomplete mode
     filterable: bool,
+    /// Maximum number of options to display in filterable mode (default: all)
+    /// When there are more matches, shows "and N more" message
+    max_display: Option<usize>,
 }
 
 impl<T: Clone> Select<T> {
@@ -27,6 +30,7 @@ impl<T: Clone> Select<T> {
             options: Vec::new(),
             default: None,
             filterable: false,
+            max_display: None,
         }
     }
 
@@ -63,6 +67,14 @@ impl<T: Clone> Select<T> {
         self
     }
 
+    /// Set maximum number of options to display in filterable mode.
+    /// When there are more matches than this limit, shows "and N more" message.
+    /// Only applies when filterable mode is enabled.
+    pub fn max_display(mut self, count: Option<usize>) -> Self {
+        self.max_display = count;
+        self
+    }
+
     /// Run the selection and return the chosen value.
     pub fn run(self) -> Option<T> {
         if self.options.is_empty() {
@@ -84,6 +96,7 @@ impl<T: Clone> Select<T> {
     fn run_interactive(self) -> Option<T> {
         let term = Term::stdout();
         let mut cursor = self.default.unwrap_or(0);
+        let mut rendered_once = false;
 
         // Find first non-disabled option
         while cursor < self.options.len() && self.options[cursor].disabled {
@@ -99,18 +112,19 @@ impl<T: Clone> Select<T> {
         // Print prompt
         println!("{}", style(&self.prompt).bold());
 
-        // Initial render
-        self.render(&term, cursor);
+        // Initial render (don't clear on first render)
+        self.render(&term, cursor, rendered_once);
+        rendered_once = true;
 
         loop {
             match term.read_key() {
                 Ok(Key::ArrowUp | Key::Char('k')) => {
                     cursor = self.find_prev_enabled(cursor);
-                    self.render(&term, cursor);
+                    self.render(&term, cursor, rendered_once);
                 }
                 Ok(Key::ArrowDown | Key::Char('j')) => {
                     cursor = self.find_next_enabled(cursor);
-                    self.render(&term, cursor);
+                    self.render(&term, cursor, rendered_once);
                 }
                 Ok(Key::Enter) => {
                     if !self.options[cursor].disabled {
@@ -138,6 +152,7 @@ impl<T: Clone> Select<T> {
         let term = Term::stdout();
         let mut filter = String::new();
         let mut cursor: usize = 0;
+        let mut prev_lines: usize = 0; // Track actual lines from previous render
 
         // Print prompt with filter hint
         println!(
@@ -146,9 +161,9 @@ impl<T: Clone> Select<T> {
             style("(type to filter)").dim()
         );
 
-        // Initial render
+        // Initial render (don't clear on first render since prev_lines = 0)
         let filtered = self.filter_options(&filter);
-        self.render_filterable(&term, &filter, &filtered, cursor);
+        prev_lines = self.render_filterable(&term, &filter, &filtered, cursor, prev_lines);
 
         loop {
             match term.read_key() {
@@ -173,7 +188,8 @@ impl<T: Clone> Select<T> {
                             }
                         }
                     }
-                    self.render_filterable(&term, &filter, &filtered, cursor);
+                    prev_lines =
+                        self.render_filterable(&term, &filter, &filtered, cursor, prev_lines);
                 }
                 Ok(Key::ArrowDown | Key::Char('j')) if filter.is_empty() => {
                     let filtered = self.filter_options(&filter);
@@ -188,7 +204,8 @@ impl<T: Clone> Select<T> {
                             }
                         }
                     }
-                    self.render_filterable(&term, &filter, &filtered, cursor);
+                    prev_lines =
+                        self.render_filterable(&term, &filter, &filtered, cursor, prev_lines);
                 }
                 Ok(Key::ArrowUp) => {
                     let filtered = self.filter_options(&filter);
@@ -211,7 +228,8 @@ impl<T: Clone> Select<T> {
                             }
                         }
                     }
-                    self.render_filterable(&term, &filter, &filtered, cursor);
+                    prev_lines =
+                        self.render_filterable(&term, &filter, &filtered, cursor, prev_lines);
                 }
                 Ok(Key::ArrowDown) => {
                     let filtered = self.filter_options(&filter);
@@ -226,14 +244,15 @@ impl<T: Clone> Select<T> {
                             }
                         }
                     }
-                    self.render_filterable(&term, &filter, &filtered, cursor);
+                    prev_lines =
+                        self.render_filterable(&term, &filter, &filtered, cursor, prev_lines);
                 }
                 Ok(Key::Enter) => {
                     let filtered = self.filter_options(&filter);
                     if !filtered.is_empty() {
                         let original_idx = filtered[cursor];
                         if !self.options[original_idx].disabled {
-                            self.clear_filterable(&term, &filtered);
+                            self.clear_filterable(&term, prev_lines);
                             println!(
                                 "{} {}",
                                 style("\u{2713}").green(),
@@ -244,8 +263,7 @@ impl<T: Clone> Select<T> {
                     }
                 }
                 Ok(Key::Escape) => {
-                    let filtered = self.filter_options(&filter);
-                    self.clear_filterable(&term, &filtered);
+                    self.clear_filterable(&term, prev_lines);
                     println!("{} Cancelled", style("\u{2715}").red());
                     return None;
                 }
@@ -253,13 +271,15 @@ impl<T: Clone> Select<T> {
                     filter.pop();
                     cursor = 0;
                     let filtered = self.filter_options(&filter);
-                    self.render_filterable(&term, &filter, &filtered, cursor);
+                    prev_lines =
+                        self.render_filterable(&term, &filter, &filtered, cursor, prev_lines);
                 }
                 Ok(Key::Char(c)) if !c.is_control() => {
                     filter.push(c);
                     cursor = 0;
                     let filtered = self.filter_options(&filter);
-                    self.render_filterable(&term, &filter, &filtered, cursor);
+                    prev_lines =
+                        self.render_filterable(&term, &filter, &filtered, cursor, prev_lines);
                 }
                 _ => {}
             }
@@ -282,11 +302,37 @@ impl<T: Clone> Select<T> {
     }
 
     /// Render filterable options list with filter input.
-    fn render_filterable(&self, term: &Term, filter: &str, filtered: &[usize], cursor: usize) {
-        // Calculate lines to clear: 1 for filter input + filtered options count
-        // On first render, we need to account for options that will be shown
-        let lines_to_clear = 1 + filtered.len().min(self.options.len());
-        let _ = term.clear_last_lines(lines_to_clear);
+    /// Returns the number of lines rendered (for clearing on next render).
+    fn render_filterable(
+        &self,
+        term: &Term,
+        filter: &str,
+        filtered: &[usize],
+        cursor: usize,
+        prev_lines: usize,
+    ) -> usize {
+        // Clear previous render (only if we've rendered before)
+        if prev_lines > 0 {
+            let _ = term.clear_last_lines(prev_lines);
+        }
+
+        // Calculate how many options to display and the sliding window
+        let max_visible = self.max_display.unwrap_or(filtered.len());
+        let display_count = max_visible.min(filtered.len());
+
+        // Calculate window start for sliding window (keep cursor visible)
+        let window_start = if filtered.is_empty() {
+            0
+        } else if cursor >= display_count {
+            // Cursor is beyond visible area, slide window
+            cursor.saturating_sub(display_count - 1)
+        } else {
+            0
+        };
+
+        let window_end = (window_start + display_count).min(filtered.len());
+        let has_more_above = window_start > 0;
+        let has_more_below = window_end < filtered.len();
 
         // Render filter input line
         if filter.is_empty() {
@@ -300,11 +346,24 @@ impl<T: Clone> Select<T> {
             );
         }
 
-        // Render filtered options
+        let mut lines_rendered = 1; // filter line
+
+        // Render filtered options with sliding window
         if filtered.is_empty() {
             println!("{}", style("  No matches").dim().red());
+            lines_rendered += 1;
         } else {
-            for (i, &original_idx) in filtered.iter().enumerate() {
+            // Show "N more above" if there are hidden options above
+            if has_more_above {
+                println!(
+                    "{}",
+                    style(format!("  ... {} more above", window_start)).dim()
+                );
+                lines_rendered += 1;
+            }
+
+            for i in window_start..window_end {
+                let original_idx = filtered[i];
                 let opt = &self.options[original_idx];
                 let is_selected = i == cursor;
                 let prefix = if is_selected { ">" } else { " " };
@@ -323,25 +382,33 @@ impl<T: Clone> Select<T> {
                 };
 
                 println!("{}", line);
+                lines_rendered += 1;
+            }
+
+            // Show "and N more" if there are hidden options below
+            if has_more_below {
+                let more_count = filtered.len() - window_end;
+                println!("{}", style(format!("  ... and {} more", more_count)).dim());
+                lines_rendered += 1;
             }
         }
+
+        lines_rendered
     }
 
     /// Clear the filterable options list.
-    fn clear_filterable(&self, term: &Term, filtered: &[usize]) {
-        // Clear filter line + all displayed options
-        let lines = 1 + if filtered.is_empty() {
-            1
-        } else {
-            filtered.len()
-        };
-        let _ = term.clear_last_lines(lines);
+    fn clear_filterable(&self, term: &Term, prev_lines: usize) {
+        if prev_lines > 0 {
+            let _ = term.clear_last_lines(prev_lines);
+        }
     }
 
     /// Render options list.
-    fn render(&self, term: &Term, cursor: usize) {
-        // Move up to clear previous render
-        let _ = term.clear_last_lines(self.options.len());
+    fn render(&self, term: &Term, cursor: usize, should_clear: bool) {
+        // Clear previous render only if we've rendered before
+        if should_clear {
+            let _ = term.clear_last_lines(self.options.len());
+        }
 
         for (i, opt) in self.options.iter().enumerate() {
             let is_selected = i == cursor;

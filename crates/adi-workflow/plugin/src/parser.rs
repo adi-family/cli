@@ -41,6 +41,10 @@ pub struct Input {
     /// Enable fuzzy search/autocomplete for select inputs
     #[serde(default)]
     pub autocomplete: Option<bool>,
+    /// Maximum number of options to display in autocomplete mode (default: 10)
+    /// When there are more matches, shows "and N more" message
+    #[serde(default)]
+    pub autocomplete_count: Option<usize>,
     #[serde(default)]
     pub default: Option<serde_json::Value>,
     #[serde(default)]
@@ -206,6 +210,7 @@ run = "echo {{ branch }} {{ dir }} {{ service }}"
         let branch_input = &workflow.inputs[0];
         assert!(branch_input.options_source.is_some());
         assert_eq!(branch_input.autocomplete, Some(true));
+        assert_eq!(branch_input.autocomplete_count, None); // Not set
 
         // Check dir input
         let dir_input = &workflow.inputs[1];
@@ -247,5 +252,45 @@ run = "echo done"
 
         let workflow = parse_workflow(toml).unwrap();
         assert_eq!(workflow.inputs.len(), 3);
+    }
+
+    #[test]
+    fn test_parse_autocomplete_count() {
+        let toml = r#"
+[workflow]
+name = "autocomplete-count-test"
+
+[[inputs]]
+name = "crate"
+type = "select"
+prompt = "Select crate"
+options_source = { type = "cargo-workspace-members" }
+autocomplete = true
+autocomplete_count = 5
+
+[[inputs]]
+name = "branch"
+type = "select"
+prompt = "Select branch"
+options_source = { type = "git-branches" }
+autocomplete = true
+
+[[steps]]
+name = "Done"
+run = "echo {{ crate }}"
+"#;
+
+        let workflow = parse_workflow(toml).unwrap();
+        assert_eq!(workflow.inputs.len(), 2);
+
+        // Check crate input has autocomplete_count
+        let crate_input = &workflow.inputs[0];
+        assert_eq!(crate_input.autocomplete, Some(true));
+        assert_eq!(crate_input.autocomplete_count, Some(5));
+
+        // Check branch input doesn't have autocomplete_count (defaults to None)
+        let branch_input = &workflow.inputs[1];
+        assert_eq!(branch_input.autocomplete, Some(true));
+        assert_eq!(branch_input.autocomplete_count, None);
     }
 }

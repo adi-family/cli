@@ -413,6 +413,7 @@ mod tests {
             options_cmd: None,
             options_source: None,
             autocomplete: None,
+            autocomplete_count: None,
             default: None,
             validation: None,
             env: None,

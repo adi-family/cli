@@ -103,6 +103,7 @@ fn prompt_select(
         .options(select_options)
         .default(default_index)
         .filterable(input.autocomplete.unwrap_or(false))
+        .max_display(input.autocomplete_count)
         .run();
 
     match result {

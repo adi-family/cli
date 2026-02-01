@@ -16,6 +16,7 @@ find crates -name 'plugin.toml' -type f 2>/dev/null | while read f; do
 done | sort -u
 """
 autocomplete = true
+autocomplete_count = 10
 
 [[inputs]]
 name = "version_bump"

@@ -51,6 +51,8 @@ pub struct Input {
     #[serde(default)]
     pub autocomplete: Option<bool>,
     #[serde(default)]
+    pub autocomplete_count: Option<usize>,
+    #[serde(default)]
     pub default: Option<serde_json::Value>,
     #[serde(default)]
     pub validation: Option<String>,

@@ -13,6 +13,7 @@ options_cmd = """
 git submodule status | awk '{print $2}' | sort
 """
 autocomplete = true
+autocomplete_count = 10
 
 [[inputs]]
 name = "update_parent"

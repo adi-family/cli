@@ -1,0 +1,44 @@
+# ADI CLI Release Workflow
+# Build cross-platform binaries and create GitHub release
+
+[workflow]
+name = "release-cli"
+description = "Build and release adi CLI to GitHub"
+
+[[inputs]]
+name = "version"
+type = "input"
+prompt = "Version to release (e.g., 1.0.1)"
+required = true
+
+[[inputs]]
+name = "title"
+type = "input"
+prompt = "Release title (short description)"
+default = ""
+
+[[inputs]]
+name = "draft"
+type = "confirm"
+prompt = "Create as draft release?"
+default = false
+
+[[steps]]
+name = "Release CLI"
+run = """
+VERSION="{{ version }}"
+TITLE="{{ title }}"
+DRAFT="{{ draft }}"
+
+ARGS="--version $VERSION"
+
+if [ -n "$TITLE" ]; then
+    ARGS="$ARGS --title \"$TITLE\""
+fi
+
+if [ "$DRAFT" = "true" ]; then
+    ARGS="$ARGS --draft"
+fi
+
+eval "$WORKFLOWS_DIR/release-cli.sh $ARGS"
+"""
