@@ -301,7 +301,7 @@ services:
         working_dir: crates/adi-platform-api
     hooks:
       pre-up:
-        - run: cargo run --bin adi-platform-migrate all
+        - run: cargo run -p adi-platform-api-cli --bin adi-platform -- migrate all
           working_dir: crates/adi-platform-api
           timeout: "120s"
     rollout:
