@@ -1,11 +1,12 @@
-//! Interactive TTY prompts using dialoguer
+//! Interactive TTY prompts using lib-console-output
 
 use crate::options::resolve_options;
 use crate::parser::{Input, InputType};
 use crate::template;
-use dialoguer::{Confirm, FuzzySelect, Input as DialoguerInput, MultiSelect, Password, Select};
+use lib_console_output::{
+    is_interactive, Confirm, Input as ConsoleInput, MultiSelect, Password, Select, SelectOption,
+};
 use std::collections::HashMap;
-use std::io::{self, IsTerminal};
 
 /// Collect all input values from user via interactive prompts
 ///
@@ -14,8 +15,8 @@ use std::io::{self, IsTerminal};
 pub fn collect_inputs(inputs: &[Input]) -> Result<HashMap<String, serde_json::Value>, String> {
     let mut values = HashMap::new();
 
-    // Check if we have a TTY
-    if !io::stdin().is_terminal() {
+    // Check if we have an interactive terminal
+    if !is_interactive() {
         return Err("Interactive prompts require a TTY".to_string());
     }
 
@@ -91,24 +92,23 @@ fn prompt_select(
         .and_then(|default_val| options.iter().position(|o| o == default_val))
         .unwrap_or(0);
 
-    // Use fuzzy select if autocomplete is enabled
-    let selection = if input.autocomplete.unwrap_or(false) {
-        FuzzySelect::new()
-            .with_prompt(&input.prompt)
-            .items(&options)
-            .default(default_index)
-            .interact()
-            .map_err(|e| format!("Prompt error: {}", e))?
-    } else {
-        Select::new()
-            .with_prompt(&input.prompt)
-            .items(&options)
-            .default(default_index)
-            .interact()
-            .map_err(|e| format!("Prompt error: {}", e))?
-    };
+    // Build select options
+    let select_options: Vec<SelectOption<String>> = options
+        .iter()
+        .map(|o| SelectOption::new(o.clone(), o.clone()))
+        .collect();
 
-    Ok(serde_json::Value::String(options[selection].clone()))
+    // Use lib-console-output Select
+    // Note: lib-console-output doesn't have fuzzy select, using regular select
+    let result = Select::new(&input.prompt)
+        .options(select_options)
+        .default(default_index)
+        .run();
+
+    match result {
+        Some(value) => Ok(serde_json::Value::String(value)),
+        None => Err("Selection cancelled".to_string()),
+    }
 }
 
 fn prompt_text(input: &Input) -> Result<serde_json::Value, String> {
@@ -118,40 +118,31 @@ fn prompt_text(input: &Input) -> Result<serde_json::Value, String> {
         .and_then(|d| d.as_str())
         .map(|s| s.to_string());
 
-    let value = if let Some(validation_pattern) = &input.validation {
+    let mut builder = ConsoleInput::new(&input.prompt);
+
+    if let Some(ref default) = default_value {
+        builder = builder.default(default.clone());
+    }
+
+    // Add validation if present
+    if let Some(validation_pattern) = &input.validation {
         let pattern = regex::Regex::new(validation_pattern)
             .map_err(|e| format!("Invalid validation pattern: {}", e))?;
         let pattern_str = validation_pattern.clone();
 
-        let mut builder = DialoguerInput::<String>::new().with_prompt(&input.prompt);
+        builder = builder.validate(move |input: &str| -> Result<(), String> {
+            if pattern.is_match(input) {
+                Ok(())
+            } else {
+                Err(format!("Input must match pattern: {}", pattern_str))
+            }
+        });
+    }
 
-        if let Some(ref default) = default_value {
-            builder = builder.default(default.clone());
-        }
-
-        builder
-            .validate_with(move |input: &String| -> Result<(), String> {
-                if pattern.is_match(input) {
-                    Ok(())
-                } else {
-                    Err(format!("Input must match pattern: {}", pattern_str))
-                }
-            })
-            .interact()
-            .map_err(|e| format!("Prompt error: {}", e))?
-    } else {
-        let mut builder = DialoguerInput::<String>::new().with_prompt(&input.prompt);
-
-        if let Some(ref default) = default_value {
-            builder = builder.default(default.clone());
-        }
-
-        builder
-            .interact()
-            .map_err(|e| format!("Prompt error: {}", e))?
-    };
-
-    Ok(serde_json::Value::String(value))
+    match builder.run() {
+        Some(value) => Ok(serde_json::Value::String(value)),
+        None => Err("Input cancelled".to_string()),
+    }
 }
 
 fn prompt_confirm(input: &Input) -> Result<serde_json::Value, String> {
@@ -161,13 +152,12 @@ fn prompt_confirm(input: &Input) -> Result<serde_json::Value, String> {
         .and_then(|d| d.as_bool())
         .unwrap_or(false);
 
-    let value = Confirm::new()
-        .with_prompt(&input.prompt)
-        .default(default_value)
-        .interact()
-        .map_err(|e| format!("Prompt error: {}", e))?;
+    let result = Confirm::new(&input.prompt).default(default_value).run();
 
-    Ok(serde_json::Value::Bool(value))
+    match result {
+        Some(value) => Ok(serde_json::Value::Bool(value)),
+        None => Err("Confirmation cancelled".to_string()),
+    }
 }
 
 fn prompt_multi_select(
@@ -182,42 +172,52 @@ fn prompt_multi_select(
     }
 
     // Determine default selections
-    let defaults: Vec<bool> = if let Some(default_val) = &input.default {
+    let default_indices: Vec<usize> = if let Some(default_val) = &input.default {
         if let Some(arr) = default_val.as_array() {
             let default_strings: Vec<&str> = arr.iter().filter_map(|v| v.as_str()).collect();
             options
                 .iter()
-                .map(|o| default_strings.contains(&o.as_str()))
+                .enumerate()
+                .filter(|(_, o)| default_strings.contains(&o.as_str()))
+                .map(|(i, _)| i)
                 .collect()
         } else {
-            vec![false; options.len()]
+            vec![]
         }
     } else {
-        vec![false; options.len()]
+        vec![]
     };
 
-    let selections = MultiSelect::new()
-        .with_prompt(&input.prompt)
-        .items(&options)
-        .defaults(&defaults)
-        .interact()
-        .map_err(|e| format!("Prompt error: {}", e))?;
-
-    let selected: Vec<serde_json::Value> = selections
-        .into_iter()
-        .map(|i| serde_json::Value::String(options[i].clone()))
+    // Build select options
+    let select_options: Vec<SelectOption<String>> = options
+        .iter()
+        .map(|o| SelectOption::new(o.clone(), o.clone()))
         .collect();
 
-    Ok(serde_json::Value::Array(selected))
+    let result = MultiSelect::new(&input.prompt)
+        .options(select_options)
+        .defaults(default_indices)
+        .run();
+
+    match result {
+        Some(selected) => {
+            let values: Vec<serde_json::Value> = selected
+                .into_iter()
+                .map(serde_json::Value::String)
+                .collect();
+            Ok(serde_json::Value::Array(values))
+        }
+        None => Err("Multi-select cancelled".to_string()),
+    }
 }
 
 fn prompt_password(input: &Input) -> Result<serde_json::Value, String> {
-    let value = Password::new()
-        .with_prompt(&input.prompt)
-        .interact()
-        .map_err(|e| format!("Prompt error: {}", e))?;
+    let result = Password::new(&input.prompt).run();
 
-    Ok(serde_json::Value::String(value))
+    match result {
+        Some(value) => Ok(serde_json::Value::String(value)),
+        None => Err("Password input cancelled".to_string()),
+    }
 }
 
 #[cfg(test)]

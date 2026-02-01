@@ -4,7 +4,7 @@ use crate::discovery::{discover_workflows, find_workflow};
 use crate::executor::execute_steps;
 use crate::parser::{load_workflow, WorkflowScope};
 use crate::prompts::collect_inputs;
-use dialoguer::{theme::ColorfulTheme, FuzzySelect};
+use lib_console_output::{debug, info, is_interactive, success, Select, SelectOption};
 use serde_json::json;
 use std::path::PathBuf;
 
@@ -101,38 +101,35 @@ fn cmd_select_and_run(cwd: &PathBuf) -> Result<String, String> {
     }
 
     // Check if we're in an interactive terminal
-    if !atty::is(atty::Stream::Stdin) {
+    if !is_interactive() {
         // Non-interactive: show help text
         return Ok(help_text());
     }
 
-    // Build selection items with descriptions
-    let items: Vec<String> = workflows
+    // Build selection options with descriptions
+    let options: Vec<SelectOption<String>> = workflows
         .iter()
         .map(|w| {
             let scope = match w.scope {
                 WorkflowScope::Local => "[local]",
                 WorkflowScope::Global => "[global]",
             };
-            match &w.description {
+            let label = match &w.description {
                 Some(desc) => format!("{} {} - {}", w.name, scope, desc),
                 None => format!("{} {}", w.name, scope),
-            }
+            };
+            SelectOption::new(label, w.name.clone())
         })
         .collect();
 
-    println!("Select a workflow to run (type to search):\n");
+    info("Select a workflow to run:");
 
-    let selection = FuzzySelect::with_theme(&ColorfulTheme::default())
-        .items(&items)
-        .default(0)
-        .interact()
-        .map_err(|e| format!("Selection cancelled: {}", e))?;
+    let selection = Select::new("Workflow").options(options).default(0).run();
 
-    let selected_workflow = &workflows[selection];
-    println!();
-
-    cmd_run(cwd, &selected_workflow.name)
+    match selection {
+        Some(workflow_name) => cmd_run(cwd, &workflow_name),
+        None => Err("Selection cancelled".to_string()),
+    }
 }
 
 fn cmd_show(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {
@@ -194,17 +191,16 @@ fn cmd_run(cwd: &PathBuf, name: &str) -> Result<String, String> {
 
     let workflow = load_workflow(&path)?;
 
-    println!("Running workflow: {}", workflow.workflow.name);
+    info(&format!("Running workflow: {}", workflow.workflow.name));
     if let Some(desc) = &workflow.workflow.description {
-        println!("  {}", desc);
+        debug(&format!("  {}", desc));
     }
-    println!();
 
     // Collect inputs
     let variables = if workflow.inputs.is_empty() {
         std::collections::HashMap::new()
     } else {
-        println!("Collecting inputs...\n");
+        info("Collecting inputs...");
         collect_inputs(&workflow.inputs)?
     };
 
@@ -213,10 +209,11 @@ fn cmd_run(cwd: &PathBuf, name: &str) -> Result<String, String> {
         return Ok("Workflow has no steps to execute".to_string());
     }
 
-    println!("\nExecuting steps...\n");
+    info("Executing steps...");
     execute_steps(&workflow.steps, &variables)?;
 
-    Ok(format!("\nWorkflow '{}' completed successfully!", name))
+    success(&format!("Workflow '{}' completed successfully!", name));
+    Ok(String::new())
 }
 
 /// List available commands for discovery

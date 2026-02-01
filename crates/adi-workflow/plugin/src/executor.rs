@@ -3,6 +3,7 @@
 use crate::parser::Step;
 use crate::prelude::get_prelude;
 use crate::template::{create_env, render, render_env_vars};
+use lib_console_output::{debug, info, warn};
 use minijinja::Environment;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
@@ -19,16 +20,16 @@ pub fn execute_steps(
         // Check condition if present
         if let Some(condition) = &step.condition {
             if !evaluate_condition(&env, condition, variables)? {
-                println!(
-                    "  Skipping step {}: {} (condition not met)",
+                warn(&format!(
+                    "Skipping step {}: {} (condition not met)",
                     i + 1,
                     step.name
-                );
+                ));
                 continue;
             }
         }
 
-        println!("  Running step {}: {}", i + 1, step.name);
+        info(&format!("Running step {}: {}", i + 1, step.name));
 
         // Render the command template
         let command = render(&env, &step.run, variables)?;
@@ -107,7 +108,7 @@ fn execute_command(
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             if let Ok(line) = line {
-                println!("    {}", line);
+                debug(&format!("  {}", line));
             }
         }
     }
@@ -117,7 +118,7 @@ fn execute_command(
         let reader = BufReader::new(stderr);
         for line in reader.lines() {
             if let Ok(line) = line {
-                eprintln!("    {}", line);
+                warn(&format!("  {}", line));
             }
         }
     }
