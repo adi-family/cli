@@ -2,11 +2,81 @@
 
 use crate::discovery::{discover_workflows, find_workflow};
 use crate::executor::execute_steps;
-use crate::parser::{load_workflow, WorkflowScope};
-use crate::prompts::collect_inputs;
+use crate::options::resolve_options;
+use crate::parser::{load_workflow, InputType, WorkflowScope};
+use crate::prompts::collect_inputs_with_prefilled;
 use lib_console_output::{debug, info, is_interactive, success, Select, SelectOption};
 use serde_json::json;
+use std::collections::HashMap;
 use std::path::PathBuf;
+
+/// Parsed CLI arguments for workflow execution
+#[derive(Debug, Default)]
+struct ParsedArgs {
+    workflow_name: Option<String>,
+    inputs: HashMap<String, String>,
+    show_schema: bool,
+    show_help: bool,
+}
+
+/// Parse CLI arguments, extracting --input/-i flags
+fn parse_args(args: &[String]) -> ParsedArgs {
+    let mut parsed = ParsedArgs::default();
+    let mut i = 0;
+
+    while i < args.len() {
+        let arg = &args[i];
+
+        match arg.as_str() {
+            "--schema" => {
+                parsed.show_schema = true;
+                i += 1;
+            }
+            "--help" | "-h" => {
+                parsed.show_help = true;
+                i += 1;
+            }
+            "--input" | "-i" => {
+                // Next arg should be key=value
+                if i + 1 < args.len() {
+                    if let Some((key, value)) = args[i + 1].split_once('=') {
+                        parsed.inputs.insert(key.to_string(), value.to_string());
+                    }
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
+            arg if arg.starts_with("--input=") => {
+                // --input=key=value format
+                if let Some(kv) = arg.strip_prefix("--input=") {
+                    if let Some((key, value)) = kv.split_once('=') {
+                        parsed.inputs.insert(key.to_string(), value.to_string());
+                    }
+                }
+                i += 1;
+            }
+            arg if arg.starts_with("-i=") => {
+                // -i=key=value format
+                if let Some(kv) = arg.strip_prefix("-i=") {
+                    if let Some((key, value)) = kv.split_once('=') {
+                        parsed.inputs.insert(key.to_string(), value.to_string());
+                    }
+                }
+                i += 1;
+            }
+            _ => {
+                // First non-flag argument is the workflow name
+                if parsed.workflow_name.is_none() && !arg.starts_with('-') {
+                    parsed.workflow_name = Some(arg.clone());
+                }
+                i += 1;
+            }
+        }
+    }
+
+    parsed
+}
 
 /// Run the CLI command
 pub fn run_command(context_json: &str) -> Result<String, String> {
@@ -38,13 +108,26 @@ pub fn run_command(context_json: &str) -> Result<String, String> {
         "list" => cmd_list(&cwd),
         "show" => cmd_show(&cwd, &cmd_args),
         "--completions" => cmd_completions(&cwd, &cmd_args),
+        "--help" | "-h" => Ok(help_text()),
         "" => {
             // No subcommand - show interactive workflow selector
             cmd_select_and_run(&cwd)
         }
         workflow_name => {
-            // Run a workflow by name
-            cmd_run(&cwd, workflow_name)
+            // Parse remaining args for --input flags
+            let remaining_args: Vec<String> = args.iter().skip(1).cloned().collect();
+            let parsed = parse_args(&remaining_args);
+
+            if parsed.show_help {
+                return Ok(help_text());
+            }
+
+            if parsed.show_schema {
+                return cmd_schema(&cwd, workflow_name);
+            }
+
+            // Run workflow with pre-filled inputs
+            cmd_run_with_inputs(&cwd, workflow_name, parsed.inputs)
         }
     }
 }
@@ -53,18 +136,25 @@ fn help_text() -> String {
     r#"ADI Workflow - Run workflows defined in TOML files
 
 Commands:
-  <name>     Run a workflow by name
-  list       List available workflows
-  show       Show workflow definition
+  <name>              Run a workflow by name
+  list                List available workflows
+  show <name>         Show workflow definition
+
+Options:
+  -i, --input KEY=VAL  Pre-fill input value (repeatable)
+  --schema             Output workflow inputs as JSON schema (for LLM/automation)
+  -h, --help           Show this help message
 
 Workflow locations:
   ./.adi/workflows/<name>.toml  (local, highest priority)
   ~/.adi/workflows/<name>.toml  (global)
 
-Usage:
-  adi workflow deploy          # Run the 'deploy' workflow
-  adi workflow list            # List available workflows
-  adi workflow show deploy     # Show 'deploy' workflow details"#
+Examples:
+  adi workflow deploy                              # Interactive mode
+  adi workflow list                                # List available workflows
+  adi workflow show deploy                         # Show workflow details
+  adi workflow deploy --schema                     # Get inputs as JSON schema
+  adi workflow deploy -i env=prod -i version=1.0  # Non-interactive with inputs"#
         .to_string()
 }
 
@@ -128,7 +218,7 @@ fn cmd_select_and_run(cwd: &PathBuf) -> Result<String, String> {
     let selection = Select::new("Workflow").options(options).default(0).run();
 
     match selection {
-        Some(workflow_name) => cmd_run(cwd, &workflow_name),
+        Some(workflow_name) => cmd_run_with_inputs(cwd, &workflow_name, HashMap::new()),
         None => Err("Selection cancelled".to_string()),
     }
 }
@@ -187,7 +277,74 @@ fn cmd_show(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {
     Ok(output.trim_end().to_string())
 }
 
-fn cmd_run(cwd: &PathBuf, name: &str) -> Result<String, String> {
+/// Output workflow inputs as JSON schema for LLM/automation use
+fn cmd_schema(cwd: &PathBuf, name: &str) -> Result<String, String> {
+    let path = find_workflow(cwd, name).ok_or_else(|| format!("Workflow '{}' not found", name))?;
+    let workflow = load_workflow(&path)?;
+
+    let mut inputs_schema = Vec::new();
+
+    for input in &workflow.inputs {
+        let mut input_obj = json!({
+            "name": input.name,
+            "type": format!("{:?}", input.input_type).to_lowercase(),
+            "prompt": input.prompt,
+        });
+
+        // Add options if available (try to resolve them)
+        if input.input_type == InputType::Select || input.input_type == InputType::MultiSelect {
+            // Try to resolve options, but don't fail if we can't
+            if let Ok(options) = resolve_options(input, &HashMap::new()) {
+                input_obj["options"] = json!(options);
+            } else if let Some(opts) = &input.options {
+                input_obj["options"] = json!(opts);
+            } else if input.options_cmd.is_some() {
+                input_obj["options_dynamic"] = json!("Run workflow to see dynamic options");
+            } else if input.options_source.is_some() {
+                input_obj["options_dynamic"] = json!(format!("{:?}", input.options_source));
+            }
+        }
+
+        if let Some(default) = &input.default {
+            input_obj["default"] = default.clone();
+        }
+
+        if let Some(env) = &input.env {
+            input_obj["env"] = json!(env);
+        }
+
+        if let Some(condition) = &input.condition {
+            input_obj["condition"] = json!(condition);
+        }
+
+        if let Some(validation) = &input.validation {
+            input_obj["validation"] = json!(validation);
+        }
+
+        inputs_schema.push(input_obj);
+    }
+
+    let schema = json!({
+        "workflow": workflow.workflow.name,
+        "description": workflow.workflow.description,
+        "inputs": inputs_schema,
+        "usage": format!("adi workflow {} {}", name,
+            workflow.inputs.iter()
+                .map(|i| format!("-i {}=<value>", i.name))
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
+    });
+
+    Ok(serde_json::to_string_pretty(&schema).unwrap_or_else(|_| schema.to_string()))
+}
+
+/// Run workflow with pre-filled inputs from CLI arguments
+fn cmd_run_with_inputs(
+    cwd: &PathBuf,
+    name: &str,
+    prefilled: HashMap<String, String>,
+) -> Result<String, String> {
     let path = find_workflow(cwd, name).ok_or_else(|| format!("Workflow '{}' not found", name))?;
 
     let workflow = load_workflow(&path)?;
@@ -197,12 +354,17 @@ fn cmd_run(cwd: &PathBuf, name: &str) -> Result<String, String> {
         debug(&format!("  {}", desc));
     }
 
-    // Collect inputs
+    // Collect inputs with pre-filled values
     let variables = if workflow.inputs.is_empty() {
-        std::collections::HashMap::new()
+        HashMap::new()
     } else {
-        info("Collecting inputs...");
-        collect_inputs(&workflow.inputs)?
+        if !prefilled.is_empty() {
+            debug(&format!(
+                "Pre-filled inputs: {:?}",
+                prefilled.keys().collect::<Vec<_>>()
+            ));
+        }
+        collect_inputs_with_prefilled(&workflow.inputs, prefilled)?
     };
 
     // Execute steps
@@ -277,4 +439,106 @@ pub fn list_commands() -> serde_json::Value {
         {"name": "show", "description": "Show workflow definition", "usage": "show <name>"},
         {"name": "<name>", "description": "Run a workflow by name", "usage": "<name>"}
     ])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_args_empty() {
+        let args: Vec<String> = vec![];
+        let parsed = parse_args(&args);
+        assert!(parsed.workflow_name.is_none());
+        assert!(parsed.inputs.is_empty());
+        assert!(!parsed.show_schema);
+        assert!(!parsed.show_help);
+    }
+
+    #[test]
+    fn test_parse_args_schema_flag() {
+        let args = vec!["--schema".to_string()];
+        let parsed = parse_args(&args);
+        assert!(parsed.show_schema);
+        assert!(!parsed.show_help);
+    }
+
+    #[test]
+    fn test_parse_args_help_flags() {
+        let args = vec!["--help".to_string()];
+        let parsed = parse_args(&args);
+        assert!(parsed.show_help);
+
+        let args = vec!["-h".to_string()];
+        let parsed = parse_args(&args);
+        assert!(parsed.show_help);
+    }
+
+    #[test]
+    fn test_parse_args_input_flag_separate() {
+        let args = vec!["-i".to_string(), "key=value".to_string()];
+        let parsed = parse_args(&args);
+        assert_eq!(parsed.inputs.get("key"), Some(&"value".to_string()));
+
+        let args = vec!["--input".to_string(), "foo=bar".to_string()];
+        let parsed = parse_args(&args);
+        assert_eq!(parsed.inputs.get("foo"), Some(&"bar".to_string()));
+    }
+
+    #[test]
+    fn test_parse_args_input_flag_equals() {
+        let args = vec!["-i=key=value".to_string()];
+        let parsed = parse_args(&args);
+        assert_eq!(parsed.inputs.get("key"), Some(&"value".to_string()));
+
+        let args = vec!["--input=foo=bar".to_string()];
+        let parsed = parse_args(&args);
+        assert_eq!(parsed.inputs.get("foo"), Some(&"bar".to_string()));
+    }
+
+    #[test]
+    fn test_parse_args_multiple_inputs() {
+        let args = vec![
+            "-i".to_string(),
+            "plugin=adi.workflow".to_string(),
+            "-i".to_string(),
+            "action=build".to_string(),
+            "--input".to_string(),
+            "skip_lint=true".to_string(),
+        ];
+        let parsed = parse_args(&args);
+        assert_eq!(parsed.inputs.len(), 3);
+        assert_eq!(
+            parsed.inputs.get("plugin"),
+            Some(&"adi.workflow".to_string())
+        );
+        assert_eq!(parsed.inputs.get("action"), Some(&"build".to_string()));
+        assert_eq!(parsed.inputs.get("skip_lint"), Some(&"true".to_string()));
+    }
+
+    #[test]
+    fn test_parse_args_mixed_flags_and_inputs() {
+        let args = vec![
+            "--schema".to_string(),
+            "-i".to_string(),
+            "key=value".to_string(),
+        ];
+        let parsed = parse_args(&args);
+        assert!(parsed.show_schema);
+        assert_eq!(parsed.inputs.get("key"), Some(&"value".to_string()));
+    }
+
+    #[test]
+    fn test_parse_args_value_with_equals() {
+        // Test value that contains = sign
+        let args = vec![
+            "-i".to_string(),
+            "url=http://example.com?foo=bar".to_string(),
+        ];
+        let parsed = parse_args(&args);
+        assert_eq!(
+            parsed.inputs.get("url"),
+            Some(&"http://example.com?foo=bar".to_string())
+        );
+    }
 }

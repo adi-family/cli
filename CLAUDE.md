@@ -557,7 +557,6 @@ Interactive workflows are defined in `.adi/workflows/` directory. Each workflow 
 | `build-plugin` | Build and install plugins locally (no registry) | `adi workflow build-plugin` |
 | `release` | Build + Docker image + push to registry | `adi workflow release` |
 | `deploy` | Deploy services to Coolify | `adi workflow deploy` |
-| `dev` | Local development environment | `adi workflow dev` |
 | `release-plugin` | Build and publish a single plugin | `adi workflow release-plugin` |
 | `release-plugins` | Build and publish multiple plugins | `adi workflow release-plugins` |
 | `commit-submodule` | Commit changes in submodule and parent | `adi workflow commit-submodule` |
@@ -678,10 +677,10 @@ cargo build -p adi-indexer-cli    # Build specific package
 ### Quick Start
 ```bash
 cp .env.local.example .env.local  # Create config (one time)
-adi workflow dev                  # Interactive: start services
-.adi/workflows/dev.sh up          # Non-interactive: start default services
-.adi/workflows/dev.sh status      # Check service status
-.adi/workflows/dev.sh restart web # Restart specific service
+adi hive up                       # Start all services (uses .adi/hive.yaml)
+adi hive status                   # Check service status
+adi hive restart web              # Restart specific service
+adi hive down                     # Stop all services
 ```
 
 ### Web UI Environment (apps/infra-service-web/.env.local)
