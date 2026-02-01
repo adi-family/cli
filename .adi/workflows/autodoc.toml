@@ -1,0 +1,68 @@
+# ADI Autodoc Workflow
+# Generate documentation for Rust crates using cargo-public-api and LLM enrichment
+
+[workflow]
+name = "autodoc"
+description = "Generate API documentation for Rust crates with LLM enrichment and translations"
+
+[[inputs]]
+name = "crate"
+type = "select"
+prompt = "Select crate to document"
+# Dynamically discovers all crates with Cargo.toml (libraries only)
+options_cmd = """
+find crates -name 'Cargo.toml' -type f 2>/dev/null | while read f; do
+    dir=$(dirname "$f")
+    # Check if it's a library (has [lib] or no [[bin]])
+    if grep -q '^\[lib\]' "$f" 2>/dev/null || ! grep -q '^\[\[bin\]\]' "$f" 2>/dev/null; then
+        # Get package name
+        name=$(grep -m1 '^name = ' "$f" 2>/dev/null | sed 's/name = "//;s/"//')
+        if [ -n "$name" ]; then
+            echo "$name"
+        fi
+    fi
+done | sort -u
+"""
+autocomplete = true
+
+[[inputs]]
+name = "language"
+type = "select"
+prompt = "Documentation language"
+options = [
+    "en - English (Recommended)",
+    "uk - Ukrainian",
+    "ru - Russian",
+    "zh - Chinese",
+    "ja - Japanese",
+    "ko - Korean",
+    "es - Spanish",
+    "de - German",
+    "fr - French"
+]
+default = "en - English (Recommended)"
+
+[[inputs]]
+name = "enrich"
+type = "confirm"
+prompt = "Enrich documentation with LLM (examples, descriptions)?"
+default = true
+
+[[inputs]]
+name = "force"
+type = "confirm"
+prompt = "Overwrite existing documentation?"
+default = false
+
+[[steps]]
+name = "Generate documentation"
+run = """
+CRATE="{{ crate }}"
+LANGUAGE="{{ language | split(' ') | first }}"
+ENRICH="{{ enrich }}"
+FORCE="{{ force }}"
+
+info "Generating documentation for: $CRATE (language: $LANGUAGE)"
+
+"$WORKFLOWS_DIR/autodoc.sh" "$CRATE" --lang "$LANGUAGE" $([ "$ENRICH" = "true" ] && echo "--enrich") $([ "$FORCE" = "true" ] && echo "--force")
+"""

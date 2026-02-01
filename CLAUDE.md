@@ -564,6 +564,7 @@ Interactive workflows are defined in `.adi/workflows/` directory. Each workflow 
 | `lint-plugin` | Lint a plugin before release | `adi workflow lint-plugin` |
 | `seal` | Commit and push all changes including submodules | `adi workflow seal` |
 | `cocoon-images` | Build cocoon Docker image variants | `adi workflow cocoon-images` |
+| `autodoc` | Generate API documentation with LLM enrichment | `adi workflow autodoc` |
 
 ### Workflow Structure
 
@@ -626,6 +627,33 @@ adi workflow build-plugin
 - `--skip-lint` - Skip linting for faster builds
 
 **Common plugins:** `adi.hive`, `adi.cocoon`, `adi.agent-loop`, `adi.tasks`, `adi.workflow`
+
+### Example: Autodoc (API Documentation)
+Generate API documentation for Rust crates with LLM enrichment and translations:
+```bash
+# Interactive mode
+adi workflow autodoc
+
+# Generate English docs
+.adi/workflows/autodoc.sh lib-embed --lang en
+
+# Generate Ukrainian docs with LLM enrichment
+.adi/workflows/autodoc.sh lib-embed --lang uk --enrich
+
+# Overwrite existing documentation
+.adi/workflows/autodoc.sh lib-embed --lang en --enrich --force
+```
+
+**Options:**
+- `--lang <code>` - Language (en, uk, ru, zh, ja, ko, es, de, fr)
+- `--enrich` - Use LLM (claude CLI) to enrich docs with examples and descriptions
+- `--force` - Overwrite existing documentation
+
+**Output:** `.adi/docs/<crate-name>/<lang>/api.md`
+
+**Requirements:**
+- `cargo-public-api` (auto-installed if missing)
+- `claude` CLI (for `--enrich` option)
 
 ## Setup
 ```bash
