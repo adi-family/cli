@@ -15,6 +15,8 @@ pub struct Select<T: Clone> {
     prompt: String,
     options: Vec<SelectOption<T>>,
     default: Option<usize>,
+    /// Enable filtering/autocomplete mode
+    filterable: bool,
 }
 
 impl<T: Clone> Select<T> {
@@ -24,6 +26,7 @@ impl<T: Clone> Select<T> {
             prompt: prompt.into(),
             options: Vec::new(),
             default: None,
+            filterable: false,
         }
     }
 
@@ -53,6 +56,13 @@ impl<T: Clone> Select<T> {
         self
     }
 
+    /// Enable filtering/autocomplete mode.
+    /// When enabled, users can type to filter options.
+    pub fn filterable(mut self, enabled: bool) -> Self {
+        self.filterable = enabled;
+        self
+    }
+
     /// Run the selection and return the chosen value.
     pub fn run(self) -> Option<T> {
         if self.options.is_empty() {
@@ -64,6 +74,7 @@ impl<T: Clone> Select<T> {
 
         match mode {
             OutputMode::JsonStream => self.run_json(),
+            OutputMode::Text if interactive && self.filterable => self.run_filterable(),
             OutputMode::Text if interactive => self.run_interactive(),
             OutputMode::Text => self.run_simple(),
         }
@@ -120,6 +131,211 @@ impl<T: Clone> Select<T> {
                 _ => {}
             }
         }
+    }
+
+    /// Filterable mode with typing to filter options.
+    fn run_filterable(self) -> Option<T> {
+        let term = Term::stdout();
+        let mut filter = String::new();
+        let mut cursor: usize = 0;
+
+        // Print prompt with filter hint
+        println!(
+            "{} {}",
+            style(&self.prompt).bold(),
+            style("(type to filter)").dim()
+        );
+
+        // Initial render
+        let filtered = self.filter_options(&filter);
+        self.render_filterable(&term, &filter, &filtered, cursor);
+
+        loop {
+            match term.read_key() {
+                Ok(Key::ArrowUp | Key::Char('k')) if filter.is_empty() => {
+                    let filtered = self.filter_options(&filter);
+                    if !filtered.is_empty() {
+                        cursor = if cursor == 0 {
+                            filtered.len() - 1
+                        } else {
+                            cursor - 1
+                        };
+                        // Skip disabled options
+                        let start = cursor;
+                        while self.options[filtered[cursor]].disabled {
+                            cursor = if cursor == 0 {
+                                filtered.len() - 1
+                            } else {
+                                cursor - 1
+                            };
+                            if cursor == start {
+                                break;
+                            }
+                        }
+                    }
+                    self.render_filterable(&term, &filter, &filtered, cursor);
+                }
+                Ok(Key::ArrowDown | Key::Char('j')) if filter.is_empty() => {
+                    let filtered = self.filter_options(&filter);
+                    if !filtered.is_empty() {
+                        cursor = (cursor + 1) % filtered.len();
+                        // Skip disabled options
+                        let start = cursor;
+                        while self.options[filtered[cursor]].disabled {
+                            cursor = (cursor + 1) % filtered.len();
+                            if cursor == start {
+                                break;
+                            }
+                        }
+                    }
+                    self.render_filterable(&term, &filter, &filtered, cursor);
+                }
+                Ok(Key::ArrowUp) => {
+                    let filtered = self.filter_options(&filter);
+                    if !filtered.is_empty() {
+                        cursor = if cursor == 0 {
+                            filtered.len() - 1
+                        } else {
+                            cursor - 1
+                        };
+                        // Skip disabled options
+                        let start = cursor;
+                        while self.options[filtered[cursor]].disabled {
+                            cursor = if cursor == 0 {
+                                filtered.len() - 1
+                            } else {
+                                cursor - 1
+                            };
+                            if cursor == start {
+                                break;
+                            }
+                        }
+                    }
+                    self.render_filterable(&term, &filter, &filtered, cursor);
+                }
+                Ok(Key::ArrowDown) => {
+                    let filtered = self.filter_options(&filter);
+                    if !filtered.is_empty() {
+                        cursor = (cursor + 1) % filtered.len();
+                        // Skip disabled options
+                        let start = cursor;
+                        while self.options[filtered[cursor]].disabled {
+                            cursor = (cursor + 1) % filtered.len();
+                            if cursor == start {
+                                break;
+                            }
+                        }
+                    }
+                    self.render_filterable(&term, &filter, &filtered, cursor);
+                }
+                Ok(Key::Enter) => {
+                    let filtered = self.filter_options(&filter);
+                    if !filtered.is_empty() {
+                        let original_idx = filtered[cursor];
+                        if !self.options[original_idx].disabled {
+                            self.clear_filterable(&term, &filtered);
+                            println!(
+                                "{} {}",
+                                style("\u{2713}").green(),
+                                self.options[original_idx].label
+                            );
+                            return Some(self.options[original_idx].value.clone());
+                        }
+                    }
+                }
+                Ok(Key::Escape) => {
+                    let filtered = self.filter_options(&filter);
+                    self.clear_filterable(&term, &filtered);
+                    println!("{} Cancelled", style("\u{2715}").red());
+                    return None;
+                }
+                Ok(Key::Backspace) => {
+                    filter.pop();
+                    cursor = 0;
+                    let filtered = self.filter_options(&filter);
+                    self.render_filterable(&term, &filter, &filtered, cursor);
+                }
+                Ok(Key::Char(c)) if !c.is_control() => {
+                    filter.push(c);
+                    cursor = 0;
+                    let filtered = self.filter_options(&filter);
+                    self.render_filterable(&term, &filter, &filtered, cursor);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Filter options based on search string (case-insensitive).
+    fn filter_options(&self, filter: &str) -> Vec<usize> {
+        if filter.is_empty() {
+            return (0..self.options.len()).collect();
+        }
+
+        let filter_lower = filter.to_lowercase();
+        self.options
+            .iter()
+            .enumerate()
+            .filter(|(_, opt)| opt.label.to_lowercase().contains(&filter_lower))
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// Render filterable options list with filter input.
+    fn render_filterable(&self, term: &Term, filter: &str, filtered: &[usize], cursor: usize) {
+        // Calculate lines to clear: 1 for filter input + filtered options count
+        // On first render, we need to account for options that will be shown
+        let lines_to_clear = 1 + filtered.len().min(self.options.len());
+        let _ = term.clear_last_lines(lines_to_clear);
+
+        // Render filter input line
+        if filter.is_empty() {
+            println!("{}", style("  Type to filter...").dim());
+        } else {
+            println!(
+                "  {} {} {}",
+                style("Filter:").dim(),
+                filter,
+                style(format!("({} matches)", filtered.len())).dim()
+            );
+        }
+
+        // Render filtered options
+        if filtered.is_empty() {
+            println!("{}", style("  No matches").dim().red());
+        } else {
+            for (i, &original_idx) in filtered.iter().enumerate() {
+                let opt = &self.options[original_idx];
+                let is_selected = i == cursor;
+                let prefix = if is_selected { ">" } else { " " };
+
+                let line = if opt.disabled {
+                    format!(
+                        "{} {} {}",
+                        style(prefix).dim(),
+                        style(&opt.label).dim(),
+                        style("(disabled)").dim()
+                    )
+                } else if is_selected {
+                    format!("{} {}", style(prefix).cyan(), style(&opt.label).cyan())
+                } else {
+                    format!("  {}", &opt.label)
+                };
+
+                println!("{}", line);
+            }
+        }
+    }
+
+    /// Clear the filterable options list.
+    fn clear_filterable(&self, term: &Term, filtered: &[usize]) {
+        // Clear filter line + all displayed options
+        let lines = 1 + if filtered.is_empty() {
+            1
+        } else {
+            filtered.len()
+        };
+        let _ = term.clear_last_lines(lines);
     }
 
     /// Render options list.

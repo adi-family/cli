@@ -98,11 +98,11 @@ fn prompt_select(
         .map(|o| SelectOption::new(o.clone(), o.clone()))
         .collect();
 
-    // Use lib-console-output Select
-    // Note: lib-console-output doesn't have fuzzy select, using regular select
+    // Use lib-console-output Select with optional filtering
     let result = Select::new(&input.prompt)
         .options(select_options)
         .default(default_index)
+        .filterable(input.autocomplete.unwrap_or(false))
         .run();
 
     match result {

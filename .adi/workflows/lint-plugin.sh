@@ -474,7 +474,7 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             usage
             ;;
-        --fix)
+--fix)
             FIX_MODE=true
             shift
             ;;

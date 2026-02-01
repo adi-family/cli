@@ -37,6 +37,7 @@ pub fn run_command(context_json: &str) -> Result<String, String> {
     match subcommand {
         "list" => cmd_list(&cwd),
         "show" => cmd_show(&cwd, &cmd_args),
+        "--completions" => cmd_completions(&cwd, &cmd_args),
         "" => {
             // No subcommand - show interactive workflow selector
             cmd_select_and_run(&cwd)
@@ -216,7 +217,60 @@ fn cmd_run(cwd: &PathBuf, name: &str) -> Result<String, String> {
     Ok(String::new())
 }
 
-/// List available commands for discovery
+/// Generate shell completions for workflow names
+fn cmd_completions(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {
+    // Parse position (1-based, position of word being completed)
+    let position: usize = args.first().and_then(|s| s.parse().ok()).unwrap_or(1);
+
+    // Get the words typed so far (after --completions and position)
+    let words: Vec<&str> = args.iter().skip(1).copied().collect();
+
+    // Position 1 = completing the subcommand/workflow name
+    if position == 1 {
+        let mut completions = Vec::new();
+
+        // Add static subcommands
+        completions.push("list\tList available workflows".to_string());
+        completions.push("show\tShow workflow definition".to_string());
+
+        // Add workflow names
+        let workflows = discover_workflows(cwd);
+        for wf in workflows {
+            let desc = wf.description.as_deref().unwrap_or("Run workflow");
+            completions.push(format!("{}\t{}", wf.name, desc));
+        }
+
+        return Ok(completions.join("\n"));
+    }
+
+    // Position 2+ = context-dependent completions
+    let subcommand = words.first().copied().unwrap_or("");
+
+    match subcommand {
+        "show" => {
+            // Complete workflow names for 'show'
+            if position == 2 {
+                let workflows = discover_workflows(cwd);
+                let completions: Vec<String> = workflows
+                    .iter()
+                    .map(|wf| {
+                        let desc = wf.description.as_deref().unwrap_or("Show this workflow");
+                        format!("{}\t{}", wf.name, desc)
+                    })
+                    .collect();
+                return Ok(completions.join("\n"));
+            }
+        }
+        _ => {
+            // For workflow runs or unknown subcommands, no additional completions
+        }
+    }
+
+    Ok(String::new())
+}
+
+/// List available commands for discovery (used by external tooling)
+#[allow(dead_code)]
 pub fn list_commands() -> serde_json::Value {
     json!([
         {"name": "list", "description": "List available workflows", "usage": "list"},

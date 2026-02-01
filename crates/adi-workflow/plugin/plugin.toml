@@ -14,6 +14,7 @@ min_host_version = "0.9.0"
 command = "workflow"
 description = "Run workflows defined in TOML files"
 aliases = ["wf"]
+dynamic_completions = true
 
 [[provides]]
 id = "adi.workflow.cli"

@@ -61,14 +61,27 @@ impl CliCommands for WorkflowPlugin {
                 usage: "workflow show <name>".to_string(),
                 has_subcommands: false,
             },
+            CliCommand {
+                name: "--completions".to_string(),
+                description: "Output completion suggestions (internal use)".to_string(),
+                usage: "workflow --completions <position> [args...]".to_string(),
+                has_subcommands: false,
+            },
         ]
     }
 
     async fn run_command(&self, ctx: &CliContext) -> Result<CliResult> {
+        // Build full args list: [subcommand, ...remaining_args]
+        let mut full_args = Vec::new();
+        if let Some(ref subcmd) = ctx.subcommand {
+            full_args.push(subcmd.clone());
+        }
+        full_args.extend(ctx.args.iter().cloned());
+
         // Convert context to JSON format expected by cli_impl::run_command
         let context_json = serde_json::json!({
             "command": &ctx.command,
-            "args": &ctx.args,
+            "args": &full_args,
             "cwd": &ctx.cwd,
         });
 
