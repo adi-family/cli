@@ -231,6 +231,7 @@ services:
     proxy:
       host: adi.local
       path: /api/logging
+      strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -287,6 +288,7 @@ services:
         SMTP_FROM_EMAIL: ${env.SMTP_FROM_EMAIL:-}
         SMTP_FROM_NAME: ${env.SMTP_FROM_NAME:-}
         SMTP_TLS: ${env.SMTP_TLS:-}
+        UNSAFE_PRINT_EMAIL_CODE_IN_CONSOLE: ${env.UNSAFE_PRINT_EMAIL_CODE_IN_CONSOLE:-true}
         LOGGING_URL: "http://localhost:8040"
     depends_on:
       - postgres
@@ -312,6 +314,7 @@ services:
     proxy:
       host: adi.local
       path: /api/platform
+      strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -408,6 +411,7 @@ services:
     proxy:
       host: adi.local
       path: /api/flowmap
+      strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -440,6 +444,7 @@ services:
     proxy:
       host: adi.local
       path: /api/analytics-ingestion
+      strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -474,6 +479,7 @@ services:
     proxy:
       host: adi.local
       path: /api/analytics
+      strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -508,6 +514,7 @@ services:
     proxy:
       host: adi.local
       path: /api/llm-proxy
+      strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -551,6 +558,7 @@ services:
     proxy:
       host: adi.local
       path: /api/balance
+      strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -588,6 +596,7 @@ services:
     proxy:
       host: adi.local
       path: /api/credentials
+      strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -621,6 +630,7 @@ services:
     proxy:
       host: adi.local
       path: /api/registry
+      strip_prefix: true
     healthcheck:
       type: http
       http:
