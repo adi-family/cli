@@ -520,7 +520,9 @@ name = "adi-hive-plugin"
 version = "0.1.15"
 dependencies = [
  "adi-hive-core",
+ "console 0.15.11",
  "dirs 5.0.1",
+ "lib-console-output",
  "lib-plugin-abi-v3",
  "libc",
  "nix 0.29.0",
@@ -1034,6 +1036,40 @@ name = "adi-tasks-plugin"
 version = "0.8.8"
 dependencies = [
  "adi-tasks-core",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "adi-tools-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "dirs 5.0.1",
+ "hex",
+ "lib-embed",
+ "lib-plugin-manifest",
+ "regex",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+ "walkdir",
+]
+
+[[package]]
+name = "adi-tools-plugin"
+version = "0.1.0"
+dependencies = [
+ "adi-tools-core",
  "async-trait",
  "lib-plugin-abi-v3",
  "serde",

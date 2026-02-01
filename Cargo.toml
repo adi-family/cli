@@ -46,6 +46,10 @@ members = [
     "crates/adi-tasks/http",
     "crates/adi-tasks/mcp",
 
+    # Tools components (CLI tool index for LLM agents)
+    "crates/adi-tools/core",
+    "crates/adi-tools/plugin",
+
     # Workflow components
     "crates/adi-workflow/mcp",
 
@@ -247,6 +251,7 @@ adi-api-proxy-core = { path = "crates/adi-api-proxy/core" }
 adi-hive-core = { path = "crates/hive/core" }
 adi-audio-core = { path = "crates/adi-audio/core" }
 adi-platform-api-core = { path = "crates/adi-platform-api/core" }
+adi-tools-core = { path = "crates/adi-tools/core" }
 
 # Hive plugin system
 hive-plugin-abi = { path = "crates/hive/plugins/abi" }
