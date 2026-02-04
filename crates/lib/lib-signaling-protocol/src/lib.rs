@@ -933,6 +933,425 @@ pub struct SilkHtmlSpan {
     pub styles: HashMap<String, String>,
 }
 
+// ========== ADI Service Protocol ==========
+//
+// Generic protocol for any ADI service to receive requests via WebRTC.
+// Services register with cocoon and receive routed messages.
+// Supports request/response and streaming patterns.
+//
+// ## MCP-Inspired Architecture
+//
+// This protocol follows patterns from MCP (Model Context Protocol):
+// - Capability negotiation at connection time
+// - Self-describing services with JSON Schema
+// - Dynamic discovery of services and methods
+// - Native streaming support
+// - Subscriptions for real-time updates
+//
+// ## Connection Lifecycle
+//
+// 1. WebRTC data channel "adi" established
+// 2. Client sends AdiInitialize::Request with capabilities
+// 3. Cocoon responds with AdiInitialize::Response (capabilities + services)
+// 4. Client sends AdiInitialize::Ready
+// 5. Normal request/response flow begins
+// 6. Async notifications may arrive at any time
+// 7. Subscriptions enable push-based updates
+
+/// ADI Protocol version (semver)
+/// Major version changes indicate breaking protocol changes
+/// Minor version changes add new optional features
+pub const ADI_PROTOCOL_VERSION: &str = "1.0.0";
+
+// ========== Capability Negotiation ==========
+
+/// Protocol capabilities exchanged during initialization
+/// Both client and cocoon declare what they support
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdiCapabilities {
+    /// Protocol version (semver, e.g., "1.0.0")
+    pub protocol_version: String,
+    /// Client/cocoon endpoint info
+    pub info: AdiEndpointInfo,
+    /// Supported features
+    pub features: AdiFeatures,
+}
+
+impl Default for AdiCapabilities {
+    fn default() -> Self {
+        Self {
+            protocol_version: ADI_PROTOCOL_VERSION.to_string(),
+            info: AdiEndpointInfo::default(),
+            features: AdiFeatures::default(),
+        }
+    }
+}
+
+/// Information about an endpoint (client or cocoon)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdiEndpointInfo {
+    /// Endpoint name (e.g., "web-client", "cocoon-worker")
+    pub name: String,
+    /// Endpoint version
+    pub version: String,
+    /// Unique identifier (device_id for cocoon, session_id for client)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+}
+
+impl Default for AdiEndpointInfo {
+    fn default() -> Self {
+        Self {
+            name: "unknown".to_string(),
+            version: "0.0.0".to_string(),
+            id: None,
+        }
+    }
+}
+
+/// Feature flags for capability negotiation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdiFeatures {
+    /// Whether streaming responses are supported
+    #[serde(default = "default_true")]
+    pub streaming: bool,
+    /// Whether notifications are supported
+    #[serde(default = "default_true")]
+    pub notifications: bool,
+    /// Whether subscriptions are supported
+    #[serde(default)]
+    pub subscriptions: bool,
+    /// Maximum message size in bytes (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_message_size: Option<usize>,
+    /// Supported content types (default: ["json"])
+    #[serde(default = "default_content_types")]
+    pub content_types: Vec<String>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_content_types() -> Vec<String> {
+    vec!["json".to_string()]
+}
+
+impl Default for AdiFeatures {
+    fn default() -> Self {
+        Self {
+            streaming: true,
+            notifications: true,
+            subscriptions: false,
+            max_message_size: None,
+            content_types: default_content_types(),
+        }
+    }
+}
+
+// ========== Connection Initialization ==========
+
+/// Initialization messages for establishing ADI protocol connection
+/// Exchanged after WebRTC data channel is established
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum AdiInitialize {
+    /// Client → Cocoon: Initialize connection with client capabilities
+    Request {
+        request_id: Uuid,
+        capabilities: AdiCapabilities,
+    },
+
+    /// Cocoon → Client: Initialization response with capabilities and available services
+    Response {
+        request_id: Uuid,
+        /// Negotiated capabilities (intersection of client + cocoon)
+        capabilities: AdiCapabilities,
+        /// Available services and their methods
+        services: Vec<AdiServiceInfo>,
+    },
+
+    /// Client → Cocoon: Confirmation that client is ready
+    /// After this, normal request/response flow begins
+    Ready { request_id: Uuid },
+
+    /// Error during initialization
+    Error {
+        request_id: Uuid,
+        code: String,
+        message: String,
+    },
+}
+
+// ========== Notifications (Async Events) ==========
+
+/// Notifications are async events sent without a request
+/// No response is expected (fire-and-forget)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum AdiNotification {
+    /// Service list changed (services added/removed/updated)
+    ServicesChanged {
+        /// Service IDs that were added
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        added: Vec<String>,
+        /// Service IDs that were removed
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        removed: Vec<String>,
+        /// Service IDs that were updated (version/methods changed)
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        updated: Vec<String>,
+    },
+
+    /// Methods changed for a specific service
+    MethodsChanged {
+        service: String,
+        /// Updated method list
+        methods: Vec<AdiMethodInfo>,
+    },
+
+    /// Service-specific event (defined by plugin)
+    ServiceEvent {
+        service: String,
+        /// Event name (e.g., "task_created", "index_updated")
+        event: String,
+        /// Event payload (service-defined)
+        data: JsonValue,
+    },
+
+    /// Progress update for long-running operation
+    Progress {
+        /// Original request ID
+        request_id: Uuid,
+        /// Progress value (0.0 to 1.0)
+        progress: f32,
+        /// Optional human-readable message
+        #[serde(skip_serializing_if = "Option::is_none")]
+        message: Option<String>,
+        /// Optional extra data
+        #[serde(skip_serializing_if = "Option::is_none")]
+        data: Option<JsonValue>,
+    },
+
+    /// Connection health/keepalive
+    Ping { timestamp: i64 },
+
+    /// Response to ping
+    Pong {
+        timestamp: i64,
+        /// Server timestamp for latency calculation
+        server_timestamp: i64,
+    },
+}
+
+// ========== Subscriptions ==========
+
+/// Subscription management for real-time updates
+/// Similar to WebSocket subscriptions or GraphQL subscriptions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum AdiSubscription {
+    /// Client → Cocoon: Subscribe to service events
+    Subscribe {
+        request_id: Uuid,
+        /// Service to subscribe to
+        service: String,
+        /// Event name (e.g., "task_status", "log_stream", "*" for all)
+        event: String,
+        /// Optional filter for events
+        #[serde(skip_serializing_if = "Option::is_none")]
+        filter: Option<JsonValue>,
+    },
+
+    /// Cocoon → Client: Subscription confirmed
+    Subscribed {
+        request_id: Uuid,
+        /// Unique subscription ID (for unsubscribe)
+        subscription_id: Uuid,
+        /// Service subscribed to
+        service: String,
+        /// Event subscribed to
+        event: String,
+    },
+
+    /// Client → Cocoon: Unsubscribe from events
+    Unsubscribe { subscription_id: Uuid },
+
+    /// Cocoon → Client: Unsubscription confirmed
+    Unsubscribed { subscription_id: Uuid },
+
+    /// Cocoon → Client: Subscription event data
+    /// Sent when subscribed event occurs
+    Event {
+        subscription_id: Uuid,
+        service: String,
+        event: String,
+        data: JsonValue,
+        /// Sequence number for ordering
+        seq: u64,
+    },
+
+    /// Subscription error
+    Error {
+        request_id: Uuid,
+        code: String,
+        message: String,
+    },
+}
+
+// ========== Service Capabilities ==========
+
+/// Service-level capabilities (what a specific service supports)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdiServiceCapabilities {
+    /// Whether service supports subscriptions
+    #[serde(default)]
+    pub subscriptions: bool,
+    /// Whether service emits notifications
+    #[serde(default)]
+    pub notifications: bool,
+    /// Whether service methods can stream responses
+    #[serde(default = "default_true")]
+    pub streaming: bool,
+}
+
+impl Default for AdiServiceCapabilities {
+    fn default() -> Self {
+        Self {
+            subscriptions: false,
+            notifications: false,
+            streaming: true,
+        }
+    }
+}
+
+// ========== Request/Response ==========
+
+/// ADI service request - sent via "adi" WebRTC data channel
+/// Generic request that gets routed to registered service handlers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdiRequest {
+    /// Unique request ID for correlation
+    pub request_id: Uuid,
+    /// Target service identifier (e.g., "tasks", "indexer", "kb", "agent")
+    pub service: String,
+    /// Method to invoke (e.g., "list", "create", "search")
+    pub method: String,
+    /// Method parameters as JSON
+    #[serde(default)]
+    pub params: JsonValue,
+}
+
+/// ADI service response - sent back via "adi" WebRTC data channel
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum AdiResponse {
+    /// Successful response with data
+    Success {
+        request_id: Uuid,
+        service: String,
+        method: String,
+        data: JsonValue,
+    },
+
+    /// Streaming response chunk (for long-running operations)
+    /// Services push data through a pipe, each chunk becomes a Stream message
+    Stream {
+        request_id: Uuid,
+        service: String,
+        method: String,
+        /// Chunk data
+        data: JsonValue,
+        /// Sequence number for ordering
+        seq: u32,
+        /// false = more chunks coming, true = final chunk
+        done: bool,
+    },
+
+    /// Error response
+    Error {
+        request_id: Uuid,
+        service: String,
+        method: String,
+        /// Error code (e.g., "not_found", "invalid_params", "internal")
+        code: String,
+        /// Human-readable error message
+        message: String,
+    },
+
+    /// Service not found/not registered
+    ServiceNotFound { request_id: Uuid, service: String },
+
+    /// Method not supported by service
+    MethodNotFound {
+        request_id: Uuid,
+        service: String,
+        method: String,
+        /// Available methods for discovery
+        available_methods: Vec<String>,
+    },
+}
+
+/// Service discovery messages
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum AdiDiscovery {
+    /// Request list of available services
+    ListServices { request_id: Uuid },
+
+    /// Response with available services and their methods
+    ServicesList {
+        request_id: Uuid,
+        services: Vec<AdiServiceInfo>,
+    },
+}
+
+/// Information about a registered ADI service
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AdiServiceInfo {
+    /// Service identifier (e.g., "tasks", "indexer", "kb")
+    pub id: String,
+    /// Human-readable name (e.g., "Task Management")
+    pub name: String,
+    /// Service version (semver)
+    #[serde(default)]
+    pub version: String,
+    /// Human-readable description
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Available methods
+    #[serde(default)]
+    pub methods: Vec<AdiMethodInfo>,
+    /// Service-level capabilities
+    #[serde(default)]
+    pub capabilities: AdiServiceCapabilities,
+}
+
+/// Information about a service method
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AdiMethodInfo {
+    /// Method name (e.g., "list", "create", "search")
+    pub name: String,
+    /// Human-readable description
+    #[serde(default)]
+    pub description: String,
+    /// Whether this method supports streaming responses
+    #[serde(default)]
+    pub streaming: bool,
+    /// JSON Schema for input parameters (for validation and documentation)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub params_schema: Option<JsonValue>,
+    /// JSON Schema for response data (for documentation)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result_schema: Option<JsonValue>,
+    /// Whether this method is deprecated
+    #[serde(default)]
+    pub deprecated: bool,
+    /// Deprecation message (if deprecated)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deprecation_message: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -966,6 +1385,8 @@ mod tests {
     fn test_cocoon_kind_serialization() {
         let kind = CocoonKind {
             id: "ubuntu".to_string(),
+            runner_type: "docker".to_string(),
+            runner_config: serde_json::json!({"image": "git.the-ihor.com/adi/cocoon:ubuntu"}),
             image: "git.the-ihor.com/adi/cocoon:ubuntu".to_string(),
         };
 
@@ -973,7 +1394,7 @@ mod tests {
         let deserialized: CocoonKind = serde_json::from_str(&json).unwrap();
 
         assert_eq!(deserialized.id, "ubuntu");
-        assert_eq!(deserialized.image, "git.the-ihor.com/adi/cocoon:ubuntu");
+        assert_eq!(deserialized.runner_type, "docker");
     }
 
     #[test]
@@ -993,5 +1414,330 @@ mod tests {
         assert_eq!(deserialized.domain, "example.com");
         assert_eq!(deserialized.days_until_expiry, 90);
         assert!(!deserialized.needs_renewal);
+    }
+
+    #[test]
+    fn test_adi_request_serialization() {
+        let req = AdiRequest {
+            request_id: Uuid::nil(),
+            service: "tasks".to_string(),
+            method: "list".to_string(),
+            params: serde_json::json!({"status": "todo"}),
+        };
+
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains("\"service\":\"tasks\""));
+        assert!(json.contains("\"method\":\"list\""));
+
+        let deserialized: AdiRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.service, "tasks");
+        assert_eq!(deserialized.method, "list");
+        assert_eq!(deserialized.params["status"], "todo");
+    }
+
+    #[test]
+    fn test_adi_response_success_serialization() {
+        let resp = AdiResponse::Success {
+            request_id: Uuid::nil(),
+            service: "tasks".to_string(),
+            method: "list".to_string(),
+            data: serde_json::json!([{"id": 1, "title": "Test"}]),
+        };
+
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("\"type\":\"success\""));
+
+        let deserialized: AdiResponse = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            AdiResponse::Success {
+                service,
+                method,
+                data,
+                ..
+            } => {
+                assert_eq!(service, "tasks");
+                assert_eq!(method, "list");
+                assert!(data.is_array());
+            }
+            _ => panic!("Wrong response type"),
+        }
+    }
+
+    #[test]
+    fn test_adi_response_stream_serialization() {
+        let resp = AdiResponse::Stream {
+            request_id: Uuid::nil(),
+            service: "agent".to_string(),
+            method: "run".to_string(),
+            data: serde_json::json!({"chunk": "Hello"}),
+            seq: 1,
+            done: false,
+        };
+
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("\"type\":\"stream\""));
+        assert!(json.contains("\"seq\":1"));
+        assert!(json.contains("\"done\":false"));
+    }
+
+    #[test]
+    fn test_adi_discovery_serialization() {
+        let discovery = AdiDiscovery::ServicesList {
+            request_id: Uuid::nil(),
+            services: vec![AdiServiceInfo {
+                id: "tasks".to_string(),
+                name: "Task Management".to_string(),
+                version: "0.1.0".to_string(),
+                description: Some("Manage tasks and todos".to_string()),
+                methods: vec![AdiMethodInfo {
+                    name: "list".to_string(),
+                    description: "List all tasks".to_string(),
+                    streaming: false,
+                    params_schema: None,
+                    result_schema: None,
+                    deprecated: false,
+                    deprecation_message: None,
+                }],
+                capabilities: AdiServiceCapabilities::default(),
+            }],
+        };
+
+        let json = serde_json::to_string(&discovery).unwrap();
+        assert!(json.contains("\"type\":\"services_list\""));
+        assert!(json.contains("\"id\":\"tasks\""));
+
+        let deserialized: AdiDiscovery = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            AdiDiscovery::ServicesList { services, .. } => {
+                assert_eq!(services.len(), 1);
+                assert_eq!(services[0].id, "tasks");
+                assert_eq!(services[0].methods.len(), 1);
+            }
+            _ => panic!("Wrong discovery type"),
+        }
+    }
+
+    #[test]
+    fn test_adi_capabilities_default() {
+        let caps = AdiCapabilities::default();
+        assert_eq!(caps.protocol_version, ADI_PROTOCOL_VERSION);
+        assert!(caps.features.streaming);
+        assert!(caps.features.notifications);
+        assert!(!caps.features.subscriptions);
+    }
+
+    #[test]
+    fn test_adi_initialize_serialization() {
+        let init = AdiInitialize::Request {
+            request_id: Uuid::nil(),
+            capabilities: AdiCapabilities {
+                protocol_version: "1.0.0".to_string(),
+                info: AdiEndpointInfo {
+                    name: "web-client".to_string(),
+                    version: "1.0.0".to_string(),
+                    id: Some("session-123".to_string()),
+                },
+                features: AdiFeatures::default(),
+            },
+        };
+
+        let json = serde_json::to_string(&init).unwrap();
+        assert!(json.contains("\"type\":\"request\""));
+        assert!(json.contains("\"protocol_version\":\"1.0.0\""));
+        assert!(json.contains("\"name\":\"web-client\""));
+
+        let deserialized: AdiInitialize = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            AdiInitialize::Request { capabilities, .. } => {
+                assert_eq!(capabilities.info.name, "web-client");
+                assert!(capabilities.features.streaming);
+            }
+            _ => panic!("Wrong init type"),
+        }
+    }
+
+    #[test]
+    fn test_adi_notification_serialization() {
+        let notif = AdiNotification::ServiceEvent {
+            service: "tasks".to_string(),
+            event: "task_created".to_string(),
+            data: serde_json::json!({"task_id": "123", "title": "New task"}),
+        };
+
+        let json = serde_json::to_string(&notif).unwrap();
+        assert!(json.contains("\"type\":\"service_event\""));
+        assert!(json.contains("\"service\":\"tasks\""));
+        assert!(json.contains("\"event\":\"task_created\""));
+
+        let deserialized: AdiNotification = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            AdiNotification::ServiceEvent {
+                service,
+                event,
+                data,
+            } => {
+                assert_eq!(service, "tasks");
+                assert_eq!(event, "task_created");
+                assert_eq!(data["task_id"], "123");
+            }
+            _ => panic!("Wrong notification type"),
+        }
+    }
+
+    #[test]
+    fn test_adi_notification_progress() {
+        let notif = AdiNotification::Progress {
+            request_id: Uuid::nil(),
+            progress: 0.5,
+            message: Some("Indexing files...".to_string()),
+            data: None,
+        };
+
+        let json = serde_json::to_string(&notif).unwrap();
+        assert!(json.contains("\"type\":\"progress\""));
+        assert!(json.contains("\"progress\":0.5"));
+
+        let deserialized: AdiNotification = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            AdiNotification::Progress {
+                progress, message, ..
+            } => {
+                assert!((progress - 0.5).abs() < 0.001);
+                assert_eq!(message, Some("Indexing files...".to_string()));
+            }
+            _ => panic!("Wrong notification type"),
+        }
+    }
+
+    #[test]
+    fn test_adi_subscription_serialization() {
+        let sub = AdiSubscription::Subscribe {
+            request_id: Uuid::nil(),
+            service: "tasks".to_string(),
+            event: "status_changed".to_string(),
+            filter: Some(serde_json::json!({"project_id": "proj-1"})),
+        };
+
+        let json = serde_json::to_string(&sub).unwrap();
+        assert!(json.contains("\"type\":\"subscribe\""));
+        assert!(json.contains("\"service\":\"tasks\""));
+
+        let deserialized: AdiSubscription = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            AdiSubscription::Subscribe {
+                service,
+                event,
+                filter,
+                ..
+            } => {
+                assert_eq!(service, "tasks");
+                assert_eq!(event, "status_changed");
+                assert!(filter.is_some());
+            }
+            _ => panic!("Wrong subscription type"),
+        }
+    }
+
+    #[test]
+    fn test_adi_subscription_event() {
+        let event = AdiSubscription::Event {
+            subscription_id: Uuid::nil(),
+            service: "tasks".to_string(),
+            event: "status_changed".to_string(),
+            data: serde_json::json!({"task_id": "123", "status": "completed"}),
+            seq: 42,
+        };
+
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"type\":\"event\""));
+        assert!(json.contains("\"seq\":42"));
+
+        let deserialized: AdiSubscription = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            AdiSubscription::Event { seq, data, .. } => {
+                assert_eq!(seq, 42);
+                assert_eq!(data["status"], "completed");
+            }
+            _ => panic!("Wrong subscription type"),
+        }
+    }
+
+    #[test]
+    fn test_adi_service_capabilities() {
+        let caps = AdiServiceCapabilities {
+            subscriptions: true,
+            notifications: true,
+            streaming: true,
+        };
+
+        let json = serde_json::to_string(&caps).unwrap();
+        assert!(json.contains("\"subscriptions\":true"));
+        assert!(json.contains("\"notifications\":true"));
+        assert!(json.contains("\"streaming\":true"));
+
+        // Test default
+        let default_caps = AdiServiceCapabilities::default();
+        assert!(!default_caps.subscriptions);
+        assert!(!default_caps.notifications);
+        assert!(default_caps.streaming); // streaming defaults to true
+    }
+
+    #[test]
+    fn test_adi_method_info_with_schemas() {
+        let method = AdiMethodInfo {
+            name: "create".to_string(),
+            description: "Create a new task".to_string(),
+            streaming: false,
+            params_schema: Some(serde_json::json!({
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                    "title": { "type": "string" },
+                    "description": { "type": "string" }
+                }
+            })),
+            result_schema: Some(serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "id": { "type": "string" },
+                    "created_at": { "type": "string", "format": "date-time" }
+                }
+            })),
+            deprecated: false,
+            deprecation_message: None,
+        };
+
+        let json = serde_json::to_string(&method).unwrap();
+        assert!(json.contains("\"params_schema\""));
+        assert!(json.contains("\"result_schema\""));
+        assert!(!json.contains("\"deprecated\":true")); // false is default, may be omitted
+
+        let deserialized: AdiMethodInfo = serde_json::from_str(&json).unwrap();
+        assert!(deserialized.params_schema.is_some());
+        assert!(deserialized.result_schema.is_some());
+    }
+
+    #[test]
+    fn test_adi_method_deprecated() {
+        let method = AdiMethodInfo {
+            name: "old_list".to_string(),
+            description: "List tasks (deprecated)".to_string(),
+            streaming: false,
+            params_schema: None,
+            result_schema: None,
+            deprecated: true,
+            deprecation_message: Some("Use 'list' method instead".to_string()),
+        };
+
+        let json = serde_json::to_string(&method).unwrap();
+        assert!(json.contains("\"deprecated\":true"));
+        assert!(json.contains("\"deprecation_message\""));
+
+        let deserialized: AdiMethodInfo = serde_json::from_str(&json).unwrap();
+        assert!(deserialized.deprecated);
+        assert_eq!(
+            deserialized.deprecation_message,
+            Some("Use 'list' method instead".to_string())
+        );
     }
 }
