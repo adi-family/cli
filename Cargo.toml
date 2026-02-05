@@ -16,6 +16,8 @@ exclude = [
     # Standalone API services
     "crates/adi-balance-api",
     "crates/adi-credentials-api",
+    # Submodule parent dirs with placeholder Cargo.toml
+    "crates/hive",
 ]
 members = [
     # CLI manager (submodule)
