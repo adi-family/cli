@@ -44,6 +44,9 @@ defaults:
 # -----------------------------------------------------------------------------
 # Reverse Proxy Configuration
 # -----------------------------------------------------------------------------
+# Hosts:
+#   - adi.local              (local development)
+#   - adi-local.the-ihor.com (via Cloudflare tunnel, rewrites Host to adi.local)
 
 proxy:
   bind:
@@ -191,9 +194,12 @@ services:
         ports:
           http: 8011
     proxy:
-      host: adi.local
-      path: /api/signaling
-      strip_prefix: true
+      - host: adi.local
+        path: /api/signaling
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /api/signaling
+        strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -229,9 +235,12 @@ services:
         ports:
           http: 8040
     proxy:
-      host: adi.local
-      path: /api/logging
-      strip_prefix: true
+      - host: adi.local
+        path: /api/logging
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /api/logging
+        strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -267,9 +276,12 @@ services:
         ports:
           http: 8012
     proxy:
-      host: adi.local
-      path: /api/auth
-      strip_prefix: true
+      - host: adi.local
+        path: /api/auth
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /api/auth
+        strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -312,9 +324,12 @@ services:
         ports:
           http: 8015
     proxy:
-      host: adi.local
-      path: /api/platform
-      strip_prefix: true
+      - host: adi.local
+        path: /api/platform
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /api/platform
+        strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -349,8 +364,10 @@ services:
         ports:
           http: 8013
     proxy:
-      host: adi.local
-      path: /
+      - host: adi.local
+        path: /
+      - host: adi-local.the-ihor.com
+        path: /
     healthcheck:
       type: tcp
       tcp:
@@ -358,10 +375,11 @@ services:
     environment:
       static:
         PORT: "8013"
-        AUTH_API_URL: "http://localhost:8012"
-        NEXT_PUBLIC_PLATFORM_API_URL: "http://localhost:8015"
-        NEXT_PUBLIC_FLOWMAP_API_URL: "http://localhost:8017"
+        AUTH_API_URL: "http://adi.local/api/auth"
+        NEXT_PUBLIC_PLATFORM_API_URL: "http://adi.local/api/platform"
+        NEXT_PUBLIC_FLOWMAP_API_URL: "http://adi.local/api/flowmap"
         NEXT_PUBLIC_CREDENTIALS_API_URL: "http://adi.local/api/credentials"
+        NEXT_PUBLIC_SIGNALING_URL: "ws://adi.local/api/signaling/ws"
     depends_on:
       - auth
       - platform
@@ -379,8 +397,10 @@ services:
         ports:
           http: 8035
     proxy:
-      host: adi.local
-      path: /app
+      - host: adi.local
+        path: /app
+      - host: adi-local.the-ihor.com
+        path: /app
     healthcheck:
       type: tcp
       tcp:
@@ -388,9 +408,7 @@ services:
     environment:
       static:
         PORT: "8035"
-        VITE_SIGNALING_URL: "ws://adi.local/api/signaling/ws"
-    depends_on:
-      - signaling
+        VITE_SIGNALING_URL: "/api/signaling/ws"
     restart: on-failure
 
   # ---------------------------------------------------------------------------
@@ -409,9 +427,12 @@ services:
         ports:
           http: 8017
     proxy:
-      host: adi.local
-      path: /api/flowmap
-      strip_prefix: true
+      - host: adi.local
+        path: /api/flowmap
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /api/flowmap
+        strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -442,9 +463,12 @@ services:
         ports:
           http: 8022
     proxy:
-      host: adi.local
-      path: /api/analytics-ingestion
-      strip_prefix: true
+      - host: adi.local
+        path: /api/analytics-ingestion
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /api/analytics-ingestion
+        strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -477,9 +501,12 @@ services:
         ports:
           http: 8023
     proxy:
-      host: adi.local
-      path: /api/analytics
-      strip_prefix: true
+      - host: adi.local
+        path: /api/analytics
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /api/analytics
+        strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -512,9 +539,12 @@ services:
         ports:
           http: 8029
     proxy:
-      host: adi.local
-      path: /api/llm-proxy
-      strip_prefix: true
+      - host: adi.local
+        path: /api/llm-proxy
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /api/llm-proxy
+        strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -556,9 +586,12 @@ services:
         ports:
           http: 8030
     proxy:
-      host: adi.local
-      path: /api/balance
-      strip_prefix: true
+      - host: adi.local
+        path: /api/balance
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /api/balance
+        strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -594,9 +627,12 @@ services:
         ports:
           http: 8033
     proxy:
-      host: adi.local
-      path: /api/credentials
-      strip_prefix: true
+      - host: adi.local
+        path: /api/credentials
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /api/credentials
+        strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -628,9 +664,12 @@ services:
         ports:
           http: 8019
     proxy:
-      host: adi.local
-      path: /api/registry
-      strip_prefix: true
+      - host: adi.local
+        path: /api/registry
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /api/registry
+        strip_prefix: true
     healthcheck:
       type: http
       http:
@@ -645,3 +684,42 @@ services:
       - logging
     restart: on-failure
 
+  # ---------------------------------------------------------------------------
+  # Cloudflare Tunnel (exposes local dev to adi-local.the-ihor.com)
+  # ---------------------------------------------------------------------------
+  # Setup:
+  #   1. Install cloudflared: brew install cloudflared
+  #   2. Login: cloudflared tunnel login
+  #   3. Create tunnel: cloudflared tunnel create adi-local
+  #   4. Add DNS: cloudflared tunnel route dns adi-local adi-local.the-ihor.com
+  #   5. Copy tunnel credentials to ~/.cloudflared/<tunnel-id>.json
+  #   6. Set CF_TUNNEL_ID in .env.local
+  #
+  # Basic auth is configured in the tunnel config file (~/.cloudflared/config.yml)
+  # ---------------------------------------------------------------------------
+
+  cloudflare-tunnel:
+    runner:
+      type: script
+      script:
+        run: |
+          cloudflared tunnel --config ~/.cloudflared/adi-local.yml run adi-local
+    rollout:
+      type: recreate
+      recreate:
+        ports: {}
+    healthcheck:
+      type: cmd
+      cmd:
+        command: pgrep -f "cloudflared tunnel.*adi-local" || exit 1
+        interval: 10s
+        timeout: 5s
+        retries: 3
+    environment:
+      static:
+        TUNNEL_ORIGIN_CERT: ${env.CF_ORIGIN_CERT:-~/.cloudflared/cert.pem}
+    depends_on:
+      - web
+      - auth
+      - platform
+    restart: on-failure

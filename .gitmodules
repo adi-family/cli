@@ -4,24 +4,6 @@
 [submodule "crates/lib/lib-embed"]
 	path = crates/lib/lib-embed
 	url = https://github.com/adi-family/lib-embed.git
-[submodule "crates/adi-indexer-core"]
-	path = crates/adi-indexer-core
-	url = https://github.com/adi-family/adi-indexer-core.git
-[submodule "crates/adi-indexer-cli"]
-	path = crates/adi-indexer-cli
-	url = https://github.com/adi-family/adi-indexer-cli.git
-[submodule "crates/adi-indexer-http"]
-	path = crates/adi-indexer-http
-	url = https://github.com/adi-family/adi-indexer-http.git
-[submodule "crates/adi-tasks-core"]
-	path = crates/adi-tasks-core
-	url = https://github.com/adi-family/adi-tasks-core.git
-[submodule "crates/adi-tasks-cli"]
-	path = crates/adi-tasks-cli
-	url = https://github.com/adi-family/adi-tasks-cli.git
-[submodule "crates/adi-tasks-http"]
-	path = crates/adi-tasks-http
-	url = https://github.com/adi-family/adi-tasks-http.git
 [submodule "crates/lib/lib-animation"]
 	path = crates/lib/lib-animation
 	url = https://github.com/adi-family/lib-animation.git
@@ -58,24 +40,6 @@
 [submodule "crates/adi-agent-loop/plugin"]
 	path = crates/adi-agent-loop/plugin
 	url = https://github.com/adi-family/adi-agent-loop-plugin.git
-[submodule "crates/adi-indexer-plugin"]
-	path = crates/adi-indexer-plugin
-	url = https://github.com/adi-family/adi-indexer-plugin.git
-[submodule "crates/adi-knowledgebase-cli"]
-	path = crates/adi-knowledgebase-cli
-	url = https://github.com/adi-family/adi-knowledgebase-cli.git
-[submodule "crates/adi-knowledgebase-core"]
-	path = crates/adi-knowledgebase-core
-	url = https://github.com/adi-family/adi-knowledgebase-core.git
-[submodule "crates/adi-knowledgebase-http"]
-	path = crates/adi-knowledgebase-http
-	url = https://github.com/adi-family/adi-knowledgebase-http.git
-[submodule "crates/adi-knowledgebase-plugin"]
-	path = crates/adi-knowledgebase-plugin
-	url = https://github.com/adi-family/adi-knowledgebase-plugin.git
-[submodule "crates/adi-tasks-plugin"]
-	path = crates/adi-tasks-plugin
-	url = https://github.com/adi-family/adi-tasks-plugin.git
 [submodule "crates/lib/lib-plugin-host"]
 	path = crates/lib/lib-plugin-host
 	url = https://github.com/adi-family/lib-plugin-host.git
@@ -103,55 +67,27 @@
 [submodule "crates/lib/lib-misc-color"]
 	path = crates/lib/lib-misc-color
 	url = https://github.com/adi-family/lib-misc-color.git
-
 [submodule "crates/lib/lib-indexer-lang-abi"]
 	path = crates/lib/lib-indexer-lang-abi
 	url = https://github.com/adi-family/lib-indexer-lang-abi.git
-[submodule "crates/adi-lang-rust"]
-	path = crates/adi-lang-rust
-	url = https://github.com/adi-family/adi-lang-rust.git
-[submodule "crates/adi-lang-python"]
-	path = crates/adi-lang-python
-	url = https://github.com/adi-family/adi-lang-python.git
-[submodule "crates/adi-lang-typescript"]
-	path = crates/adi-lang-typescript
-	url = https://github.com/adi-family/adi-lang-typescript.git
-[submodule "crates/adi-lang-cpp"]
-	path = crates/adi-lang-cpp
-	url = https://github.com/adi-family/adi-lang-cpp.git
-[submodule "crates/adi-lang-go"]
-	path = crates/adi-lang-go
-	url = https://github.com/adi-family/adi-lang-go.git
-[submodule "crates/adi-lang-java"]
-	path = crates/adi-lang-java
-	url = https://github.com/adi-family/adi-lang-java.git
-[submodule "crates/adi-lang-csharp"]
-	path = crates/adi-lang-csharp
-	url = https://github.com/adi-family/adi-lang-csharp.git
-[submodule "crates/adi-lang-ruby"]
-	path = crates/adi-lang-ruby
-	url = https://github.com/adi-family/adi-lang-ruby.git
-[submodule "crates/adi-lang-php"]
-	path = crates/adi-lang-php
-	url = https://github.com/adi-family/adi-lang-php.git
-[submodule "crates/adi-lang-swift"]
-	path = crates/adi-lang-swift
-	url = https://github.com/adi-family/adi-lang-swift.git
-[submodule "crates/adi-lang-lua"]
-	path = crates/adi-lang-lua
-	url = https://github.com/adi-family/adi-lang-lua.git
+[submodule "crates/adi-lang"]
+	path = crates/adi-lang
+	url = https://github.com/adi-family/adi-lang.git
+[submodule "crates/adi-indexer"]
+	path = crates/adi-indexer
+	url = https://github.com/adi-family/adi-indexer.git
+[submodule "crates/adi-tasks"]
+	path = crates/adi-tasks
+	url = https://github.com/adi-family/adi-tasks.git
+[submodule "crates/adi-knowledgebase"]
+	path = crates/adi-knowledgebase
+	url = https://github.com/adi-family/adi-knowledgebase.git
 [submodule "apps/infra-service-web"]
 	path = apps/infra-service-web
 	url = git@github.com:adi-family/infra-service-web.git
 [submodule "crates/adi-platform-api"]
 	path = crates/adi-platform-api
 	url = https://github.com/adi-family/adi-platform-api.git
-[submodule "apps/infra-service-platform-backend"]
-	path = apps/infra-service-platform-backend
-	url = https://github.com/adi-family/infra-service-platform-backend.git
-[submodule "apps/infra-service-signaling"]
-	path = apps/infra-service-signaling
-	url = https://github.com/adi-family/infra-service-signaling.git
 [submodule "crates/lib/lib-tarminal-sync"]
 	path = crates/lib/lib-tarminal-sync
 	url = git@github.com:adi-family/lib-tarminal-sync.git
@@ -164,7 +100,6 @@
 [submodule "release/adi.the-ihor.com"]
 	path = release/adi.the-ihor.com
 	url = git@github.com:adi-family/adi.the-ihor.com.git
-
 [submodule "crates/adi-llm-uzu-plugin"]
 	path = crates/adi-llm-uzu-plugin
 	url = https://github.com/adi-family/adi-llm-uzu-plugin.git
@@ -180,3 +115,48 @@
 [submodule "apps/web-app"]
 	path = apps/web-app
 	url = git@github.com:adi-family/web-app.git
+[submodule "apps/flowmap-api"]
+	path = apps/flowmap-api
+	url = https://github.com/adi-family/flowmap-api.git
+[submodule "apps/chrome-extension-debugger"]
+	path = apps/chrome-extension-debugger
+	url = https://github.com/adi-family/chrome-extension-debugger.git
+[submodule "crates/adi-auth"]
+	path = crates/adi-auth
+	url = https://github.com/adi-family/adi-auth.git
+[submodule "crates/adi-api-proxy"]
+	path = crates/adi-api-proxy
+	url = https://github.com/adi-family/adi-api-proxy.git
+[submodule "crates/adi-audio"]
+	path = crates/adi-audio
+	url = https://github.com/adi-family/adi-audio.git
+[submodule "crates/adi-tools"]
+	path = crates/adi-tools
+	url = https://github.com/adi-family/adi-tools.git
+[submodule "crates/adi-browser-debug"]
+	path = crates/adi-browser-debug
+	url = https://github.com/adi-family/adi-browser-debug.git
+[submodule "crates/adi-workflow"]
+	path = crates/adi-workflow
+	url = https://github.com/adi-family/adi-workflow.git
+[submodule "crates/adi-linter"]
+	path = crates/adi-linter
+	url = https://github.com/adi-family/adi-linter.git
+[submodule "crates/adi-balance-api"]
+	path = crates/adi-balance-api
+	url = https://github.com/adi-family/adi-balance-api.git
+[submodule "crates/adi-credentials-api"]
+	path = crates/adi-credentials-api
+	url = https://github.com/adi-family/adi-credentials-api.git
+[submodule "crates/adi-logging-service"]
+	path = crates/adi-logging-service
+	url = https://github.com/adi-family/adi-logging-service.git
+[submodule "crates/webrtc-test-peer"]
+	path = crates/webrtc-test-peer
+	url = https://github.com/adi-family/webrtc-test-peer.git
+[submodule "crates/adi-embed-plugin"]
+	path = crates/adi-embed-plugin
+	url = https://github.com/adi-family/adi-embed-plugin.git
+[submodule "crates/adi-llm-extract-plugin"]
+	path = crates/adi-llm-extract-plugin
+	url = https://github.com/adi-family/adi-llm-extract-plugin.git

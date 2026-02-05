@@ -3140,6 +3140,8 @@ dependencies = [
 name = "cocoon"
 version = "0.2.7"
 dependencies = [
+ "adi-tasks-core",
+ "async-trait",
  "base64 0.22.1",
  "chrono",
  "futures",
@@ -3154,6 +3156,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
  "tokio-tungstenite 0.24.0",
  "tracing",

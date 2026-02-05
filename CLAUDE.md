@@ -7,36 +7,8 @@ adi-cli, rust, monorepo, workspace, submodules, meta-repo
 
 ## Code Guidelines
 - For translations and internationalization, prefer Fluent (https://projectfluent.org/)
-- Translation plugin system: See `docs/i18n-translation-plugin-system.md` for architecture and implementation guide
-- Translation plugins follow naming pattern: `[plugin-id].[language-code]` (e.g., `adi.tasks.en-US`, `adi.tasks.zh-CN`)
-
-## Internationalization (i18n)
-
-### Status
-- ✅ Phase 1: Core infrastructure (`lib-i18n-core`) - Complete
-- ✅ Phase 2: English translation plugin (`adi-cli-lang-en`) - Complete
-- ✅ Phase 3: Integration into `adi-cli` - Complete (96+ messages converted)
-- ⏳ Phase 4: Testing & documentation - Pending
-
-### Implementation Progress
-See `NEXT_STEPS_I18N.md` for detailed status and remaining work.
-
-### Architecture
-- **lib-i18n-core**: Core library with Fluent integration, service discovery, and global `t!()` macro
-- **Translation plugins**: Dynamic plugins that provide `.ftl` message files
-  - `adi-cli-lang-en`: English translations (~100 messages across 7 domains)
-  - Future: `adi-cli-lang-zh-CN`, `adi-cli-lang-uk-UA`, etc.
-- **Service-based discovery**: Plugins register translation services, discovered at runtime
-
-### Message Domains
-1. Self-update (11 messages) - Update checking and installation
-2. Shell completions (7 messages) - Completion initialization
-3. Plugin management (25 messages) - Install, update, uninstall
-4. Search (5 messages) - Registry search
-5. Services (3 messages) - Service listing
-6. Run commands (8 messages) - Plugin execution
-7. External commands (9 messages) - Dynamic command dispatch
-8. Common (9 messages) - Shared UI elements
+- Translation plugins follow naming pattern: `[plugin-id].[language-code]` (e.g., `adi.tasks.en-US`)
+- `lib-i18n-core`: Core library with Fluent integration, service discovery, and global `t!()` macro
 
 ## Plugin ABI Architecture
 
@@ -72,6 +44,11 @@ Components that users interact with via `adi` CLI need a plugin:
 - `adi-knowledgebase` (core, cli, http, plugin) - `adi kb`
 - `adi-api-proxy` (core, http, plugin) - `adi proxy`
 - `hive` (core, http, plugin) - `adi hive`
+- `adi-audio` (core, plugin) - `adi audio`
+- `adi-tools` (core, plugin) - `adi tools`
+- `adi-browser-debug` (core, plugin, mcp) - `adi browser-debug`
+- `adi-workflow` (plugin) - `adi workflow`
+- `adi-linter` (plugin) - `adi lint`
 
 ### Backend Services (no plugin)
 Services that run on servers and are called via HTTP don't need plugins:
@@ -84,17 +61,13 @@ Services that run on servers and are called via HTTP don't need plugins:
 
 **Components:**
 - `adi-platform-api` (core, http, cli) - Unified Platform API
-- `adi-balance-api` (core, http, cli) - Balance/transaction tracking
-- `adi-credentials-api` (core, http, cli) - Secure credentials storage
-- `adi-logging-service` (core, http, cli) - Centralized logging
-- `tarminal-signaling-server` (core, http, cli) - WebSocket signaling
+- `adi-auth` (core, http) - Authentication service (email + TOTP)
+- `tarminal-signaling-server` - WebSocket signaling
 
-**Migration Status:**
-- ✅ `adi-platform-api` - Migrated to core/http/cli pattern
-- ⏳ `adi-balance-api` - Pending migration
-- ⏳ `adi-credentials-api` - Pending migration
-- ⏳ `adi-logging-service` - Pending migration
-- ⏳ `tarminal-signaling-server` - Pending migration
+**Standalone API services** (excluded from main workspace, developed independently):
+- `adi-balance-api` - Balance/transaction tracking
+- `adi-credentials-api` - Secure credentials storage
+- `adi-logging-service` - Centralized logging
 
 **Naming convention:**
 - Core: `adi-{component}-core` (e.g., `adi-platform-api-core`)
@@ -105,52 +78,81 @@ Services that run on servers and are called via HTTP don't need plugins:
 **Dependencies flow:** `cli` → `core` ← `http` (both cli and http depend on core)
 
 ## Submodules
+
+### Core CLI
 - `crates/adi-cli` - Component installer/manager
-- `crates/lib-embed` - Shared embedding library
-- `crates/lib-cli-common` - Common CLI utilities
-- `crates/lib-daemon-core` - Generic daemon management library (PID files, Unix sockets, IPC, shutdown coordination)
-- `crates/lib-migrations` - Database migration framework
-- `crates/adi-indexer/core` - Code indexer core library
-- `crates/adi-indexer/cli` - Code indexer CLI
-- `crates/adi-indexer/http` - Code indexer HTTP server
-- `crates/adi-tasks/core` - Task management core library
-- `crates/adi-tasks/cli` - Task management CLI
-- `crates/adi-tasks/http` - Task management HTTP server
-- `crates/adi-knowledgebase/core` - Knowledgebase core library (graph DB + embeddings)
-- `crates/adi-knowledgebase/cli` - Knowledgebase CLI
-- `crates/adi-knowledgebase/http` - Knowledgebase HTTP server
-- `crates/adi-agent-loop/core` - Agent loop core library (autonomous LLM agents)
-- `crates/adi-agent-loop/http` - Agent loop HTTP server
-- `crates/adi-agent-loop/plugin` - Agent loop plugin (includes CLI functionality)
-- `crates/adi-api-proxy/core` - API Proxy core library (BYOK/Platform modes, encryption)
-- `crates/adi-api-proxy/http` - API Proxy HTTP server (OpenAI-compatible proxy)
-- `crates/adi-api-proxy/plugin` - API Proxy CLI plugin
-- `crates/hive/core` - Hive core library (cocoon container orchestration)
-- `crates/hive/http` - Hive HTTP server (WebSocket signaling client)
-- `crates/hive/plugin` - Hive CLI plugin (`adi hive` commands)
-- `crates/adi-executor` - Docker-based task execution service
-- `crates/cocoon` - Containerized worker with signaling server connectivity for remote command execution
-- `crates/lib-misc-color` - Unified color type (RGB/RGBA/Hex)
-- `crates/lib-animation` - UI animation utilities
-- `crates/lib-syntax-highlight` - Syntax highlighting tokenizer
-- `crates/lib-terminal-theme` - Terminal color themes
-- `crates/lib-json-tree` - JSON tree view state management
-- `crates/lib-terminal-grid` - VTE terminal emulation + PTY
-- `crates/lib-iced-ui` - Reusable iced UI components
-- `crates/lib-client-github` - GitHub API client library
-- `crates/lib-client-openrouter` - OpenRouter API client library
-- `crates/lib-signaling-protocol` - WebSocket signaling protocol (device pairing, cocoon spawning, WebRTC, SSL, browser debug) - used by hive, cocoon, signaling-server, platform-api
-- `crates/lib-tarminal-sync` - Terminal CRDT sync protocol (version vectors, grid deltas) - used by Tarminal terminal emulator only
-- `crates/tarminal-signaling-server` - WebSocket signaling server for device pairing
-- `crates/adi-platform-api/core` - Platform API core library (business logic, types, storage)
-- `crates/adi-platform-api/http` - Platform API HTTP server
-- `crates/adi-platform-api/cli` - Platform API CLI (migrations, server management)
-- `crates/lib-analytics-core` - Analytics event tracking and persistence library
-- `crates/adi-analytics-api` - Analytics API (metrics, dashboards, aggregates)
-- `crates/lib-logging-core` - Centralized logging client with distributed tracing
-- `crates/adi-logging-service` - Logging service (ingestion + query API)
-- `crates/adi-balance-api` - Balance and transaction tracking service
-- `crates/adi-credentials-api` - Secure credentials storage service (ChaCha20-Poly1305 encrypted)
+
+### User-Facing Components (nested structure: core/http/plugin)
+- `crates/adi-agent-loop` - Autonomous LLM agents
+- `crates/adi-tasks` - Task management
+- `crates/adi-indexer` - Code indexer
+- `crates/adi-knowledgebase` - Graph DB + embeddings
+- `crates/adi-api-proxy` - LLM API proxy (BYOK/Platform modes)
+- `crates/hive` - Cocoon container orchestration
+- `crates/adi-audio` - Audio processing
+- `crates/adi-tools` - CLI tools collection
+- `crates/adi-browser-debug` - Browser debugging + MCP
+- `crates/adi-workflow` - Workflow automation
+- `crates/adi-linter` - Code linting
+- `crates/adi-lang` - Language analyzers (rust, python, typescript, etc.)
+
+### Backend Services
+- `crates/adi-platform-api` - Unified Platform API (core/http/cli)
+- `crates/adi-auth` - Authentication service (email + TOTP)
+- `crates/tarminal-signaling-server` - WebSocket signaling server
+- `crates/adi-analytics-api` - Analytics API (metrics, dashboards)
+- `crates/adi-analytics-ingestion` - Analytics event ingestion
+- `crates/adi-plugin-registry-http` - Plugin registry HTTP server
+- `crates/adi-executor` - Docker-based task execution
+- `crates/cocoon` - Containerized worker for remote execution
+
+### Standalone Services (separate workspaces)
+- `crates/adi-balance-api` - Balance/transaction tracking
+- `crates/adi-credentials-api` - Secure credentials storage (ChaCha20-Poly1305)
+- `crates/adi-logging-service` - Centralized logging (ingestion + query)
+
+### Libraries
+- `crates/lib/lib-embed` - Shared embedding library
+- `crates/lib/lib-cli-common` - Common CLI utilities
+- `crates/lib/lib-daemon-core` - Daemon management (PID, Unix sockets, IPC)
+- `crates/lib/lib-migrations` - Database migration framework
+- `crates/lib/lib-migrations-core` - Migration core types
+- `crates/lib/lib-migrations-sql` - SQL migration utilities
+- `crates/lib/lib-misc-color` - Unified color type (RGB/RGBA/Hex)
+- `crates/lib/lib-animation` - UI animation utilities
+- `crates/lib/lib-syntax-highlight` - Syntax highlighting tokenizer
+- `crates/lib/lib-terminal-theme` - Terminal color themes
+- `crates/lib/lib-json-tree` - JSON tree view state management
+- `crates/lib/lib-terminal-grid` - VTE terminal emulation + PTY
+- `crates/lib/lib-iced-ui` - Reusable iced UI components
+- `crates/lib/lib-client` - API client utilities
+- `crates/lib/lib-console-output` - Console output formatting
+- `crates/lib/lib-http-common` - Common HTTP utilities
+- `crates/lib/lib-signaling-protocol` - WebSocket signaling protocol
+- `crates/lib/lib-tarminal-sync` - Terminal CRDT sync protocol
+- `crates/lib/lib-analytics-core` - Analytics client library
+- `crates/lib/lib-logging-core` - Logging client with distributed tracing
+- `crates/lib/lib-plugin-abi-v3` - Unified plugin ABI
+- `crates/lib/lib-plugin-host` - Plugin host runtime
+- `crates/lib/lib-plugin-manifest` - Plugin manifest parsing
+- `crates/lib/lib-plugin-registry` - Plugin registry client
+- `crates/lib/lib-plugin-verify` - Plugin verification
+- `crates/lib/lib-indexer-lang-abi` - Language analyzer ABI
+- `crates/lib/lib-typespec-api` - TypeSpec API utilities
+- `crates/lib/lib-i18n-core` - Internationalization (Fluent)
+- `crates/lib/lib-mcp-core` - Model Context Protocol core
+- `crates/lib/lib-webrtc-manager` - WebRTC management
+- `crates/lib/lib-hive-daemon-client` - Hive daemon client
+- `crates/lib/lib-task-store` - Task persistence
+
+### Plugins
+- `crates/adi-embed-plugin` - Embedding plugin
+- `crates/adi-llm-extract-plugin` - LLM extraction plugin
+- `crates/adi-llm-uzu-plugin` - Local LLM inference (Apple Silicon)
+
+### Tools
+- `crates/tool-generate-heartbit` - Heartbit generation
+- `crates/webrtc-test-peer` - WebRTC testing utility
 
 ## FlowMap (Standalone)
 - `crates/lib-flowmap-core` - Core flow graph types
@@ -477,6 +479,8 @@ Logging service needs:
 ## Apps
 - `apps/infra-service-web` - Web UI for ADI (Next.js + Tailwind CSS)
 - `apps/flowmap-api` - FlowMap HTTP API server for code flow visualization
+- `apps/web-app` - Web application
+- `apps/chrome-extension-debugger` - Chrome extension for debugging
 
 ## Production Release Images
 All production services are built using **cross-compilation** for 10-20x faster builds than Docker.
@@ -556,6 +560,7 @@ Interactive workflows are defined in `.adi/workflows/` directory. Each workflow 
 | `build-linux` | Cross-compile services for Linux | `adi workflow build-linux` |
 | `build-plugin` | Build and install plugins locally (no registry) | `adi workflow build-plugin` |
 | `release` | Build + Docker image + push to registry | `adi workflow release` |
+| `release-cli` | Build and release CLI binary | `adi workflow release-cli` |
 | `deploy` | Deploy services to Coolify | `adi workflow deploy` |
 | `release-plugin` | Build and publish a single plugin | `adi workflow release-plugin` |
 | `release-plugins` | Build and publish multiple plugins | `adi workflow release-plugins` |
@@ -564,6 +569,7 @@ Interactive workflows are defined in `.adi/workflows/` directory. Each workflow 
 | `seal` | Commit and push all changes including submodules | `adi workflow seal` |
 | `cocoon-images` | Build cocoon Docker image variants | `adi workflow cocoon-images` |
 | `autodoc` | Generate API documentation with LLM enrichment | `adi workflow autodoc` |
+| `convert-sounds` | Convert audio files | `adi workflow convert-sounds` |
 
 ### Workflow Structure
 
@@ -765,35 +771,8 @@ adi run adi.tasks list            # Alternative plugin run syntax
 git submodule update --remote     # Pull latest from all submodules
 ```
 
-## Deployment Repos
-Some crates have separate deployment wrapper repos that contain them as submodules:
-- `apps/infra-service-auth` wraps `crates/adi-auth`
-
-After pushing changes to a crate, also update its deployment repo:
-```bash
-cd apps/infra-service-auth
-git submodule update --remote adi-auth
-git add adi-auth && git commit -m "🔗 Update adi-auth: <description>" && git push
-```
-
 ## Component Repos
-Each submodule is an independent repo that can be developed standalone:
-- adi-cli: `../adi-cli`
-- lib-embed: `../lib-embed`
-- lib-cli-common: `../lib-cli-common`
-- lib-migrations: `../lib-migrations`
-- adi-indexer: `../adi-indexer` (contains core, cli, http, plugin)
-- adi-tasks: `../adi-tasks` (contains core, cli, http, plugin)
-- lib-misc-color: `../lib-misc-color`
-- lib-animation: `../lib-animation`
-- lib-syntax-highlight: `../lib-syntax-highlight`
-- lib-terminal-theme: `../lib-terminal-theme`
-- lib-json-tree: `../lib-json-tree`
-- lib-terminal-grid: `../lib-terminal-grid`
-- lib-iced-ui: `../lib-iced-ui`
-- lib-client-github: `../lib-client-github`
-- lib-client-openrouter: `../lib-client-openrouter`
-- adi-executor: `../adi-executor`
-- adi-web-ui: `../adi-web-ui`
-- each crate in the crates dir must be a submodule
-- each app in the apps dir must be a submodule
+Each submodule is an independent repo that can be developed standalone.
+- Each crate in `crates/` must be a submodule
+- Each app in `apps/` must be a submodule
+- Nested components (like `adi-indexer/core`) are contained in a single submodule repo
