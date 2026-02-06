@@ -5,9 +5,9 @@
 //! Password (hidden) input component.
 
 use super::types::generate_id;
-use crate::{console as out_console, is_interactive, OutputMode};
+use crate::{console as out_console, is_interactive, theme, OutputMode};
 use chrono::Utc;
-use console::{style, Key, Term};
+use console::{Key, Term};
 use std::io::Write;
 
 /// Password input builder.
@@ -68,7 +68,7 @@ impl Password {
 
             // Check empty
             if !self.allow_empty && password.is_empty() {
-                println!("{} Password cannot be empty", style("!").yellow());
+                println!("{} Password cannot be empty", theme::warning(theme::icons::WARNING));
                 continue;
             }
 
@@ -76,7 +76,7 @@ impl Password {
             if let Some(ref confirm_prompt) = self.confirmation {
                 let confirm = self.read_password(&term, confirm_prompt)?;
                 if password != confirm {
-                    println!("{} Passwords do not match", style("!").yellow());
+                    println!("{} Passwords do not match", theme::warning(theme::icons::WARNING));
                     continue;
                 }
             }
@@ -141,7 +141,7 @@ impl Password {
 
             // Check empty
             if !self.allow_empty && password.is_empty() {
-                println!("{} Password cannot be empty", style("!").yellow());
+                println!("{} Password cannot be empty", theme::warning(theme::icons::WARNING));
                 continue;
             }
 
@@ -156,7 +156,7 @@ impl Password {
                 };
 
                 if password != confirm {
-                    println!("{} Passwords do not match", style("!").yellow());
+                    println!("{} Passwords do not match", theme::warning(theme::icons::WARNING));
                     continue;
                 }
             }

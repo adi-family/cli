@@ -126,7 +126,7 @@ Services that run on servers and are called via HTTP don't need plugins:
 - `crates/lib/lib-terminal-grid` - VTE terminal emulation + PTY
 - `crates/lib/lib-iced-ui` - Reusable iced UI components
 - `crates/lib/lib-client` - API client utilities
-- `crates/lib/lib-console-output` - Console output formatting
+- `crates/lib/lib-console-output` - Console output component library (see below)
 - `crates/lib/lib-http-common` - Common HTTP utilities
 - `crates/lib/lib-signaling-protocol` - WebSocket signaling protocol
 - `crates/lib/lib-tarminal-sync` - Terminal CRDT sync protocol
@@ -455,6 +455,69 @@ Services need:
 Logging service needs:
 - `DATABASE_URL` - TimescaleDB connection string
 - `PORT` - Listen port (default: 8040)
+
+## Console Output Library (`lib-console-output`)
+
+Unified console output component library for all CLI plugins. Use this for **all** user-facing terminal output.
+
+### Theme (`theme` module) — ADI Brand Identity (A7 palette)
+- All colors are basic 16 ANSI — works on every terminal
+- `theme::brand(val)` / `theme::brand_bold(val)` — magenta, for spinners, selections, interactive elements
+- `theme::info(val)` — magenta (brand-aligned info messages)
+- `theme::debug(val)` — cyan (distinct from brand)
+- `theme::success(val)` — green
+- `theme::warning(val)` — yellow
+- `theme::error(val)` — red bold
+- `theme::muted(val)` — dim (trace, hints, borders, disabled)
+- `theme::bold(val)` — bold (prompts, headers)
+- `theme::icons::*` — icon constants: `SUCCESS` (✓), `ERROR` (✕), `WARNING` (⚠), `INFO` (ℹ), `DEBUG` (›), `TRACE` (·), `BRAND` (◆)
+- To change the entire visual identity, only edit `theme.rs`
+
+### Block Components (`blocks` module)
+All implement `Renderable` trait: `line_count()`, `print() -> LiveHandle`, `render() -> String`, `Display`.
+
+| Component | Use case | Live variant |
+|-----------|----------|--------------|
+| `Table` | Bordered table with auto-width columns, rounded corners | `LiveTable` — push/set/remove rows, auto re-renders |
+| `Columns` | Borderless aligned columns with optional header | — |
+| `Card` | Bordered panel with optional title | — |
+| `KeyValue` | Aligned label-value pairs | `LiveKeyValue` — set key/value, auto re-renders |
+| `Section` | Header with separator line (`── Title ──`) | — |
+| `List` | Bullet (`•`) or numbered list | — |
+
+- `LiveHandle` — returned by `.print()`, provides `.clear()` and `.refresh(new)` for in-place terminal updates
+- Width calculation uses `console::measure_text_width` — safe with ANSI-styled cell values
+- Borders styled via `theme::muted`, titles via `theme::brand_bold`, bullets via `theme::brand`
+
+### Usage Example
+```rust
+use lib_console_output::{theme, blocks::{Table, Section, Card, KeyValue, Renderable}};
+
+// Section header
+Section::new("Services").width(50).print();
+
+// Bordered table with styled cells
+let handle = Table::new()
+    .header(["Service", "Status", "Port"])
+    .row(["web", &theme::success("running").to_string(), "8080"])
+    .row(["api", &theme::error("stopped").to_string(), "3000"])
+    .print();
+
+// Clear and replace later
+handle.clear();
+
+// Live table (auto-refreshes on mutation)
+let mut live = blocks::LiveTable::new().header(["Service", "Status"]);
+live.push_row(["web", "starting"]);
+live.set_row(0, ["web", "running"]); // clears + re-renders
+live.done();
+```
+
+### Other Modules
+- `progress` — Spinner, ProgressBar, StepProgress, MultiProgress (all themed magenta)
+- `input` — Select, MultiSelect, Confirm, Input, Password (interactive, JSON stream, fallback modes)
+- Macros: `out_info!`, `out_error!`, `out_success!`, `out_warn!`, `out_debug!`, `out_trace!`
+- Dual-mode: text (human) + JSON stream (`SILK_MODE=true`) for WebRTC/cloud
 
 ## Cocoon
 - Cocoon is a containerized worker environment that connects to the signaling server

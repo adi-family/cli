@@ -5,9 +5,9 @@
 //! Text input component.
 
 use super::types::generate_id;
-use crate::{console as out_console, is_interactive, OutputMode};
+use crate::{console as out_console, is_interactive, theme, OutputMode};
 use chrono::Utc;
-use console::{style, Key, Term};
+use console::{Key, Term};
 use std::io::Write;
 
 /// Validator function type alias.
@@ -85,7 +85,7 @@ impl Input {
             let default_hint = self
                 .default
                 .as_ref()
-                .map(|d| format!(" [{}]", style(d).dim()))
+                .map(|d| format!(" [{}]", theme::muted(d)))
                 .unwrap_or_default();
 
             print!("\r{}{}: {}", self.prompt, default_hint, buffer);
@@ -102,14 +102,14 @@ impl Input {
                     // Validate
                     if !self.allow_empty && value.is_empty() {
                         println!();
-                        println!("{} Input is required", style("!").yellow());
+                        println!("{} Input is required", theme::warning(theme::icons::WARNING));
                         continue;
                     }
 
                     if let Some(ref validator) = self.validator {
                         if let Err(msg) = validator(&value) {
                             println!();
-                            println!("{} {}", style("!").yellow(), msg);
+                            println!("{} {}", theme::warning(theme::icons::WARNING), msg);
                             continue;
                         }
                     }
@@ -180,13 +180,13 @@ impl Input {
 
         // Validate
         if !self.allow_empty && value.is_empty() {
-            println!("{} Input is required", style("!").yellow());
+            println!("{} Input is required", theme::warning(theme::icons::WARNING));
             return None;
         }
 
         if let Some(ref validator) = self.validator {
             if let Err(msg) = validator(&value) {
-                println!("{} {}", style("!").yellow(), msg);
+                println!("{} {}", theme::warning(theme::icons::WARNING), msg);
                 return None;
             }
         }

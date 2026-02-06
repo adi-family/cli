@@ -5,7 +5,7 @@
 //! Multiple selection input component.
 
 use super::types::{generate_id, InputRequest, SelectOption, SelectOptionJson};
-use crate::{console as out_console, is_interactive, OutputMode};
+use crate::{console as out_console, is_interactive, theme, OutputMode};
 use chrono::Utc;
 use console::{style, Key, Term};
 use std::collections::HashSet;
@@ -98,10 +98,10 @@ impl<T: Clone> MultiSelect<T> {
         }
 
         // Print prompt and instructions
-        println!("{}", style(&self.prompt).bold());
+        println!("{}", theme::bold(&self.prompt));
         println!(
             "{}",
-            style("(Space to toggle, Enter to confirm, Esc to cancel)").dim()
+            theme::muted("(Space to toggle, Enter to confirm, Esc to cancel)")
         );
 
         // Initial render
@@ -159,7 +159,7 @@ impl<T: Clone> MultiSelect<T> {
                         .collect();
                     println!(
                         "{} {}",
-                        style("\u{2713}").green(),
+                        theme::success(theme::icons::SUCCESS),
                         if labels.is_empty() {
                             "(none)".to_string()
                         } else {
@@ -170,7 +170,7 @@ impl<T: Clone> MultiSelect<T> {
                 }
                 Ok(Key::Escape | Key::Char('q')) => {
                     self.clear_options(&term);
-                    println!("{} Cancelled", style("\u{2715}").red());
+                    println!("{} Cancelled", theme::error(theme::icons::ERROR));
                     return None;
                 }
                 _ => {}
@@ -191,27 +191,27 @@ impl<T: Clone> MultiSelect<T> {
             let line = if opt.disabled {
                 format!(
                     "{} {} {} {}",
-                    style(prefix).dim(),
-                    style(checkbox).dim(),
-                    style(&opt.label).dim(),
-                    style("(disabled)").dim()
+                    theme::muted(prefix),
+                    theme::muted(checkbox),
+                    theme::muted(&opt.label),
+                    theme::muted("(disabled)")
                 )
             } else if is_cursor {
                 format!(
                     "{} {} {}",
-                    style(prefix).cyan(),
+                    theme::brand(prefix),
                     if is_selected {
-                        style(checkbox).green()
+                        theme::success(checkbox)
                     } else {
-                        style(checkbox).cyan()
+                        theme::brand(checkbox)
                     },
-                    style(&opt.label).cyan()
+                    theme::brand(&opt.label)
                 )
             } else {
                 format!(
                     "  {} {}",
                     if is_selected {
-                        style(checkbox).green()
+                        theme::success(checkbox)
                     } else {
                         style(checkbox).white()
                     },
@@ -264,21 +264,21 @@ impl<T: Clone> MultiSelect<T> {
 
     /// Simple mode - comma-separated number selection.
     fn run_simple(self) -> Option<Vec<T>> {
-        println!("{}", style(&self.prompt).bold());
+        println!("{}", theme::bold(&self.prompt));
         for (i, opt) in self.options.iter().enumerate() {
             let marker = if self.defaults.contains(&i) { "*" } else { " " };
             if opt.disabled {
                 println!(
                     " {} {} {} (disabled)",
                     marker,
-                    style(format!("[{}]", i + 1)).dim(),
-                    style(&opt.label).dim()
+                    theme::muted(format!("[{}]", i + 1)),
+                    theme::muted(&opt.label)
                 );
             } else {
                 println!(
                     " {} {} {}",
                     marker,
-                    style(format!("[{}]", i + 1)).cyan(),
+                    theme::brand(format!("[{}]", i + 1)),
                     &opt.label
                 );
             }
@@ -319,7 +319,7 @@ impl<T: Clone> MultiSelect<T> {
             if indices.len() < min {
                 println!(
                     "{} At least {} selection(s) required",
-                    style("!").yellow(),
+                    theme::warning(theme::icons::WARNING),
                     min
                 );
                 return None;

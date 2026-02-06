@@ -9,17 +9,14 @@
 //! - Non-interactive: Print progress updates as separate lines
 //! - JSON stream: Send structured progress events
 
-use crate::{console as out_console, OutputMode};
+use crate::{console as out_console, theme, OutputMode};
 use chrono::{DateTime, Utc};
-use console::{style, StyledObject, Term};
+use console::{StyledObject, Term};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-
-/// Spinner animation frames.
-const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 /// Default spinner tick interval.
 const SPINNER_INTERVAL: Duration = Duration::from_millis(80);
@@ -150,7 +147,7 @@ impl Spinner {
         }
 
         if self.last_tick.elapsed() >= SPINNER_INTERVAL {
-            self.frame = (self.frame + 1) % SPINNER_FRAMES.len();
+            self.frame = (self.frame + 1) % theme::SPINNER_FRAMES.len();
             self.last_tick = Instant::now();
 
             if self.interactive && self.mode.is_text() {
@@ -161,8 +158,8 @@ impl Spinner {
 
     /// Render the current spinner state.
     fn render(&self) {
-        let frame = SPINNER_FRAMES[self.frame];
-        let line = format!("{} {}", style(frame).cyan(), self.message);
+        let frame = theme::SPINNER_FRAMES[self.frame];
+        let line = format!("{} {}", theme::brand(frame), self.message);
         let _ = self.term.clear_line();
         let _ = write!(&self.term, "\r{}", line);
         let _ = self.term.flush();
@@ -203,11 +200,15 @@ impl Spinner {
             OutputMode::Text if self.interactive => {
                 let _ = self.term.clear_line();
                 if success {
-                    println!("\r{} {}", style("\u{2713}").green(), final_message);
+                    println!(
+                        "\r{} {}",
+                        theme::success(theme::icons::SUCCESS),
+                        final_message
+                    );
                 } else {
                     eprintln!(
                         "\r{} {}{}",
-                        style("\u{2715}").red(),
+                        theme::error(theme::icons::ERROR),
                         final_message,
                         error.map(|e| format!(": {}", e)).unwrap_or_default()
                     );
@@ -215,11 +216,15 @@ impl Spinner {
             }
             OutputMode::Text => {
                 if success {
-                    println!("{} {}", style("\u{2713}").green(), final_message);
+                    println!(
+                        "{} {}",
+                        theme::success(theme::icons::SUCCESS),
+                        final_message
+                    );
                 } else {
                     eprintln!(
                         "{} {}{}",
-                        style("\u{2715}").red(),
+                        theme::error(theme::icons::ERROR),
                         final_message,
                         error.map(|e| format!(": {}", e)).unwrap_or_default()
                     );
@@ -360,12 +365,16 @@ impl ProgressBar {
         let filled = ((percent / 100.0) * self.width as f32) as usize;
         let empty = self.width.saturating_sub(filled);
 
-        let bar = format!("{}{}", "\u{2588}".repeat(filled), "\u{2591}".repeat(empty));
+        let bar = format!(
+            "{}{}",
+            theme::icons::BAR_FILLED.repeat(filled),
+            theme::icons::BAR_EMPTY.repeat(empty)
+        );
 
         let line = format!(
             "{} {} [{}/{}] {:.0}%",
             self.message,
-            style(&bar).cyan(),
+            theme::brand(&bar),
             current,
             self.total,
             percent
@@ -411,16 +420,32 @@ impl ProgressBar {
             OutputMode::Text if self.interactive => {
                 let _ = self.term.clear_line();
                 if success {
-                    println!("\r{} {}", style("\u{2713}").green(), final_message);
+                    println!(
+                        "\r{} {}",
+                        theme::success(theme::icons::SUCCESS),
+                        final_message
+                    );
                 } else {
-                    eprintln!("\r{} {}", style("\u{2715}").red(), final_message);
+                    eprintln!(
+                        "\r{} {}",
+                        theme::error(theme::icons::ERROR),
+                        final_message
+                    );
                 }
             }
             OutputMode::Text => {
                 if success {
-                    println!("{} {}", style("\u{2713}").green(), final_message);
+                    println!(
+                        "{} {}",
+                        theme::success(theme::icons::SUCCESS),
+                        final_message
+                    );
                 } else {
-                    eprintln!("{} {}", style("\u{2715}").red(), final_message);
+                    eprintln!(
+                        "{} {}",
+                        theme::error(theme::icons::ERROR),
+                        final_message
+                    );
                 }
             }
         }
@@ -469,7 +494,7 @@ impl StepProgress {
             }
             OutputMode::Text => {
                 let prefix = format!("[{}/{}]", self.current, self.total);
-                println!("{} {}", style(prefix).dim(), self.message);
+                println!("{} {}", theme::muted(prefix), self.message);
             }
         }
     }
@@ -494,11 +519,11 @@ impl StepProgress {
             OutputMode::Text if self.interactive => {
                 let prefix = format!("[{}/{}]", self.current, self.total);
                 let _ = self.term.clear_line();
-                let _ = writeln!(&self.term, "\r{} {}", style(prefix).cyan(), self.message);
+                let _ = writeln!(&self.term, "\r{} {}", theme::brand(prefix), self.message);
             }
             OutputMode::Text => {
                 let prefix = format!("[{}/{}]", self.current, self.total);
-                println!("{} {}", style(prefix).cyan(), self.message);
+                println!("{} {}", theme::brand(prefix), self.message);
             }
         }
     }
@@ -522,7 +547,11 @@ impl StepProgress {
                 println!("{}", event.to_json());
             }
             OutputMode::Text => {
-                println!("{} {}", style("\u{2713}").green(), final_message);
+                println!(
+                    "{} {}",
+                    theme::success(theme::icons::SUCCESS),
+                    final_message
+                );
             }
         }
     }
@@ -544,7 +573,7 @@ impl StepProgress {
             OutputMode::Text => {
                 eprintln!(
                     "{} {} at step {}/{}",
-                    style("\u{2715}").red(),
+                    theme::error(theme::icons::ERROR),
                     final_message,
                     self.current,
                     self.total
@@ -678,10 +707,18 @@ impl MultiProgress {
             }
             OutputMode::Text => {
                 let (icon, style_fn): (&str, fn(&str) -> StyledObject<&str>) = match item.status {
-                    MultiProgressStatus::Pending => ("\u{25CB}", |s| style(s).dim()),
-                    MultiProgressStatus::InProgress => ("\u{25D0}", |s| style(s).cyan()),
-                    MultiProgressStatus::Complete => ("\u{2713}", |s| style(s).green()),
-                    MultiProgressStatus::Failed => ("\u{2715}", |s| style(s).red()),
+                    MultiProgressStatus::Pending => {
+                        (theme::icons::PENDING, |s| theme::muted(s))
+                    }
+                    MultiProgressStatus::InProgress => {
+                        (theme::icons::IN_PROGRESS, |s| theme::brand(s))
+                    }
+                    MultiProgressStatus::Complete => {
+                        (theme::icons::SUCCESS, |s| theme::success(s))
+                    }
+                    MultiProgressStatus::Failed => {
+                        (theme::icons::ERROR, |s| theme::error(s))
+                    }
                 };
 
                 println!("{} {}", style_fn(icon), item.message);

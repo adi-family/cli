@@ -5,9 +5,9 @@
 //! Yes/No confirmation input component.
 
 use super::types::generate_id;
-use crate::{console as out_console, is_interactive, OutputMode};
+use crate::{console as out_console, is_interactive, theme, OutputMode};
 use chrono::Utc;
-use console::{style, Key, Term};
+use console::{Key, Term};
 use std::io::Write;
 
 /// Confirmation prompt builder.
@@ -53,31 +53,31 @@ impl Confirm {
             None => "[y/n]",
         };
 
-        print!("{} {} ", self.prompt, style(hint).dim());
+        print!("{} {} ", self.prompt, theme::muted(hint));
         let _ = std::io::stdout().flush();
 
         loop {
             match term.read_key() {
                 Ok(Key::Char('y' | 'Y')) => {
-                    println!("{}", style("yes").green());
+                    println!("{}", theme::success("yes"));
                     return Some(true);
                 }
                 Ok(Key::Char('n' | 'N')) => {
-                    println!("{}", style("no").red());
+                    println!("{}", theme::error("no"));
                     return Some(false);
                 }
                 Ok(Key::Enter) => {
                     if let Some(default) = self.default {
                         if default {
-                            println!("{}", style("yes").green());
+                            println!("{}", theme::success("yes"));
                         } else {
-                            println!("{}", style("no").red());
+                            println!("{}", theme::error("no"));
                         }
                         return Some(default);
                     }
                 }
                 Ok(Key::Escape) => {
-                    println!("{}", style("cancelled").dim());
+                    println!("{}", theme::muted("cancelled"));
                     return None;
                 }
                 _ => {}

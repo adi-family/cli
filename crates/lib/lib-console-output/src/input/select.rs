@@ -5,9 +5,9 @@
 //! Single selection input component.
 
 use super::types::{generate_id, InputRequest, SelectOption, SelectOptionJson};
-use crate::{console as out_console, is_interactive, OutputMode};
+use crate::{console as out_console, is_interactive, theme, OutputMode};
 use chrono::Utc;
-use console::{style, Key, Term};
+use console::{Key, Term};
 use std::io::Write;
 
 /// Single selection builder.
@@ -110,7 +110,7 @@ impl<T: Clone> Select<T> {
         }
 
         // Print prompt
-        println!("{}", style(&self.prompt).bold());
+        println!("{}", theme::bold(&self.prompt));
 
         // Initial render (don't clear on first render)
         self.render(&term, cursor, rendered_once);
@@ -131,7 +131,7 @@ impl<T: Clone> Select<T> {
                         self.clear_options(&term);
                         println!(
                             "{} {}",
-                            style("\u{2713}").green(),
+                            theme::success(theme::icons::SUCCESS),
                             self.options[cursor].label
                         );
                         return Some(self.options[cursor].value.clone());
@@ -139,7 +139,7 @@ impl<T: Clone> Select<T> {
                 }
                 Ok(Key::Escape | Key::Char('q')) => {
                     self.clear_options(&term);
-                    println!("{} Cancelled", style("\u{2715}").red());
+                    println!("{} Cancelled", theme::error(theme::icons::ERROR));
                     return None;
                 }
                 _ => {}
@@ -157,8 +157,8 @@ impl<T: Clone> Select<T> {
         // Print prompt with filter hint
         println!(
             "{} {}",
-            style(&self.prompt).bold(),
-            style("(type to filter)").dim()
+            theme::bold(&self.prompt),
+            theme::muted("(type to filter)")
         );
 
         // Initial render (don't clear on first render since prev_lines = 0)
@@ -255,7 +255,7 @@ impl<T: Clone> Select<T> {
                             self.clear_filterable(&term, prev_lines);
                             println!(
                                 "{} {}",
-                                style("\u{2713}").green(),
+                                theme::success(theme::icons::SUCCESS),
                                 self.options[original_idx].label
                             );
                             return Some(self.options[original_idx].value.clone());
@@ -264,7 +264,7 @@ impl<T: Clone> Select<T> {
                 }
                 Ok(Key::Escape) => {
                     self.clear_filterable(&term, prev_lines);
-                    println!("{} Cancelled", style("\u{2715}").red());
+                    println!("{} Cancelled", theme::error(theme::icons::ERROR));
                     return None;
                 }
                 Ok(Key::Backspace) => {
@@ -336,13 +336,13 @@ impl<T: Clone> Select<T> {
 
         // Render filter input line
         if filter.is_empty() {
-            println!("{}", style("  Type to filter...").dim());
+            println!("{}", theme::muted("  Type to filter..."));
         } else {
             println!(
                 "  {} {} {}",
-                style("Filter:").dim(),
+                theme::muted("Filter:"),
                 filter,
-                style(format!("({} matches)", filtered.len())).dim()
+                theme::muted(format!("({} matches)", filtered.len()))
             );
         }
 
@@ -350,14 +350,14 @@ impl<T: Clone> Select<T> {
 
         // Render filtered options with sliding window
         if filtered.is_empty() {
-            println!("{}", style("  No matches").dim().red());
+            println!("{}", theme::error("  No matches"));
             lines_rendered += 1;
         } else {
             // Show "N more above" if there are hidden options above
             if has_more_above {
                 println!(
                     "{}",
-                    style(format!("  ... {} more above", window_start)).dim()
+                    theme::muted(format!("  ... {} more above", window_start))
                 );
                 lines_rendered += 1;
             }
@@ -371,12 +371,12 @@ impl<T: Clone> Select<T> {
                 let line = if opt.disabled {
                     format!(
                         "{} {} {}",
-                        style(prefix).dim(),
-                        style(&opt.label).dim(),
-                        style("(disabled)").dim()
+                        theme::muted(prefix),
+                        theme::muted(&opt.label),
+                        theme::muted("(disabled)")
                     )
                 } else if is_selected {
-                    format!("{} {}", style(prefix).cyan(), style(&opt.label).cyan())
+                    format!("{} {}", theme::brand(prefix), theme::brand(&opt.label))
                 } else {
                     format!("  {}", &opt.label)
                 };
@@ -388,7 +388,7 @@ impl<T: Clone> Select<T> {
             // Show "and N more" if there are hidden options below
             if has_more_below {
                 let more_count = filtered.len() - window_end;
-                println!("{}", style(format!("  ... and {} more", more_count)).dim());
+                println!("{}", theme::muted(format!("  ... and {} more", more_count)));
                 lines_rendered += 1;
             }
         }
@@ -417,12 +417,12 @@ impl<T: Clone> Select<T> {
             let line = if opt.disabled {
                 format!(
                     "{} {} {}",
-                    style(prefix).dim(),
-                    style(&opt.label).dim(),
-                    style("(disabled)").dim()
+                    theme::muted(prefix),
+                    theme::muted(&opt.label),
+                    theme::muted("(disabled)")
                 )
             } else if is_selected {
-                format!("{} {}", style(prefix).cyan(), style(&opt.label).cyan())
+                format!("{} {}", theme::brand(prefix), theme::brand(&opt.label))
             } else {
                 format!("  {}", &opt.label)
             };
@@ -472,16 +472,16 @@ impl<T: Clone> Select<T> {
 
     /// Simple mode - just number selection.
     fn run_simple(self) -> Option<T> {
-        println!("{}", style(&self.prompt).bold());
+        println!("{}", theme::bold(&self.prompt));
         for (i, opt) in self.options.iter().enumerate() {
             if opt.disabled {
                 println!(
                     "  {} {} (disabled)",
-                    style(format!("[{}]", i + 1)).dim(),
-                    style(&opt.label).dim()
+                    theme::muted(format!("[{}]", i + 1)),
+                    theme::muted(&opt.label)
                 );
             } else {
-                println!("  {} {}", style(format!("[{}]", i + 1)).cyan(), &opt.label);
+                println!("  {} {}", theme::brand(format!("[{}]", i + 1)), &opt.label);
             }
         }
 

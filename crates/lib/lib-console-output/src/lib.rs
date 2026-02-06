@@ -188,6 +188,7 @@
 //! // Response: {"type":"select_response","id":"input_abc","index":0,"timestamp":"..."}
 //! ```
 
+pub mod blocks;
 mod config;
 mod console;
 pub mod input;
@@ -198,6 +199,7 @@ mod message;
 mod mode;
 pub mod progress;
 mod style;
+pub mod theme;
 
 pub use config::{ConsoleConfig, NO_COLOR_ENV, QUIET_ENV, SILK_MODE_ENV, VERBOSE_ENV};
 pub use console::{
@@ -215,3 +217,6 @@ pub use progress::{
     Spinner, StepProgress,
 };
 pub use style::{format_text_line, icons, level_icon, level_prefix, styled_message};
+pub use blocks::{
+    Card, Columns, KeyValue, List, LiveKeyValue, LiveTable, Renderable, Section, Table, LiveHandle,
+};

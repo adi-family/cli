@@ -520,7 +520,6 @@ name = "adi-hive-plugin"
 version = "0.1.15"
 dependencies = [
  "adi-hive-core",
- "console 0.15.11",
  "ctrlc",
  "dirs 5.0.1",
  "lib-console-output",
