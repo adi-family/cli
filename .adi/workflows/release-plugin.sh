@@ -142,27 +142,47 @@ EOF
     exit 0
 }
 
-# Get crate directory for plugin by searching for plugin.toml with matching ID
+# Ensure manifest-gen binary is available
+ensure_manifest_gen() {
+    local manifest_gen="$PROJECT_ROOT/target/release/manifest-gen"
+    if [[ ! -f "$manifest_gen" ]]; then
+        manifest_gen="$PROJECT_ROOT/target/debug/manifest-gen"
+    fi
+    if [[ ! -f "$manifest_gen" ]]; then
+        info "Building manifest-gen..."
+        (cd "$PROJECT_ROOT" && cargo build -p lib-plugin-manifest --features generate --release 2>/dev/null) || \
+        (cd "$PROJECT_ROOT" && cargo build -p lib-plugin-manifest --features generate 2>/dev/null)
+        manifest_gen="$PROJECT_ROOT/target/release/manifest-gen"
+        if [[ ! -f "$manifest_gen" ]]; then
+            manifest_gen="$PROJECT_ROOT/target/debug/manifest-gen"
+        fi
+    fi
+    echo "$manifest_gen"
+}
+
+# Get crate directory for plugin by searching for Cargo.toml with [package.metadata.plugin]
 get_plugin_crate() {
     local name="$1"
-    
-    # First, try to find by plugin ID (e.g., "adi.workflow")
+
+    # First, try to find by plugin ID in Cargo.toml [package.metadata.plugin]
     local found_path=""
     local plugin_id=""
     while IFS= read -r f; do
-        plugin_id=$(grep -m1 '^id = ' "$f" 2>/dev/null | sed 's/id = "//;s/"//')
+        if ! grep -q 'package\.metadata\.plugin' "$f" 2>/dev/null; then
+            continue
+        fi
+        plugin_id=$(grep -A1 '\[package\.metadata\.plugin\]' "$f" 2>/dev/null | grep '^id = ' | sed 's/id = "//;s/"//' | tr -d '\n')
         if [[ "$plugin_id" == "$name" ]]; then
-            # Return the directory containing plugin.toml, relative to PROJECT_ROOT
             found_path=$(dirname "$f" | sed "s|^$PROJECT_ROOT/||")
             break
         fi
-    done < <(find "$PROJECT_ROOT/crates" -name 'plugin.toml' -type f 2>/dev/null)
-    
+    done < <(find "$PROJECT_ROOT/crates" -name 'Cargo.toml' -type f 2>/dev/null)
+
     if [[ -n "$found_path" ]]; then
         echo "$found_path"
         return
     fi
-    
+
     # Fallback to legacy short names for backward compatibility
     name="${name%-plugin}"
     case "$name" in
@@ -275,40 +295,21 @@ bump_version() {
     echo "${major}.${minor}.${patch}"
 }
 
-# Update version in plugin.toml and Cargo.toml
+# Update version in Cargo.toml (single source of truth)
 update_plugin_version() {
-    local plugin_toml="$1"
+    local cargo_toml="$1"
     local old_version="$2"
     local new_version="$3"
-    
-    # Update plugin.toml
-    sed -i '' "s/^version = \"$old_version\"/version = \"$new_version\"/" "$plugin_toml"
-    success "Updated plugin.toml: $old_version -> $new_version"
-    
-    # Update Cargo.toml (same directory or plugin/ subdir)
-    local plugin_dir
-    plugin_dir=$(dirname "$plugin_toml")
-    local cargo_toml="$plugin_dir/Cargo.toml"
-    
-    # Check if Cargo.toml is in plugin/ subdir
-    if [[ ! -f "$cargo_toml" ]] || grep -q '^\[workspace\]' "$cargo_toml" 2>/dev/null; then
-        if [[ -f "$plugin_dir/plugin/Cargo.toml" ]]; then
-            cargo_toml="$plugin_dir/plugin/Cargo.toml"
-        fi
+
+    # Check if version is workspace-managed
+    if grep -q 'version\.workspace\s*=\s*true' "$cargo_toml" 2>/dev/null || \
+       grep -q 'version = { workspace = true }' "$cargo_toml" 2>/dev/null; then
+        warn "Cargo.toml uses workspace version, cannot bump individually"
+        return 1
     fi
-    
-    if [[ -f "$cargo_toml" ]]; then
-        # Check if version is workspace-managed
-        local cargo_version
-        cargo_version=$(grep '^version = ' "$cargo_toml" | head -1 | sed 's/version = "\(.*\)"/\1/')
-        
-        if [[ "$cargo_version" == "version.workspace" ]] || [[ -z "$cargo_version" ]]; then
-            info "Cargo.toml uses workspace version, skipping"
-        else
-            sed -i '' "s/^version = \"$cargo_version\"/version = \"$new_version\"/" "$cargo_toml"
-            success "Updated Cargo.toml: $cargo_version -> $new_version"
-        fi
-    fi
+
+    sed -i '' "s/^version = \"$old_version\"/version = \"$new_version\"/" "$cargo_toml"
+    success "Updated Cargo.toml: $old_version -> $new_version"
 }
 
 build_plugin() {
@@ -318,20 +319,27 @@ build_plugin() {
 
     cd "$PROJECT_ROOT"
 
-    # Read plugin.toml
-    local plugin_toml="$PROJECT_ROOT/$crate_dir/plugin.toml"
-    require_file "$plugin_toml" "plugin.toml not found in $crate_dir"
+    # Find Cargo.toml with plugin metadata
+    local cargo_toml="$PROJECT_ROOT/$crate_dir/Cargo.toml"
+    require_file "$cargo_toml" "Cargo.toml not found in $crate_dir"
 
-    # Parse plugin metadata
-    PLUGIN_ID=$(sed -n '/^\[plugin\]/,/^\[/{/^id = /p;}' "$plugin_toml" | sed 's/id = "\(.*\)"/\1/' | tr -d '\n')
-    PLUGIN_VERSION=$(sed -n '/^\[plugin\]/,/^\[/{/^version = /p;}' "$plugin_toml" | sed 's/version = "\(.*\)"/\1/' | tr -d '\n')
-    PLUGIN_NAME=$(sed -n '/^\[plugin\]/,/^\[/{/^name = /p;}' "$plugin_toml" | sed 's/name = "\(.*\)"/\1/' | tr -d '\n')
-    PLUGIN_DESC=$(sed -n '/^\[plugin\]/,/^\[/{/^description = /p;}' "$plugin_toml" | sed 's/description = "\(.*\)"/\1/' | tr -d '\n')
-    PLUGIN_AUTHOR=$(sed -n '/^\[plugin\]/,/^\[/{/^author = /p;}' "$plugin_toml" | sed 's/author = "\(.*\)"/\1/' | tr -d '\n')
-    PLUGIN_TYPE=$(sed -n '/^\[plugin\]/,/^\[/{/^type = /p;}' "$plugin_toml" | sed 's/type = "\(.*\)"/\1/' | tr -d '\n')
+    # Generate plugin.toml from Cargo.toml metadata
+    local manifest_gen
+    manifest_gen=$(ensure_manifest_gen)
+    local generated_toml
+    generated_toml=$(mktemp "${TMPDIR:-/tmp}/plugin.XXXXXX.toml")
+    "$manifest_gen" --cargo-toml "$cargo_toml" --output "$generated_toml" || error "Failed to generate manifest from $cargo_toml"
 
-    PLUGIN_ID=$(require_value "$PLUGIN_ID" "Could not read plugin ID from plugin.toml")
-    PLUGIN_VERSION=$(require_value "$PLUGIN_VERSION" "Could not read plugin version from plugin.toml")
+    # Parse plugin metadata from generated manifest
+    PLUGIN_ID=$(sed -n '/^\[plugin\]/,/^\[/{/^id = /p;}' "$generated_toml" | sed 's/id = "\(.*\)"/\1/' | tr -d '\n')
+    PLUGIN_VERSION=$(sed -n '/^\[plugin\]/,/^\[/{/^version = /p;}' "$generated_toml" | sed 's/version = "\(.*\)"/\1/' | tr -d '\n')
+    PLUGIN_NAME=$(sed -n '/^\[plugin\]/,/^\[/{/^name = /p;}' "$generated_toml" | sed 's/name = "\(.*\)"/\1/' | tr -d '\n')
+    PLUGIN_DESC=$(sed -n '/^\[plugin\]/,/^\[/{/^description = /p;}' "$generated_toml" | sed 's/description = "\(.*\)"/\1/' | tr -d '\n')
+    PLUGIN_AUTHOR=$(sed -n '/^\[plugin\]/,/^\[/{/^author = /p;}' "$generated_toml" | sed 's/author = "\(.*\)"/\1/' | tr -d '\n')
+    PLUGIN_TYPE=$(sed -n '/^\[plugin\]/,/^\[/{/^type = /p;}' "$generated_toml" | sed 's/type = "\(.*\)"/\1/' | tr -d '\n')
+
+    PLUGIN_ID=$(require_value "$PLUGIN_ID" "Could not read plugin ID from Cargo.toml metadata")
+    PLUGIN_VERSION=$(require_value "$PLUGIN_VERSION" "Could not read plugin version from Cargo.toml")
 
     info "Plugin: $PLUGIN_ID v$PLUGIN_VERSION"
     info "Building library (no standalone binary)..."
@@ -373,7 +381,7 @@ build_plugin() {
     local pkg_dir
     pkg_dir=$(mktemp -d)
     cp "$lib_path" "$pkg_dir/plugin.$lib_ext"
-    cp "$plugin_toml" "$pkg_dir/plugin.toml"
+    cp "$generated_toml" "$pkg_dir/plugin.toml"
 
     local archive_name="${PLUGIN_ID}-v${PLUGIN_VERSION}-${PLUGIN_PLATFORM}.tar.gz"
     PLUGIN_ARCHIVE="$dist_dir/$archive_name"
@@ -476,17 +484,17 @@ main() {
 
     # Handle version bump if requested
     if [ -n "$bump_type" ]; then
-        local plugin_toml="$PROJECT_ROOT/$crate_dir/plugin.toml"
-        require_file "$plugin_toml" "plugin.toml not found in $crate_dir"
-        
+        local cargo_toml="$PROJECT_ROOT/$crate_dir/Cargo.toml"
+        require_file "$cargo_toml" "Cargo.toml not found in $crate_dir"
+
         local current_version
-        current_version=$(sed -n '/^\[plugin\]/,/^\[/{/^version = /p;}' "$plugin_toml" | sed 's/version = "\(.*\)"/\1/' | tr -d '\n')
-        
+        current_version=$(grep '^version = ' "$cargo_toml" | head -1 | sed 's/version = "\(.*\)"/\1/')
+
         local new_version
         new_version=$(bump_version "$current_version" "$bump_type")
-        
+
         info "Bumping version: $current_version -> $new_version ($bump_type)"
-        update_plugin_version "$plugin_toml" "$current_version" "$new_version"
+        update_plugin_version "$cargo_toml" "$current_version" "$new_version"
     fi
 
     # Lint plugin before building

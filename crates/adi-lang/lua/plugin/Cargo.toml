@@ -14,3 +14,23 @@ lib-plugin-abi-v3 = { path = "../../../lib/lib-plugin-abi-v3" }
 async-trait = "0.1"
 tree-sitter = "0.25"
 tree-sitter-lua = "0.2"
+
+[package.metadata.plugin]
+id = "adi.lang.lua"
+name = "Lua Language Support"
+type = "lang"
+
+[package.metadata.plugin.compatibility]
+api_version = 3
+min_host_version = "0.9.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.indexer.lang"
+version = "3.0.0"
+
+[package.metadata.plugin.tags]
+categories = ["language", "lua", "scripting", "parsing"]
+
+[package.metadata.plugin.language]
+id = "lua"
+extensions = ["lua"]

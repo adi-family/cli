@@ -134,9 +134,9 @@ main() {
         esac
     done
 
-    # Get current version from first plugin's plugin.toml
+    # Get current version from first plugin's Cargo.toml
     local current_version
-    current_version=$(grep '^version' "$ROOT_DIR/crates/adi-tasks/plugin/plugin.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+    current_version=$(grep '^version = ' "$ROOT_DIR/crates/adi-tasks/plugin/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
     info "Current version: v$current_version"
 
     local version="$current_version"
@@ -146,23 +146,27 @@ main() {
         version=$(bump_version "$current_version" "$bump_type")
         info "Bumping version: $current_version -> $version ($bump_type)"
         
-        # Update plugin.toml files
-        info "Updating plugin.toml files to v$version..."
+        # Update Cargo.toml version fields (single source of truth)
+        info "Updating Cargo.toml versions to v$version..."
         for plugin_spec in "${PLUGINS[@]}"; do
             IFS=':' read -r crate_name _ _ _ <<< "$plugin_spec"
-            local manifest="$ROOT_DIR/crates/$crate_name/plugin.toml"
+            local cargo_file="$ROOT_DIR/crates/$crate_name/Cargo.toml"
             # Handle plugin directory structures
             case "$crate_name" in
-                adi-lang-*) manifest="$ROOT_DIR/crates/adi-lang/${crate_name#adi-lang-}/plugin/plugin.toml" ;;
-                adi-knowledgebase-plugin) manifest="$ROOT_DIR/crates/adi-knowledgebase/plugin/plugin.toml" ;;
-                adi-tasks-plugin) manifest="$ROOT_DIR/crates/adi-tasks/plugin/plugin.toml" ;;
-                adi-linter-plugin) manifest="$ROOT_DIR/crates/adi-linter/plugin/plugin.toml" ;;
+                adi-lang-*) cargo_file="$ROOT_DIR/crates/adi-lang/${crate_name#adi-lang-}/plugin/Cargo.toml" ;;
+                adi-knowledgebase-plugin) cargo_file="$ROOT_DIR/crates/adi-knowledgebase/plugin/Cargo.toml" ;;
+                adi-tasks-plugin) cargo_file="$ROOT_DIR/crates/adi-tasks/plugin/Cargo.toml" ;;
+                adi-linter-plugin) cargo_file="$ROOT_DIR/crates/adi-linter/plugin/Cargo.toml" ;;
             esac
-            if [ -f "$manifest" ]; then
-                sed -i '' "s/^version = \"$current_version\"/version = \"$version\"/" "$manifest"
+            if [ -f "$cargo_file" ]; then
+                # Skip workspace-managed versions
+                if grep -q 'version\.workspace' "$cargo_file" 2>/dev/null; then
+                    continue
+                fi
+                sed -i '' "s/^version = \"$current_version\"/version = \"$version\"/" "$cargo_file"
             fi
         done
-        success "Updated plugin.toml files"
+        success "Updated Cargo.toml versions"
     fi
 
     info "Releasing plugins v$version"
@@ -250,18 +254,30 @@ main() {
         # Package
         local lib_name="lib${crate_name//-/_}.$lib_ext"
         local lib_path="$ROOT_DIR/target/release/$lib_name"
-        local manifest_path="$crate_dir/plugin.toml"
 
         if [ ! -f "$lib_path" ]; then
             warn "Library not found: $lib_path"
             continue
         fi
 
+        # Generate plugin.toml from Cargo.toml metadata
+        local manifest_gen
+        manifest_gen="${ROOT_DIR}/target/release/manifest-gen"
+        if [[ ! -f "$manifest_gen" ]]; then
+            manifest_gen="${ROOT_DIR}/target/debug/manifest-gen"
+        fi
+        local generated_toml
+        generated_toml=$(mktemp "${TMPDIR:-/tmp}/plugin.XXXXXX.toml")
+        "$manifest_gen" --cargo-toml "$crate_dir/Cargo.toml" --output "$generated_toml" 2>/dev/null || {
+            warn "Failed to generate manifest for $crate_name"
+            continue
+        }
+
         # Create package
         local pkg_dir
         pkg_dir=$(create_temp_dir)
         cp "$lib_path" "$pkg_dir/plugin.$lib_ext"
-        cp "$manifest_path" "$pkg_dir/plugin.toml"
+        cp "$generated_toml" "$pkg_dir/plugin.toml"
 
         local archive_name="${plugin_id}-v${version}-${platform}.tar.gz"
         create_tarball "$dist_dir/$archive_name" "$pkg_dir" "plugin.$lib_ext" "plugin.toml"

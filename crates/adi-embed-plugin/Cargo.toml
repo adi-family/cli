@@ -17,3 +17,18 @@ fastembed = "4"
 tracing = "0.1"
 once_cell = "1.21"
 directories = "5.0"
+
+[package.metadata.plugin]
+id = "adi.embed"
+name = "ADI Embed"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.embed"
+version = "1.0.0"
+
+[package.metadata.plugin.tags]
+categories = ["embedding", "ml", "onnx", "fastembed"]

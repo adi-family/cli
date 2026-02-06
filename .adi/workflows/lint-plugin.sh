@@ -137,16 +137,46 @@ get_lib_extension() {
 lint_plugin() {
     local plugin_dir="$1"
     local fix_mode="${2:-false}"
-    local manifest="$plugin_dir/plugin.toml"
 
     section "Linting plugin: $plugin_dir"
 
-    # Check manifest exists
-    if [[ ! -f "$manifest" ]]; then
-        error "plugin.toml not found at $manifest"
+    # Check for Cargo.toml with [package.metadata.plugin]
+    local cargo_toml="$plugin_dir/Cargo.toml"
+    if [[ ! -f "$cargo_toml" ]]; then
+        error "Cargo.toml not found at $cargo_toml"
         return 1
     fi
-    success "plugin.toml exists"
+
+    if ! grep -q 'package\.metadata\.plugin' "$cargo_toml" 2>/dev/null; then
+        # Backward compat: check for legacy plugin.toml
+        local manifest="$plugin_dir/plugin.toml"
+        if [[ -f "$manifest" ]]; then
+            warn "Found legacy plugin.toml - migrate to [package.metadata.plugin] in Cargo.toml"
+        else
+            error "No [package.metadata.plugin] section in Cargo.toml"
+        fi
+        return 1
+    fi
+    success "Cargo.toml has [package.metadata.plugin]"
+
+    # Generate plugin.toml from metadata for validation
+    local manifest_gen="$PROJECT_ROOT/target/release/manifest-gen"
+    if [[ ! -f "$manifest_gen" ]]; then
+        manifest_gen="$PROJECT_ROOT/target/debug/manifest-gen"
+    fi
+    local manifest
+    manifest=$(mktemp "${TMPDIR:-/tmp}/plugin-lint.XXXXXX.toml")
+    if [[ -f "$manifest_gen" ]]; then
+        "$manifest_gen" --cargo-toml "$cargo_toml" --output "$manifest" 2>/dev/null || {
+            error "Failed to generate manifest from Cargo.toml metadata"
+            return 1
+        }
+        success "Manifest generated successfully from Cargo.toml"
+    else
+        warn "manifest-gen not found - skipping manifest generation validation"
+        warn "Build with: cargo build -p lib-plugin-manifest --features generate"
+        return 0
+    fi
 
     # Validate TOML syntax
     section "Validating TOML syntax"
@@ -435,30 +465,9 @@ type = "'"$detected_type"'"
         success "author: $author"
     fi
 
-    # Check Cargo.toml version matches
-    section "Checking version consistency"
-    local cargo_toml="$plugin_dir/Cargo.toml"
-    # If plugin.toml is at root but Cargo.toml is in plugin/ subdir, check there
-    if [[ ! -f "$cargo_toml" ]] && [[ -f "$plugin_dir/plugin/Cargo.toml" ]]; then
-        cargo_toml="$plugin_dir/plugin/Cargo.toml"
-    fi
-    if [[ -f "$cargo_toml" ]]; then
-        local cargo_version
-        cargo_version=$(get_toml_value "$cargo_toml" "version")
-        # Skip workspace version references
-        if [[ "$cargo_version" == "version.workspace" ]] || [[ -z "$cargo_version" ]]; then
-            info "Cargo.toml uses workspace version, skipping check"
-        elif [[ "$cargo_version" != "$plugin_version" ]]; then
-            error "Version mismatch: plugin.toml ($plugin_version) != Cargo.toml ($cargo_version)"
-            if [[ "$fix_mode" == "true" ]]; then
-                info "FIX: Updating Cargo.toml version to $plugin_version"
-                sed -i '' "s/^version = \"$cargo_version\"/version = \"$plugin_version\"/" "$cargo_toml"
-                success "Updated Cargo.toml version"
-            fi
-        else
-            success "Versions match: $plugin_version"
-        fi
-    fi
+    # Version consistency - single source of truth in Cargo.toml
+    section "Checking version source"
+    success "Version from Cargo.toml: $plugin_version (single source of truth)"
 
     return 0
 }
@@ -503,8 +512,11 @@ if [[ "$LINT_ALL" == "true" ]]; then
     PLUGINS_CHECKED=0
     PLUGINS_FAILED=0
 
-    for plugin_toml in $(find "$PROJECT_ROOT/crates" -name "plugin.toml" -maxdepth 2 2>/dev/null); do
-        plugin_dir=$(dirname "$plugin_toml")
+    for cargo_file in $(find "$PROJECT_ROOT/crates" -name "Cargo.toml" -type f 2>/dev/null); do
+        if ! grep -q 'package\.metadata\.plugin' "$cargo_file" 2>/dev/null; then
+            continue
+        fi
+        plugin_dir=$(dirname "$cargo_file")
         plugin_name=$(basename "$plugin_dir")
 
         ERRORS=0
@@ -553,16 +565,19 @@ resolve_plugin_dir() {
         return
     fi
     
-    # Try to find by plugin ID in plugin.toml files
+    # Try to find by plugin ID in Cargo.toml [package.metadata.plugin]
     local found_path=""
     local plugin_id=""
     while IFS= read -r f; do
-        plugin_id=$(grep -m1 '^id = ' "$f" 2>/dev/null | sed 's/id = "//;s/"//')
+        if ! grep -q 'package\.metadata\.plugin' "$f" 2>/dev/null; then
+            continue
+        fi
+        plugin_id=$(grep -A1 '\[package\.metadata\.plugin\]' "$f" 2>/dev/null | grep '^id = ' | sed 's/id = "//;s/"//' | tr -d '\n')
         if [[ "$plugin_id" == "$plugin" ]]; then
             found_path=$(dirname "$f")
             break
         fi
-    done < <(find "$PROJECT_ROOT/crates" -name 'plugin.toml' -type f 2>/dev/null)
+    done < <(find "$PROJECT_ROOT/crates" -name 'Cargo.toml' -type f 2>/dev/null)
     
     if [[ -n "$found_path" ]]; then
         echo "$found_path"

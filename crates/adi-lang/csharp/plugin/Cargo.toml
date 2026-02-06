@@ -16,3 +16,23 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tree-sitter = "0.25"
 tree-sitter-c-sharp = "0.23"
+
+[package.metadata.plugin]
+id = "adi.lang.csharp"
+name = "C# Language Support"
+type = "lang"
+
+[package.metadata.plugin.compatibility]
+api_version = 3
+min_host_version = "0.9.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.indexer.lang"
+version = "3.0.0"
+
+[package.metadata.plugin.tags]
+categories = ["language", "csharp", "dotnet", "parsing"]
+
+[package.metadata.plugin.language]
+id = "csharp"
+extensions = ["cs"]

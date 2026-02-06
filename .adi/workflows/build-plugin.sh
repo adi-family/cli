@@ -116,27 +116,48 @@ EOF
     exit 0
 }
 
-# Get crate directory for plugin by searching for plugin.toml with matching ID
+# Ensure manifest-gen binary is available
+ensure_manifest_gen() {
+    local manifest_gen="$PROJECT_ROOT/target/release/manifest-gen"
+    if [[ ! -f "$manifest_gen" ]]; then
+        manifest_gen="$PROJECT_ROOT/target/debug/manifest-gen"
+    fi
+    if [[ ! -f "$manifest_gen" ]]; then
+        info "Building manifest-gen..."
+        (cd "$PROJECT_ROOT" && cargo build -p lib-plugin-manifest --features generate --release 2>/dev/null) || \
+        (cd "$PROJECT_ROOT" && cargo build -p lib-plugin-manifest --features generate 2>/dev/null)
+        manifest_gen="$PROJECT_ROOT/target/release/manifest-gen"
+        if [[ ! -f "$manifest_gen" ]]; then
+            manifest_gen="$PROJECT_ROOT/target/debug/manifest-gen"
+        fi
+    fi
+    echo "$manifest_gen"
+}
+
+# Get crate directory for plugin by searching for Cargo.toml with [package.metadata.plugin]
 get_plugin_crate() {
     local name="$1"
-    
-    # First, try to find by plugin ID (e.g., "adi.workflow")
+
+    # First, try to find by plugin ID in Cargo.toml [package.metadata.plugin]
     local found_path=""
     local plugin_id=""
     while IFS= read -r f; do
-        plugin_id=$(grep -m1 '^id = ' "$f" 2>/dev/null | sed 's/id = "//;s/"//')
+        # Check if this Cargo.toml has [package.metadata.plugin] section
+        if ! grep -q 'package\.metadata\.plugin' "$f" 2>/dev/null; then
+            continue
+        fi
+        plugin_id=$(grep -A1 '\[package\.metadata\.plugin\]' "$f" 2>/dev/null | grep '^id = ' | sed 's/id = "//;s/"//' | tr -d '\n')
         if [[ "$plugin_id" == "$name" ]]; then
-            # Return the directory containing plugin.toml, relative to PROJECT_ROOT
             found_path=$(dirname "$f" | sed "s|^$PROJECT_ROOT/||")
             break
         fi
-    done < <(find "$PROJECT_ROOT/crates" -name 'plugin.toml' -type f 2>/dev/null)
-    
+    done < <(find "$PROJECT_ROOT/crates" -name 'Cargo.toml' -type f 2>/dev/null)
+
     if [[ -n "$found_path" ]]; then
         echo "$found_path"
         return
     fi
-    
+
     # Fallback to legacy short names for backward compatibility
     name="${name%-plugin}"
     case "$name" in
@@ -218,17 +239,24 @@ build_plugin() {
 
     cd "$PROJECT_ROOT"
 
-    # Read plugin.toml
-    local plugin_toml="$PROJECT_ROOT/$crate_dir/plugin.toml"
-    require_file "$plugin_toml" "plugin.toml not found in $crate_dir"
+    # Find Cargo.toml with plugin metadata
+    local cargo_toml="$PROJECT_ROOT/$crate_dir/Cargo.toml"
+    require_file "$cargo_toml" "Cargo.toml not found in $crate_dir"
 
-    # Parse plugin metadata
-    PLUGIN_ID=$(sed -n '/^\[plugin\]/,/^\[/{/^id = /p;}' "$plugin_toml" | sed 's/id = "\(.*\)"/\1/' | tr -d '\n')
-    PLUGIN_VERSION=$(sed -n '/^\[plugin\]/,/^\[/{/^version = /p;}' "$plugin_toml" | sed 's/version = "\(.*\)"/\1/' | tr -d '\n')
+    # Generate plugin.toml from Cargo.toml metadata
+    local manifest_gen
+    manifest_gen=$(ensure_manifest_gen)
+    local generated_toml
+    generated_toml=$(mktemp "${TMPDIR:-/tmp}/plugin.XXXXXX.toml")
+    "$manifest_gen" --cargo-toml "$cargo_toml" --output "$generated_toml" || error "Failed to generate manifest from $cargo_toml"
 
-    PLUGIN_ID=$(require_value "$PLUGIN_ID" "Could not read plugin ID from plugin.toml")
-    PLUGIN_VERSION=$(require_value "$PLUGIN_VERSION" "Could not read plugin version from plugin.toml")
-    PLUGIN_TOML_PATH="$plugin_toml"
+    # Parse plugin metadata from generated manifest
+    PLUGIN_ID=$(sed -n '/^\[plugin\]/,/^\[/{/^id = /p;}' "$generated_toml" | sed 's/id = "\(.*\)"/\1/' | tr -d '\n')
+    PLUGIN_VERSION=$(sed -n '/^\[plugin\]/,/^\[/{/^version = /p;}' "$generated_toml" | sed 's/version = "\(.*\)"/\1/' | tr -d '\n')
+
+    PLUGIN_ID=$(require_value "$PLUGIN_ID" "Could not read plugin ID from Cargo.toml metadata")
+    PLUGIN_VERSION=$(require_value "$PLUGIN_VERSION" "Could not read plugin version from Cargo.toml")
+    PLUGIN_TOML_PATH="$generated_toml"
 
     info "Plugin: $PLUGIN_ID v$PLUGIN_VERSION"
 

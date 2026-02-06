@@ -20,3 +20,24 @@ anyhow = "1.0"
 console = "0.15"
 dialoguer = "0.11"
 once_cell = "1.21"
+
+[package.metadata.plugin]
+id = "adi.agent-loop"
+name = "ADI Agent Loop"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.cli]
+command = "agent-loop"
+description = "Autonomous LLM agents for code tasks"
+aliases = ["al"]
+
+[[package.metadata.plugin.provides]]
+id = "adi.agent-loop.cli"
+version = "1.0.0"
+description = "CLI commands for agent loop"
+
+[package.metadata.plugin.tags]
+categories = ["agent", "llm", "automation", "workflow"]
