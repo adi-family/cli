@@ -29,7 +29,7 @@ get_service_config() {
         platform-api) echo "crates/platform-api:platform-api:platform-api" ;;
         analytics-api) echo "crates/analytics-api:analytics-api:analytics-api" ;;
         analytics-ingestion) echo "crates/analytics-ingestion:analytics-ingestion:analytics-ingestion" ;;
-        tarminal-signaling-server) echo "crates/tarminal-signaling-server:tarminal-signaling:tarminal-signaling-server" ;;
+        signaling-server) echo "crates/signaling-server:signaling-server:signaling-server" ;;
         plugin-registry) echo "crates/plugin-registry-http:plugin-registry:plugin-registry" ;;
         flowmap-api) echo "apps/flowmap-api:flowmap-api:flowmap-api" ;;
         hive) echo "crates/hive/http:hive:hive" ;;
@@ -49,7 +49,7 @@ get_image_name() {
 }
 
 # All available services
-ALL_SERVICES="auth platform-api analytics-api analytics-ingestion tarminal-signaling-server plugin-registry flowmap-api hive cocoon llm-proxy"
+ALL_SERVICES="auth platform-api analytics-api analytics-ingestion signaling-server plugin-registry flowmap-api hive cocoon llm-proxy"
 
 usage() {
     cat <<EOF
@@ -68,7 +68,7 @@ SERVICES:
     platform-api                Platform API
     analytics-api               Analytics API
     analytics-ingestion         Analytics ingestion
-    tarminal-signaling-server   Signaling server
+    signaling-server            Signaling server
     plugin-registry             Plugin registry
     flowmap-api                 FlowMap API
     hive                        Hive (cocoon orchestration)

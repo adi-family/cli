@@ -459,7 +459,7 @@ COMMANDS:
 SERVICES:
     auth                Auth API (auth)
     platform            Platform API (platform-api)
-    signaling           Signaling Server (tarminal-signaling-server)
+    signaling           Signaling Server (signaling-server)
     web                 Web UI (infra-service-web)
     analytics-ingestion Analytics Ingestion (analytics-ingestion)
     analytics           Analytics API (analytics-api)

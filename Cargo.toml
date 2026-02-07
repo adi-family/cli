@@ -12,7 +12,7 @@ exclude = [
     # Nested workspaces (submodules with their own workspace roots)
     "crates/executor",
     "crates/plugin-registry-http",
-    "crates/tarminal-signaling-server",
+    "crates/signaling-server",
     # Standalone API services
     "crates/balance-api",
     "crates/credentials-api",
@@ -233,8 +233,8 @@ members = [
 # FlowMap is standalone (not in workspace) - build with:
 # cd apps/flowmap-api && cargo build
 
-# Note: tarminal-signaling-server is standalone (not in workspace) - build with:
-# cd crates/tarminal-signaling-server && cargo build
+# Note: signaling-server is standalone (not in workspace) - build with:
+# cd crates/signaling-server && cargo build
 
 [workspace.package]
 version = "0.8.4"

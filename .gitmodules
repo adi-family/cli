@@ -55,7 +55,7 @@
 [submodule "crates/tool-generate-heartbit"]
 	path = crates/tool-generate-heartbit
 	url = https://github.com/adi-family/tool-generate-heartbit.git
-[submodule "crates/tarminal-signaling-server"]
+[submodule "crates/signaling-server"]
 	path = crates/signaling-server
 	url = https://github.com/adi-family/tarminal-signaling-server.git
 [submodule "crates/adi-executor"]

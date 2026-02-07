@@ -62,7 +62,7 @@ Services that run on servers and are called via HTTP don't need plugins:
 **Components:**
 - `platform-api` (core, http, cli) - Unified Platform API
 - `auth` (core, http) - Authentication service (email + TOTP)
-- `tarminal-signaling-server` - WebSocket signaling
+- `signaling-server` - WebSocket signaling
 
 **Standalone API services** (excluded from main workspace, developed independently):
 - `balance-api` - Balance/transaction tracking
@@ -99,7 +99,7 @@ Services that run on servers and are called via HTTP don't need plugins:
 ### Backend Services
 - `crates/platform-api` - Unified Platform API (core/http/cli)
 - `crates/auth` - Authentication service (email + TOTP)
-- `crates/tarminal-signaling-server` - WebSocket signaling server
+- `crates/signaling-server` - WebSocket signaling server
 - `crates/analytics-api` - Analytics API (metrics, dashboards)
 - `crates/analytics-ingestion` - Analytics event ingestion
 - `crates/plugin-registry-http` - Plugin registry HTTP server
@@ -559,7 +559,7 @@ All production services are built using **cross-compilation** for 10-20x faster 
 - `analytics-ingestion` - Analytics event ingestion service
 - `auth` - Authentication service (email + TOTP)
 - `platform-api` - Unified Platform API
-- `tarminal-signaling-server` - WebSocket signaling server
+- `signaling-server` - WebSocket signaling server
 - `plugin-registry` - Plugin registry HTTP server
 - `flowmap-api` - Code flow visualization API
 - `hive` - Hive: Cocoon orchestration API
@@ -801,7 +801,7 @@ AUTH_API_URL=http://adi.local/api/auth
 For faster iteration on specific services:
 ```bash
 # Terminal/pane 1: Signaling server
-cd crates/tarminal-signaling-server && cargo run
+cd crates/signaling-server && cargo run
 
 # Terminal/pane 2: Auth service
 cd crates/auth && DATABASE_URL=postgres://postgres:postgres@localhost/adi_auth cargo run -p auth-http

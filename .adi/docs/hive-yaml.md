@@ -2404,7 +2404,7 @@ services:
       type: script
       script:
         run: cargo run
-        working_dir: crates/tarminal-signaling-server
+        working_dir: crates/signaling-server
     rollout:
       type: recreate
       recreate:
