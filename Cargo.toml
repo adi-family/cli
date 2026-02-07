@@ -71,9 +71,9 @@ members = [
     "crates/agent-loop/core",
     "crates/agent-loop/http",
 
-    # API Proxy components
-    "crates/api-proxy/core",
-    "crates/api-proxy/http",
+    # LLM Proxy components
+    "crates/llm-proxy/core",
+    "crates/llm-proxy/http",
 
     # Hive components
     "crates/hive/core",
@@ -191,7 +191,7 @@ members = [
     "crates/agent-loop/plugin",
     "crates/linter/plugin",
     "crates/workflow/plugin",
-    "crates/api-proxy/plugin",
+    "crates/llm-proxy/plugin",
     "crates/hive/plugin",
     "crates/llm-extract-plugin",
     "crates/lib/lib-typespec-api/plugin",
@@ -250,7 +250,7 @@ knowledgebase-core = { path = "crates/knowledgebase/core" }
 agent-loop-core = { path = "crates/agent-loop/core" }
 auth-core = { path = "crates/auth-core" }
 linter-core = { path = "crates/linter/core" }
-api-proxy-core = { path = "crates/api-proxy/core" }
+llm-proxy-core = { path = "crates/llm-proxy/core" }
 hive-core = { path = "crates/hive/core" }
 audio-core = { path = "crates/audio/core" }
 platform-api-core = { path = "crates/platform-api/core" }

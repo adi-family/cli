@@ -526,12 +526,12 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin api-proxy
-        working_dir: crates/api-proxy/http
+        run: cargo run --bin llm-proxy
+        working_dir: crates/llm-proxy/http
     hooks:
       pre-up:
-        - run: cargo run --bin api-proxy-migrate
-          working_dir: crates/api-proxy/http
+        - run: cargo run --bin llm-proxy-migrate
+          working_dir: crates/llm-proxy/http
           timeout: "120s"
     rollout:
       type: recreate

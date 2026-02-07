@@ -42,7 +42,7 @@ Components that users interact with via `adi` CLI need a plugin:
 - `tasks` (core, cli, http, plugin) - `adi tasks list`
 - `indexer` (core, cli, http, plugin) - `adi index`
 - `knowledgebase` (core, cli, http, plugin) - `adi kb`
-- `api-proxy` (core, http, plugin) - `adi proxy`
+- `llm-proxy` (core, http, plugin) - `adi llm-proxy`
 - `hive` (core, http, plugin) - `adi hive`
 - `audio` (core, plugin) - `adi audio`
 - `tools` (core, plugin) - `adi tools`
@@ -87,7 +87,7 @@ Services that run on servers and are called via HTTP don't need plugins:
 - `crates/tasks` - Task management
 - `crates/indexer` - Code indexer
 - `crates/knowledgebase` - Graph DB + embeddings
-- `crates/api-proxy` - LLM API proxy (BYOK/Platform modes)
+- `crates/llm-proxy` - LLM API proxy (BYOK/Platform modes)
 - `crates/hive` - Cocoon container orchestration
 - `crates/audio` - Audio processing
 - `crates/tools` - CLI tools collection

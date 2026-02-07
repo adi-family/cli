@@ -1,0 +1,49 @@
+[package]
+name = "llm-proxy-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "ADI LLM Proxy - Core library for LLM API proxying with BYOK/Platform modes"
+
+[dependencies]
+# Workspace dependencies
+thiserror.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+sha2.workspace = true
+hex.workspace = true
+tracing.workspace = true
+futures.workspace = true
+reqwest = { workspace = true, features = ["stream"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "rust_decimal"] }
+
+# Encryption (ChaCha20-Poly1305)
+chacha20poly1305 = "0.10"
+rand = "0.8"
+base64.workspace = true
+
+# Rhai scripting
+rhai = { version = "1.19", features = ["serde"] }
+
+# Streaming
+async-stream = "0.3"
+tokio-stream = "0.1"
+bytes = "1"
+
+# HTTP types
+http = "1"
+axum = { version = "0.7", features = ["macros"] }
+
+# Decimal for cost tracking
+rust_decimal = { version = "1", features = ["serde"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

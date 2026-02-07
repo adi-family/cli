@@ -2547,8 +2547,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin api-proxy
-        working_dir: crates/api-proxy/http
+        run: cargo run --bin llm-proxy
+        working_dir: crates/llm-proxy/http
     rollout:
       type: recreate
       recreate:
@@ -4378,8 +4378,8 @@ hooks:
           working_dir: crates/auth
         - run: cargo build -p platform-api --release
           working_dir: crates/platform-api
-        - run: cargo build -p api-proxy --release
-          working_dir: crates/api-proxy/http
+        - run: cargo build -p llm-proxy --release
+          working_dir: crates/llm-proxy/http
       on_failure: abort
       timeout: 600s
 

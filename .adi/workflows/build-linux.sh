@@ -58,7 +58,7 @@ get_service_config() {
         flowmap-api) echo "apps/flowmap-api:flowmap-api" ;;
         hive) echo "crates/hive/http:hive" ;;
         cocoon) echo "crates/cocoon:cocoon:standalone" ;;
-        llm-proxy) echo "crates/api-proxy/http:api-proxy,api-proxy-migrate" ;;
+        llm-proxy) echo "crates/llm-proxy/http:llm-proxy,llm-proxy-migrate" ;;
         *) return 1 ;;
     esac
 }

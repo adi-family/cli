@@ -96,7 +96,7 @@ PLUGINS:
     workflow            Workflow automation
     coolify             Coolify deployment integration
     linter              Code linter
-    api-proxy           LLM API proxy (BYOK/Platform)
+    llm-proxy           LLM API proxy (BYOK/Platform)
     hive                Hive orchestration CLI
     llm-extract         LLM extraction utilities
     llm-uzu             Local LLM inference (Apple Silicon)
@@ -170,7 +170,7 @@ get_plugin_crate() {
         workflow) echo "crates/workflow/plugin" ;;
         coolify) echo "crates/coolify/plugin" ;;
         linter) echo "crates/linter/plugin" ;;
-        api-proxy) echo "crates/api-proxy/plugin" ;;
+        llm-proxy) echo "crates/llm-proxy/plugin" ;;
         llm-extract) echo "crates/llm-extract-plugin" ;;
         llm-uzu) echo "crates/llm-uzu-plugin" ;;
         tsp-gen|typespec) echo "crates/lib/lib-typespec-api/plugin" ;;

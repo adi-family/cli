@@ -58,7 +58,7 @@ dotenvy = { version = "0.15", optional = true }
 [features]
 default = []
 migrate = ["lib-migrations-core", "lib-migrations-sql", "dotenvy"]
-# Axum 0.7 support (for adi-auth, signaling, adi-api-proxy, etc.)
+# Axum 0.7 support (for adi-auth, signaling, adi-llm-proxy, etc.)
 axum = ["axum-07", "tower-04"]
 # Axum 0.8 support (for adi-platform, analytics, balance, credentials, etc.)
 axum-08-compat = ["axum-08", "tower-05"]

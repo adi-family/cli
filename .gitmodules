@@ -125,7 +125,7 @@
 	path = crates/auth
 	url = https://github.com/adi-family/adi-auth.git
 [submodule "crates/adi-api-proxy"]
-	path = crates/api-proxy
+	path = crates/llm-proxy
 	url = https://github.com/adi-family/adi-api-proxy.git
 [submodule "crates/adi-audio"]
 	path = crates/audio
