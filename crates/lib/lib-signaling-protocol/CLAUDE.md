@@ -19,7 +19,7 @@ Extracted from `lib-tarminal-sync` to avoid coupling hive/cocoon to terminal CRD
 - `lib-signaling-protocol` provides: WebSocket message definitions only
 
 ## Related Components
-- `tarminal-signaling-server`: WebSocket relay server implementing this protocol
+- `signaling-server`: WebSocket relay server implementing this protocol
 - `hive`: Cocoon orchestration client
 - `cocoon`: Worker device implementing protocol
 - `adi-platform-api`: Platform integration layer
