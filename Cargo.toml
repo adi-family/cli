@@ -99,6 +99,7 @@ members = [
     "crates/hive/plugins/env-aws-secrets",
     "crates/hive/plugins/runner-compose",
     "crates/hive/plugins/runner-podman",
+    "crates/hive/plugins/runner-watcher",
     "crates/hive/plugins/rollout-recreate",
     "crates/hive/plugins/rollout-blue-green",
     "crates/hive/plugins/proxy-ip-filter",
@@ -275,6 +276,7 @@ hive-env-1password = { path = "crates/hive/plugins/env-1password" }
 hive-env-aws-secrets = { path = "crates/hive/plugins/env-aws-secrets" }
 hive-runner-compose = { path = "crates/hive/plugins/runner-compose" }
 hive-runner-podman = { path = "crates/hive/plugins/runner-podman" }
+hive-runner-watcher = { path = "crates/hive/plugins/runner-watcher" }
 hive-rollout-recreate = { path = "crates/hive/plugins/rollout-recreate" }
 hive-rollout-blue-green = { path = "crates/hive/plugins/rollout-blue-green" }
 hive-proxy-ip-filter = { path = "crates/hive/plugins/proxy-ip-filter" }
