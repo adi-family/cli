@@ -280,7 +280,7 @@ interface ConsoleEntry {
 | Component | Type | Description |
 |-----------|------|-------------|
 | `lib-tarminal-sync` | Modify | Add `browser_debug_*` message types |
-| `tarminal-signaling-server` | Modify | Handle messages, token validation, request routing |
+| `signaling-server` | Modify | Handle messages, token validation, request routing |
 | `apps/chrome-extension-debugger` | Modify | Token detection, WebSocket client, event streaming |
 | `crates/adi-browser-debug/core` | New | Types, protocol definitions |
 | `crates/adi-browser-debug/plugin` | New | MCP tools, CLI, signaling client |
@@ -382,7 +382,7 @@ apps/chrome-extension-debugger/
 | Phase | Component | Tasks | Effort | Status |
 |-------|-----------|-------|--------|--------|
 | 1 | `lib-tarminal-sync` | Add `browser_debug_*` message types | S | DONE |
-| 2 | `tarminal-signaling-server` | Handle new messages, token validation, routing | M | DONE |
+| 2 | `signaling-server` | Handle new messages, token validation, routing | M | DONE |
 | 3 | `chrome-extension-debugger` | Token detection, WebSocket, streaming | M | DONE |
 | 4 | `adi-browser-debug/core` | Shared types | S | DONE |
 | 5 | `adi-browser-debug/plugin` | MCP tools, CLI | M | DONE |
