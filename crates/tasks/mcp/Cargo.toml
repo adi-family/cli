@@ -1,0 +1,20 @@
+[package]
+name = "tasks-mcp"
+version = "0.8.3"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "MCP (Model Context Protocol) server for ADI Tasks"
+
+[[bin]]
+name = "tasks-mcp"
+path = "src/main.rs"
+
+[dependencies]
+tasks-core = { path = "../core" }
+lib-mcp-core = { path = "../../lib/lib-mcp-core" }
+tokio = { version = "1.49", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

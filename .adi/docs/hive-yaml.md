@@ -314,7 +314,7 @@ The file MUST be valid YAML 1.2.
 All relative paths in the configuration file MUST be resolved relative to the **project root** (parent directory of `.adi/`).
 
 ```yaml
-working_dir: crates/adi-auth  # Resolves to <project>/crates/adi-auth
+working_dir: crates/auth  # Resolves to <project>/crates/auth
 ```
 
 ---
@@ -906,8 +906,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run -p adi-auth-http
-        working_dir: crates/adi-auth
+        run: cargo run -p auth-http
+        working_dir: crates/auth
     rollout:
       type: recreate
       recreate:
@@ -1031,8 +1031,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run -p adi-auth-http
-        working_dir: crates/adi-auth
+        run: cargo run -p auth-http
+        working_dir: crates/auth
     rollout:
       type: recreate
       recreate:
@@ -1053,11 +1053,11 @@ services:
         run: |
           set -e
           echo "Running auth migrations..."
-          cd crates/adi-auth
+          cd crates/auth
           cargo run --bin migrate -- up
-          
+
           echo "Running platform migrations..."
-          cd ../adi-platform-api
+          cd ../platform-api
           cargo run --bin migrate -- up
           
           echo "All migrations complete!"
@@ -1476,7 +1476,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run -p adi-auth-http
+        run: cargo run -p auth-http
     depends_on:
       - postgres
 ```
@@ -1732,8 +1732,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run -p adi-auth-http
-        working_dir: crates/adi-auth
+        run: cargo run -p auth-http
+        working_dir: crates/auth
     rollout:
       type: blue-green
       blue-green:
@@ -2419,8 +2419,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin adi-logging-service
-        working_dir: crates/adi-logging-service
+        run: cargo run --bin logging-service
+        working_dir: crates/logging-service
     rollout:
       type: recreate
       recreate:
@@ -2440,8 +2440,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run -p adi-auth-http
-        working_dir: crates/adi-auth
+        run: cargo run -p auth-http
+        working_dir: crates/auth
     rollout:
       type: recreate
       recreate:
@@ -2466,8 +2466,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin adi-platform-api
-        working_dir: crates/adi-platform-api
+        run: cargo run --bin platform-api
+        working_dir: crates/platform-api
     rollout:
       type: recreate
       recreate:
@@ -2498,7 +2498,7 @@ services:
       type: script
       script:
         run: cargo run
-        working_dir: crates/adi-analytics-ingestion
+        working_dir: crates/analytics-ingestion
     rollout:
       type: recreate
       recreate:
@@ -2519,7 +2519,7 @@ services:
       type: script
       script:
         run: cargo run
-        working_dir: crates/adi-analytics-api
+        working_dir: crates/analytics-api
     rollout:
       type: recreate
       recreate:
@@ -2547,8 +2547,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin adi-api-proxy
-        working_dir: crates/adi-api-proxy/http
+        run: cargo run --bin api-proxy
+        working_dir: crates/api-proxy/http
     rollout:
       type: recreate
       recreate:
@@ -2570,8 +2570,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin adi-balance-api
-        working_dir: crates/adi-balance-api
+        run: cargo run --bin balance-api
+        working_dir: crates/balance-api
     rollout:
       type: recreate
       recreate:
@@ -2591,8 +2591,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin adi-credentials-api
-        working_dir: crates/adi-credentials-api
+        run: cargo run --bin credentials-api
+        working_dir: crates/credentials-api
     rollout:
       type: recreate
       recreate:
@@ -2881,7 +2881,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run -p adi-auth-http
+        run: cargo run -p auth-http
     uses:
       - name: shared-postgres
         secret: ${env.INFRA_SECRET}
@@ -2895,7 +2895,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin adi-platform-api
+        run: cargo run --bin platform-api
     uses:
       - name: shared-postgres
         secret: ${env.INFRA_SECRET}
@@ -3481,8 +3481,8 @@ defaults:
   
   hive.obs.adi:
     signaling_url: ${env.SIGNALING_URL}
-    logging_service: true       # Forward to adi-logging-service
-    analytics_service: true     # Forward to adi-analytics
+    logging_service: true       # Forward to logging-service
+    analytics_service: true     # Forward to analytics
 ```
 
 #### SQLite Schema
@@ -3595,8 +3595,8 @@ HiveResponse::ObservabilitySubscribed {
 This enables:
 - Remote log viewing via `adi hive logs` (when connected to remote hive)
 - Web UI log viewer and metrics dashboard
-- Centralized logging to `adi-logging-service`
-- Analytics events to `adi-analytics`
+- Centralized logging to `logging-service`
+- Analytics events to `analytics`
 
 ---
 
@@ -3891,9 +3891,9 @@ hooks:
     - run: |
         set -e
         echo "Running database migrations..."
-        cd crates/adi-auth
+        cd crates/auth
         cargo run --bin migrate -- up
-        cd ../adi-platform-api
+        cd ../platform-api
         cargo run --bin migrate -- up
       on_failure: abort
       timeout: 120s
@@ -4101,14 +4101,14 @@ The default and simplest runner. The `run` shorthand always uses this.
 ```yaml
 # Shorthand
 - run: cargo run --bin migrate -- up
-  working_dir: crates/adi-auth
+  working_dir: crates/auth
 
 # Equivalent explicit form
 - runner:
     type: script
     script:
       run: cargo run --bin migrate -- up
-      working_dir: crates/adi-auth
+      working_dir: crates/auth
 ```
 
 #### External: Docker Runner
@@ -4122,7 +4122,7 @@ Runs a container to completion (`docker run --rm`). The container starts, execut
       image: flyway/flyway:10
       command: -url=jdbc:postgresql://host.docker.internal:5432/adi_auth migrate
       volumes:
-        - ./crates/adi-auth/migrations:/flyway/sql
+        - ./crates/auth/migrations:/flyway/sql
       environment:
         FLYWAY_USER: adi
         FLYWAY_PASSWORD: adi
@@ -4234,12 +4234,12 @@ services:
     runner:
       type: script
       script:
-        run: cargo run -p adi-auth-http
-        working_dir: crates/adi-auth
+        run: cargo run -p auth-http
+        working_dir: crates/auth
     hooks:
       pre-up:
         - run: cargo run --bin migrate -- up
-          working_dir: crates/adi-auth
+          working_dir: crates/auth
           on_failure: abort
           timeout: 120s
       post-up:
@@ -4349,7 +4349,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run -p adi-auth-http
+        run: cargo run -p auth-http
     hooks:
       pre-up:
         - runner:
@@ -4358,7 +4358,7 @@ services:
               image: flyway/flyway:10
               command: -url=jdbc:postgresql://host.docker.internal:5432/adi_auth migrate
               volumes:
-                - ./crates/adi-auth/migrations:/flyway/sql
+                - ./crates/auth/migrations:/flyway/sql
               environment:
                 FLYWAY_USER: adi
                 FLYWAY_PASSWORD: adi
@@ -4374,20 +4374,20 @@ hooks:
   pre-up:
     # Build all services concurrently
     - parallel:
-        - run: cargo build -p adi-auth-http --release
-          working_dir: crates/adi-auth
-        - run: cargo build -p adi-platform-api --release
-          working_dir: crates/adi-platform-api
-        - run: cargo build -p adi-api-proxy --release
-          working_dir: crates/adi-api-proxy/http
+        - run: cargo build -p auth-http --release
+          working_dir: crates/auth
+        - run: cargo build -p platform-api --release
+          working_dir: crates/platform-api
+        - run: cargo build -p api-proxy --release
+          working_dir: crates/api-proxy/http
       on_failure: abort
       timeout: 600s
 
     # Sequential: run migrations after all builds succeed
     - run: |
         set -e
-        cd crates/adi-auth && cargo run --bin migrate -- up
-        cd ../adi-platform-api && cargo run --bin migrate -- up
+        cd crates/auth && cargo run --bin migrate -- up
+        cd ../platform-api && cargo run --bin migrate -- up
       on_failure: abort
       timeout: 120s
 ```
@@ -4401,7 +4401,7 @@ services:
         - parallel:
             # Script: run local migrations
             - run: cargo run --bin migrate -- up
-              working_dir: crates/adi-auth
+              working_dir: crates/auth
             # Docker: run Flyway migrations
             - runner:
                 type: docker

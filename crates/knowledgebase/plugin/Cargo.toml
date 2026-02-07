@@ -1,0 +1,39 @@
+[package]
+name = "knowledgebase-plugin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "ADI Knowledgebase plugin providing MCP tools for knowledge graph and embeddings"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+lib-plugin-host = { path = "../../lib/lib-plugin-host" }
+knowledgebase-core = { path = "../core" }
+async-trait = "0.1"
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+once_cell = "1.21"
+tokio = { workspace = true, features = ["rt-multi-thread", "sync"] }
+
+[package.metadata.plugin]
+id = "adi.knowledgebase"
+name = "ADI Knowledgebase"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.mcp.tools"
+version = "1.0.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.mcp.resources"
+version = "1.0.0"
+
+[package.metadata.plugin.tags]
+categories = ["knowledgebase", "embeddings", "graph", "rag"]

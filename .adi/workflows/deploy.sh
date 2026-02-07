@@ -457,13 +457,13 @@ COMMANDS:
     help                Show this help
 
 SERVICES:
-    auth                Auth API (adi-auth)
-    platform            Platform API (adi-platform-api)
+    auth                Auth API (auth)
+    platform            Platform API (platform-api)
     signaling           Signaling Server (tarminal-signaling-server)
     web                 Web UI (infra-service-web)
-    analytics-ingestion Analytics Ingestion (adi-analytics-ingestion)
-    analytics           Analytics API (adi-analytics-api)
-    registry            Plugin Registry (adi-plugin-registry-http)
+    analytics-ingestion Analytics Ingestion (analytics-ingestion)
+    analytics           Analytics API (analytics-api)
+    registry            Plugin Registry (plugin-registry-http)
 
 ENVIRONMENT:
     COOLIFY_URL         Coolify instance URL (default: http://in.the-ihor.com)

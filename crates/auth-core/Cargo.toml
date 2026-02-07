@@ -1,0 +1,31 @@
+[package]
+name = "auth-core"
+version = "0.8.4"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "Core library for ADI Auth - email-based passwordless authentication"
+
+[features]
+default = []
+axum = ["dep:axum"]
+
+[dependencies]
+thiserror = "2"
+tokio = { version = "1.49", features = ["full"] }
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { version = "0.31", features = ["bundled"] }
+dirs = "5"
+tracing = "0.1"
+lib-migrations = { path = "../lib/lib-migrations" }
+jsonwebtoken = "9"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.19", features = ["v4", "serde"] }
+fastrand = "2"
+lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "smtp-transport"] }
+axum = { version = "0.7", optional = true }
+
+[dev-dependencies]
+tempfile = "3.24"

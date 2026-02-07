@@ -36,7 +36,7 @@ OPTIONS:
 
 EXAMPLES:
     $0 apps/infra-service-web
-    $0 crates/adi-cli --update-parent no
+    $0 crates/cli --update-parent no
 
 EOF
     exit 0

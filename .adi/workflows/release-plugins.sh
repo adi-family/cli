@@ -77,23 +77,23 @@ bump_version() {
 
 # Core plugins
 PLUGINS=(
-    "adi-tasks-plugin:adi.tasks:ADI Tasks:core"
-    "adi-agent-loop-plugin:adi.agent-loop:ADI Agent Loop:core"
-    "adi-indexer-plugin:adi.indexer:ADI Indexer:core"
-    "adi-knowledgebase-plugin:adi.knowledgebase:ADI Knowledgebase:core"
-    "adi-linter-plugin:adi.linter:ADI Linter:core"
+    "tasks-plugin:adi.tasks:ADI Tasks:core"
+    "agent-loop-plugin:adi.agent-loop:ADI Agent Loop:core"
+    "indexer-plugin:adi.indexer:ADI Indexer:core"
+    "knowledgebase-plugin:adi.knowledgebase:ADI Knowledgebase:core"
+    "linter-plugin:adi.linter:ADI Linter:core"
     # Language plugins
-    "adi-lang-rust:adi.lang.rust:Rust Language Support:language"
-    "adi-lang-python:adi.lang.python:Python Language Support:language"
-    "adi-lang-typescript:adi.lang.typescript:TypeScript Language Support:language"
-    "adi-lang-cpp:adi.lang.cpp:C++ Language Support:language"
-    "adi-lang-go:adi.lang.go:Go Language Support:language"
-    "adi-lang-java:adi.lang.java:Java Language Support:language"
-    "adi-lang-csharp:adi.lang.csharp:C# Language Support:language"
-    "adi-lang-ruby:adi.lang.ruby:Ruby Language Support:language"
-    "adi-lang-php:adi.lang.php:PHP Language Support:language"
-    "adi-lang-swift:adi.lang.swift:Swift Language Support:language"
-    "adi-lang-lua:adi.lang.lua:Lua Language Support:language"
+    "lang-rust:adi.lang.rust:Rust Language Support:language"
+    "lang-python:adi.lang.python:Python Language Support:language"
+    "lang-typescript:adi.lang.typescript:TypeScript Language Support:language"
+    "lang-cpp:adi.lang.cpp:C++ Language Support:language"
+    "lang-go:adi.lang.go:Go Language Support:language"
+    "lang-java:adi.lang.java:Java Language Support:language"
+    "lang-csharp:adi.lang.csharp:C# Language Support:language"
+    "lang-ruby:adi.lang.ruby:Ruby Language Support:language"
+    "lang-php:adi.lang.php:PHP Language Support:language"
+    "lang-swift:adi.lang.swift:Swift Language Support:language"
+    "lang-lua:adi.lang.lua:Lua Language Support:language"
 )
 
 # =============================================================================
@@ -136,7 +136,7 @@ main() {
 
     # Get current version from first plugin's Cargo.toml
     local current_version
-    current_version=$(grep '^version = ' "$ROOT_DIR/crates/adi-tasks/plugin/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+    current_version=$(grep '^version = ' "$ROOT_DIR/crates/tasks/plugin/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
     info "Current version: v$current_version"
 
     local version="$current_version"
@@ -153,10 +153,10 @@ main() {
             local cargo_file="$ROOT_DIR/crates/$crate_name/Cargo.toml"
             # Handle plugin directory structures
             case "$crate_name" in
-                adi-lang-*) cargo_file="$ROOT_DIR/crates/adi-lang/${crate_name#adi-lang-}/plugin/Cargo.toml" ;;
-                adi-knowledgebase-plugin) cargo_file="$ROOT_DIR/crates/adi-knowledgebase/plugin/Cargo.toml" ;;
-                adi-tasks-plugin) cargo_file="$ROOT_DIR/crates/adi-tasks/plugin/Cargo.toml" ;;
-                adi-linter-plugin) cargo_file="$ROOT_DIR/crates/adi-linter/plugin/Cargo.toml" ;;
+                lang-*) cargo_file="$ROOT_DIR/crates/lang/${crate_name#lang-}/plugin/Cargo.toml" ;;
+                knowledgebase-plugin) cargo_file="$ROOT_DIR/crates/knowledgebase/plugin/Cargo.toml" ;;
+                tasks-plugin) cargo_file="$ROOT_DIR/crates/tasks/plugin/Cargo.toml" ;;
+                linter-plugin) cargo_file="$ROOT_DIR/crates/linter/plugin/Cargo.toml" ;;
             esac
             if [ -f "$cargo_file" ]; then
                 # Skip workspace-managed versions
@@ -230,10 +230,10 @@ main() {
         # Map crate name to directory path
         local crate_dir="$ROOT_DIR/crates/$crate_name"
         case "$crate_name" in
-            adi-lang-*) crate_dir="$ROOT_DIR/crates/adi-lang/${crate_name#adi-lang-}/plugin" ;;
-            adi-knowledgebase-plugin) crate_dir="$ROOT_DIR/crates/adi-knowledgebase/plugin" ;;
-            adi-tasks-plugin) crate_dir="$ROOT_DIR/crates/adi-tasks/plugin" ;;
-            adi-linter-plugin) crate_dir="$ROOT_DIR/crates/adi-linter/plugin" ;;
+            lang-*) crate_dir="$ROOT_DIR/crates/lang/${crate_name#lang-}/plugin" ;;
+            knowledgebase-plugin) crate_dir="$ROOT_DIR/crates/knowledgebase/plugin" ;;
+            tasks-plugin) crate_dir="$ROOT_DIR/crates/tasks/plugin" ;;
+            linter-plugin) crate_dir="$ROOT_DIR/crates/linter/plugin" ;;
         esac
 
         # Check if crate exists

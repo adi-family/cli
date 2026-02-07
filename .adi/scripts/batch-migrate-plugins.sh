@@ -6,23 +6,23 @@ set -e
 # Plugin mapping: directory:struct_name:display_name
 PLUGINS=(
     # Core CLI plugins
-    "crates/adi-audio/plugin:AudioPlugin:ADI Audio"
-    "crates/adi-linter/plugin:LinterPlugin:ADI Linter"
-    "crates/adi-coolify/plugin:CoolifyPlugin:ADI Coolify"
-    "crates/adi-browser-debug/plugin:BrowserDebugPlugin:Browser Debug"
+    "crates/audio/plugin:AudioPlugin:ADI Audio"
+    "crates/linter/plugin:LinterPlugin:ADI Linter"
+    "crates/coolify/plugin:CoolifyPlugin:ADI Coolify"
+    "crates/browser-debug/plugin:BrowserDebugPlugin:Browser Debug"
 
     # Language plugins
-    "crates/adi-lang/go/plugin:GoLangPlugin:Go Language Support"
-    "crates/adi-lang/python/plugin:PythonLangPlugin:Python Language Support"
-    "crates/adi-lang/typescript/plugin:TypeScriptLangPlugin:TypeScript Language Support"
-    "crates/adi-lang/rust/plugin:RustLangPlugin:Rust Language Support"
-    "crates/adi-lang/java/plugin:JavaLangPlugin:Java Language Support"
-    "crates/adi-lang/php/plugin:PhpLangPlugin:PHP Language Support"
-    "crates/adi-lang/lua/plugin:LuaLangPlugin:Lua Language Support"
-    "crates/adi-lang/cpp/plugin:CppLangPlugin:C++ Language Support"
-    "crates/adi-lang/swift/plugin:SwiftLangPlugin:Swift Language Support"
-    "crates/adi-lang/csharp/plugin:CSharpLangPlugin:C# Language Support"
-    "crates/adi-lang/ruby/plugin:RubyLangPlugin:Ruby Language Support"
+    "crates/lang/go/plugin:GoLangPlugin:Go Language Support"
+    "crates/lang/python/plugin:PythonLangPlugin:Python Language Support"
+    "crates/lang/typescript/plugin:TypeScriptLangPlugin:TypeScript Language Support"
+    "crates/lang/rust/plugin:RustLangPlugin:Rust Language Support"
+    "crates/lang/java/plugin:JavaLangPlugin:Java Language Support"
+    "crates/lang/php/plugin:PhpLangPlugin:PHP Language Support"
+    "crates/lang/lua/plugin:LuaLangPlugin:Lua Language Support"
+    "crates/lang/cpp/plugin:CppLangPlugin:C++ Language Support"
+    "crates/lang/swift/plugin:SwiftLangPlugin:Swift Language Support"
+    "crates/lang/csharp/plugin:CSharpLangPlugin:C# Language Support"
+    "crates/lang/ruby/plugin:RubyLangPlugin:Ruby Language Support"
 )
 
 TEMPLATE="$(dirname "$0")/../templates/v3-cli-only-plugin.rs"

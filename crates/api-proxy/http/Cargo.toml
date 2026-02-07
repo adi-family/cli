@@ -1,0 +1,75 @@
+[package]
+name = "api-proxy-http"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "ADI API Proxy - HTTP server for LLM API proxying"
+
+[[bin]]
+name = "api-proxy"
+path = "src/main.rs"
+
+[[bin]]
+name = "api-proxy-migrate"
+path = "src/bin/migrate.rs"
+
+[[bin]]
+name = "add-platform-key"
+path = "src/bin/add_platform_key.rs"
+
+[dependencies]
+# Core library
+api-proxy-core = { path = "../core" }
+
+# Analytics
+lib-analytics-core = { path = "../../lib/lib-analytics-core" }
+
+# HTTP utilities
+lib-http-common = { path = "../../lib/lib-http-common" }
+
+# Logging
+lib-logging-core = { path = "../../lib/lib-logging-core", features = ["axum"] }
+
+# Workspace dependencies
+thiserror.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+futures.workspace = true
+
+# HTTP server
+axum = { version = "0.7", features = ["macros"] }
+tower.workspace = true
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate"] }
+
+# Auth
+jsonwebtoken.workspace = true
+
+# Streaming
+async-stream = "0.3"
+tokio-stream = "0.1"
+bytes = "1"
+
+# HTTP types
+http.workspace = true
+
+# Decimal
+rust_decimal = { version = "1.32", features = ["serde"] }
+
+# Environment
+dotenvy = "0.15"
+
+# Tracing
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

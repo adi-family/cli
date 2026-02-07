@@ -1,0 +1,30 @@
+[package]
+name = "api-proxy-plugin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "ADI API Proxy CLI plugin for managing proxy tokens and keys"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Plugin ABI
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Async runtime
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+
+# HTTP client for API calls
+reqwest = { workspace = true, features = ["json", "blocking"] }
+
+# CLI formatting
+console.workspace = true
+
+# Global state
+once_cell = "1.21"

@@ -1,0 +1,26 @@
+[package]
+name = "indexer-http"
+version = "0.8.3"
+edition = "2021"
+license = "BSL-1.0"
+description = "HTTP API server for ADI Code Indexer"
+authors = ["ADI Team"]
+
+[[bin]]
+name = "indexer-http"
+path = "src/main.rs"
+
+[dependencies]
+indexer-core = { path = "../core", features = ["fastembed"] }
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+tokio = { version = "1.49", features = ["full"] }
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP utilities
+lib-http-common = { path = "../../lib/lib-http-common" }

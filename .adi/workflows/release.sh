@@ -25,16 +25,16 @@ REGISTRY="docker-registry.the-ihor.com"
 get_service_config() {
     local service=$1
     case "$service" in
-        adi-auth) echo "crates/adi-auth:adi-auth-http,adi-auth-migrate:adi-auth" ;;
-        adi-platform-api) echo "crates/adi-platform-api:adi-platform-api:adi-platform-api" ;;
-        adi-analytics-api) echo "crates/adi-analytics-api:adi-analytics-api:adi-analytics-api" ;;
-        adi-analytics-ingestion) echo "crates/adi-analytics-ingestion:adi-analytics-ingestion:adi-analytics-ingestion" ;;
+        auth) echo "crates/auth:auth-http,auth-migrate:auth" ;;
+        platform-api) echo "crates/platform-api:platform-api:platform-api" ;;
+        analytics-api) echo "crates/analytics-api:analytics-api:analytics-api" ;;
+        analytics-ingestion) echo "crates/analytics-ingestion:analytics-ingestion:analytics-ingestion" ;;
         tarminal-signaling-server) echo "crates/tarminal-signaling-server:tarminal-signaling:tarminal-signaling-server" ;;
-        adi-plugin-registry) echo "crates/adi-plugin-registry-http:adi-plugin-registry:adi-plugin-registry" ;;
+        plugin-registry) echo "crates/plugin-registry-http:plugin-registry:plugin-registry" ;;
         flowmap-api) echo "apps/flowmap-api:flowmap-api:flowmap-api" ;;
         hive) echo "crates/hive/http:hive:hive" ;;
         cocoon) echo "crates/cocoon:cocoon:cocoon" ;;
-        llm-proxy) echo "crates/adi-api-proxy/http:adi-api-proxy,adi-api-proxy-migrate:llm-proxy" ;;
+        llm-proxy) echo "crates/api-proxy/http:api-proxy,api-proxy-migrate:llm-proxy" ;;
         *) return 1 ;;
     esac
 }
@@ -43,13 +43,13 @@ get_service_config() {
 get_image_name() {
     local service=$1
     case "$service" in
-        llm-proxy) echo "adi-llm-proxy" ;;
+        llm-proxy) echo "llm-proxy" ;;
         *) echo "$service" ;;
     esac
 }
 
 # All available services
-ALL_SERVICES="adi-auth adi-platform-api adi-analytics-api adi-analytics-ingestion tarminal-signaling-server adi-plugin-registry flowmap-api hive cocoon llm-proxy"
+ALL_SERVICES="auth platform-api analytics-api analytics-ingestion tarminal-signaling-server plugin-registry flowmap-api hive cocoon llm-proxy"
 
 usage() {
     cat <<EOF
@@ -64,12 +64,12 @@ OPTIONS:
     -h, --help          Show this help
 
 SERVICES:
-    adi-auth                    Auth service
-    adi-platform-api            Platform API
-    adi-analytics-api           Analytics API
-    adi-analytics-ingestion     Analytics ingestion
+    auth                        Auth service
+    platform-api                Platform API
+    analytics-api               Analytics API
+    analytics-ingestion         Analytics ingestion
     tarminal-signaling-server   Signaling server
-    adi-plugin-registry         Plugin registry
+    plugin-registry             Plugin registry
     flowmap-api                 FlowMap API
     hive                        Hive (cocoon orchestration)
     cocoon                      Cocoon worker (Docker image)
@@ -79,7 +79,7 @@ SERVICES:
 EXAMPLES:
     $0 llm-proxy                # Build llm-proxy image
     $0 all --push               # Build + push all services
-    $0 adi-auth --tag v1.0.0    # Build with custom tag
+    $0 auth --tag v1.0.0        # Build with custom tag
     $0 llm-proxy --skip-build   # Docker only (binaries already built)
 EOF
     exit 0

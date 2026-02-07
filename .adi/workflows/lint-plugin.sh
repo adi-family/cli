@@ -587,8 +587,6 @@ resolve_plugin_dir() {
     # Fallback to directory-based resolution
     if [[ -d "$PROJECT_ROOT/crates/$plugin" ]]; then
         echo "$PROJECT_ROOT/crates/$plugin"
-    elif [[ -d "$PROJECT_ROOT/crates/adi-$plugin" ]]; then
-        echo "$PROJECT_ROOT/crates/adi-$plugin"
     fi
 }
 
@@ -600,7 +598,6 @@ if [[ -z "$PLUGIN_DIR" ]]; then
     echo "  - Direct path: $PLUGIN"
     echo "  - Plugin ID lookup in plugin.toml files"
     echo "  - Directory: $PROJECT_ROOT/crates/$PLUGIN"
-    echo "  - Directory: $PROJECT_ROOT/crates/adi-$PLUGIN"
     exit 1
 fi
 

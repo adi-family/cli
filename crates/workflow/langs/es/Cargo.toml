@@ -1,0 +1,34 @@
+[package]
+name = "workflow-lang-es"
+version = "3.0.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Spanish translations for ADI Workflow (v3)"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../lib/lib-plugin-abi-v3" }
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[package.metadata.plugin]
+id = "adi.workflow.es-ES"
+name = "ADI Workflow - Español"
+type = "translation"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.i18n.workflow.es-ES"
+version = "1.0.0"
+description = "Spanish translations for workflow"
+
+[package.metadata.plugin.translation]
+translates = "adi.workflow"
+language = "es-ES"
+language_name = "Español"
+namespace = "workflow"

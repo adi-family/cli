@@ -1,0 +1,40 @@
+[package]
+name = "tasks-plugin"
+version = "0.8.8"
+edition = "2021"
+license = "BSL-1.0"
+description = "ADI Tasks plugin providing CLI commands for task management"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# V3 Plugin ABI (unified, replaces lib-plugin-abi)
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+tasks-core = { path = "../core" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["sync"] }
+async-trait = "0.1"
+
+[package.metadata.plugin]
+id = "adi.tasks"
+name = "ADI Tasks"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.cli]
+command = "tasks"
+description = "Task management - dependency graphs and task tracking"
+aliases = ["t"]
+
+[[package.metadata.plugin.provides]]
+id = "adi.tasks.cli"
+version = "1.0.0"
+description = "CLI commands for task management"
+
+[package.metadata.plugin.tags]
+categories = ["tasks", "project-management", "workflow"]

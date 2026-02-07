@@ -20,7 +20,7 @@ if [[ -z "${_ADI_PRELUDE_LOADED:-}" ]]; then
 fi
 
 REPO="adi-family/adi-cli"
-CLI_CRATE="$PROJECT_ROOT/crates/adi-cli"
+CLI_CRATE="$PROJECT_ROOT/crates/cli"
 DIST_DIR="$PROJECT_ROOT/dist/cli"
 
 # Targets to build
@@ -125,7 +125,7 @@ if [[ "$SKIP_BUILD" == "false" ]]; then
         fi
         
         # Build
-        cargo build --release --target "$target" -p adi-cli
+        cargo build --release --target "$target" -p cli
         
         # Determine binary name and archive format
         if [[ "$target" == *"windows"* ]]; then

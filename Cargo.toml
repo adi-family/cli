@@ -4,24 +4,24 @@ exclude = [
     "crates/lib/lib-flowmap-core",
     "crates/lib/lib-flowmap-parser",
     "apps/flowmap-api",
-    "crates/adi-analytics-api",
-    "crates/adi-analytics-ingestion",
+    "crates/analytics-api",
+    "crates/analytics-ingestion",
     # Apple Silicon only - requires Metal Toolchain
     "crates/lib/lib-client/uzu",
-    "crates/adi-llm-uzu-plugin",
+    "crates/llm-uzu-plugin",
     # Nested workspaces (submodules with their own workspace roots)
-    "crates/adi-executor",
-    "crates/adi-plugin-registry-http",
+    "crates/executor",
+    "crates/plugin-registry-http",
     "crates/tarminal-signaling-server",
     # Standalone API services
-    "crates/adi-balance-api",
-    "crates/adi-credentials-api",
+    "crates/balance-api",
+    "crates/credentials-api",
     # Submodule parent dirs with placeholder Cargo.toml
     "crates/hive",
 ]
 members = [
     # CLI manager (submodule)
-    "crates/adi-cli",
+    "crates/cli",
 
     # Shared libraries
     "crates/lib/lib-cli-common",
@@ -38,42 +38,42 @@ members = [
 
     # Indexer components (flat submodules)
     "crates/lib/lib-embed",
-    "crates/adi-indexer/core",
-    "crates/adi-indexer/cli",
-    "crates/adi-indexer/http",
+    "crates/indexer/core",
+    "crates/indexer/cli",
+    "crates/indexer/http",
 
     # Tasks components
-    "crates/adi-tasks/core",
-    "crates/adi-tasks/cli",
-    "crates/adi-tasks/http",
-    "crates/adi-tasks/mcp",
+    "crates/tasks/core",
+    "crates/tasks/cli",
+    "crates/tasks/http",
+    "crates/tasks/mcp",
 
     # Tools components (CLI tool index for LLM agents)
-    "crates/adi-tools/core",
-    "crates/adi-tools/plugin",
+    "crates/tools/core",
+    "crates/tools/plugin",
 
     # Workflow components
-    "crates/adi-workflow/mcp",
+    "crates/workflow/mcp",
 
     # Linter components
-    "crates/adi-linter/core",
+    "crates/linter/core",
 
     # Auth components
-    "crates/adi-auth-core",
-    "crates/adi-auth-http",
+    "crates/auth-core",
+    "crates/auth-http",
 
     # Knowledgebase components
-    "crates/adi-knowledgebase/core",
-    "crates/adi-knowledgebase/cli",
-    "crates/adi-knowledgebase/http",
+    "crates/knowledgebase/core",
+    "crates/knowledgebase/cli",
+    "crates/knowledgebase/http",
 
     # Agent Loop components
-    "crates/adi-agent-loop/core",
-    "crates/adi-agent-loop/http",
+    "crates/agent-loop/core",
+    "crates/agent-loop/http",
 
     # API Proxy components
-    "crates/adi-api-proxy/core",
-    "crates/adi-api-proxy/http",
+    "crates/api-proxy/core",
+    "crates/api-proxy/http",
 
     # Hive components
     "crates/hive/core",
@@ -130,12 +130,12 @@ members = [
 
     # Logging
     "crates/lib/lib-logging-core",
-    "crates/adi-logging-service",
+    "crates/logging-service",
 
     # Platform API components
-    "crates/adi-platform-api/core",
-    "crates/adi-platform-api/http",
-    "crates/adi-platform-api/cli",
+    "crates/platform-api/core",
+    "crates/platform-api/http",
+    "crates/platform-api/cli",
 
     # Tools
     "crates/tool-generate-heartbit",
@@ -167,66 +167,66 @@ members = [
 
     # Indexer language plugins
     "crates/lib/lib-indexer-lang-abi",
-    "crates/adi-lang/rust/plugin",
-    "crates/adi-lang/python/plugin",
-    "crates/adi-lang/typescript/plugin",
-    "crates/adi-lang/cpp/plugin",
-    "crates/adi-lang/go/plugin",
-    "crates/adi-lang/java/plugin",
-    "crates/adi-lang/csharp/plugin",
-    "crates/adi-lang/ruby/plugin",
-    "crates/adi-lang/php/plugin",
-    "crates/adi-lang/swift/plugin",
-    "crates/adi-lang/lua/plugin",
+    "crates/lang/rust/plugin",
+    "crates/lang/python/plugin",
+    "crates/lang/typescript/plugin",
+    "crates/lang/cpp/plugin",
+    "crates/lang/go/plugin",
+    "crates/lang/java/plugin",
+    "crates/lang/csharp/plugin",
+    "crates/lang/ruby/plugin",
+    "crates/lang/php/plugin",
+    "crates/lang/swift/plugin",
+    "crates/lang/lua/plugin",
 
     # TypeSpec API generator
     "crates/lib/lib-typespec-api",
 
     # Core plugins
-    "crates/adi-embed-plugin",
-    "crates/adi-indexer/plugin",
-    "crates/adi-tasks/plugin",
-    "crates/adi-knowledgebase/plugin",
-    "crates/adi-agent-loop/plugin",
-    "crates/adi-linter/plugin",
-    "crates/adi-workflow/plugin",
-    "crates/adi-api-proxy/plugin",
+    "crates/embed-plugin",
+    "crates/indexer/plugin",
+    "crates/tasks/plugin",
+    "crates/knowledgebase/plugin",
+    "crates/agent-loop/plugin",
+    "crates/linter/plugin",
+    "crates/workflow/plugin",
+    "crates/api-proxy/plugin",
     "crates/hive/plugin",
-    "crates/adi-llm-extract-plugin",
+    "crates/llm-extract-plugin",
     "crates/lib/lib-typespec-api/plugin",
     "crates/cocoon",
     "crates/webrtc-test-peer",
 
     # Browser Debug components
-    "crates/adi-browser-debug/core",
-    "crates/adi-browser-debug/plugin",
-    "crates/adi-browser-debug/mcp",
+    "crates/browser-debug/core",
+    "crates/browser-debug/plugin",
+    "crates/browser-debug/mcp",
 
     # Audio components
-    "crates/adi-audio/core",
-    "crates/adi-audio/plugin",
+    "crates/audio/core",
+    "crates/audio/plugin",
 
     # Workflow translation plugins
-    "crates/adi-workflow/langs/en",
-    "crates/adi-workflow/langs/uk",
-    "crates/adi-workflow/langs/zh",
-    "crates/adi-workflow/langs/es",
-    "crates/adi-workflow/langs/fr",
-    "crates/adi-workflow/langs/de",
-    "crates/adi-workflow/langs/ja",
-    "crates/adi-workflow/langs/ko",
-    "crates/adi-workflow/langs/ru",
+    "crates/workflow/langs/en",
+    "crates/workflow/langs/uk",
+    "crates/workflow/langs/zh",
+    "crates/workflow/langs/es",
+    "crates/workflow/langs/fr",
+    "crates/workflow/langs/de",
+    "crates/workflow/langs/ja",
+    "crates/workflow/langs/ko",
+    "crates/workflow/langs/ru",
 
     # Translation plugins
-    "crates/adi-cli/plugins/en-US",
-    "crates/adi-cli/plugins/zh-CN",
-    "crates/adi-cli/plugins/uk-UA",
-    "crates/adi-cli/plugins/es-ES",
-    "crates/adi-cli/plugins/fr-FR",
-    "crates/adi-cli/plugins/de-DE",
-    "crates/adi-cli/plugins/ja-JP",
-    "crates/adi-cli/plugins/ko-KR",
-    "crates/adi-cli/plugins/ru-RU",
+    "crates/cli/plugins/en-US",
+    "crates/cli/plugins/zh-CN",
+    "crates/cli/plugins/uk-UA",
+    "crates/cli/plugins/es-ES",
+    "crates/cli/plugins/fr-FR",
+    "crates/cli/plugins/de-DE",
+    "crates/cli/plugins/ja-JP",
+    "crates/cli/plugins/ko-KR",
+    "crates/cli/plugins/ru-RU",
 ]
 
 # FlowMap is standalone (not in workspace) - build with:
@@ -243,17 +243,17 @@ authors = ["ADI Team"]
 
 [workspace.dependencies]
 # Core crates (from submodules)
-adi-indexer-core = { path = "crates/adi-indexer/core" }
-adi-tasks-core = { path = "crates/adi-tasks/core" }
-adi-knowledgebase-core = { path = "crates/adi-knowledgebase/core" }
-adi-agent-loop-core = { path = "crates/adi-agent-loop/core" }
-adi-auth-core = { path = "crates/adi-auth-core" }
-adi-linter-core = { path = "crates/adi-linter/core" }
-adi-api-proxy-core = { path = "crates/adi-api-proxy/core" }
-adi-hive-core = { path = "crates/hive/core" }
-adi-audio-core = { path = "crates/adi-audio/core" }
-adi-platform-api-core = { path = "crates/adi-platform-api/core" }
-adi-tools-core = { path = "crates/adi-tools/core" }
+indexer-core = { path = "crates/indexer/core" }
+tasks-core = { path = "crates/tasks/core" }
+knowledgebase-core = { path = "crates/knowledgebase/core" }
+agent-loop-core = { path = "crates/agent-loop/core" }
+auth-core = { path = "crates/auth-core" }
+linter-core = { path = "crates/linter/core" }
+api-proxy-core = { path = "crates/api-proxy/core" }
+hive-core = { path = "crates/hive/core" }
+audio-core = { path = "crates/audio/core" }
+platform-api-core = { path = "crates/platform-api/core" }
+tools-core = { path = "crates/tools/core" }
 
 # Hive plugin system
 hive-plugin-abi = { path = "crates/hive/plugins/abi" }

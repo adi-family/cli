@@ -1,4 +1,4 @@
-adi-cli, rust, monorepo, workspace, submodules, meta-repo
+cli, rust, monorepo, workspace, submodules, meta-repo
 
 ## Overview
 - Meta-repository aggregating ADI family components via git submodules
@@ -38,17 +38,17 @@ Components that users interact with via `adi` CLI need a plugin:
 | `cli/` | Standalone CLI (optional) | Binary |
 
 **Components:**
-- `adi-agent-loop` (core, http, plugin) - `adi agent run`
-- `adi-tasks` (core, cli, http, plugin) - `adi tasks list`
-- `adi-indexer` (core, cli, http, plugin) - `adi index`
-- `adi-knowledgebase` (core, cli, http, plugin) - `adi kb`
-- `adi-api-proxy` (core, http, plugin) - `adi proxy`
+- `agent-loop` (core, http, plugin) - `adi agent run`
+- `tasks` (core, cli, http, plugin) - `adi tasks list`
+- `indexer` (core, cli, http, plugin) - `adi index`
+- `knowledgebase` (core, cli, http, plugin) - `adi kb`
+- `api-proxy` (core, http, plugin) - `adi proxy`
 - `hive` (core, http, plugin) - `adi hive`
-- `adi-audio` (core, plugin) - `adi audio`
-- `adi-tools` (core, plugin) - `adi tools`
-- `adi-browser-debug` (core, plugin, mcp) - `adi browser-debug`
-- `adi-workflow` (plugin) - `adi workflow`
-- `adi-linter` (plugin) - `adi lint`
+- `audio` (core, plugin) - `adi audio`
+- `tools` (core, plugin) - `adi tools`
+- `browser-debug` (core, plugin, mcp) - `adi browser-debug`
+- `workflow` (plugin) - `adi workflow`
+- `linter` (plugin) - `adi lint`
 
 ### Backend Services (no plugin)
 Services that run on servers and are called via HTTP don't need plugins:
@@ -60,56 +60,56 @@ Services that run on servers and are called via HTTP don't need plugins:
 | `cli/` | Migrations + server management | Binary |
 
 **Components:**
-- `adi-platform-api` (core, http, cli) - Unified Platform API
-- `adi-auth` (core, http) - Authentication service (email + TOTP)
+- `platform-api` (core, http, cli) - Unified Platform API
+- `auth` (core, http) - Authentication service (email + TOTP)
 - `tarminal-signaling-server` - WebSocket signaling
 
 **Standalone API services** (excluded from main workspace, developed independently):
-- `adi-balance-api` - Balance/transaction tracking
-- `adi-credentials-api` - Secure credentials storage
-- `adi-logging-service` - Centralized logging
+- `balance-api` - Balance/transaction tracking
+- `credentials-api` - Secure credentials storage
+- `logging-service` - Centralized logging
 
 **Naming convention:**
-- Core: `adi-{component}-core` (e.g., `adi-platform-api-core`)
-- HTTP: `adi-{component}-http` (e.g., `adi-platform-api-http`)
-- CLI: `adi-{component}-cli` (e.g., `adi-platform-api-cli`)
-- Plugin: `adi-{component}-plugin` (only for user-facing components)
+- Core: `{component}-core` (e.g., `platform-api-core`)
+- HTTP: `{component}-http` (e.g., `platform-api-http`)
+- CLI: `{component}-cli` (e.g., `platform-api-cli`)
+- Plugin: `{component}-plugin` (only for user-facing components)
 
 **Dependencies flow:** `cli` → `core` ← `http` (both cli and http depend on core)
 
 ## Submodules
 
 ### Core CLI
-- `crates/adi-cli` - Component installer/manager
+- `crates/cli` - Component installer/manager
 
 ### User-Facing Components (nested structure: core/http/plugin)
-- `crates/adi-agent-loop` - Autonomous LLM agents
-- `crates/adi-tasks` - Task management
-- `crates/adi-indexer` - Code indexer
-- `crates/adi-knowledgebase` - Graph DB + embeddings
-- `crates/adi-api-proxy` - LLM API proxy (BYOK/Platform modes)
+- `crates/agent-loop` - Autonomous LLM agents
+- `crates/tasks` - Task management
+- `crates/indexer` - Code indexer
+- `crates/knowledgebase` - Graph DB + embeddings
+- `crates/api-proxy` - LLM API proxy (BYOK/Platform modes)
 - `crates/hive` - Cocoon container orchestration
-- `crates/adi-audio` - Audio processing
-- `crates/adi-tools` - CLI tools collection
-- `crates/adi-browser-debug` - Browser debugging + MCP
-- `crates/adi-workflow` - Workflow automation
-- `crates/adi-linter` - Code linting
-- `crates/adi-lang` - Language analyzers (rust, python, typescript, etc.)
+- `crates/audio` - Audio processing
+- `crates/tools` - CLI tools collection
+- `crates/browser-debug` - Browser debugging + MCP
+- `crates/workflow` - Workflow automation
+- `crates/linter` - Code linting
+- `crates/lang` - Language analyzers (rust, python, typescript, etc.)
 
 ### Backend Services
-- `crates/adi-platform-api` - Unified Platform API (core/http/cli)
-- `crates/adi-auth` - Authentication service (email + TOTP)
+- `crates/platform-api` - Unified Platform API (core/http/cli)
+- `crates/auth` - Authentication service (email + TOTP)
 - `crates/tarminal-signaling-server` - WebSocket signaling server
-- `crates/adi-analytics-api` - Analytics API (metrics, dashboards)
-- `crates/adi-analytics-ingestion` - Analytics event ingestion
-- `crates/adi-plugin-registry-http` - Plugin registry HTTP server
-- `crates/adi-executor` - Docker-based task execution
+- `crates/analytics-api` - Analytics API (metrics, dashboards)
+- `crates/analytics-ingestion` - Analytics event ingestion
+- `crates/plugin-registry-http` - Plugin registry HTTP server
+- `crates/executor` - Docker-based task execution
 - `crates/cocoon` - Containerized worker for remote execution
 
 ### Standalone Services (separate workspaces)
-- `crates/adi-balance-api` - Balance/transaction tracking
-- `crates/adi-credentials-api` - Secure credentials storage (ChaCha20-Poly1305)
-- `crates/adi-logging-service` - Centralized logging (ingestion + query)
+- `crates/balance-api` - Balance/transaction tracking
+- `crates/credentials-api` - Secure credentials storage (ChaCha20-Poly1305)
+- `crates/logging-service` - Centralized logging (ingestion + query)
 
 ### Libraries
 - `crates/lib/lib-embed` - Shared embedding library
@@ -146,9 +146,9 @@ Services that run on servers and are called via HTTP don't need plugins:
 - `crates/lib/lib-task-store` - Task persistence
 
 ### Plugins
-- `crates/adi-embed-plugin` - Embedding plugin
-- `crates/adi-llm-extract-plugin` - LLM extraction plugin
-- `crates/adi-llm-uzu-plugin` - Local LLM inference (Apple Silicon)
+- `crates/embed-plugin` - Embedding plugin
+- `crates/llm-extract-plugin` - LLM extraction plugin
+- `crates/llm-uzu-plugin` - Local LLM inference (Apple Silicon)
 
 ### Tools
 - `crates/tool-generate-heartbit` - Heartbit generation
@@ -190,14 +190,14 @@ PORT=8080 ./target/release/flowmap-api
 
 ### Architecture
 ```
-Services → lib-analytics-core → HTTP POST → adi-analytics-ingestion → TimescaleDB
-                                                                             ↓
-                                              adi-analytics-api ← (reads) ←─┘
+Services → lib-analytics-core → HTTP POST → analytics-ingestion → TimescaleDB
+                                                                           ↓
+                                            analytics-api ← (reads) ←─────┘
 ```
 
 - **lib-analytics-core**: HTTP client library that sends events to ingestion service
-- **adi-analytics-ingestion**: Receives events via HTTP and writes to TimescaleDB
-- **adi-analytics-api**: REST API for querying metrics and dashboards
+- **analytics-ingestion**: Receives events via HTTP and writes to TimescaleDB
+- **analytics-api**: REST API for querying metrics and dashboards
 - **TimescaleDB**: Time-series database (PostgreSQL extension) for storing events
 - **Continuous Aggregates**: Auto-updating materialized views for fast analytics queries
 
@@ -311,11 +311,11 @@ Request → Service A [trace: abc, span: 001] → Service B [trace: abc, span: 0
               ↓                                    ↓
          LoggingClient                       LoggingClient
               ↓                                    ↓
-                    adi-logging-service (TimescaleDB)
+                    logging-service (TimescaleDB)
 ```
 
 - **lib-logging-core**: Client library with distributed tracing (trace ID + span ID) and correlation IDs
-- **adi-logging-service**: Receives logs via HTTP and stores to TimescaleDB, provides query API
+- **logging-service**: Receives logs via HTTP and stores to TimescaleDB, provides query API
 - **TimescaleDB**: Time-series database for log storage with 30-day retention
 
 ### Distributed Tracing
@@ -523,10 +523,10 @@ live.done();
 - Cocoon is a containerized worker environment that connects to the signaling server
 - Provides isolated execution environment for running commands remotely
 - Replaces file-based execution with real-time WebSocket communication
-- Used by adi-executor to run tasks in Docker containers with live command streaming
+- Used by executor to run tasks in Docker containers with live command streaming
 
 ## Uzu LLM Plugin (Apple Silicon only)
-- `crates/adi-llm-uzu-plugin` - Local LLM inference plugin for Apple Silicon
+- `crates/llm-uzu-plugin` - Local LLM inference plugin for Apple Silicon
 - `crates/lib-client-uzu` - Uzu inference engine client library (dependency)
 - **Distribution**: Pre-built binaries via plugin registry
 - **Installation**: `adi plugin install adi.llm.uzu`
@@ -555,12 +555,12 @@ All production services are built using **cross-compilation** for 10-20x faster 
 3. Push to registry
 
 **Services:**
-- `adi-analytics-api` - Analytics API (metrics, dashboards)
-- `adi-analytics-ingestion` - Analytics event ingestion service
-- `adi-auth` - Authentication service (email + TOTP)
-- `adi-platform-api` - Unified Platform API
+- `analytics-api` - Analytics API (metrics, dashboards)
+- `analytics-ingestion` - Analytics event ingestion service
+- `auth` - Authentication service (email + TOTP)
+- `platform-api` - Unified Platform API
 - `tarminal-signaling-server` - WebSocket signaling server
-- `adi-plugin-registry` - Plugin registry HTTP server
+- `plugin-registry` - Plugin registry HTTP server
 - `flowmap-api` - Code flow visualization API
 - `hive` - Hive: Cocoon orchestration API
 
@@ -590,12 +590,12 @@ brew install filosottile/musl-cross/musl-cross
 ```bash
 # Build Linux binaries (native speed, persistent Cargo cache)
 adi workflow build-linux                        # Interactive: select services
-adi workflow build-linux --services adi-auth    # Build specific service
+adi workflow build-linux --services auth    # Build specific service
 
 # Build Docker images + push (optional)
 adi workflow release                            # Interactive: select services
 adi workflow release --push                     # Build + push to registry
-adi workflow release --services adi-auth --tag v1.0.0  # Build with custom tag
+adi workflow release --services auth --tag v1.0.0  # Build with custom tag
 ```
 
 ### Performance Benefits
@@ -607,7 +607,7 @@ adi workflow release --services adi-auth --tag v1.0.0  # Build with custom tag
 ### Deploy to Production
 All services use Traefik for routing at `https://adi.the-ihor.com/api/*`:
 ```bash
-cd release/adi.the-ihor.com/adi-auth
+cd release/adi.the-ihor.com/auth
 cp .env.example .env  # Configure environment
 docker-compose up -d  # Deploy with Traefik
 ```
@@ -733,8 +733,8 @@ git submodule update --init --recursive
 ## Building
 ```bash
 cargo build --workspace           # Build all
-cargo build -p adi-cli            # Build adi CLI
-cargo build -p adi-indexer-cli    # Build specific package
+cargo build -p cli                # Build adi CLI
+cargo build -p indexer-cli        # Build specific package
 ```
 
 ## Local Development
@@ -804,7 +804,7 @@ For faster iteration on specific services:
 cd crates/tarminal-signaling-server && cargo run
 
 # Terminal/pane 2: Auth service
-cd crates/adi-auth && DATABASE_URL=postgres://postgres:postgres@localhost/adi_auth cargo run -p adi-auth-http
+cd crates/auth && DATABASE_URL=postgres://postgres:postgres@localhost/adi_auth cargo run -p auth-http
 
 # Terminal/pane 3: Web UI
 cd apps/infra-service-web && npm run dev
@@ -838,4 +838,4 @@ git submodule update --remote     # Pull latest from all submodules
 Each submodule is an independent repo that can be developed standalone.
 - Each crate in `crates/` must be a submodule
 - Each app in `apps/` must be a submodule
-- Nested components (like `adi-indexer/core`) are contained in a single submodule repo
+- Nested components (like `indexer/core`) are contained in a single submodule repo

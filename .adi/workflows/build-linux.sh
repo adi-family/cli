@@ -49,22 +49,22 @@ fi
 get_service_config() {
     local service=$1
     case "$service" in
-        adi-auth) echo "crates/adi-auth:adi-auth-http,adi-auth-migrate" ;;
-        adi-platform-api) echo "crates/adi-platform-api:adi-platform-api" ;;
-        adi-analytics-api) echo "crates/adi-analytics-api:adi-analytics-api" ;;
-        adi-analytics-ingestion) echo "crates/adi-analytics-ingestion:adi-analytics-ingestion" ;;
+        auth) echo "crates/auth:auth-http,auth-migrate" ;;
+        platform-api) echo "crates/platform-api:platform-api" ;;
+        analytics-api) echo "crates/analytics-api:analytics-api" ;;
+        analytics-ingestion) echo "crates/analytics-ingestion:analytics-ingestion" ;;
         tarminal-signaling-server) echo "crates/tarminal-signaling-server:tarminal-signaling" ;;
-        adi-plugin-registry) echo "crates/adi-plugin-registry-http:adi-plugin-registry" ;;
+        plugin-registry) echo "crates/plugin-registry-http:plugin-registry" ;;
         flowmap-api) echo "apps/flowmap-api:flowmap-api" ;;
         hive) echo "crates/hive/http:hive" ;;
         cocoon) echo "crates/cocoon:cocoon:standalone" ;;
-        llm-proxy) echo "crates/adi-api-proxy/http:adi-api-proxy,adi-api-proxy-migrate" ;;
+        llm-proxy) echo "crates/api-proxy/http:api-proxy,api-proxy-migrate" ;;
         *) return 1 ;;
     esac
 }
 
 # All available services
-ALL_SERVICES="adi-auth adi-platform-api adi-analytics-api adi-analytics-ingestion tarminal-signaling-server adi-plugin-registry flowmap-api hive cocoon llm-proxy"
+ALL_SERVICES="auth platform-api analytics-api analytics-ingestion tarminal-signaling-server plugin-registry flowmap-api hive cocoon llm-proxy"
 
 build_service() {
     local service=$1

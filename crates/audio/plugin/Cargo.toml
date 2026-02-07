@@ -1,0 +1,41 @@
+[package]
+name = "audio-plugin"
+version = "3.0.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "ADI Audio plugin - CLI commands for audio processing (WAV, filters, EQ, compression)"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+async-trait = "0.1"
+tokio = { version = "1.0", features = ["full"] }
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+audio-core = { path = "../core" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+
+[package.metadata.plugin]
+id = "adi.audio"
+name = "ADI Audio"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+api_version = 3
+min_host_version = "0.9.0"
+
+[package.metadata.plugin.cli]
+command = "audio"
+description = "Audio processing: WAV analysis, filters, EQ, compression, normalization"
+aliases = []
+
+[[package.metadata.plugin.provides]]
+id = "adi.audio.cli"
+version = "3.0.0"
+description = "CLI commands for audio processing"
+
+[package.metadata.plugin.tags]
+categories = ["audio", "dsp", "wav", "mastering", "eq", "compression"]
