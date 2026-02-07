@@ -7,6 +7,7 @@
 //! - GET /logs/span/:span_id - Get logs for a specific span
 //! - GET /health - Health check
 
+mod generated;
 mod writer;
 mod routes;
 

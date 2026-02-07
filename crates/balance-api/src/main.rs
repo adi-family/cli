@@ -15,6 +15,7 @@ mod auth;
 mod config;
 mod db;
 mod error;
+mod generated;
 mod handlers;
 mod middleware;
 mod models;

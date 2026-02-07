@@ -1,23 +1,298 @@
-use tasks_core::{CreateTask, TaskId, TaskManager};
-use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-    routing::{delete, get, put},
-    Json, Router,
-};
+mod generated;
+
+use async_trait::async_trait;
+use axum::{routing::get, Json, Router};
+use generated::enums::TaskStatus;
+use generated::models::*;
+use generated::server::*;
 use lib_http_common::version_header_layer;
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
+use tasks_core::{TaskId, TaskManager};
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
 struct AppState {
     tasks: RwLock<Option<TaskManager>>,
-    #[allow(dead_code)]
-    project_path: Option<PathBuf>,
+}
+
+fn to_api_error(e: tasks_core::Error) -> ApiError {
+    let (status, code) = match &e {
+        tasks_core::Error::TaskNotFound(_) => (404, "not_found"),
+        tasks_core::Error::DependencyNotFound { .. } => (404, "not_found"),
+        tasks_core::Error::WouldCreateCycle { .. } => (409, "conflict"),
+        tasks_core::Error::SelfDependency(_) => (400, "bad_request"),
+        _ => (500, "internal_error"),
+    };
+    ApiError {
+        status,
+        code: code.to_string(),
+        message: e.to_string(),
+    }
+}
+
+fn unavailable() -> ApiError {
+    ApiError {
+        status: 503,
+        code: "unavailable".to_string(),
+        message: "Tasks not initialized".to_string(),
+    }
+}
+
+fn task_to_model(t: &tasks_core::Task) -> Task {
+    Task {
+        id: t.id.0,
+        title: t.title.clone(),
+        description: t.description.clone(),
+        status: match t.status {
+            tasks_core::TaskStatus::Todo => TaskStatus::Todo,
+            tasks_core::TaskStatus::InProgress => TaskStatus::InProgress,
+            tasks_core::TaskStatus::Done => TaskStatus::Done,
+            tasks_core::TaskStatus::Blocked => TaskStatus::Blocked,
+            tasks_core::TaskStatus::Cancelled => TaskStatus::Cancelled,
+        },
+        symbol_id: t.symbol_id,
+        project_path: t.project_path.as_ref().map(|p| p.to_string()),
+        created_at: t.created_at,
+        updated_at: t.updated_at,
+    }
+}
+
+#[async_trait]
+impl TaskServiceHandler for AppState {
+    async fn list(&self, query: TaskServiceListQuery) -> Result<Vec<Task>, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+
+        let result = if let Some(status_str) = query.status {
+            let status: tasks_core::TaskStatus = status_str
+                .parse()
+                .map_err(|_| ApiError {
+                    status: 400,
+                    code: "bad_request".to_string(),
+                    message: "Invalid status".to_string(),
+                })?;
+            t.get_by_status(status).map_err(to_api_error)?
+        } else {
+            t.list().map_err(to_api_error)?
+        };
+
+        Ok(result.iter().map(task_to_model).collect())
+    }
+
+    async fn create(&self, body: CreateTaskInput) -> Result<IdResponse, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+
+        let mut create = tasks_core::CreateTask::new(&body.title);
+        create.description = body.description;
+        create.symbol_id = body.symbol_id;
+
+        if let Some(deps) = body.depends_on {
+            create = create.with_dependencies(deps.into_iter().map(TaskId).collect());
+        }
+
+        let id = t.create_task(create).map_err(to_api_error)?;
+        Ok(IdResponse { id: id.0 })
+    }
+
+    async fn get(&self, id: i64) -> Result<TaskWithDependencies, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+
+        let result = t
+            .get_task_with_dependencies(TaskId(id))
+            .map_err(to_api_error)?;
+        Ok(TaskWithDependencies {
+            task: task_to_model(&result.task),
+            depends_on: result.depends_on.iter().map(task_to_model).collect(),
+            dependents: result.dependents.iter().map(task_to_model).collect(),
+        })
+    }
+
+    async fn update(&self, id: i64, body: UpdateTaskInput) -> Result<Task, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+
+        let mut task = t.get_task(TaskId(id)).map_err(to_api_error)?;
+
+        if let Some(title) = body.title {
+            task.title = title;
+        }
+        if let Some(description) = body.description {
+            task.description = Some(description);
+        }
+        if let Some(status_str) = body.status {
+            task.status = status_str.parse().map_err(|_| ApiError {
+                status: 400,
+                code: "bad_request".to_string(),
+                message: "Invalid status".to_string(),
+            })?;
+        }
+        if let Some(symbol_id) = body.symbol_id {
+            task.symbol_id = Some(symbol_id);
+        }
+
+        t.update_task(&task).map_err(to_api_error)?;
+        Ok(task_to_model(&task))
+    }
+
+    async fn delete(&self, id: i64) -> Result<DeletedResponse, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+        t.delete_task(TaskId(id)).map_err(to_api_error)?;
+        Ok(DeletedResponse { deleted: id })
+    }
+
+    async fn update_status(&self, id: i64, body: UpdateStatusInput) -> Result<Task, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+
+        let status: tasks_core::TaskStatus = body.status.parse().map_err(|_| ApiError {
+            status: 400,
+            code: "bad_request".to_string(),
+            message: "Invalid status".to_string(),
+        })?;
+
+        t.update_status(TaskId(id), status).map_err(to_api_error)?;
+        let task = t.get_task(TaskId(id)).map_err(to_api_error)?;
+        Ok(task_to_model(&task))
+    }
+
+    async fn get_dependencies(&self, id: i64) -> Result<Vec<Task>, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+        let deps = t.get_dependencies(TaskId(id)).map_err(to_api_error)?;
+        Ok(deps.iter().map(task_to_model).collect())
+    }
+
+    async fn add_dependency(&self, id: i64, body: AddDependencyInput) -> Result<DependencyResponse, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+        t.add_dependency(TaskId(id), TaskId(body.depends_on))
+            .map_err(to_api_error)?;
+        Ok(DependencyResponse {
+            from: id,
+            to: body.depends_on,
+        })
+    }
+
+    async fn remove_dependency(&self, id: i64, dep_id: i64) -> Result<RemovedResponse, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+        t.remove_dependency(TaskId(id), TaskId(dep_id))
+            .map_err(to_api_error)?;
+        Ok(RemovedResponse { removed: true })
+    }
+
+    async fn get_dependents(&self, id: i64) -> Result<Vec<Task>, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+        let deps = t.get_dependents(TaskId(id)).map_err(to_api_error)?;
+        Ok(deps.iter().map(task_to_model).collect())
+    }
+
+    async fn search(&self, query: TaskServiceSearchQuery) -> Result<Vec<Task>, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+        let limit = query.limit.map(|l| l as usize).unwrap_or(10);
+        let results = t.search(&query.q, limit).map_err(to_api_error)?;
+        Ok(results.iter().map(task_to_model).collect())
+    }
+
+    async fn get_ready(&self) -> Result<Vec<Task>, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+        let ready = t.get_ready().map_err(to_api_error)?;
+        Ok(ready.iter().map(task_to_model).collect())
+    }
+
+    async fn get_blocked(&self) -> Result<Vec<Task>, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+        let blocked = t.get_blocked().map_err(to_api_error)?;
+        Ok(blocked.iter().map(task_to_model).collect())
+    }
+
+    async fn link_to_symbol(&self, id: i64, symbol_id: i64) -> Result<LinkResponse, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+        t.link_to_symbol(TaskId(id), symbol_id)
+            .map_err(to_api_error)?;
+        Ok(LinkResponse {
+            task_id: id,
+            symbol_id,
+        })
+    }
+
+    async fn unlink_symbol(&self, id: i64) -> Result<UnlinkResponse, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+        t.unlink_symbol(TaskId(id)).map_err(to_api_error)?;
+        Ok(UnlinkResponse {
+            task_id: id,
+            unlinked: true,
+        })
+    }
+}
+
+#[async_trait]
+impl GraphServiceHandler for AppState {
+    async fn get_graph(&self) -> Result<Vec<GraphNode>, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+
+        let all_tasks = t.list().map_err(to_api_error)?;
+        let mut graph = Vec::new();
+        for task in &all_tasks {
+            let deps = t
+                .get_dependencies(task.id)
+                .map(|deps| deps.iter().map(|d| d.id.0).collect())
+                .unwrap_or_default();
+            graph.push(GraphNode {
+                task: task_to_model(task),
+                dependencies: deps,
+            });
+        }
+        Ok(graph)
+    }
+
+    async fn detect_cycles(&self) -> Result<CyclesResponse, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+
+        let cycles = t.detect_cycles().map_err(to_api_error)?;
+        let cycle_ids: Vec<Vec<i64>> = cycles
+            .into_iter()
+            .map(|c| c.into_iter().map(|id| id.0).collect())
+            .collect();
+        Ok(CyclesResponse { cycles: cycle_ids })
+    }
+}
+
+#[async_trait]
+impl StatusServiceHandler for AppState {
+    async fn get_status(&self) -> Result<TasksStatus, ApiError> {
+        let tasks = self.tasks.read().await;
+        let t = tasks.as_ref().ok_or_else(unavailable)?;
+
+        let status = t.status().map_err(to_api_error)?;
+        Ok(TasksStatus {
+            total_tasks: status.total_tasks,
+            todo_count: status.todo_count,
+            in_progress_count: status.in_progress_count,
+            done_count: status.done_count,
+            blocked_count: status.blocked_count,
+            cancelled_count: status.cancelled_count,
+            total_dependencies: status.total_dependencies,
+            has_cycles: status.has_cycles,
+        })
+    }
+}
+
+async fn health() -> Json<serde_json::Value> {
+    Json(serde_json::json!({ "status": "ok", "service": "adi-tasks-http" }))
 }
 
 #[tokio::main]
@@ -44,45 +319,19 @@ async fn main() {
 
     let state = Arc::new(AppState {
         tasks: RwLock::new(tasks),
-        project_path,
     });
 
     let app = Router::new()
-        // Health
         .route("/", get(health))
         .route("/health", get(health))
-        .route("/status", get(status))
-        // Tasks CRUD
-        .route("/tasks", get(list_tasks).post(create_task))
-        .route(
-            "/tasks/:id",
-            get(get_task).put(update_task).delete(delete_task),
-        )
-        .route("/tasks/:id/status", put(update_status))
-        // Dependencies
-        .route(
-            "/tasks/:id/dependencies",
-            get(get_dependencies).post(add_dependency),
-        )
-        .route("/tasks/:id/dependencies/:dep_id", delete(remove_dependency))
-        .route("/tasks/:id/dependents", get(get_dependents))
-        // Queries
-        .route("/tasks/search", get(search_tasks))
-        .route("/tasks/ready", get(get_ready_tasks))
-        .route("/tasks/blocked", get(get_blocked_tasks))
-        // Graph
-        .route("/graph", get(get_graph))
-        .route("/graph/cycles", get(detect_cycles))
-        // Symbol linking
-        .route("/tasks/:id/link/:symbol_id", put(link_to_symbol))
-        .route("/tasks/:id/link", delete(unlink_symbol))
-        .with_state(state)
+        .merge(generated::server::create_router::<AppState>())
         .layer(version_header_layer(
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),
         ))
         .layer(TraceLayer::new_for_http())
-        .layer(CorsLayer::permissive());
+        .layer(CorsLayer::permissive())
+        .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
         .await
@@ -91,427 +340,4 @@ async fn main() {
     tracing::info!("ADI Tasks HTTP server listening on port {}", port);
 
     axum::serve(listener, app).await.unwrap();
-}
-
-// --- Health & Status ---
-
-async fn health() -> impl IntoResponse {
-    Json(serde_json::json!({ "status": "ok", "service": "adi-tasks-http" }))
-}
-
-async fn status(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.status() {
-            Ok(status) => (StatusCode::OK, Json(serde_json::json!(status))),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-// --- Task CRUD ---
-
-#[derive(Deserialize)]
-struct ListQuery {
-    status: Option<String>,
-}
-
-async fn list_tasks(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<ListQuery>,
-) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => {
-            let result = if let Some(status_str) = query.status {
-                match status_str.parse() {
-                    Ok(status) => t.get_by_status(status),
-                    Err(_) => {
-                        return (
-                            StatusCode::BAD_REQUEST,
-                            Json(serde_json::json!({ "error": "Invalid status" })),
-                        );
-                    }
-                }
-            } else {
-                t.list()
-            };
-
-            match result {
-                Ok(tasks) => (StatusCode::OK, Json(serde_json::json!(tasks))),
-                Err(e) => error_response(e),
-            }
-        }
-        None => unavailable_response(),
-    }
-}
-
-#[derive(Deserialize)]
-struct CreateTaskInput {
-    title: String,
-    description: Option<String>,
-    depends_on: Option<Vec<i64>>,
-    symbol_id: Option<i64>,
-}
-
-async fn create_task(
-    State(state): State<Arc<AppState>>,
-    Json(input): Json<CreateTaskInput>,
-) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => {
-            let mut create_input = CreateTask::new(&input.title);
-            create_input.description = input.description;
-            create_input.symbol_id = input.symbol_id;
-
-            if let Some(deps) = input.depends_on {
-                create_input =
-                    create_input.with_dependencies(deps.into_iter().map(TaskId).collect());
-            }
-
-            match t.create_task(create_input) {
-                Ok(id) => (StatusCode::CREATED, Json(serde_json::json!({ "id": id.0 }))),
-                Err(e) => error_response(e),
-            }
-        }
-        None => unavailable_response(),
-    }
-}
-
-async fn get_task(State(state): State<Arc<AppState>>, Path(id): Path<i64>) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.get_task_with_dependencies(TaskId(id)) {
-            Ok(task) => (StatusCode::OK, Json(serde_json::json!(task))),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-#[derive(Deserialize)]
-struct UpdateTaskInput {
-    title: Option<String>,
-    description: Option<String>,
-    status: Option<String>,
-    symbol_id: Option<i64>,
-}
-
-async fn update_task(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
-    Json(input): Json<UpdateTaskInput>,
-) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => {
-            let mut task = match t.get_task(TaskId(id)) {
-                Ok(task) => task,
-                Err(e) => return error_response(e),
-            };
-
-            if let Some(title) = input.title {
-                task.title = title;
-            }
-            if let Some(description) = input.description {
-                task.description = Some(description);
-            }
-            if let Some(status_str) = input.status {
-                match status_str.parse() {
-                    Ok(status) => task.status = status,
-                    Err(_) => {
-                        return (
-                            StatusCode::BAD_REQUEST,
-                            Json(serde_json::json!({ "error": "Invalid status" })),
-                        );
-                    }
-                }
-            }
-            if let Some(symbol_id) = input.symbol_id {
-                task.symbol_id = Some(symbol_id);
-            }
-
-            match t.update_task(&task) {
-                Ok(()) => (StatusCode::OK, Json(serde_json::json!(task))),
-                Err(e) => error_response(e),
-            }
-        }
-        None => unavailable_response(),
-    }
-}
-
-async fn delete_task(State(state): State<Arc<AppState>>, Path(id): Path<i64>) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.delete_task(TaskId(id)) {
-            Ok(()) => (StatusCode::OK, Json(serde_json::json!({ "deleted": id }))),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-#[derive(Deserialize)]
-struct UpdateStatusInput {
-    status: String,
-}
-
-async fn update_status(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
-    Json(input): Json<UpdateStatusInput>,
-) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => {
-            let status = match input.status.parse() {
-                Ok(s) => s,
-                Err(_) => {
-                    return (
-                        StatusCode::BAD_REQUEST,
-                        Json(serde_json::json!({ "error": "Invalid status" })),
-                    );
-                }
-            };
-
-            match t.update_status(TaskId(id), status) {
-                Ok(()) => (
-                    StatusCode::OK,
-                    Json(serde_json::json!({ "id": id, "status": input.status })),
-                ),
-                Err(e) => error_response(e),
-            }
-        }
-        None => unavailable_response(),
-    }
-}
-
-// --- Dependencies ---
-
-async fn get_dependencies(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
-) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.get_dependencies(TaskId(id)) {
-            Ok(deps) => (StatusCode::OK, Json(serde_json::json!(deps))),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-#[derive(Deserialize)]
-struct AddDependencyInput {
-    depends_on: i64,
-}
-
-async fn add_dependency(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
-    Json(input): Json<AddDependencyInput>,
-) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.add_dependency(TaskId(id), TaskId(input.depends_on)) {
-            Ok(()) => (
-                StatusCode::CREATED,
-                Json(serde_json::json!({ "from": id, "to": input.depends_on })),
-            ),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-async fn remove_dependency(
-    State(state): State<Arc<AppState>>,
-    Path((id, dep_id)): Path<(i64, i64)>,
-) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.remove_dependency(TaskId(id), TaskId(dep_id)) {
-            Ok(()) => (StatusCode::OK, Json(serde_json::json!({ "removed": true }))),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-async fn get_dependents(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
-) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.get_dependents(TaskId(id)) {
-            Ok(deps) => (StatusCode::OK, Json(serde_json::json!(deps))),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-// --- Queries ---
-
-#[derive(Deserialize)]
-struct SearchQuery {
-    q: String,
-    #[serde(default = "default_limit")]
-    limit: usize,
-}
-
-fn default_limit() -> usize {
-    10
-}
-
-async fn search_tasks(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<SearchQuery>,
-) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.search(&query.q, query.limit) {
-            Ok(results) => (StatusCode::OK, Json(serde_json::json!(results))),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-async fn get_ready_tasks(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.get_ready() {
-            Ok(ready) => (StatusCode::OK, Json(serde_json::json!(ready))),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-async fn get_blocked_tasks(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.get_blocked() {
-            Ok(blocked) => (StatusCode::OK, Json(serde_json::json!(blocked))),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-// --- Graph ---
-
-#[derive(Serialize)]
-struct GraphNode {
-    task: tasks_core::Task,
-    dependencies: Vec<i64>,
-}
-
-async fn get_graph(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => {
-            let all_tasks = match t.list() {
-                Ok(tasks) => tasks,
-                Err(e) => return error_response(e),
-            };
-
-            let mut graph = Vec::new();
-            for task in all_tasks {
-                let deps = match t.get_dependencies(task.id) {
-                    Ok(deps) => deps.iter().map(|d| d.id.0).collect(),
-                    Err(_) => vec![],
-                };
-                graph.push(GraphNode {
-                    task,
-                    dependencies: deps,
-                });
-            }
-
-            (StatusCode::OK, Json(serde_json::json!(graph)))
-        }
-        None => unavailable_response(),
-    }
-}
-
-async fn detect_cycles(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.detect_cycles() {
-            Ok(cycles) => {
-                let cycle_ids: Vec<Vec<i64>> = cycles
-                    .into_iter()
-                    .map(|c| c.into_iter().map(|id| id.0).collect())
-                    .collect();
-                (
-                    StatusCode::OK,
-                    Json(serde_json::json!({ "cycles": cycle_ids })),
-                )
-            }
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-// --- Symbol Linking ---
-
-async fn link_to_symbol(
-    State(state): State<Arc<AppState>>,
-    Path((id, symbol_id)): Path<(i64, i64)>,
-) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.link_to_symbol(TaskId(id), symbol_id) {
-            Ok(()) => (
-                StatusCode::OK,
-                Json(serde_json::json!({ "task_id": id, "symbol_id": symbol_id })),
-            ),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-async fn unlink_symbol(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
-) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    match tasks.as_ref() {
-        Some(t) => match t.unlink_symbol(TaskId(id)) {
-            Ok(()) => (
-                StatusCode::OK,
-                Json(serde_json::json!({ "task_id": id, "unlinked": true })),
-            ),
-            Err(e) => error_response(e),
-        },
-        None => unavailable_response(),
-    }
-}
-
-// --- Helper Functions ---
-
-fn error_response(e: tasks_core::Error) -> (StatusCode, Json<serde_json::Value>) {
-    let status = match &e {
-        tasks_core::Error::TaskNotFound(_) => StatusCode::NOT_FOUND,
-        tasks_core::Error::DependencyNotFound { .. } => StatusCode::NOT_FOUND,
-        tasks_core::Error::WouldCreateCycle { .. } => StatusCode::CONFLICT,
-        tasks_core::Error::SelfDependency(_) => StatusCode::BAD_REQUEST,
-        _ => StatusCode::INTERNAL_SERVER_ERROR,
-    };
-
-    (status, Json(serde_json::json!({ "error": e.to_string() })))
-}
-
-fn unavailable_response() -> (StatusCode, Json<serde_json::Value>) {
-    (
-        StatusCode::SERVICE_UNAVAILABLE,
-        Json(serde_json::json!({ "error": "Tasks not initialized" })),
-    )
 }

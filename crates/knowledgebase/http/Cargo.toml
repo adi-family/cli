@@ -19,6 +19,8 @@ fastembed = ["knowledgebase-core/fastembed"]
 knowledgebase-core = { path = "../core", features = ["fastembed"] }
 lib-mcp-core = { path = "../../lib/lib-mcp-core", optional = true }
 axum.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
 tower.workspace = true
 tower-http = { workspace = true, features = ["cors", "trace"] }
 tokio = { workspace = true, features = ["full"] }

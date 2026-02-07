@@ -140,7 +140,9 @@ version = "0.8.3"
 dependencies = [
  "agent-loop-core",
  "anyhow",
+ "async-trait",
  "axum 0.7.9",
+ "chrono",
  "lib-http-common",
  "serde",
  "serde_json",
@@ -149,6 +151,7 @@ dependencies = [
  "tower-http 0.5.2",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -4670,14 +4673,19 @@ name = "hive-http"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
+ "axum 0.7.9",
+ "chrono",
  "dotenvy",
  "hive-core",
  "hive-ssl",
  "lib-signaling-protocol",
  "rustls 0.23.36",
+ "serde",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -5733,7 +5741,9 @@ name = "indexer-http"
 version = "0.8.3"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum 0.7.9",
+ "chrono",
  "indexer-core",
  "lib-http-common",
  "serde",
@@ -5743,6 +5753,7 @@ dependencies = [
  "tower-http 0.5.2",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -6184,7 +6195,9 @@ name = "knowledgebase-http"
 version = "0.8.4"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum 0.7.9",
+ "chrono",
  "futures",
  "knowledgebase-core",
  "lib-http-common",
@@ -7200,6 +7213,7 @@ name = "logging-service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum 0.7.9",
  "chrono",
  "dotenvy",
@@ -11349,7 +11363,9 @@ dependencies = [
 name = "tasks-http"
 version = "0.8.3"
 dependencies = [
+ "async-trait",
  "axum 0.7.9",
+ "chrono",
  "lib-http-common",
  "serde",
  "serde_json",
@@ -11359,6 +11375,7 @@ dependencies = [
  "tower-http 0.5.2",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

@@ -1,18 +1,12 @@
-// Copyright (c) 2024-2025 Ihor
-// SPDX-License-Identifier: BSL-1.1
-// See LICENSE file for details
+mod generated;
 
 use anyhow::Result;
-use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-    routing::{get, post},
-    Json, Router,
-};
+use async_trait::async_trait;
+use axum::{routing::get, Json, Router};
+use generated::enums::{SymbolKind, Visibility};
+use generated::models::*;
+use generated::server::*;
 use lib_http_common::version_header_layer;
-use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -26,52 +20,255 @@ struct AppState {
     project_path: PathBuf,
 }
 
-#[derive(Deserialize)]
-struct SearchQuery {
-    q: String,
-    #[serde(default = "default_limit")]
-    limit: usize,
+fn internal_error(e: impl std::fmt::Display) -> ApiError {
+    ApiError {
+        status: 500,
+        code: "internal_error".to_string(),
+        message: e.to_string(),
+    }
 }
 
-fn default_limit() -> usize {
-    10
+fn unavailable(msg: &str) -> ApiError {
+    ApiError {
+        status: 503,
+        code: "unavailable".to_string(),
+        message: msg.to_string(),
+    }
 }
 
-#[derive(Deserialize)]
-struct DeadCodeQuery {
-    #[serde(default = "default_mode")]
-    mode: String,
-    #[serde(default = "default_true")]
-    exclude_tests: bool,
-    #[serde(default = "default_true")]
-    exclude_traits: bool,
-    #[serde(default = "default_true")]
-    exclude_ffi: bool,
+fn not_found(e: impl std::fmt::Display) -> ApiError {
+    ApiError {
+        status: 404,
+        code: "not_found".to_string(),
+        message: e.to_string(),
+    }
 }
 
-fn default_mode() -> String {
-    "strict".to_string()
+fn convert_symbol_kind(k: indexer_core::SymbolKind) -> SymbolKind {
+    match k {
+        indexer_core::SymbolKind::Function => SymbolKind::Function,
+        indexer_core::SymbolKind::Method => SymbolKind::Method,
+        indexer_core::SymbolKind::Class => SymbolKind::Class,
+        indexer_core::SymbolKind::Struct => SymbolKind::Struct,
+        indexer_core::SymbolKind::Enum => SymbolKind::Enum,
+        indexer_core::SymbolKind::Interface => SymbolKind::Interface,
+        indexer_core::SymbolKind::Trait => SymbolKind::Trait,
+        indexer_core::SymbolKind::Module => SymbolKind::Module,
+        indexer_core::SymbolKind::Constant => SymbolKind::Constant,
+        indexer_core::SymbolKind::Variable => SymbolKind::Variable,
+        indexer_core::SymbolKind::Type => SymbolKind::Type,
+        indexer_core::SymbolKind::Property => SymbolKind::Property,
+        indexer_core::SymbolKind::Field => SymbolKind::Field,
+        indexer_core::SymbolKind::Constructor => SymbolKind::Constructor,
+        indexer_core::SymbolKind::Destructor => SymbolKind::Destructor,
+        indexer_core::SymbolKind::Operator => SymbolKind::Operator,
+        indexer_core::SymbolKind::Macro => SymbolKind::Macro,
+        indexer_core::SymbolKind::Namespace => SymbolKind::Namespace,
+        indexer_core::SymbolKind::Package => SymbolKind::Package,
+        _ => SymbolKind::Unknown,
+    }
 }
 
-fn default_true() -> bool {
-    true
+fn convert_visibility(v: indexer_core::Visibility) -> Visibility {
+    match v {
+        indexer_core::Visibility::Public => Visibility::Public,
+        indexer_core::Visibility::PublicCrate => Visibility::PublicCrate,
+        indexer_core::Visibility::PublicSuper => Visibility::PublicSuper,
+        indexer_core::Visibility::Protected => Visibility::Protected,
+        indexer_core::Visibility::Private => Visibility::Private,
+        indexer_core::Visibility::Internal => Visibility::Internal,
+        _ => Visibility::Unknown,
+    }
 }
 
-#[derive(Serialize)]
-#[allow(dead_code)]
-struct ErrorResponse {
-    error: String,
+fn convert_symbol(s: &indexer_core::Symbol) -> Symbol {
+    Symbol {
+        id: s.id.0,
+        name: s.name.clone(),
+        kind: convert_symbol_kind(s.kind),
+        file_id: s.file_id.0,
+        file_path: s.file_path.display().to_string(),
+        location: Location {
+            start_line: s.location.start_line,
+            start_col: s.location.start_col,
+            end_line: s.location.end_line,
+            end_col: s.location.end_col,
+            start_byte: s.location.start_byte,
+            end_byte: s.location.end_byte,
+        },
+        parent_id: s.parent_id.map(|id| id.0),
+        signature: s.signature.clone(),
+        description: s.description.clone(),
+        doc_comment: s.doc_comment.clone(),
+        visibility: convert_visibility(s.visibility),
+        is_entry_point: s.is_entry_point,
+    }
 }
 
-#[derive(Serialize)]
-#[allow(dead_code)]
-struct SuccessResponse<T> {
-    data: T,
+fn convert_search_result(r: &indexer_core::SearchResult) -> SearchResult {
+    SearchResult {
+        symbol: convert_symbol(&r.symbol),
+        score: r.score,
+        context: r.context.clone(),
+    }
+}
+
+#[async_trait]
+impl IndexerServiceHandler for AppState {
+    async fn get_status(&self) -> Result<Status, ApiError> {
+        let adi = self.adi.read().await;
+        let adi = adi.as_ref().ok_or_else(|| unavailable("ADI not initialized"))?;
+        let status = adi.status().map_err(internal_error)?;
+        // Convert via serde since Status fields match
+        let v = serde_json::to_value(status).map_err(internal_error)?;
+        serde_json::from_value(v).map_err(internal_error)
+    }
+
+    async fn index_project(&self) -> Result<IndexProgress, ApiError> {
+        let adi = match indexer_core::Adi::open(&self.project_path).await {
+            Ok(adi) => adi,
+            Err(e) => return Err(internal_error(e)),
+        };
+
+        let progress = adi.index().await.map_err(internal_error)?;
+        *self.adi.write().await = Some(adi);
+
+        Ok(IndexProgress {
+            files_processed: progress.files_processed,
+            files_total: progress.files_total,
+            symbols_indexed: progress.symbols_indexed,
+            errors: progress.errors,
+        })
+    }
+
+    async fn search(&self, query: IndexerServiceSearchQuery) -> Result<Vec<SearchResult>, ApiError> {
+        let adi = self.adi.read().await;
+        let adi = adi.as_ref().ok_or_else(|| unavailable("ADI not initialized"))?;
+        let limit = query.limit.map(|l| l as usize).unwrap_or(10);
+        let results = adi.search(&query.q, limit).await.map_err(internal_error)?;
+        Ok(results.iter().map(convert_search_result).collect())
+    }
+
+    async fn search_symbols(&self, query: IndexerServiceSearchSymbolsQuery) -> Result<Vec<SearchResult>, ApiError> {
+        let adi = self.adi.read().await;
+        let adi = adi.as_ref().ok_or_else(|| unavailable("ADI not initialized"))?;
+        let limit = query.limit.map(|l| l as usize).unwrap_or(10);
+        let symbols = adi.search_symbols(&query.q, limit).await.map_err(internal_error)?;
+        Ok(symbols
+            .iter()
+            .map(|s| SearchResult {
+                symbol: convert_symbol(s),
+                score: 1.0,
+                context: None,
+            })
+            .collect())
+    }
+
+    async fn get_symbol(&self, id: i64) -> Result<Symbol, ApiError> {
+        let adi = self.adi.read().await;
+        let adi = adi.as_ref().ok_or_else(|| unavailable("ADI not initialized"))?;
+        let symbol = adi.get_symbol(indexer_core::SymbolId(id)).map_err(not_found)?;
+        Ok(convert_symbol(&symbol))
+    }
+
+    async fn get_symbol_reachability(&self, id: i64) -> Result<ReachabilityResponse, ApiError> {
+        use indexer_core::analyzer::{EntryPointDetector, ReachabilityAnalyzer};
+
+        let adi = self.adi.read().await;
+        let adi = adi.as_ref().ok_or_else(|| unavailable("ADI not initialized"))?;
+
+        let storage = indexer_core::SqliteStorage::open(
+            &self.project_path.join(".adi/tree/index.sqlite"),
+        )
+        .map_err(internal_error)?;
+        let storage_arc = Arc::new(storage);
+
+        let entry_detector = EntryPointDetector::new(storage_arc.clone());
+        let entry_points = entry_detector.detect_entry_points().map_err(internal_error)?;
+
+        let reachability_analyzer = ReachabilityAnalyzer::new(storage_arc);
+        let is_reachable = reachability_analyzer
+            .is_reachable(indexer_core::SymbolId(id), &entry_points)
+            .map_err(internal_error)?;
+
+        let symbol = adi.get_symbol(indexer_core::SymbolId(id)).map_err(not_found)?;
+
+        Ok(ReachabilityResponse {
+            symbol_id: id,
+            symbol_name: symbol.name,
+            is_reachable,
+            status: if is_reachable {
+                "reachable".to_string()
+            } else {
+                "dead_code".to_string()
+            },
+        })
+    }
+
+    async fn search_files(&self, query: IndexerServiceSearchFilesQuery) -> Result<Vec<File>, ApiError> {
+        let adi = self.adi.read().await;
+        let adi = adi.as_ref().ok_or_else(|| unavailable("ADI not initialized"))?;
+        let limit = query.limit.map(|l| l as usize).unwrap_or(10);
+        let results = adi.search_files(&query.q, limit).await.map_err(internal_error)?;
+        let v = serde_json::to_value(results).map_err(internal_error)?;
+        serde_json::from_value(v).map_err(internal_error)
+    }
+
+    async fn get_file(&self, path: String) -> Result<FileInfo, ApiError> {
+        let adi = self.adi.read().await;
+        let adi = adi.as_ref().ok_or_else(|| unavailable("ADI not initialized"))?;
+        let file_info = adi.get_file(std::path::Path::new(&path)).map_err(not_found)?;
+        let v = serde_json::to_value(file_info).map_err(internal_error)?;
+        serde_json::from_value(v).map_err(internal_error)
+    }
+
+    async fn get_tree(&self) -> Result<Tree, ApiError> {
+        let adi = self.adi.read().await;
+        let adi = adi.as_ref().ok_or_else(|| unavailable("ADI not initialized"))?;
+        let tree = adi.get_tree().map_err(internal_error)?;
+        let v = serde_json::to_value(tree).map_err(internal_error)?;
+        serde_json::from_value(v).map_err(internal_error)
+    }
+
+    async fn find_dead_code(&self, query: IndexerServiceFindDeadCodeQuery) -> Result<DeadCodeReport, ApiError> {
+        use indexer_core::analyzer::{AnalysisConfig, AnalysisMode, DeadCodeAnalyzer};
+
+        let mode = match query.mode.as_deref() {
+            Some("library") => AnalysisMode::Library,
+            Some("application") => AnalysisMode::Application,
+            _ => AnalysisMode::Strict,
+        };
+
+        let config = AnalysisConfig {
+            mode,
+            exclude_tests: query.exclude_tests.unwrap_or(true),
+            exclude_traits: query.exclude_traits.unwrap_or(true),
+            exclude_ffi: query.exclude_ffi.unwrap_or(true),
+            exclude_patterns: vec![],
+        };
+
+        let storage = indexer_core::SqliteStorage::open(
+            &self.project_path.join(".adi/tree/index.sqlite"),
+        )
+        .map_err(internal_error)?;
+
+        let analyzer = DeadCodeAnalyzer::new(Arc::new(storage), config);
+        let report = analyzer.analyze().map_err(internal_error)?;
+        let v = serde_json::to_value(report).map_err(internal_error)?;
+        serde_json::from_value(v).map_err(internal_error)
+    }
+}
+
+async fn health() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "status": "ok",
+        "service": "adi-http",
+        "version": env!("CARGO_PKG_VERSION")
+    }))
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Parse args
     let args: Vec<String> = std::env::args().collect();
     let project_path = if args.len() > 1 {
         PathBuf::from(&args[1])
@@ -84,9 +281,7 @@ async fn main() -> Result<()> {
         .and_then(|p| p.parse().ok())
         .unwrap_or(3000);
 
-    // Setup logging
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
     tracing_subscriber::registry()
         .with(fmt::layer())
         .with(filter)
@@ -95,7 +290,6 @@ async fn main() -> Result<()> {
     info!("Starting ADI HTTP server");
     info!("Project path: {}", project_path.display());
 
-    // Initialize ADI
     let adi = match indexer_core::Adi::open(&project_path).await {
         Ok(adi) => Some(adi),
         Err(e) => {
@@ -112,16 +306,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/", get(health))
         .route("/health", get(health))
-        .route("/status", get(status))
-        .route("/index", post(index_project))
-        .route("/search", get(search))
-        .route("/symbols", get(search_symbols))
-        .route("/symbols/:id", get(get_symbol))
-        .route("/symbols/:id/reachability", get(get_symbol_reachability))
-        .route("/files", get(search_files))
-        .route("/files/*path", get(get_file))
-        .route("/tree", get(get_tree))
-        .route("/dead-code", get(find_dead_code))
+        .merge(generated::server::create_router::<AppState>())
         .layer(version_header_layer(
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),
@@ -130,300 +315,11 @@ async fn main() -> Result<()> {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
     info!("Listening on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
 
     Ok(())
-}
-
-async fn health() -> impl IntoResponse {
-    Json(serde_json::json!({
-        "status": "ok",
-        "service": "adi-http",
-        "version": env!("CARGO_PKG_VERSION")
-    }))
-}
-
-async fn status(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let adi = state.adi.read().await;
-
-    match adi.as_ref() {
-        Some(adi) => match adi.status() {
-            Ok(status) => (StatusCode::OK, Json(serde_json::to_value(status).unwrap())),
-            Err(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": e.to_string() })),
-            ),
-        },
-        None => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({ "error": "ADI not initialized. POST /index first." })),
-        ),
-    }
-}
-
-async fn index_project(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    // Re-initialize ADI
-    let adi = match indexer_core::Adi::open(&state.project_path).await {
-        Ok(adi) => adi,
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": e.to_string() })),
-            );
-        }
-    };
-
-    // Index
-    let progress = match adi.index().await {
-        Ok(p) => p,
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": e.to_string() })),
-            );
-        }
-    };
-
-    // Store new ADI instance
-    *state.adi.write().await = Some(adi);
-
-    (
-        StatusCode::OK,
-        Json(serde_json::to_value(progress).unwrap()),
-    )
-}
-
-async fn search(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<SearchQuery>,
-) -> impl IntoResponse {
-    let adi = state.adi.read().await;
-
-    match adi.as_ref() {
-        Some(adi) => match adi.search(&query.q, query.limit).await {
-            Ok(results) => (StatusCode::OK, Json(serde_json::to_value(results).unwrap())),
-            Err(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": e.to_string() })),
-            ),
-        },
-        None => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({ "error": "ADI not initialized" })),
-        ),
-    }
-}
-
-async fn search_symbols(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<SearchQuery>,
-) -> impl IntoResponse {
-    let adi = state.adi.read().await;
-
-    match adi.as_ref() {
-        Some(adi) => match adi.search_symbols(&query.q, query.limit).await {
-            Ok(results) => (StatusCode::OK, Json(serde_json::to_value(results).unwrap())),
-            Err(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": e.to_string() })),
-            ),
-        },
-        None => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({ "error": "ADI not initialized" })),
-        ),
-    }
-}
-
-async fn get_symbol(State(state): State<Arc<AppState>>, Path(id): Path<i64>) -> impl IntoResponse {
-    let adi = state.adi.read().await;
-
-    match adi.as_ref() {
-        Some(adi) => match adi.get_symbol(indexer_core::SymbolId(id)) {
-            Ok(symbol) => (StatusCode::OK, Json(serde_json::to_value(symbol).unwrap())),
-            Err(e) => (
-                StatusCode::NOT_FOUND,
-                Json(serde_json::json!({ "error": e.to_string() })),
-            ),
-        },
-        None => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({ "error": "ADI not initialized" })),
-        ),
-    }
-}
-
-async fn search_files(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<SearchQuery>,
-) -> impl IntoResponse {
-    let adi = state.adi.read().await;
-
-    match adi.as_ref() {
-        Some(adi) => match adi.search_files(&query.q, query.limit).await {
-            Ok(results) => (StatusCode::OK, Json(serde_json::to_value(results).unwrap())),
-            Err(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": e.to_string() })),
-            ),
-        },
-        None => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({ "error": "ADI not initialized" })),
-        ),
-    }
-}
-
-async fn get_file(
-    State(state): State<Arc<AppState>>,
-    Path(path): Path<String>,
-) -> impl IntoResponse {
-    let adi = state.adi.read().await;
-
-    match adi.as_ref() {
-        Some(adi) => match adi.get_file(std::path::Path::new(&path)) {
-            Ok(file_info) => (
-                StatusCode::OK,
-                Json(serde_json::to_value(file_info).unwrap()),
-            ),
-            Err(e) => (
-                StatusCode::NOT_FOUND,
-                Json(serde_json::json!({ "error": e.to_string() })),
-            ),
-        },
-        None => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({ "error": "ADI not initialized" })),
-        ),
-    }
-}
-
-async fn get_tree(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let adi = state.adi.read().await;
-
-    match adi.as_ref() {
-        Some(adi) => match adi.get_tree() {
-            Ok(tree) => (StatusCode::OK, Json(serde_json::to_value(tree).unwrap())),
-            Err(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": e.to_string() })),
-            ),
-        },
-        None => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({ "error": "ADI not initialized" })),
-        ),
-    }
-}
-
-async fn find_dead_code(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<DeadCodeQuery>,
-) -> impl IntoResponse {
-    use indexer_core::analyzer::{AnalysisConfig, AnalysisMode, DeadCodeAnalyzer};
-
-    let mode = match query.mode.as_str() {
-        "library" => AnalysisMode::Library,
-        "application" => AnalysisMode::Application,
-        _ => AnalysisMode::Strict,
-    };
-
-    let config = AnalysisConfig {
-        mode,
-        exclude_tests: query.exclude_tests,
-        exclude_traits: query.exclude_traits,
-        exclude_ffi: query.exclude_ffi,
-        exclude_patterns: vec![],
-    };
-
-    match indexer_core::SqliteStorage::open(&state.project_path.join(".adi/tree/index.sqlite"))
-    {
-        Ok(storage) => {
-            let analyzer = DeadCodeAnalyzer::new(Arc::new(storage), config);
-            match analyzer.analyze() {
-                Ok(report) => (StatusCode::OK, Json(serde_json::to_value(report).unwrap())),
-                Err(e) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({ "error": e.to_string() })),
-                ),
-            }
-        }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        ),
-    }
-}
-
-async fn get_symbol_reachability(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
-) -> impl IntoResponse {
-    use indexer_core::analyzer::{EntryPointDetector, ReachabilityAnalyzer};
-
-    let adi = state.adi.read().await;
-
-    match adi.as_ref() {
-        Some(adi) => {
-            match indexer_core::SqliteStorage::open(
-                &state.project_path.join(".adi/tree/index.sqlite"),
-            ) {
-                Ok(storage) => {
-                    let storage_arc = Arc::new(storage);
-
-                    let entry_detector = EntryPointDetector::new(storage_arc.clone());
-                    let entry_points = match entry_detector.detect_entry_points() {
-                        Ok(ep) => ep,
-                        Err(e) => {
-                            return (
-                                StatusCode::INTERNAL_SERVER_ERROR,
-                                Json(serde_json::json!({ "error": e.to_string() })),
-                            );
-                        }
-                    };
-
-                    let reachability_analyzer = ReachabilityAnalyzer::new(storage_arc);
-                    let is_reachable = match reachability_analyzer
-                        .is_reachable(indexer_core::SymbolId(id), &entry_points)
-                    {
-                        Ok(r) => r,
-                        Err(e) => {
-                            return (
-                                StatusCode::INTERNAL_SERVER_ERROR,
-                                Json(serde_json::json!({ "error": e.to_string() })),
-                            );
-                        }
-                    };
-
-                    match adi.get_symbol(indexer_core::SymbolId(id)) {
-                        Ok(symbol) => (
-                            StatusCode::OK,
-                            Json(serde_json::json!({
-                                "symbol_id": id,
-                                "symbol_name": symbol.name,
-                                "is_reachable": is_reachable,
-                                "status": if is_reachable { "reachable" } else { "dead_code" }
-                            })),
-                        ),
-                        Err(e) => (
-                            StatusCode::NOT_FOUND,
-                            Json(serde_json::json!({ "error": e.to_string() })),
-                        ),
-                    }
-                }
-                Err(e) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({ "error": e.to_string() })),
-                ),
-            }
-        }
-        None => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({ "error": "ADI not initialized" })),
-        ),
-    }
 }
