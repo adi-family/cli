@@ -2420,7 +2420,7 @@ services:
       type: script
       script:
         run: cargo run --bin logging-service
-        working_dir: crates/logging-service
+        working_dir: crates/logging
     rollout:
       type: recreate
       recreate:
@@ -2467,7 +2467,7 @@ services:
       type: script
       script:
         run: cargo run --bin platform-api
-        working_dir: crates/platform-api
+        working_dir: crates/platform
     rollout:
       type: recreate
       recreate:
@@ -2519,7 +2519,7 @@ services:
       type: script
       script:
         run: cargo run
-        working_dir: crates/analytics-api
+        working_dir: crates/analytics
     rollout:
       type: recreate
       recreate:
@@ -2571,7 +2571,7 @@ services:
       type: script
       script:
         run: cargo run --bin balance-api
-        working_dir: crates/balance-api
+        working_dir: crates/balance
     rollout:
       type: recreate
       recreate:
@@ -2592,7 +2592,7 @@ services:
       type: script
       script:
         run: cargo run --bin credentials-api
-        working_dir: crates/credentials-api
+        working_dir: crates/credentials
     rollout:
       type: recreate
       recreate:
@@ -4377,7 +4377,7 @@ hooks:
         - run: cargo build -p auth-http --release
           working_dir: crates/auth
         - run: cargo build -p platform-api --release
-          working_dir: crates/platform-api
+          working_dir: crates/platform
         - run: cargo build -p llm-proxy --release
           working_dir: crates/llm-proxy/http
       on_failure: abort

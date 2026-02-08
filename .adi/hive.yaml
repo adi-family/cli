@@ -222,8 +222,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin logging-service
-        working_dir: crates/logging-service
+        run: cargo run --bin logging-http
+        working_dir: crates/logging
     hooks:
       pre-up:
         - run: cargo run --bin logging-migrate --features migrate all
@@ -311,12 +311,12 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin platform-api
-        working_dir: crates/platform-api
+        run: cargo run --bin platform-http
+        working_dir: crates/platform
     hooks:
       pre-up:
-        - run: cargo run -p platform-api-cli --bin platform -- migrate all
-          working_dir: crates/platform-api
+        - run: cargo run -p platform-cli --bin platform -- migrate all
+          working_dir: crates/platform
           timeout: "120s"
     rollout:
       type: recreate
@@ -493,8 +493,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run
-        working_dir: crates/analytics-api
+        run: cargo run --bin analytics-http
+        working_dir: crates/analytics
     rollout:
       type: recreate
       recreate:
@@ -573,12 +573,12 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin balance-api
-        working_dir: crates/balance-api
+        run: cargo run --bin balance-http
+        working_dir: crates/balance
     hooks:
       pre-up:
         - run: cargo run --bin balance-migrate all
-          working_dir: crates/balance-api
+          working_dir: crates/balance
           timeout: "120s"
     rollout:
       type: recreate
@@ -614,12 +614,12 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin credentials-api
-        working_dir: crates/credentials-api
+        run: cargo run --bin credentials-http
+        working_dir: crates/credentials
     hooks:
       pre-up:
         - run: cargo run --bin credentials-migrate all
-          working_dir: crates/credentials-api
+          working_dir: crates/credentials
           timeout: "120s"
     rollout:
       type: recreate
@@ -657,7 +657,7 @@ services:
       type: script
       script:
         run: cargo run
-        working_dir: crates/plugin-registry-http
+        working_dir: crates/plugin-registry
     rollout:
       type: recreate
       recreate:

@@ -120,13 +120,13 @@ members = [
 
     # Logging
     "crates/lib/lib-logging-core",
-    "crates/logging-service/core",
-    "crates/logging-service/http",
+    "crates/logging/core",
+    "crates/logging/http",
 
-    # Platform API components
-    "crates/platform-api/core",
-    "crates/platform-api/http",
-    "crates/platform-api/cli",
+    # Platform components
+    "crates/platform/core",
+    "crates/platform/http",
+    "crates/platform/cli",
 
     # Tools
     "crates/tool-generate-heartbit",
@@ -228,18 +228,18 @@ members = [
     "crates/executor/http",
 
     # Plugin Registry
-    "crates/plugin-registry-http/core",
-    "crates/plugin-registry-http/http",
+    "crates/plugin-registry/core",
+    "crates/plugin-registry/http",
 
-    # Balance API
-    "crates/balance-api/core",
-    "crates/balance-api/http",
-    "crates/balance-api/cli",
+    # Balance
+    "crates/balance/core",
+    "crates/balance/http",
+    "crates/balance/cli",
 
-    # Credentials API
-    "crates/credentials-api/core",
-    "crates/credentials-api/http",
-    "crates/credentials-api/cli",
+    # Credentials
+    "crates/credentials/core",
+    "crates/credentials/http",
+    "crates/credentials/cli",
 
     # FlowMap
     "crates/lib/lib-flowmap-core",
@@ -247,8 +247,8 @@ members = [
     "apps/flowmap-api",
 
     # Analytics
-    "crates/analytics-api/core",
-    "crates/analytics-api/http",
+    "crates/analytics/core",
+    "crates/analytics/http",
     "crates/analytics-ingestion/core",
     "crates/analytics-ingestion/http",
 ]
@@ -273,13 +273,13 @@ linter-core = { path = "crates/linter/core" }
 llm-proxy-core = { path = "crates/llm-proxy/core" }
 hive-core = { path = "crates/hive/core" }
 audio-core = { path = "crates/audio/core" }
-platform-api-core = { path = "crates/platform-api/core" }
+platform-core = { path = "crates/platform/core" }
 tools-core = { path = "crates/tools/core" }
-balance-api-core = { path = "crates/balance-api/core" }
-credentials-core = { path = "crates/credentials-api/core" }
-logging-core = { path = "crates/logging-service/core" }
+balance-core = { path = "crates/balance/core" }
+credentials-core = { path = "crates/credentials/core" }
+logging-core = { path = "crates/logging/core" }
 executor-core = { path = "crates/executor/core" }
-plugin-registry-core = { path = "crates/plugin-registry-http/core" }
+plugin-registry-core = { path = "crates/plugin-registry/core" }
 signaling-server-core = { path = "crates/signaling-server/core" }
 
 # Hive plugin system

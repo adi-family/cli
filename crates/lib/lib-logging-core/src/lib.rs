@@ -12,7 +12,7 @@
 //!                ↓                                    ↓
 //!           LoggingClient                       LoggingClient
 //!                ↓                                    ↓
-//!           adi-logging-service (TimescaleDB)
+//!           adi-logging (TimescaleDB)
 //! ```
 //!
 //! # Usage

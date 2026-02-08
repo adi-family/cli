@@ -22,4 +22,4 @@ Extracted from `lib-tarminal-sync` to avoid coupling hive/cocoon to terminal CRD
 - `signaling-server`: WebSocket relay server implementing this protocol
 - `hive`: Cocoon orchestration client
 - `cocoon`: Worker device implementing protocol
-- `adi-platform-api`: Platform integration layer
+- `adi-platform`: Platform integration layer

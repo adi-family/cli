@@ -60,19 +60,17 @@ Services that run on servers and are called via HTTP don't need plugins:
 | `cli/` | Migrations + server management | Binary |
 
 **Components:**
-- `platform-api` (core, http, cli) - Unified Platform API
+- `platform` (core, http, cli) - Unified Platform API
 - `auth` (core, http) - Authentication service (email + TOTP)
 - `signaling-server` - WebSocket signaling
-
-**Standalone API services** (excluded from main workspace, developed independently):
-- `balance-api` - Balance/transaction tracking
-- `credentials-api` - Secure credentials storage
-- `logging-service` - Centralized logging
+- `balance` - Balance/transaction tracking
+- `credentials` - Secure credentials storage
+- `logging` - Centralized logging
 
 **Naming convention:**
-- Core: `{component}-core` (e.g., `platform-api-core`)
-- HTTP: `{component}-http` (e.g., `platform-api-http`)
-- CLI: `{component}-cli` (e.g., `platform-api-cli`)
+- Core: `{component}-core` (e.g., `platform-core`)
+- HTTP: `{component}-http` (e.g., `platform-http`)
+- CLI: `{component}-cli` (e.g., `platform-cli`)
 - Plugin: `{component}-plugin` (only for user-facing components)
 
 **Dependencies flow:** `cli` → `core` ← `http` (both cli and http depend on core)
@@ -97,19 +95,19 @@ Services that run on servers and are called via HTTP don't need plugins:
 - `crates/lang` - Language analyzers (rust, python, typescript, etc.)
 
 ### Backend Services
-- `crates/platform-api` - Unified Platform API (core/http/cli)
+- `crates/platform` - Unified Platform API (core/http/cli)
 - `crates/auth` - Authentication service (email + TOTP)
 - `crates/signaling-server` - WebSocket signaling server
-- `crates/analytics-api` - Analytics API (metrics, dashboards)
+- `crates/analytics` - Analytics API (metrics, dashboards)
 - `crates/analytics-ingestion` - Analytics event ingestion
-- `crates/plugin-registry-http` - Plugin registry HTTP server
+- `crates/plugin-registry` - Plugin registry HTTP server
 - `crates/executor` - Docker-based task execution
 - `crates/cocoon` - Containerized worker for remote execution
 
 ### Standalone Services (separate workspaces)
-- `crates/balance-api` - Balance/transaction tracking
-- `crates/credentials-api` - Secure credentials storage (ChaCha20-Poly1305)
-- `crates/logging-service` - Centralized logging (ingestion + query)
+- `crates/balance` - Balance/transaction tracking
+- `crates/credentials` - Secure credentials storage (ChaCha20-Poly1305)
+- `crates/logging` - Centralized logging (ingestion + query)
 
 ### Libraries
 - `crates/lib/lib-embed` - Shared embedding library
@@ -192,12 +190,12 @@ PORT=8080 ./target/release/flowmap-api
 ```
 Services → lib-analytics-core → HTTP POST → analytics-ingestion → TimescaleDB
                                                                            ↓
-                                            analytics-api ← (reads) ←─────┘
+                                            analytics ← (reads) ←─────────┘
 ```
 
 - **lib-analytics-core**: HTTP client library that sends events to ingestion service
 - **analytics-ingestion**: Receives events via HTTP and writes to TimescaleDB
-- **analytics-api**: REST API for querying metrics and dashboards
+- **analytics**: REST API for querying metrics and dashboards
 - **TimescaleDB**: Time-series database (PostgreSQL extension) for storing events
 - **Continuous Aggregates**: Auto-updating materialized views for fast analytics queries
 
@@ -311,11 +309,11 @@ Request → Service A [trace: abc, span: 001] → Service B [trace: abc, span: 0
               ↓                                    ↓
          LoggingClient                       LoggingClient
               ↓                                    ↓
-                    logging-service (TimescaleDB)
+                    logging (TimescaleDB)
 ```
 
 - **lib-logging-core**: Client library with distributed tracing (trace ID + span ID) and correlation IDs
-- **logging-service**: Receives logs via HTTP and stores to TimescaleDB, provides query API
+- **logging**: Receives logs via HTTP and stores to TimescaleDB, provides query API
 - **TimescaleDB**: Time-series database for log storage with 30-day retention
 
 ### Distributed Tracing
@@ -555,12 +553,12 @@ All production services are built using **cross-compilation** for 10-20x faster 
 3. Push to registry
 
 **Services:**
-- `analytics-api` - Analytics API (metrics, dashboards)
+- `analytics` - Analytics API (metrics, dashboards)
 - `analytics-ingestion` - Analytics event ingestion service
 - `auth` - Authentication service (email + TOTP)
-- `platform-api` - Unified Platform API
+- `platform` - Unified Platform API
 - `signaling-server` - WebSocket signaling server
-- `plugin-registry` - Plugin registry HTTP server
+- `plugin-registry` - Plugin registry server
 - `flowmap-api` - Code flow visualization API
 - `hive` - Hive: Cocoon orchestration API
 

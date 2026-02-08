@@ -29,7 +29,7 @@
 	path = crates/lib/lib-migrations
 	url = https://github.com/adi-family/lib-migrations.git
 [submodule "crates/adi-plugin-registry-http"]
-	path = crates/plugin-registry-http
+	path = crates/plugin-registry
 	url = https://github.com/adi-family/adi-plugin-registry.git
 [submodule "crates/adi-agent-loop/core"]
 	path = crates/agent-loop/core
@@ -86,7 +86,7 @@
 	path = apps/infra-service-web
 	url = git@github.com:adi-family/infra-service-web.git
 [submodule "crates/adi-platform-api"]
-	path = crates/platform-api
+	path = crates/platform
 	url = https://github.com/adi-family/adi-platform-api.git
 [submodule "crates/lib/lib-tarminal-sync"]
 	path = crates/lib/lib-tarminal-sync
@@ -104,7 +104,7 @@
 	path = crates/llm-uzu-plugin
 	url = https://github.com/adi-family/adi-llm-uzu-plugin.git
 [submodule "crates/adi-analytics-api"]
-	path = crates/analytics-api
+	path = crates/analytics
 	url = https://github.com/adi-family/adi-analytics-api.git
 [submodule "crates/adi-analytics-ingestion"]
 	path = crates/analytics-ingestion
@@ -143,13 +143,13 @@
 	path = crates/linter
 	url = https://github.com/adi-family/adi-linter.git
 [submodule "crates/adi-balance-api"]
-	path = crates/balance-api
+	path = crates/balance
 	url = https://github.com/adi-family/adi-balance-api.git
 [submodule "crates/adi-credentials-api"]
-	path = crates/credentials-api
+	path = crates/credentials
 	url = https://github.com/adi-family/adi-credentials-api.git
 [submodule "crates/adi-logging-service"]
-	path = crates/logging-service
+	path = crates/logging
 	url = https://github.com/adi-family/adi-logging-service.git
 [submodule "crates/webrtc-test-peer"]
 	path = crates/webrtc-test-peer

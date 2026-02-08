@@ -5,3 +5,5 @@
 .env.local
 dist/
 .hive/
+.DS_Store
+*.bak

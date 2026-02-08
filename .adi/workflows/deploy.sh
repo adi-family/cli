@@ -458,12 +458,12 @@ COMMANDS:
 
 SERVICES:
     auth                Auth API (auth)
-    platform            Platform API (platform-api)
+    platform            Platform API (platform)
     signaling           Signaling Server (signaling-server)
     web                 Web UI (infra-service-web)
     analytics-ingestion Analytics Ingestion (analytics-ingestion)
-    analytics           Analytics API (analytics-api)
-    registry            Plugin Registry (plugin-registry-http)
+    analytics           Analytics API (analytics)
+    registry            Plugin Registry (plugin-registry)
 
 ENVIRONMENT:
     COOLIFY_URL         Coolify instance URL (default: http://in.the-ihor.com)
