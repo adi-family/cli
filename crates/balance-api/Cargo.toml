@@ -6,9 +6,6 @@ rust-version = "1.85"
 license = "BSL-1.0"
 description = "Balance and transaction tracking service for ADI platform"
 
-# Standalone crate (not part of parent workspace)
-[workspace]
-
 [[bin]]
 name = "balance-api"
 path = "src/main.rs"

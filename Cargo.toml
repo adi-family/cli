@@ -1,23 +1,16 @@
 [workspace]
 resolver = "2"
 exclude = [
-    "crates/lib/lib-flowmap-core",
-    "crates/lib/lib-flowmap-parser",
-    "apps/flowmap-api",
-    "crates/analytics-api",
-    "crates/analytics-ingestion",
     # Apple Silicon only - requires Metal Toolchain
     "crates/lib/lib-client/uzu",
     "crates/llm-uzu-plugin",
-    # Nested workspaces (submodules with their own workspace roots)
-    "crates/executor",
-    "crates/plugin-registry-http",
-    "crates/signaling-server",
-    # Standalone API services
-    "crates/balance-api",
-    "crates/credentials-api",
     # Submodule parent dirs with placeholder Cargo.toml
     "crates/hive",
+    # Nested workspace roots (sub-crates included directly)
+    "crates/auth",
+    "crates/platform-api",
+    "crates/analytics-api",
+    "crates/analytics-ingestion",
 ]
 members = [
     # CLI manager (submodule)
@@ -59,8 +52,9 @@ members = [
     "crates/linter/core",
 
     # Auth components
-    "crates/auth-core",
-    "crates/auth-http",
+    "crates/auth/core",
+    "crates/auth/http",
+    "crates/auth/cli",
 
     # Knowledgebase components
     "crates/knowledgebase/core",
@@ -228,6 +222,26 @@ members = [
     "crates/cli/plugins/ja-JP",
     "crates/cli/plugins/ko-KR",
     "crates/cli/plugins/ru-RU",
+
+    # Signaling server
+    "crates/signaling-server",
+
+    # Standalone services
+    "crates/executor",
+    "crates/plugin-registry-http",
+    "crates/balance-api",
+    "crates/credentials-api",
+
+    # FlowMap
+    "crates/lib/lib-flowmap-core",
+    "crates/lib/lib-flowmap-parser",
+    "apps/flowmap-api",
+
+    # Analytics
+    "crates/analytics-api/core",
+    "crates/analytics-api/http",
+    "crates/analytics-ingestion/core",
+    "crates/analytics-ingestion/http",
 ]
 
 # FlowMap is standalone (not in workspace) - build with:
@@ -248,7 +262,7 @@ indexer-core = { path = "crates/indexer/core" }
 tasks-core = { path = "crates/tasks/core" }
 knowledgebase-core = { path = "crates/knowledgebase/core" }
 agent-loop-core = { path = "crates/agent-loop/core" }
-auth-core = { path = "crates/auth-core" }
+auth-core = { path = "crates/auth/core" }
 linter-core = { path = "crates/linter/core" }
 llm-proxy-core = { path = "crates/llm-proxy/core" }
 hive-core = { path = "crates/hive/core" }
