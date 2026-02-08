@@ -4846,7 +4846,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "hive-core",
- "hive-ssl",
+ "hive-proxy-ssl",
  "lib-signaling-protocol",
  "rustls 0.23.36",
  "serde",
@@ -4917,7 +4917,7 @@ dependencies = [
  "anyhow",
  "dotenvy",
  "hive-core",
- "hive-ssl",
+ "hive-proxy-ssl",
  "lib-signaling-protocol",
  "rustls 0.23.36",
  "tokio",
@@ -5100,6 +5100,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "hive-proxy-ssl"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "axum 0.7.9",
+ "axum-server",
+ "base64 0.22.1",
+ "chrono",
+ "dashmap",
+ "futures",
+ "hive-core",
+ "http 1.4.0",
+ "instant-acme",
+ "pem",
+ "rcgen",
+ "rustls 0.23.36",
+ "rustls-pemfile 2.2.0",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tokio-rustls 0.26.4",
+ "tower 0.4.13",
+ "tracing",
+ "x509-parser",
+]
+
+[[package]]
 name = "hive-rollout-blue-green"
 version = "0.8.4"
 dependencies = [
@@ -5183,37 +5214,6 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "hive-ssl"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "axum 0.7.9",
- "axum-server",
- "base64 0.22.1",
- "chrono",
- "dashmap",
- "futures",
- "hive-core",
- "http 1.4.0",
- "instant-acme",
- "pem",
- "rcgen",
- "rustls 0.23.36",
- "rustls-pemfile 2.2.0",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tokio-rustls 0.26.4",
- "tower 0.4.13",
- "tracing",
- "x509-parser",
 ]
 
 [[package]]

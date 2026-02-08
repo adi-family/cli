@@ -67,9 +67,8 @@ members = [
     # Hive components
     "crates/hive/core",
     "crates/hive/http",
-    "crates/hive/ssl",
-
     # Hive plugins
+    "crates/hive/plugins/proxy-ssl",
     "crates/hive/plugins/runner-docker",
     "crates/hive/plugins/obs-stdout",
     "crates/hive/plugins/obs-file",
