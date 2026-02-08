@@ -6,11 +6,6 @@ exclude = [
     "crates/llm-uzu-plugin",
     # Submodule parent dirs with placeholder Cargo.toml
     "crates/hive",
-    # Nested workspace roots (sub-crates included directly)
-    "crates/auth",
-    "crates/platform-api",
-    "crates/analytics-api",
-    "crates/analytics-ingestion",
 ]
 members = [
     # CLI manager (submodule)
