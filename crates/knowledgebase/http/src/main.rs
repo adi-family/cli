@@ -6,7 +6,6 @@ mod mcp;
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::{routing::get, Json, Router};
-use generated::enums::{EdgeType, NodeType};
 use generated::models::*;
 use generated::server::*;
 use knowledgebase_core::{default_data_dir, Knowledgebase};
@@ -222,6 +221,7 @@ async fn main() -> Result<()> {
     #[cfg(feature = "mcp")]
     info!("MCP support enabled at /mcp/sse (SSE) and /mcp/message (POST)");
 
+    #[allow(deprecated)] // standalone HTTP binary uses fastembed, not plugin manager
     let kb = match Knowledgebase::open(&data_dir).await {
         Ok(kb) => Some(kb),
         Err(e) => {

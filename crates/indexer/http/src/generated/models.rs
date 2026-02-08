@@ -1,7 +1,7 @@
 //! Auto-generated models from TypeSpec.
 //! DO NOT EDIT.
 
-#![allow(unused_imports)]
+#![allow(unused_imports, dead_code)]
 
 use super::enums::*;
 use chrono::{DateTime, Utc};

@@ -125,6 +125,7 @@ impl IndexerServiceHandler for AppState {
     }
 
     async fn index_project(&self) -> Result<IndexProgress, ApiError> {
+        #[allow(deprecated)] // standalone HTTP binary uses fastembed, not plugin manager
         let adi = match indexer_core::Adi::open(&self.project_path).await {
             Ok(adi) => adi,
             Err(e) => return Err(internal_error(e)),
@@ -290,6 +291,7 @@ async fn main() -> Result<()> {
     info!("Starting ADI HTTP server");
     info!("Project path: {}", project_path.display());
 
+    #[allow(deprecated)] // standalone HTTP binary uses fastembed, not plugin manager
     let adi = match indexer_core::Adi::open(&project_path).await {
         Ok(adi) => Some(adi),
         Err(e) => {
