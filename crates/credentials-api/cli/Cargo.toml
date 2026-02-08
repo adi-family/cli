@@ -1,0 +1,19 @@
+[package]
+name = "credentials-cli"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "BSL-1.0"
+description = "Migration CLI for ADI Credentials API"
+
+[[bin]]
+name = "credentials-migrate"
+path = "src/main.rs"
+
+[dependencies]
+lib-migrations-core = { git = "https://github.com/adi-family/lib-migrations-core.git" }
+lib-migrations-sql = { git = "https://github.com/adi-family/lib-migrations-sql.git" }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "json"] }
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+dotenvy = "0.15"

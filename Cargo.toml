@@ -120,7 +120,8 @@ members = [
 
     # Logging
     "crates/lib/lib-logging-core",
-    "crates/logging-service",
+    "crates/logging-service/core",
+    "crates/logging-service/http",
 
     # Platform API components
     "crates/platform-api/core",
@@ -219,13 +220,26 @@ members = [
     "crates/cli/plugins/ru-RU",
 
     # Signaling server
-    "crates/signaling-server",
+    "crates/signaling-server/core",
+    "crates/signaling-server/http",
 
-    # Standalone services
-    "crates/executor",
-    "crates/plugin-registry-http",
-    "crates/balance-api",
-    "crates/credentials-api",
+    # Executor
+    "crates/executor/core",
+    "crates/executor/http",
+
+    # Plugin Registry
+    "crates/plugin-registry-http/core",
+    "crates/plugin-registry-http/http",
+
+    # Balance API
+    "crates/balance-api/core",
+    "crates/balance-api/http",
+    "crates/balance-api/cli",
+
+    # Credentials API
+    "crates/credentials-api/core",
+    "crates/credentials-api/http",
+    "crates/credentials-api/cli",
 
     # FlowMap
     "crates/lib/lib-flowmap-core",
@@ -241,9 +255,6 @@ members = [
 
 # FlowMap is standalone (not in workspace) - build with:
 # cd apps/flowmap-api && cargo build
-
-# Note: signaling-server is standalone (not in workspace) - build with:
-# cd crates/signaling-server && cargo build
 
 [workspace.package]
 version = "0.8.4"
@@ -264,6 +275,12 @@ hive-core = { path = "crates/hive/core" }
 audio-core = { path = "crates/audio/core" }
 platform-api-core = { path = "crates/platform-api/core" }
 tools-core = { path = "crates/tools/core" }
+balance-api-core = { path = "crates/balance-api/core" }
+credentials-core = { path = "crates/credentials-api/core" }
+logging-core = { path = "crates/logging-service/core" }
+executor-core = { path = "crates/executor/core" }
+plugin-registry-core = { path = "crates/plugin-registry-http/core" }
+signaling-server-core = { path = "crates/signaling-server/core" }
 
 # Hive plugin system
 hive-plugin-abi = { path = "crates/hive/plugins/abi" }

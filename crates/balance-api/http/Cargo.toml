@@ -1,0 +1,57 @@
+[package]
+name = "balance-api-http"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "BSL-1.0"
+description = "HTTP API server for ADI Balance API"
+
+[[bin]]
+name = "balance-api-http"
+path = "src/main.rs"
+
+[dependencies]
+balance-api-core = { path = "../core" }
+
+# Web framework
+axum = { version = "0.8", features = ["macros"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "json"] }
+
+# Analytics
+lib-analytics-core = { path = "../../lib/lib-analytics-core" }
+
+# HTTP utilities
+lib-http-common = { path = "../../lib/lib-http-common" }
+
+# Logging
+lib-logging-core = { path = "../../lib/lib-logging-core", features = ["axum-08-compat"] }
+
+# Generated API support
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Auth
+jsonwebtoken = "9"
+
+# Utils
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Config
+dotenvy = "0.15"
