@@ -6966,8 +6966,12 @@ dependencies = [
 name = "lib-http-common"
 version = "0.8.4"
 dependencies = [
+ "axum 0.7.9",
  "http 1.4.0",
+ "serde",
+ "serde_json",
  "tower 0.4.13",
+ "uuid",
 ]
 
 [[package]]
