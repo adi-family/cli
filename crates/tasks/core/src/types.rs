@@ -61,7 +61,7 @@ impl FromStr for TaskStatus {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "todo" => Ok(Self::Todo),
-            "in_progress" | "inprogress" => Ok(Self::InProgress),
+            "in_progress" | "in-progress" | "inprogress" | "wip" => Ok(Self::InProgress),
             "done" => Ok(Self::Done),
             "blocked" => Ok(Self::Blocked),
             "cancelled" | "canceled" => Ok(Self::Cancelled),

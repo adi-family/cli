@@ -18,15 +18,16 @@ type CmdResult = std::result::Result<String, String>;
 
 /// ADI Tasks Plugin
 pub struct TasksPlugin {
-    /// Task manager instance
+    /// Task manager instance (eagerly initialized so both plugin_create and plugin_create_cli work)
     tasks: Arc<RwLock<Option<TaskManager>>>,
 }
 
 impl TasksPlugin {
-    /// Create a new tasks plugin
+    /// Create a new tasks plugin with eagerly initialized global TaskManager
     pub fn new() -> Self {
+        let manager = TaskManager::open_global().ok();
         Self {
-            tasks: Arc::new(RwLock::new(None)),
+            tasks: Arc::new(RwLock::new(manager)),
         }
     }
 }
@@ -52,9 +53,6 @@ impl Plugin for TasksPlugin {
     }
 
     async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
-        // Initialize task manager
-        let manager = TaskManager::open_global().ok();
-        *self.tasks.write().await = manager;
         Ok(())
     }
 
@@ -225,9 +223,12 @@ fn cmd_list(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
     } else if blocked {
         tasks.get_blocked().map_err(|e| e.to_string())?
     } else if let Some(ref status_str) = status_filter {
-        let status: TaskStatus = status_str
-            .parse()
-            .map_err(|_| format!("Invalid status: {}", status_str))?;
+        let status: TaskStatus = status_str.parse().map_err(|_| {
+            format!(
+                "Invalid status: {}. Valid: todo, in-progress, done, blocked, cancelled",
+                status_str
+            )
+        })?;
         tasks.get_by_status(status).map_err(|e| e.to_string())?
     } else {
         tasks.list().map_err(|e| e.to_string())?
@@ -342,14 +343,17 @@ fn cmd_status(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
     })?;
 
     let id: i64 = id_str.parse().map_err(|_| "Invalid task ID")?;
-    let status: TaskStatus = status_str
-        .parse()
-        .map_err(|_| format!("Invalid status: {}", status_str))?;
+    let status: TaskStatus = status_str.parse().map_err(|_| {
+        format!(
+            "Invalid status: {}. Valid: todo, in-progress, done, blocked, cancelled",
+            status_str
+        )
+    })?;
 
     tasks
         .update_status(TaskId(id), status)
         .map_err(|e| e.to_string())?;
-    Ok(format!("Task #{} status updated to {:?}", id, status))
+    Ok(format!("Task #{} status updated to {}", id, status))
 }
 
 fn cmd_delete(tasks: &TaskManager, ctx: &CliContext) -> CmdResult {
