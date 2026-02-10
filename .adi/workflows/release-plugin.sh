@@ -327,7 +327,7 @@ build_plugin() {
     local manifest_gen
     manifest_gen=$(ensure_manifest_gen)
     local generated_toml
-    generated_toml=$(mktemp "${TMPDIR:-/tmp}/plugin.XXXXXX.toml")
+    generated_toml=$(mktemp "${TMPDIR:-/tmp}/plugin-XXXXXX").toml
     "$manifest_gen" --cargo-toml "$cargo_toml" --output "$generated_toml" || error "Failed to generate manifest from $cargo_toml"
 
     # Parse plugin metadata from generated manifest
@@ -377,19 +377,73 @@ build_plugin() {
 
     info "Built: $lib_path"
 
+    # Build web UI if present (sibling web/ directory with package.json)
+    local web_dir=""
+    local parent_dir
+    parent_dir=$(dirname "$PROJECT_ROOT/$crate_dir")
+    if [[ -f "$parent_dir/web/package.json" ]]; then
+        web_dir="$parent_dir/web"
+    elif [[ -f "$PROJECT_ROOT/$crate_dir/web/package.json" ]]; then
+        web_dir="$PROJECT_ROOT/$crate_dir/web"
+    fi
+    PLUGIN_WEB_JS=""
+    if [[ -n "$web_dir" ]]; then
+        info "Building web UI from $web_dir..."
+        ensure_command "npm" "Install Node.js: https://nodejs.org"
+        (cd "$web_dir" && npm install --silent && npm run build)
+        if [[ -f "$web_dir/dist/web.js" ]]; then
+            PLUGIN_WEB_JS="$web_dir/dist/web.js"
+            success "Web UI built: $(du -h "$PLUGIN_WEB_JS" | cut -f1) ($(basename "$PLUGIN_WEB_JS"))"
+        else
+            warn "Web UI build did not produce dist/web.js, skipping"
+        fi
+    fi
+
     # Create package
     local pkg_dir
     pkg_dir=$(mktemp -d)
     cp "$lib_path" "$pkg_dir/plugin.$lib_ext"
     cp "$generated_toml" "$pkg_dir/plugin.toml"
 
+    local pkg_files=("plugin.$lib_ext" "plugin.toml")
+    if [[ -n "$PLUGIN_WEB_JS" ]]; then
+        cp "$PLUGIN_WEB_JS" "$pkg_dir/web.js"
+        pkg_files+=("web.js")
+    fi
+
     local archive_name="${PLUGIN_ID}-v${PLUGIN_VERSION}-${PLUGIN_PLATFORM}.tar.gz"
     PLUGIN_ARCHIVE="$dist_dir/$archive_name"
 
-    tar -czf "$PLUGIN_ARCHIVE" -C "$pkg_dir" "plugin.$lib_ext" "plugin.toml"
+    tar -czf "$PLUGIN_ARCHIVE" -C "$pkg_dir" "${pkg_files[@]}"
     rm -rf "$pkg_dir"
 
     success "Created: $archive_name"
+}
+
+publish_web_ui() {
+    local plugin_id="$1"
+    local version="$2"
+    local web_js_path="$3"
+    local registry="$4"
+
+    info "Publishing web UI for $plugin_id v$version..."
+
+    local url="$registry/v1/publish/plugins/$plugin_id/$version/web"
+    local response
+    response=$(curl -s -w "\n%{http_code}" --max-time 120 -X POST "$url" \
+        -H "Content-Type: application/javascript" \
+        --data-binary "@$web_js_path")
+
+    local http_code
+    http_code=$(echo "$response" | tail -n 1)
+    local body
+    body=$(echo "$response" | sed '$d')
+
+    if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+        success "Published web UI for $plugin_id v$version"
+    else
+        warn "Failed to publish web UI (HTTP $http_code): $body"
+    fi
 }
 
 publish_plugin() {
@@ -528,6 +582,9 @@ main() {
 
     if [ "$push" = true ]; then
         publish_plugin "$PLUGIN_ID" "$PLUGIN_VERSION" "$PLUGIN_PLATFORM" "$PLUGIN_ARCHIVE" "$PLUGIN_NAME" "$PLUGIN_DESC" "$PLUGIN_AUTHOR" "$PLUGIN_TYPE" "$registry"
+        if [[ -n "${PLUGIN_WEB_JS:-}" ]] && [[ -f "$PLUGIN_WEB_JS" ]]; then
+            publish_web_ui "$PLUGIN_ID" "$PLUGIN_VERSION" "$PLUGIN_WEB_JS" "$registry"
+        fi
         echo ""
         success "Install with: adi plugin install $PLUGIN_ID"
     else

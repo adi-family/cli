@@ -165,7 +165,7 @@ lint_plugin() {
         manifest_gen="$PROJECT_ROOT/target/debug/manifest-gen"
     fi
     local manifest
-    manifest=$(mktemp "${TMPDIR:-/tmp}/plugin-lint.XXXXXX.toml")
+    manifest=$(mktemp "${TMPDIR:-/tmp}/plugin-lint-XXXXXX").toml
     if [[ -f "$manifest_gen" ]]; then
         "$manifest_gen" --cargo-toml "$cargo_toml" --output "$manifest" 2>/dev/null || {
             error "Failed to generate manifest from Cargo.toml metadata"

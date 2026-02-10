@@ -186,7 +186,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run
+        run: cargo run --bin signaling-server
         working_dir: crates/signaling-server
     rollout:
       type: recreate
@@ -419,7 +419,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --release
+        run: cargo run --release --bin flowmap-api
         working_dir: apps/flowmap-api
     rollout:
       type: recreate
@@ -450,7 +450,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run
+        run: cargo run --bin analytics-ingestion
         working_dir: crates/analytics-ingestion
     hooks:
       pre-up:
@@ -656,7 +656,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run
+        run: cargo run --bin plugin-registry
         working_dir: crates/plugin-registry
     rollout:
       type: recreate
@@ -667,8 +667,14 @@ services:
       - host: adi.local
         path: /api/registry
         strip_prefix: true
+      - host: adi.local
+        path: /registry
+        strip_prefix: true
       - host: adi-local.the-ihor.com
         path: /api/registry
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /registry
         strip_prefix: true
     healthcheck:
       type: http

@@ -267,11 +267,27 @@ main() {
             manifest_gen="${ROOT_DIR}/target/debug/manifest-gen"
         fi
         local generated_toml
-        generated_toml=$(mktemp "${TMPDIR:-/tmp}/plugin.XXXXXX.toml")
+        generated_toml=$(mktemp "${TMPDIR:-/tmp}/plugin-XXXXXX").toml
         "$manifest_gen" --cargo-toml "$crate_dir/Cargo.toml" --output "$generated_toml" 2>/dev/null || {
             warn "Failed to generate manifest for $crate_name"
             continue
         }
+
+        # Build web UI if present (sibling web/ directory with package.json)
+        local web_js=""
+        local parent_crate_dir
+        parent_crate_dir=$(dirname "$crate_dir")
+        if [[ -f "$parent_crate_dir/web/package.json" ]]; then
+            info "Building web UI..."
+            if (cd "$parent_crate_dir/web" && npm install --silent && npm run build) 2>/dev/null; then
+                if [[ -f "$parent_crate_dir/web/dist/web.js" ]]; then
+                    web_js="$parent_crate_dir/web/dist/web.js"
+                    success "Web UI built"
+                fi
+            else
+                warn "Web UI build failed, skipping"
+            fi
+        fi
 
         # Create package
         local pkg_dir
@@ -279,8 +295,19 @@ main() {
         cp "$lib_path" "$pkg_dir/plugin.$lib_ext"
         cp "$generated_toml" "$pkg_dir/plugin.toml"
 
+        local pkg_files=("plugin.$lib_ext" "plugin.toml")
+        if [[ -n "$web_js" ]]; then
+            cp "$web_js" "$pkg_dir/web.js"
+            pkg_files+=("web.js")
+        fi
+
+        # Save web.js to dist for later publish
+        if [[ -n "$web_js" ]]; then
+            cp "$web_js" "$dist_dir/${plugin_id}-web.js"
+        fi
+
         local archive_name="${plugin_id}-v${version}-${platform}.tar.gz"
-        create_tarball "$dist_dir/$archive_name" "$pkg_dir" "plugin.$lib_ext" "plugin.toml"
+        create_tarball "$dist_dir/$archive_name" "$pkg_dir" "${pkg_files[@]}"
 
         success "Created $archive_name"
         echo ""
@@ -330,6 +357,19 @@ main() {
         local response
         response=$(curl -s --max-time 300 -X POST "$url" -F "file=@$archive_path")
         echo "$response" | jq . 2>/dev/null || echo "$response"
+
+        # Publish web UI if present
+        local web_js_path="$dist_dir/${plugin_id}-web.js"
+        if [[ -f "$web_js_path" ]]; then
+            info "Publishing web UI for $plugin_id..."
+            local web_response
+            web_response=$(curl -s --max-time 120 -X POST \
+                "$REGISTRY_URL/v1/publish/plugins/$plugin_id/$version/web" \
+                -H "Content-Type: application/javascript" \
+                --data-binary "@$web_js_path")
+            echo "$web_response" | jq . 2>/dev/null || echo "$web_response"
+            success "Published web UI for $plugin_id"
+        fi
 
         success "Published $plugin_id"
         echo ""

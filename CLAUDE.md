@@ -20,11 +20,6 @@ The project uses a **unified v3 plugin ABI**:
 - Features: Native Rust async traits, type-safe contexts, zero FFI overhead
 - Service traits: `CliCommands`, `HttpRoutes`, `McpTools`, `Runner`, `HealthCheck`, `EnvProvider`, `ProxyMiddleware`, `ObservabilitySink`, `RolloutStrategy`, `LanguageAnalyzer`
 
-### Migration Status: COMPLETE
-- ✅ All 79+ plugins migrated to v3
-- ✅ `lib-plugin-abi-orchestration` removed (merged into v3)
-- ✅ Legacy v2 ABI (`lib-plugin-abi`) removed from workspace
-
 ## Multi-Crate Component Architecture
 
 ### User-Facing Components (with plugin)
@@ -246,34 +241,6 @@ All services automatically track events via `AnalyticsClient`:
 - Session durations
 - Registration trends
 
-### Database Migrations
-Analytics migrations are managed by `lib-analytics-core` binary:
-```bash
-# Run analytics migrations
-cd crates/lib-analytics-core
-cargo run --bin analytics-migrate --features migrate all
-
-# Check status
-cargo run --bin analytics-migrate --features migrate status
-```
-
-### Database Schema
-Events are stored in `analytics_events` table (TimescaleDB hypertable):
-- Automatic time-series partitioning by day
-- Compression after 7 days (~90% space savings)
-- 90-day retention policy for raw events
-- Continuous aggregates kept indefinitely
-
-### Continuous Aggregates
-Auto-updating materialized views for fast queries:
-- `analytics_daily_active_users` - DAU/WAU/MAU
-- `analytics_task_stats_daily` - Task metrics by day
-- `analytics_api_latency_hourly` - API performance by hour
-- `analytics_integration_health_daily` - Integration status
-- `analytics_auth_events_daily` - Authentication metrics
-- `analytics_cocoon_activity_daily` - Cocoon usage
-- `analytics_errors_hourly` - Error tracking
-
 ### Integration Example
 ```rust
 use lib_analytics_core::{AnalyticsClient, AnalyticsEvent};
@@ -434,16 +401,6 @@ async fn list_users(req: Request) -> impl IntoResponse {
     client.info("Listing users", &ctx).send();
     // ...
 }
-```
-
-### Database Migrations
-```bash
-# Run logging migrations
-cd crates/lib/lib-logging-core
-cargo run --bin logging-migrate --features migrate all
-
-# Check status
-cargo run --bin logging-migrate --features migrate status
 ```
 
 ### Configuration

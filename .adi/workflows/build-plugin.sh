@@ -247,7 +247,7 @@ build_plugin() {
     local manifest_gen
     manifest_gen=$(ensure_manifest_gen)
     local generated_toml
-    generated_toml=$(mktemp "${TMPDIR:-/tmp}/plugin.XXXXXX.toml")
+    generated_toml=$(mktemp "${TMPDIR:-/tmp}/plugin-XXXXXX").toml
     "$manifest_gen" --cargo-toml "$cargo_toml" --output "$generated_toml" || error "Failed to generate manifest from $cargo_toml"
 
     # Parse plugin metadata from generated manifest
@@ -304,6 +304,28 @@ build_plugin() {
     require_file "$PLUGIN_LIB_PATH" "Library not found: $PLUGIN_LIB_PATH"
 
     success "Built: $PLUGIN_LIB_PATH"
+
+    # Build web UI if present (sibling web/ directory with package.json)
+    PLUGIN_WEB_JS=""
+    local parent_dir
+    parent_dir=$(dirname "$PROJECT_ROOT/$crate_dir")
+    local web_dir=""
+    if [[ -f "$parent_dir/web/package.json" ]]; then
+        web_dir="$parent_dir/web"
+    elif [[ -f "$PROJECT_ROOT/$crate_dir/web/package.json" ]]; then
+        web_dir="$PROJECT_ROOT/$crate_dir/web"
+    fi
+    if [[ -n "$web_dir" ]]; then
+        info "Building web UI from $web_dir..."
+        ensure_command "npm" "Install Node.js: https://nodejs.org"
+        (cd "$web_dir" && npm install --silent && npm run build)
+        if [[ -f "$web_dir/dist/web.js" ]]; then
+            PLUGIN_WEB_JS="$web_dir/dist/web.js"
+            success "Web UI built: $(du -h "$PLUGIN_WEB_JS" | cut -f1) ($(basename "$PLUGIN_WEB_JS"))"
+        else
+            warn "Web UI build did not produce dist/web.js, skipping"
+        fi
+    fi
 }
 
 install_plugin() {
@@ -337,6 +359,10 @@ install_plugin() {
     info "Installing to: $install_dir"
     cp "$PLUGIN_LIB_PATH" "$install_dir/plugin.$lib_ext"
     cp "$PLUGIN_TOML_PATH" "$install_dir/plugin.toml"
+    if [[ -n "${PLUGIN_WEB_JS:-}" ]] && [[ -f "$PLUGIN_WEB_JS" ]]; then
+        cp "$PLUGIN_WEB_JS" "$install_dir/web.js"
+        info "Installed web UI: web.js"
+    fi
     
     # Sign binary on macOS
     if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -433,8 +459,14 @@ main() {
         pkg_dir=$(mktemp -d)
         cp "$PLUGIN_LIB_PATH" "$pkg_dir/plugin.$lib_ext"
         cp "$PLUGIN_TOML_PATH" "$pkg_dir/plugin.toml"
-        
-        tar -czf "$archive_path" -C "$pkg_dir" "plugin.$lib_ext" "plugin.toml"
+
+        local pkg_files=("plugin.$lib_ext" "plugin.toml")
+        if [[ -n "${PLUGIN_WEB_JS:-}" ]] && [[ -f "$PLUGIN_WEB_JS" ]]; then
+            cp "$PLUGIN_WEB_JS" "$pkg_dir/web.js"
+            pkg_files+=("web.js")
+        fi
+
+        tar -czf "$archive_path" -C "$pkg_dir" "${pkg_files[@]}"
         rm -rf "$pkg_dir"
         
         success "Built: $archive_path"

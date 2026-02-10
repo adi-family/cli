@@ -4931,6 +4931,7 @@ version = "0.1.15"
 dependencies = [
  "ctrlc",
  "dirs 5.0.1",
+ "futures",
  "hive-core",
  "lib-console-output",
  "lib-plugin-abi-v3",

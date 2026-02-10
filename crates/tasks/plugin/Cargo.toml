@@ -36,5 +36,9 @@ id = "adi.tasks.cli"
 version = "1.0.0"
 description = "CLI commands for task management"
 
+[package.metadata.plugin.web_ui]
+entry = "web.js"
+sandbox = false
+
 [package.metadata.plugin.tags]
 categories = ["tasks", "project-management", "workflow"]
