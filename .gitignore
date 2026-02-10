@@ -1,10 +1,11 @@
 **/target/
 **/node_modules/
-.dev/
+.adi/dev/
 .idea/
 .env
 .env.local
 dist/
-.hive/
+.adi/hive/pids/
+.adi/hive/logs/
 .DS_Store
 *.bak

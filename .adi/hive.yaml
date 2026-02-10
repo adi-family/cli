@@ -684,7 +684,7 @@ services:
     environment:
       static:
         PORT: "8019"
-        REGISTRY_DATA_DIR: ${env.REGISTRY_DATA_DIR:-.dev/registry-data}
+        REGISTRY_DATA_DIR: ${env.REGISTRY_DATA_DIR:-.adi/dev/registry-data}
         LOGGING_URL: "http://localhost:8040"
     depends_on:
       - logging
