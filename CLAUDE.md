@@ -10,6 +10,7 @@ cli, rust, monorepo, workspace, submodules, meta-repo
 - Translation plugins follow naming pattern: `[plugin-id].[language-code]` (e.g., `adi.tasks.en-US`)
 - `lib-i18n-core`: Core library with Fluent integration, service discovery, and global `t!()` macro
 - For colors and theming, use the unified theme system in `packages/theme/` (see `packages/theme/CLAUDE.md`)
+- For UI/UX design philosophy, styling patterns, and component usage, see `ADI-STYLING.md`
 
 ## Plugin ABI Architecture
 
