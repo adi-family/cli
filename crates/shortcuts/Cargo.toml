@@ -1,0 +1,23 @@
+[package]
+name = "shortcuts-http"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.1"
+description = "HTTP redirect service for ADI shortcut URLs"
+
+[[bin]]
+name = "shortcuts-http"
+path = "src/main.rs"
+
+[dependencies]
+axum = { version = "0.8", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+lib-http-common = { path = "../lib/lib-http-common" }
+lib-logging-core = { path = "../lib/lib-logging-core", features = ["axum-08-compat"] }

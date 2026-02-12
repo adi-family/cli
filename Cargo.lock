@@ -7165,6 +7165,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "lib-shortcuts"
+version = "0.1.0"
+
+[[package]]
 name = "lib-signaling-protocol"
 version = "0.1.0"
 dependencies = [
@@ -10947,6 +10951,22 @@ name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
+
+[[package]]
+name = "shortcuts-http"
+version = "0.1.0"
+dependencies = [
+ "axum 0.8.8",
+ "lib-http-common",
+ "lib-logging-core",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tokio",
+ "tower-http 0.6.8",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "signal-hook"

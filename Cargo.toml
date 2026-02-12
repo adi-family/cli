@@ -14,6 +14,7 @@ members = [
     # Shared libraries
     "crates/lib/lib-cli-common",
     "crates/lib/lib-console-output",
+    "crates/lib/lib-shortcuts",
     "crates/lib/lib-daemon-core",
     "crates/lib/lib-http-common",
     "crates/lib/lib-migrations",
@@ -240,6 +241,9 @@ members = [
     "crates/credentials/http",
     "crates/credentials/cli",
 
+    # Shortcuts
+    "crates/shortcuts",
+
     # FlowMap
     "crates/lib/lib-flowmap-core",
     "crates/lib/lib-flowmap-parser",
@@ -328,6 +332,7 @@ lib-tarminal-sync = { path = "crates/lib/lib-tarminal-sync" }
 lib-embed = { path = "crates/lib/lib-embed" }
 lib-cli-common = { path = "crates/lib/lib-cli-common" }
 lib-console-output = { path = "crates/lib/lib-console-output" }
+lib-shortcuts = { path = "crates/lib/lib-shortcuts" }
 lib-http-common = { path = "crates/lib/lib-http-common" }
 lib-migrations = { path = "crates/lib/lib-migrations" }
 lib-task-store = { path = "crates/lib/lib-task-store" }

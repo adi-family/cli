@@ -565,6 +565,38 @@ services:
       - logging
     restart: on-failure
 
+  shortcuts:
+    runner:
+      type: script
+      script:
+        run: cargo run --bin shortcuts-http
+        working_dir: crates/shortcuts
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8031
+    proxy:
+      - host: adi.local
+        path: /sc
+        strip_prefix: true
+      - host: adi-local.the-ihor.com
+        path: /sc
+        strip_prefix: true
+    healthcheck:
+      type: http
+      http:
+        port: "{{runtime.port.http}}"
+        path: /health
+    environment:
+      static:
+        PORT: "8031"
+        CONFIG_PATH: ".adi/shortcuts.yaml"
+        LOGGING_URL: "http://localhost:8040"
+    depends_on:
+      - logging
+    restart: on-failure
+
   # ---------------------------------------------------------------------------
   # Optional Services
   # ---------------------------------------------------------------------------

@@ -1,0 +1,7 @@
+shortcuts:
+  hive-error-400: "https://docs.adi.the-ihor.com/hive/errors/400"
+  hive-error-400-llm: "https://docs.adi.the-ihor.com/hive/errors/400-llm"
+  hive-error-404: "https://docs.adi.the-ihor.com/hive/errors/404"
+  hive-error-404-llm: "https://docs.adi.the-ihor.com/hive/errors/404-llm"
+  hive-error-502: "https://docs.adi.the-ihor.com/hive/errors/502"
+  hive-error-502-llm: "https://docs.adi.the-ihor.com/hive/errors/502-llm"

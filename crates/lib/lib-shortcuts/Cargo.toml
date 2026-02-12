@@ -1,0 +1,8 @@
+[package]
+name = "lib-shortcuts"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.1"
+description = "Standardized shortcut URL registry for ADI products"
+
+[dependencies]
