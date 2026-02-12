@@ -9,6 +9,7 @@ cli, rust, monorepo, workspace, submodules, meta-repo
 - For translations and internationalization, prefer Fluent (https://projectfluent.org/)
 - Translation plugins follow naming pattern: `[plugin-id].[language-code]` (e.g., `adi.tasks.en-US`)
 - `lib-i18n-core`: Core library with Fluent integration, service discovery, and global `t!()` macro
+- For colors and theming, use the unified theme system in `packages/theme/` (see `packages/theme/CLAUDE.md`)
 
 ## Plugin ABI Architecture
 
@@ -81,7 +82,7 @@ Services that run on servers and are called via HTTP don't need plugins:
 - `crates/indexer` - Code indexer
 - `crates/knowledgebase` - Graph DB + embeddings
 - `crates/llm-proxy` - LLM API proxy (BYOK/Platform modes)
-- `crates/hive` - Cocoon container orchestration
+- `crates/hive` - Cocoon container orchestration (see `crates/hive/CLAUDE.md` for detailed hive docs)
 - `crates/audio` - Audio processing
 - `crates/tools` - CLI tools collection
 - `crates/browser-debug` - Browser debugging + MCP
@@ -415,10 +416,13 @@ Logging service needs:
 
 Unified console output component library for all CLI plugins. Use this for **all** user-facing terminal output.
 
-### Theme (`theme` module) — ADI Brand Identity (A7 palette)
-- All colors are basic 16 ANSI — works on every terminal
-- `theme::brand(val)` / `theme::brand_bold(val)` — magenta, for spinners, selections, interactive elements
-- `theme::info(val)` — magenta (brand-aligned info messages)
+### Theme (`theme` module) — Dynamic ADI Theme System
+- Brand/accent color is driven by active theme from `packages/theme/` (ANSI 256-color)
+- Status colors (success, error, warning) are universal across all themes
+- `theme::init(id)` — set theme programmatically; auto-resolves from `ADI_THEME` env var if not called
+- `theme::active()` — get the active `Theme` struct (colors, fonts, name)
+- `theme::brand(val)` / `theme::brand_bold(val)` — accent color from active theme
+- `theme::info(val)` — accent color (brand-aligned info messages)
 - `theme::debug(val)` — cyan (distinct from brand)
 - `theme::success(val)` — green
 - `theme::warning(val)` — yellow
@@ -426,7 +430,8 @@ Unified console output component library for all CLI plugins. Use this for **all
 - `theme::muted(val)` — dim (trace, hints, borders, disabled)
 - `theme::bold(val)` — bold (prompts, headers)
 - `theme::icons::*` — icon constants: `SUCCESS` (✓), `ERROR` (✕), `WARNING` (⚠), `INFO` (ℹ), `DEBUG` (›), `TRACE` (·), `BRAND` (◆)
-- To change the entire visual identity, only edit `theme.rs`
+- `theme::generated::*` — re-exports: `THEMES`, `DEFAULT_THEME`, `find_theme()`, `Theme`, `ThemeMode`, `ThemeFonts`
+- Full theme docs: `packages/theme/CLAUDE.md`
 
 ### Block Components (`blocks` module)
 All implement `Renderable` trait: `line_count()`, `print() -> LiveHandle`, `render() -> String`, `Display`.
@@ -493,6 +498,9 @@ live.done();
 - **Usage**: `adi llm-uzu load <model> && adi llm-uzu generate <model> <prompt>`
 - **Alternative to**: Ollama for maximum performance on Apple Silicon
 - **Privacy**: 100% local inference, no API calls
+
+## Packages
+- `packages/theme` - Unified ADI theme system (see `packages/theme/CLAUDE.md` for full docs)
 
 ## Apps
 - `apps/infra-service-web` - Web UI for ADI (Next.js + Tailwind CSS)
@@ -587,6 +595,7 @@ Interactive workflows are defined in `.adi/workflows/` directory. Each workflow 
 | `seal` | Commit and push all changes including submodules | `adi workflow seal` |
 | `cocoon-images` | Build cocoon Docker image variants | `adi workflow cocoon-images` |
 | `autodoc` | Generate API documentation with LLM enrichment | `adi workflow autodoc` |
+| `sync-theme` | Sync theme JSON to CSS + Rust outputs | `adi workflow sync-theme` |
 | `convert-sounds` | Convert audio files | `adi workflow convert-sounds` |
 
 ### Workflow Structure
@@ -775,6 +784,7 @@ Key variables:
 - `HMAC_SALT` - Device ID derivation for cocoon
 - `SMTP_*` - Email settings (optional for local dev)
 - `RUST_LOG` - Log level (info, debug, trace)
+- `ADI_THEME` - Theme override for CLI (e.g., `indigo`, `scarlet`, `emerald`)
 
 ## CLI Usage
 The `adi` CLI provides direct plugin commands for convenience:
