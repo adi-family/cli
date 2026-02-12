@@ -202,6 +202,7 @@ mod style;
 pub mod theme;
 
 pub use config::{ConsoleConfig, NO_COLOR_ENV, QUIET_ENV, SILK_MODE_ENV, VERBOSE_ENV};
+pub use theme::ADI_THEME_ENV;
 pub use console::{
     console, data, debug, error, info, init, is_initialized, message, success, trace, warn, Console,
 };
