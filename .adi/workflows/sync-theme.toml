@@ -1,0 +1,3 @@
+[workflow]
+name = "sync-theme"
+description = "Sync theme JSON to CSS + Rust outputs"

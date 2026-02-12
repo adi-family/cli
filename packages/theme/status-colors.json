@@ -1,0 +1,20 @@
+{
+  "dark": {
+    "success": "#2ECC87",
+    "successSoft": "rgba(46,204,135,0.12)",
+    "error": "#FF4D6A",
+    "errorSoft": "rgba(255,77,106,0.12)",
+    "warning": "#E8A317",
+    "warningSoft": "rgba(232,163,23,0.12)",
+    "info": "var(--adi-accent)"
+  },
+  "light": {
+    "success": "#1A9E62",
+    "successSoft": "rgba(26,158,98,0.08)",
+    "error": "#D03040",
+    "errorSoft": "rgba(208,48,64,0.08)",
+    "warning": "#B87D0A",
+    "warningSoft": "rgba(184,125,10,0.08)",
+    "info": "var(--adi-accent)"
+  }
+}
