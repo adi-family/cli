@@ -91,6 +91,9 @@ pub mod obs;
 pub mod rollout;
 pub mod hooks;
 
+// Log streaming trait
+pub mod logs;
+
 // Error handling
 mod error;
 pub use error::{PluginError, Result};
@@ -121,3 +124,4 @@ pub const SERVICE_ENV_PROVIDER: &str = "orchestration.env";
 pub const SERVICE_PROXY_MIDDLEWARE: &str = "orchestration.proxy";
 pub const SERVICE_OBSERVABILITY_SINK: &str = "orchestration.obs";
 pub const SERVICE_ROLLOUT_STRATEGY: &str = "orchestration.rollout";
+pub const SERVICE_LOG_PROVIDER: &str = "logs.provider";
