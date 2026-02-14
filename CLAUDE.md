@@ -15,6 +15,11 @@ cli, rust, monorepo, workspace, submodules, meta-repo
   - All env var names defined in `EnvVar` enum — never use raw `std::env::var("...")` strings
   - Public getter functions expose typed access: `clienv::theme()`, `clienv::config_dir()`, etc.
   - New env vars: add variant to `EnvVar`, add `as_str()` mapping, add public getter function
+- **Always use `lib-console-output`** for all terminal output — never use raw `println!`/`eprintln!`
+  - Use `out_info!`, `out_success!`, `out_warn!`, `out_error!`, `out_debug!` macros for messages
+  - Use `Section` for headers, `Columns`/`Table` for tabular data, `List` for bullet lists, `KeyValue` for label-value pairs
+  - Use `theme::*` functions for styling (`theme::success`, `theme::error`, `theme::brand_bold`, etc.)
+  - Exception: raw `println!` is acceptable only for machine-readable/scripting output (paths, raw JSON passthrough)
 
 ## Plugin ABI Architecture
 
