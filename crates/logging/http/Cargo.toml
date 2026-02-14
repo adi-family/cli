@@ -13,6 +13,7 @@ path = "src/main.rs"
 logging-core = { path = "../core" }
 lib-logging-core = { path = "../../lib/lib-logging-core" }
 lib-http-common = { path = "../../lib/lib-http-common" }
+lib-env-parse = { path = "../../lib/lib-env-parse" }
 tokio = { version = "1.49", features = ["full"] }
 axum = { version = "0.7", features = ["macros"] }
 tower = "0.4"

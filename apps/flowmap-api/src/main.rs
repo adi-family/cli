@@ -16,7 +16,12 @@ use std::sync::{Arc, RwLock};
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use lib_env_parse::{env_vars, env_or};
 use walkdir::WalkDir;
+
+env_vars! {
+    Port => "PORT",
+}
 
 #[derive(Clone)]
 struct AppState {
@@ -105,7 +110,7 @@ async fn main() {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    let port = std::env::var("PORT").unwrap_or_else(|_| "8092".to_string());
+    let port = env_or(EnvVar::Port.as_str(), "8092");
     let addr = format!("0.0.0.0:{}", port);
 
     tracing::info!("FlowMap API starting on {}", addr);

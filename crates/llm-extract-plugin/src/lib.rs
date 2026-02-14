@@ -12,6 +12,12 @@ use lib_plugin_manifest::PluginManifest;
 use serde_json::json;
 use std::path::PathBuf;
 
+use lib_env_parse::{env_vars, env_opt};
+
+env_vars! {
+    Home => "HOME",
+}
+
 /// LLM Extract Plugin
 pub struct LlmExtractPlugin;
 
@@ -181,7 +187,7 @@ fn cmd_all(options: &serde_json::Value) -> Result<String, String> {
 }
 
 fn get_plugins_dir() -> Result<PathBuf, String> {
-    let home = std::env::var("HOME").map_err(|_| "HOME not set")?;
+    let home = env_opt(EnvVar::Home.as_str()).ok_or("HOME not set")?;
     Ok(PathBuf::from(home).join(".adi").join("plugins"))
 }
 

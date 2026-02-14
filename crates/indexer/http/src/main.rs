@@ -14,6 +14,11 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use lib_env_parse::{env_vars, env_opt};
+
+env_vars! {
+    Port => "PORT",
+}
 
 struct AppState {
     adi: RwLock<Option<indexer_core::Adi>>,
@@ -277,8 +282,7 @@ async fn main() -> Result<()> {
         std::env::current_dir()?
     };
 
-    let port: u16 = std::env::var("PORT")
-        .ok()
+    let port: u16 = env_opt(EnvVar::Port.as_str())
         .and_then(|p| p.parse().ok())
         .unwrap_or(3000);
 

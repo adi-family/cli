@@ -12,6 +12,12 @@ use tasks_core::{TaskId, TaskManager};
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
+use lib_env_parse::{env_vars, env_opt};
+
+env_vars! {
+    Port => "PORT",
+    ProjectPath => "PROJECT_PATH",
+}
 
 struct AppState {
     tasks: RwLock<Option<TaskManager>>,
@@ -304,12 +310,11 @@ async fn main() {
         )
         .init();
 
-    let port = std::env::var("PORT")
-        .ok()
+    let port = env_opt(EnvVar::Port.as_str())
         .and_then(|p| p.parse().ok())
         .unwrap_or(8081);
 
-    let project_path = std::env::var("PROJECT_PATH").ok().map(PathBuf::from);
+    let project_path = env_opt(EnvVar::ProjectPath.as_str()).map(PathBuf::from);
 
     let tasks = if let Some(ref path) = project_path {
         TaskManager::open(path).ok()

@@ -14,6 +14,13 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use lib_env_parse::{env_vars, env_or};
+
+env_vars! {
+    ConfigPath => "CONFIG_PATH",
+    Port => "PORT",
+}
+
 #[derive(Debug, Deserialize)]
 struct Config {
     shortcuts: HashMap<String, String>,
@@ -52,7 +59,7 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let config_path = std::env::var("CONFIG_PATH").unwrap_or_else(|_| ".adi/shortcuts.yaml".into());
+    let config_path = env_or(EnvVar::ConfigPath.as_str(), ".adi/shortcuts.yaml");
     let config = load_config(&config_path);
 
     tracing::info!("loaded {} shortcuts from {}", config.shortcuts.len(), config_path);
@@ -79,7 +86,7 @@ async fn main() {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    let port = std::env::var("PORT").unwrap_or_else(|_| "8031".into());
+    let port = env_or(EnvVar::Port.as_str(), "8031");
     let addr = format!("0.0.0.0:{port}");
 
     tracing::info!("shortcuts-http starting on {addr}");

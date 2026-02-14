@@ -13,6 +13,9 @@ crate-type = ["cdylib"]
 # Plugin ABI
 lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
 
+# Environment
+lib-env-parse = { path = "../../lib/lib-env-parse" }
+
 # Serialization
 serde.workspace = true
 serde_json.workspace = true

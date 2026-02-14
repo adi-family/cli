@@ -12,6 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 browser-debug-core = { path = "../core" }
+lib-env-parse = { path = "../../lib/lib-env-parse" }
 
 # MCP
 lib-mcp-core = { path = "../../lib/lib-mcp-core" }

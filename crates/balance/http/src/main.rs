@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
     let db = Database::new(pool.clone());
 
     let analytics_url =
-        std::env::var("ANALYTICS_URL").unwrap_or_else(|_| "http://localhost:8094".to_string());
+        lib_env_parse::env_or("ANALYTICS_URL", "http://localhost:8094");
 
     let analytics_client = AnalyticsClient::new(analytics_url);
     tracing::info!("Analytics client initialized");
@@ -69,8 +69,7 @@ async fn main() -> anyhow::Result<()> {
 
     let cors = CorsLayer::new()
         .allow_origin(
-            std::env::var("CORS_ORIGIN")
-                .unwrap_or_else(|_| "http://localhost:8013".to_string())
+            lib_env_parse::env_or("CORS_ORIGIN", "http://localhost:8013")
                 .parse::<HeaderValue>()
                 .expect("Invalid CORS_ORIGIN"),
         )

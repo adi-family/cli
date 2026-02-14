@@ -32,3 +32,4 @@ serde_json.workspace = true
 uuid.workspace = true
 futures.workspace = true
 lib-http-common.workspace = true
+lib-env-parse = { path = "../../lib/lib-env-parse" }

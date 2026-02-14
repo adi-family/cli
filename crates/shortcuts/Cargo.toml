@@ -21,3 +21,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 lib-http-common = { path = "../lib/lib-http-common" }
 lib-logging-core = { path = "../lib/lib-logging-core", features = ["axum-08-compat"] }
+lib-env-parse = { path = "../lib/lib-env-parse" }

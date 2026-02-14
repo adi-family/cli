@@ -1,7 +1,18 @@
 //! Configuration for adi-llm-proxy service.
 
 use anyhow::{Context, Result};
-use std::env;
+use lib_env_parse::{env_opt, env_or, env_vars};
+
+env_vars! {
+    Host                   => "HOST",
+    Port                   => "PORT",
+    DatabaseUrl            => "DATABASE_URL",
+    DatabaseMaxConnections => "DATABASE_MAX_CONNECTIONS",
+    JwtSecret              => "JWT_SECRET",
+    EncryptionKey          => "ENCRYPTION_KEY",
+    AnalyticsUrl           => "ANALYTICS_URL",
+    UpstreamTimeoutSecs    => "UPSTREAM_TIMEOUT_SECS",
+}
 
 /// Service configuration loaded from environment variables.
 #[derive(Clone)]
@@ -28,23 +39,19 @@ impl Config {
     /// Load configuration from environment variables.
     pub fn from_env() -> Result<Self> {
         Ok(Self {
-            host: env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
-            port: env::var("PORT")
-                .unwrap_or_else(|_| "8024".to_string())
+            host: env_or(EnvVar::Host.as_str(), "0.0.0.0"),
+            port: env_or(EnvVar::Port.as_str(), "8024")
                 .parse()
                 .context("Invalid PORT")?,
-            database_url: env::var("DATABASE_URL").context("DATABASE_URL is required")?,
-            database_max_connections: env::var("DATABASE_MAX_CONNECTIONS")
-                .unwrap_or_else(|_| "10".to_string())
+            database_url: env_opt(EnvVar::DatabaseUrl.as_str()).context("DATABASE_URL is required")?,
+            database_max_connections: env_or(EnvVar::DatabaseMaxConnections.as_str(), "10")
                 .parse()
                 .context("Invalid DATABASE_MAX_CONNECTIONS")?,
-            jwt_secret: env::var("JWT_SECRET").context("JWT_SECRET is required")?,
-            encryption_key: env::var("ENCRYPTION_KEY")
+            jwt_secret: env_opt(EnvVar::JwtSecret.as_str()).context("JWT_SECRET is required")?,
+            encryption_key: env_opt(EnvVar::EncryptionKey.as_str())
                 .context("ENCRYPTION_KEY is required (64-char hex)")?,
-            analytics_url: env::var("ANALYTICS_URL")
-                .unwrap_or_else(|_| "http://localhost:8094".to_string()),
-            upstream_timeout_secs: env::var("UPSTREAM_TIMEOUT_SECS")
-                .unwrap_or_else(|_| "120".to_string())
+            analytics_url: env_or(EnvVar::AnalyticsUrl.as_str(), "http://localhost:8094"),
+            upstream_timeout_secs: env_or(EnvVar::UpstreamTimeoutSecs.as_str(), "120")
                 .parse()
                 .context("Invalid UPSTREAM_TIMEOUT_SECS")?,
         })

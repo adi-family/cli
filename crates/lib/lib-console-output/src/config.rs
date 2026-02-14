@@ -4,21 +4,28 @@
 
 //! Configuration for console output behavior.
 
-use lib_env_parse::env_bool;
+use lib_env_parse::{env_bool, env_opt, env_vars};
 
 use crate::{Level, OutputMode};
 
+env_vars! {
+    SilkMode => "SILK_MODE",
+    NoColor  => "NO_COLOR",
+    Verbose  => "VERBOSE",
+    Quiet    => "QUIET",
+}
+
 /// Environment variable for silk mode (JSON stream output).
-pub const SILK_MODE_ENV: &str = "SILK_MODE";
+pub const SILK_MODE_ENV: &str = EnvVar::SilkMode.as_str();
 
 /// Environment variable for disabling colors.
-pub const NO_COLOR_ENV: &str = "NO_COLOR";
+pub const NO_COLOR_ENV: &str = EnvVar::NoColor.as_str();
 
 /// Environment variable for verbose output.
-pub const VERBOSE_ENV: &str = "VERBOSE";
+pub const VERBOSE_ENV: &str = EnvVar::Verbose.as_str();
 
 /// Environment variable for quiet mode (errors only).
-pub const QUIET_ENV: &str = "QUIET";
+pub const QUIET_ENV: &str = EnvVar::Quiet.as_str();
 
 /// Console output configuration.
 #[derive(Debug, Clone)]
@@ -54,7 +61,7 @@ impl ConsoleConfig {
             Level::Info
         };
 
-        let colors_enabled = std::env::var(NO_COLOR_ENV).is_err();
+        let colors_enabled = env_opt(EnvVar::NoColor.as_str()).is_none();
 
         Self {
             mode,

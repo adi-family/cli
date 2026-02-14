@@ -8,6 +8,12 @@ use lib_plugin_abi_v3::{
     Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult, SERVICE_CLI_COMMANDS,
 };
 use once_cell::sync::OnceCell;
+use lib_env_parse::{env_vars, env_or};
+
+env_vars! {
+    LlmProxyUrl => "LLM_PROXY_URL",
+}
+
 use tokio::runtime::Runtime;
 
 /// Global tokio runtime for async operations
@@ -55,8 +61,7 @@ impl Plugin for LlmProxyPlugin {
     async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
         let _ = get_runtime();
         // Get API URL from env or default
-        let url = std::env::var("LLM_PROXY_URL")
-            .unwrap_or_else(|_| "http://localhost:8024".to_string());
+        let url = env_or(EnvVar::LlmProxyUrl.as_str(), "http://localhost:8024");
         let _ = API_URL.set(url);
         Ok(())
     }

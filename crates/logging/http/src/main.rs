@@ -16,6 +16,12 @@ use logging_core::LogWriter;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use lib_env_parse::{env_vars, env_opt};
+
+env_vars! {
+    DatabaseUrl => "DATABASE_URL",
+    Port => "PORT",
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -35,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let database_url = std::env::var("DATABASE_URL")
+    let database_url = env_opt(EnvVar::DatabaseUrl.as_str())
         .expect("DATABASE_URL must be set");
 
     let pool = PgPoolOptions::new()
@@ -65,8 +71,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    let port = std::env::var("PORT")
-        .ok()
+    let port = env_opt(EnvVar::Port.as_str())
         .and_then(|p| p.parse().ok())
         .unwrap_or(8040);
 

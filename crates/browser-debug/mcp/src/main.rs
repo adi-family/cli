@@ -17,6 +17,13 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::info;
 
+use lib_env_parse::{env_vars, env_or, env_opt};
+
+env_vars! {
+    SignalingUrl => "SIGNALING_URL",
+    AccessToken => "ACCESS_TOKEN",
+}
+
 struct AppState {
     client: Option<BrowserDebugClient>,
     signaling_url: String,
@@ -25,9 +32,8 @@ struct AppState {
 
 impl AppState {
     fn new() -> Self {
-        let signaling_url = std::env::var("SIGNALING_URL")
-            .unwrap_or_else(|_| "wss://adi.the-ihor.com/api/signaling/ws".to_string());
-        let access_token = std::env::var("ACCESS_TOKEN").unwrap_or_default();
+        let signaling_url = env_or(EnvVar::SignalingUrl.as_str(), "wss://adi.the-ihor.com/api/signaling/ws");
+        let access_token = env_opt(EnvVar::AccessToken.as_str()).unwrap_or_default();
 
         Self {
             client: None,

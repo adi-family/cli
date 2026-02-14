@@ -7,15 +7,44 @@
 //! If `LOGGING_URL` is not set or `LOGGING_ENABLED` is "false", the client
 //! operates in console-only mode.
 
-use lib_env_parse::{env_bool_default_true, env_opt};
+use lib_env_parse::{env_bool_default_true, env_opt, env_vars};
 
 use crate::{LoggingClient, LoggingClientConfig};
 
-/// Standard environment variable for logging service URL.
-pub const LOGGING_URL_ENV: &str = "LOGGING_URL";
+env_vars! {
+    LoggingUrl     => "LOGGING_URL",
+    LoggingEnabled => "LOGGING_ENABLED",
+    Hostname       => "HOSTNAME",
+    Environment    => "ENVIRONMENT",
+    ServiceVersion => "SERVICE_VERSION",
+    DatabaseUrl    => "DATABASE_URL",
+}
 
-/// Standard environment variable to enable/disable logging service delivery.
-pub const LOGGING_ENABLED_ENV: &str = "LOGGING_ENABLED";
+/// Standard environment variable name for logging service URL.
+pub const LOGGING_URL_ENV: &str = EnvVar::LoggingUrl.as_str();
+
+/// Standard environment variable name to enable/disable logging service delivery.
+pub const LOGGING_ENABLED_ENV: &str = EnvVar::LoggingEnabled.as_str();
+
+/// Hostname of the service instance ($HOSTNAME).
+pub fn hostname() -> Option<String> {
+    env_opt(EnvVar::Hostname.as_str())
+}
+
+/// Environment name ($ENVIRONMENT).
+pub fn environment() -> Option<String> {
+    env_opt(EnvVar::Environment.as_str())
+}
+
+/// Service version string ($SERVICE_VERSION).
+pub fn service_version() -> Option<String> {
+    env_opt(EnvVar::ServiceVersion.as_str())
+}
+
+/// Database URL ($DATABASE_URL).
+pub fn database_url() -> Option<String> {
+    env_opt(EnvVar::DatabaseUrl.as_str())
+}
 
 /// Create a logging client from environment variables.
 ///
@@ -41,8 +70,8 @@ pub const LOGGING_ENABLED_ENV: &str = "LOGGING_ENABLED";
 pub fn from_env(service: impl Into<String>) -> LoggingClient {
     let service = service.into();
 
-    let enabled = env_bool_default_true(LOGGING_ENABLED_ENV);
-    let logging_url = env_opt(LOGGING_URL_ENV);
+    let enabled = env_bool_default_true(EnvVar::LoggingEnabled.as_str());
+    let logging_url = env_opt(EnvVar::LoggingUrl.as_str());
 
     match (enabled, logging_url) {
         (true, Some(url)) if !url.is_empty() => {
@@ -86,8 +115,8 @@ where
 {
     let service = service.into();
 
-    let enabled = env_bool_default_true(LOGGING_ENABLED_ENV);
-    let logging_url = env_opt(LOGGING_URL_ENV);
+    let enabled = env_bool_default_true(EnvVar::LoggingEnabled.as_str());
+    let logging_url = env_opt(EnvVar::LoggingUrl.as_str());
 
     let config = match (enabled, logging_url) {
         (true, Some(url)) if !url.is_empty() => LoggingClientConfig::new(url, &service),

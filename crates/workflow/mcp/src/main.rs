@@ -13,6 +13,12 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use lib_env_parse::{env_vars, env_opt};
+
+env_vars! {
+    ProjectPath => "PROJECT_PATH",
+}
+
 // =============================================================================
 // Workflow Types (mirrored from plugin)
 // =============================================================================
@@ -559,8 +565,7 @@ async fn main() -> lib_mcp_core::Result<()> {
         .init();
 
     // Get project path from environment or current directory
-    let project_path = std::env::var("PROJECT_PATH")
-        .ok()
+    let project_path = env_opt(EnvVar::ProjectPath.as_str())
         .map(PathBuf::from)
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 

@@ -12,6 +12,11 @@ use lib_mcp_core::{
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use lib_env_parse::{env_vars, env_opt};
+
+env_vars! {
+    ProjectPath => "PROJECT_PATH",
+}
 
 /// Shared state for the MCP server.
 struct TasksState {
@@ -47,7 +52,7 @@ async fn main() -> lib_mcp_core::Result<()> {
         .init();
 
     // Get project path from environment
-    let project_path = std::env::var("PROJECT_PATH").ok().map(PathBuf::from);
+    let project_path = env_opt(EnvVar::ProjectPath.as_str()).map(PathBuf::from);
 
     // Create shared state
     let state = Arc::new(TasksState::new(project_path));

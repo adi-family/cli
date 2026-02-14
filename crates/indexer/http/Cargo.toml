@@ -27,3 +27,6 @@ serde_json = "1.0"
 
 # HTTP utilities
 lib-http-common = { path = "../../lib/lib-http-common" }
+
+# Environment
+lib-env-parse = { path = "../../lib/lib-env-parse" }

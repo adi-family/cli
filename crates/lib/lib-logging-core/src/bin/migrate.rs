@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
 
     tracing_subscriber::fmt::init();
 
-    let database_url = std::env::var("DATABASE_URL")
+    let database_url = lib_logging_core::env::database_url()
         .expect("DATABASE_URL must be set");
 
     println!("Connecting to database...");

@@ -286,9 +286,9 @@ impl EnrichedLogEntry {
             timestamp: Utc::now(),
             service: service.to_string(),
             entry,
-            hostname: std::env::var("HOSTNAME").ok(),
-            environment: std::env::var("ENVIRONMENT").ok(),
-            version: std::env::var("SERVICE_VERSION").ok(),
+            hostname: crate::env::hostname(),
+            environment: crate::env::environment(),
+            version: crate::env::service_version(),
         }
     }
 }

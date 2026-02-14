@@ -3,10 +3,19 @@
 use crate::error::{AgentError, Result};
 use crate::llm::{LlmProvider, MockLlmProvider};
 use crate::types::Message;
-use std::env;
+use lib_env_parse::{env_vars, env_opt};
 use std::sync::Arc;
 
 use super::{AnthropicProvider, OllamaProvider, OpenAiProvider, OpenRouterProvider};
+
+env_vars! {
+    AnthropicApiKey => "ANTHROPIC_API_KEY",
+    OpenaiApiKey => "OPENAI_API_KEY",
+    OpenaiBaseUrl => "OPENAI_BASE_URL",
+    OpenrouterApiKey => "OPENROUTER_API_KEY",
+    OpenrouterSiteName => "OPENROUTER_SITE_NAME",
+    OllamaHost => "OLLAMA_HOST",
+}
 
 /// Provider configuration
 #[derive(Debug, Clone)]
@@ -40,21 +49,21 @@ impl ProviderConfig {
     pub fn from_env(provider: &str, model: &str) -> Result<Self> {
         match provider.to_lowercase().as_str() {
             "anthropic" => Ok(Self::Anthropic {
-                api_key: api_key_from_env("ANTHROPIC_API_KEY")?,
+                api_key: api_key_from_env(EnvVar::AnthropicApiKey.as_str())?,
                 model: model.to_string(),
             }),
             "openai" => Ok(Self::OpenAi {
-                api_key: api_key_from_env("OPENAI_API_KEY")?,
+                api_key: api_key_from_env(EnvVar::OpenaiApiKey.as_str())?,
                 model: model.to_string(),
-                base_url: env::var("OPENAI_BASE_URL").ok(),
+                base_url: env_opt(EnvVar::OpenaiBaseUrl.as_str()),
             }),
             "openrouter" => Ok(Self::OpenRouter {
-                api_key: api_key_from_env("OPENROUTER_API_KEY")?,
+                api_key: api_key_from_env(EnvVar::OpenrouterApiKey.as_str())?,
                 model: model.to_string(),
-                site_name: env::var("OPENROUTER_SITE_NAME").ok(),
+                site_name: env_opt(EnvVar::OpenrouterSiteName.as_str()),
             }),
             "ollama" => Ok(Self::Ollama {
-                host: env::var("OLLAMA_HOST").ok(),
+                host: env_opt(EnvVar::OllamaHost.as_str()),
                 model: model.to_string(),
             }),
             _ => Err(AgentError::ProviderConfig(format!(
@@ -67,7 +76,7 @@ impl ProviderConfig {
 
 /// Get API key from environment variable
 fn api_key_from_env(var_name: &str) -> Result<String> {
-    env::var(var_name).map_err(|_| AgentError::ApiKeyMissing(var_name.to_string()))
+    env_opt(var_name).ok_or_else(|| AgentError::ApiKeyMissing(var_name.to_string()))
 }
 
 /// Create a provider from configuration

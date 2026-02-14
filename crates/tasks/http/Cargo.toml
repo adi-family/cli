@@ -26,3 +26,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # HTTP utilities
 lib-http-common = { path = "../../lib/lib-http-common" }
+
+# Environment
+lib-env-parse = { path = "../../lib/lib-env-parse" }

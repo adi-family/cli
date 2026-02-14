@@ -11,6 +11,11 @@ use tokio::sync::Mutex;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use lib_env_parse::{env_vars, env_or};
+
+env_vars! {
+    Port => "PORT",
+}
 
 struct AppState {
     agent: Mutex<Option<AgentLoop>>,
@@ -88,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let port = env_or(EnvVar::Port.as_str(), "8080");
     let addr = format!("0.0.0.0:{}", port);
 
     tracing::info!("Starting ADI Agent Loop HTTP server on {}", addr);

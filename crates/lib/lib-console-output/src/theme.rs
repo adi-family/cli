@@ -16,6 +16,7 @@ use std::sync::OnceLock;
 
 /// Environment variable for theme selection.
 pub const ADI_THEME_ENV: &str = "ADI_THEME";
+// Note: ADI_THEME is also managed in cli/src/clienv.rs for the CLI crate.
 
 /// Generated theme definitions from packages/theme/themes.json.
 pub mod generated {
@@ -46,8 +47,7 @@ pub fn init(theme_id: &str) {
 /// Get the active theme.
 pub fn active() -> &'static Theme {
     ACTIVE_THEME.get_or_init(|| {
-        let theme_id = std::env::var(ADI_THEME_ENV)
-            .unwrap_or_else(|_| DEFAULT_THEME.to_string());
+        let theme_id = lib_env_parse::env_or(ADI_THEME_ENV, DEFAULT_THEME);
         find_theme(&theme_id)
             .or_else(|| find_theme(DEFAULT_THEME))
             .expect("default theme must exist")

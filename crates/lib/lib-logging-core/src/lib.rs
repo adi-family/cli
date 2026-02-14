@@ -41,7 +41,7 @@
 
 mod client;
 mod context;
-mod env;
+pub mod env;
 mod error;
 mod level;
 mod entry;

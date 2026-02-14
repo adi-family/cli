@@ -18,6 +18,11 @@ use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use uuid::Uuid;
+use lib_env_parse::{env_vars, env_opt};
+
+env_vars! {
+    Port => "PORT",
+}
 
 struct AppState {
     kb: Arc<RwLock<Option<Knowledgebase>>>,
@@ -204,8 +209,7 @@ async fn main() -> Result<()> {
         default_data_dir()
     };
 
-    let port: u16 = std::env::var("PORT")
-        .ok()
+    let port: u16 = env_opt(EnvVar::Port.as_str())
         .and_then(|p| p.parse().ok())
         .unwrap_or(3001);
 

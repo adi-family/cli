@@ -20,6 +20,7 @@ glob = "0.3"
 regex = "1"
 rusqlite = { version = "0.31", features = ["bundled"] }
 lib-migrations = { path = "../../lib/lib-migrations" }
+lib-env-parse = { path = "../../lib/lib-env-parse" }
 lib-client-anthropic = { path = "../../lib/lib-client/anthropic" }
 lib-client-openai = { path = "../../lib/lib-client/openai" }
 lib-client-openrouter = { path = "../../lib/lib-client/openrouter" }

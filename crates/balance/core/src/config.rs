@@ -1,5 +1,13 @@
 use anyhow::{Context, Result};
-use std::env;
+use lib_env_parse::{env_opt, env_or, env_vars};
+
+env_vars! {
+    Host                   => "HOST",
+    Port                   => "PORT",
+    DatabaseUrl            => "DATABASE_URL",
+    DatabaseMaxConnections => "DATABASE_MAX_CONNECTIONS",
+    JwtSecret              => "JWT_SECRET",
+}
 
 #[derive(Clone)]
 pub struct Config {
@@ -13,17 +21,15 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Result<Self> {
         Ok(Self {
-            host: env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
-            port: env::var("PORT")
-                .unwrap_or_else(|_| "8030".to_string())
+            host: env_or(EnvVar::Host.as_str(), "0.0.0.0"),
+            port: env_or(EnvVar::Port.as_str(), "8030")
                 .parse()
                 .context("Invalid PORT")?,
-            database_url: env::var("DATABASE_URL").context("DATABASE_URL is required")?,
-            database_max_connections: env::var("DATABASE_MAX_CONNECTIONS")
-                .unwrap_or_else(|_| "10".to_string())
+            database_url: env_opt(EnvVar::DatabaseUrl.as_str()).context("DATABASE_URL is required")?,
+            database_max_connections: env_or(EnvVar::DatabaseMaxConnections.as_str(), "10")
                 .parse()
                 .context("Invalid DATABASE_MAX_CONNECTIONS")?,
-            jwt_secret: env::var("JWT_SECRET").context("JWT_SECRET is required")?,
+            jwt_secret: env_opt(EnvVar::JwtSecret.as_str()).context("JWT_SECRET is required")?,
         })
     }
 }
