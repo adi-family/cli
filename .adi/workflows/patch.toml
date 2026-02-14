@@ -19,18 +19,18 @@ default = "cli - Rebuild and replace adi binary (with codesign)"
 name = "plugin"
 type = "select"
 prompt = "Select plugin to patch"
-options_cmd = """
+options_cmd = '''
 grep -rl 'package.metadata.plugin' crates/*/Cargo.toml crates/*/*/Cargo.toml crates/*/*/*/Cargo.toml 2>/dev/null | while read f; do
     sed -n 's/^id = "\(.*\)"/\1/p' "$f" | head -1
 done | sort -u
-"""
+'''
 autocomplete = true
 autocomplete_count = 10
-condition = "{{ target | contains('plugin') }}"
+if = "{{ target | contains('plugin') }}"
 
 [[steps]]
 name = "Patch target"
-run = """
+run = '''
 TARGET="{{ target | split(' ') | first }}"
 PLUGIN="{{ plugin }}"
 
@@ -42,4 +42,4 @@ case "$TARGET" in
         "$WORKFLOWS_DIR/patch.sh" plugin "$PLUGIN"
         ;;
 esac
-"""
+'''
