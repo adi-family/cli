@@ -11,6 +11,9 @@ path = "src/bin/migrate.rs"
 required-features = ["migrate"]
 
 [dependencies]
+# Environment variable parsing
+lib-env-parse = { path = "../lib-env-parse" }
+
 # Async runtime
 tokio = { version = "1.49", features = ["full"] }
 

@@ -11,6 +11,7 @@ default = []
 axum = ["dep:axum"]
 
 [dependencies]
+lib-env-parse = { path = "../lib-env-parse" }
 http = { workspace = true }
 tower = { workspace = true }
 serde = { workspace = true }

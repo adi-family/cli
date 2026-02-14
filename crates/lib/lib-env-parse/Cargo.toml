@@ -1,0 +1,13 @@
+[package]
+name = "lib-env-parse"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Typed environment variable parsing — bool, string, with consistent truthy/falsy semantics"
+
+[lib]
+name = "lib_env_parse"
+path = "src/lib.rs"
+
+[dependencies]
+# No dependencies - pure std

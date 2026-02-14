@@ -12,6 +12,7 @@ members = [
     "crates/cli",
 
     # Shared libraries
+    "crates/lib/lib-env-parse",
     "crates/lib/lib-cli-common",
     "crates/lib/lib-console-output",
     "crates/lib/lib-shortcuts",
@@ -170,9 +171,6 @@ members = [
     "crates/lang/swift/plugin",
     "crates/lang/lua/plugin",
 
-    # TypeSpec API generator
-    "crates/lib/lib-typespec-api",
-
     # Core plugins
     "crates/embed-plugin",
     "crates/indexer/plugin",
@@ -330,6 +328,7 @@ lib-terminal-grid = { path = "crates/lib/lib-terminal-grid" }
 lib-iced-ui = { path = "crates/lib/lib-iced-ui" }
 lib-tarminal-sync = { path = "crates/lib/lib-tarminal-sync" }
 lib-embed = { path = "crates/lib/lib-embed" }
+lib-env-parse = { path = "crates/lib/lib-env-parse" }
 lib-cli-common = { path = "crates/lib/lib-cli-common" }
 lib-console-output = { path = "crates/lib/lib-console-output" }
 lib-shortcuts = { path = "crates/lib/lib-shortcuts" }

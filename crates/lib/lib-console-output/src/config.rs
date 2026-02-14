@@ -4,6 +4,8 @@
 
 //! Configuration for console output behavior.
 
+use lib_env_parse::env_bool;
+
 use crate::{Level, OutputMode};
 
 /// Environment variable for silk mode (JSON stream output).
@@ -38,15 +40,15 @@ impl ConsoleConfig {
     /// - `VERBOSE` - Set to "true" or "1" for trace-level output
     /// - `QUIET` - Set to "true" or "1" for errors only
     pub fn from_env() -> Self {
-        let mode = if is_env_truthy(SILK_MODE_ENV) {
+        let mode = if env_bool(SILK_MODE_ENV) {
             OutputMode::JsonStream
         } else {
             OutputMode::Text
         };
 
-        let min_level = if is_env_truthy(QUIET_ENV) {
+        let min_level = if env_bool(QUIET_ENV) {
             Level::Error
-        } else if is_env_truthy(VERBOSE_ENV) {
+        } else if env_bool(VERBOSE_ENV) {
             Level::Trace
         } else {
             Level::Info
@@ -104,12 +106,3 @@ impl Default for ConsoleConfig {
     }
 }
 
-/// Check if an environment variable is set to a truthy value.
-fn is_env_truthy(var: &str) -> bool {
-    std::env::var(var)
-        .map(|v| {
-            let v = v.to_lowercase();
-            v == "true" || v == "1" || v == "yes" || v == "on"
-        })
-        .unwrap_or(false)
-}

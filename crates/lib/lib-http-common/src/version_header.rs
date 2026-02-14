@@ -28,9 +28,7 @@ impl VersionHeaderConfig {
     ///
     /// Reads `SHOW_VERSION_IN_HEADERS` env var to determine if headers should be added.
     pub fn from_env(service_name: &'static str, version: &'static str) -> Self {
-        let enabled = std::env::var("SHOW_VERSION_IN_HEADERS")
-            .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
-            .unwrap_or(false);
+        let enabled = lib_env_parse::env_bool("SHOW_VERSION_IN_HEADERS");
 
         Self {
             service_name,

@@ -7,6 +7,8 @@
 //! If `LOGGING_URL` is not set or `LOGGING_ENABLED` is "false", the client
 //! operates in console-only mode.
 
+use lib_env_parse::{env_bool_default_true, env_opt};
+
 use crate::{LoggingClient, LoggingClientConfig};
 
 /// Standard environment variable for logging service URL.
@@ -39,13 +41,8 @@ pub const LOGGING_ENABLED_ENV: &str = "LOGGING_ENABLED";
 pub fn from_env(service: impl Into<String>) -> LoggingClient {
     let service = service.into();
 
-    // Check if logging to service is enabled
-    let enabled = std::env::var(LOGGING_ENABLED_ENV)
-        .map(|v| !v.eq_ignore_ascii_case("false") && v != "0")
-        .unwrap_or(true);
-
-    // Get logging URL
-    let logging_url = std::env::var(LOGGING_URL_ENV).ok();
+    let enabled = env_bool_default_true(LOGGING_ENABLED_ENV);
+    let logging_url = env_opt(LOGGING_URL_ENV);
 
     match (enabled, logging_url) {
         (true, Some(url)) if !url.is_empty() => {
@@ -89,11 +86,8 @@ where
 {
     let service = service.into();
 
-    let enabled = std::env::var(LOGGING_ENABLED_ENV)
-        .map(|v| !v.eq_ignore_ascii_case("false") && v != "0")
-        .unwrap_or(true);
-
-    let logging_url = std::env::var(LOGGING_URL_ENV).ok();
+    let enabled = env_bool_default_true(LOGGING_ENABLED_ENV);
+    let logging_url = env_opt(LOGGING_URL_ENV);
 
     let config = match (enabled, logging_url) {
         (true, Some(url)) if !url.is_empty() => LoggingClientConfig::new(url, &service),

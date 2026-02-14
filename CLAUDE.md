@@ -11,6 +11,10 @@ cli, rust, monorepo, workspace, submodules, meta-repo
 - `lib-i18n-core`: Core library with Fluent integration, service discovery, and global `t!()` macro
 - For colors and theming, use the unified theme system in `packages/theme/` (see `packages/theme/CLAUDE.md`)
 - For UI/UX design philosophy, styling patterns, and component usage, see `ADI-STYLING.md`
+- For environment variables in CLI crate, use `clienv` module (`crates/cli/src/clienv.rs`):
+  - All env var names defined in `EnvVar` enum — never use raw `std::env::var("...")` strings
+  - Public getter functions expose typed access: `clienv::theme()`, `clienv::config_dir()`, etc.
+  - New env vars: add variant to `EnvVar`, add `as_str()` mapping, add public getter function
 
 ## Plugin ABI Architecture
 

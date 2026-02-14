@@ -2267,6 +2267,7 @@ dependencies = [
  "indicatif 0.18.3",
  "lib-client-github",
  "lib-console-output",
+ "lib-env-parse",
  "lib-i18n-core",
  "lib-plugin-abi-v3",
  "lib-plugin-host",
@@ -4652,6 +4653,7 @@ dependencies = [
  "hyper 1.8.1",
  "hyper-util",
  "lib-daemon-core",
+ "lib-env-parse",
  "lib-hive-daemon-client",
  "lib-plugin-abi-v3",
  "lib-signaling-protocol",
@@ -5099,6 +5101,7 @@ dependencies = [
  "hive-core",
  "http 1.4.0",
  "instant-acme",
+ "lib-env-parse",
  "pem",
  "rcgen",
  "rustls 0.23.36",
@@ -6848,6 +6851,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "console 0.15.11",
+ "lib-env-parse",
  "serde",
  "serde_json",
 ]
@@ -6882,6 +6886,10 @@ dependencies = [
  "toml 0.8.23",
  "tracing",
 ]
+
+[[package]]
+name = "lib-env-parse"
+version = "0.1.0"
 
 [[package]]
 name = "lib-flowmap-core"
@@ -6929,6 +6937,7 @@ version = "0.8.4"
 dependencies = [
  "axum 0.7.9",
  "http 1.4.0",
+ "lib-env-parse",
  "serde",
  "serde_json",
  "tower 0.4.13",
@@ -6989,6 +6998,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "http 1.4.0",
+ "lib-env-parse",
  "lib-migrations-core 0.1.0 (git+https://github.com/adi-family/lib-migrations-core.git)",
  "lib-migrations-sql 0.1.0 (git+https://github.com/adi-family/lib-migrations-sql.git)",
  "reqwest 0.12.28",
