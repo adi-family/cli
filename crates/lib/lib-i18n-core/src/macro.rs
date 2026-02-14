@@ -30,6 +30,11 @@ pub fn global_instance() -> Arc<Mutex<I18n>> {
         .clone()
 }
 
+/// Try to get the global I18n instance, returning None if not yet initialized.
+pub fn try_global_instance() -> Option<Arc<Mutex<I18n>>> {
+    GLOBAL_I18N.get().cloned()
+}
+
 /// Translation macro for simple message lookups
 ///
 /// # Examples

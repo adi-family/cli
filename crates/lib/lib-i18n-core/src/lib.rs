@@ -46,6 +46,7 @@ mod core;
 mod discovery;
 mod error;
 mod fallback;
+mod localized;
 pub mod r#macro;
 
 // Re-export public API
@@ -54,7 +55,8 @@ pub use crate::discovery::{
     ServiceDescriptor, ServiceHandle, ServiceRegistry, TranslationServiceInfo,
 };
 pub use crate::error::{I18nError, Result};
-pub use crate::r#macro::{fluent_value_from, global_instance, init_global};
+pub use crate::localized::LocalizedError;
+pub use crate::r#macro::{fluent_value_from, global_instance, init_global, try_global_instance};
 
 // Re-export fluent types for convenience
 pub use fluent_bundle;
