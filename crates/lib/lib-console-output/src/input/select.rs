@@ -287,6 +287,7 @@ impl<T: Clone> Select<T> {
     }
 
     /// Filter options based on search string (case-insensitive).
+    /// Matches against both label and description.
     fn filter_options(&self, filter: &str) -> Vec<usize> {
         if filter.is_empty() {
             return (0..self.options.len()).collect();
@@ -296,9 +297,39 @@ impl<T: Clone> Select<T> {
         self.options
             .iter()
             .enumerate()
-            .filter(|(_, opt)| opt.label.to_lowercase().contains(&filter_lower))
+            .filter(|(_, opt)| {
+                opt.label.to_lowercase().contains(&filter_lower)
+                    || opt
+                        .description
+                        .as_ref()
+                        .is_some_and(|d| d.to_lowercase().contains(&filter_lower))
+            })
             .map(|(i, _)| i)
             .collect()
+    }
+
+    /// Compute the max label width for a set of option indices (for column alignment).
+    fn max_label_width(&self, indices: &[usize]) -> usize {
+        indices
+            .iter()
+            .map(|&i| self.options[i].label.len())
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Format description suffix with padding for column alignment.
+    fn format_description(&self, opt: &SelectOption<T>, pad_to: usize) -> String {
+        match &opt.description {
+            Some(desc) if !desc.is_empty() => {
+                let padding = pad_to.saturating_sub(opt.label.len());
+                format!(
+                    "{}  {}",
+                    " ".repeat(padding),
+                    theme::muted(desc)
+                )
+            }
+            _ => String::new(),
+        }
     }
 
     /// Render filterable options list with filter input.
@@ -362,11 +393,18 @@ impl<T: Clone> Select<T> {
                 lines_rendered += 1;
             }
 
+            // Compute max label width for visible window for alignment
+            let visible_indices: Vec<usize> = (window_start..window_end)
+                .map(|i| filtered[i])
+                .collect();
+            let max_width = self.max_label_width(&visible_indices);
+
             for i in window_start..window_end {
                 let original_idx = filtered[i];
                 let opt = &self.options[original_idx];
                 let is_selected = i == cursor;
                 let prefix = if is_selected { ">" } else { " " };
+                let desc = self.format_description(opt, max_width);
 
                 let line = if opt.disabled {
                     format!(
@@ -376,9 +414,9 @@ impl<T: Clone> Select<T> {
                         theme::muted("(disabled)")
                     )
                 } else if is_selected {
-                    format!("{} {}", theme::brand(prefix), theme::brand(&opt.label))
+                    format!("{} {}{}", theme::brand(prefix), theme::brand(&opt.label), desc)
                 } else {
-                    format!("  {}", &opt.label)
+                    format!("  {}{}", &opt.label, desc)
                 };
 
                 println!("{}", line);
@@ -410,9 +448,13 @@ impl<T: Clone> Select<T> {
             let _ = term.clear_last_lines(self.options.len());
         }
 
+        let all_indices: Vec<usize> = (0..self.options.len()).collect();
+        let max_width = self.max_label_width(&all_indices);
+
         for (i, opt) in self.options.iter().enumerate() {
             let is_selected = i == cursor;
             let prefix = if is_selected { ">" } else { " " };
+            let desc = self.format_description(opt, max_width);
 
             let line = if opt.disabled {
                 format!(
@@ -422,9 +464,9 @@ impl<T: Clone> Select<T> {
                     theme::muted("(disabled)")
                 )
             } else if is_selected {
-                format!("{} {}", theme::brand(prefix), theme::brand(&opt.label))
+                format!("{} {}{}", theme::brand(prefix), theme::brand(&opt.label), desc)
             } else {
-                format!("  {}", &opt.label)
+                format!("  {}{}", &opt.label, desc)
             };
 
             println!("{}", line);
@@ -472,8 +514,12 @@ impl<T: Clone> Select<T> {
 
     /// Simple mode - just number selection.
     fn run_simple(self) -> Option<T> {
+        let all_indices: Vec<usize> = (0..self.options.len()).collect();
+        let max_width = self.max_label_width(&all_indices);
+
         println!("{}", theme::bold(&self.prompt));
         for (i, opt) in self.options.iter().enumerate() {
+            let desc = self.format_description(opt, max_width);
             if opt.disabled {
                 println!(
                     "  {} {} (disabled)",
@@ -481,7 +527,7 @@ impl<T: Clone> Select<T> {
                     theme::muted(&opt.label)
                 );
             } else {
-                println!("  {} {}", theme::brand(format!("[{}]", i + 1)), &opt.label);
+                println!("  {} {}{}", theme::brand(format!("[{}]", i + 1)), &opt.label, desc);
             }
         }
 

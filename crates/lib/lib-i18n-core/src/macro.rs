@@ -55,8 +55,12 @@ pub fn try_global_instance() -> Option<Arc<Mutex<I18n>>> {
 #[macro_export]
 macro_rules! t {
     // Simple key lookup
+    // NOTE: The let binding ensures the MutexGuard temporary is dropped at the
+    // semicolon, preventing deadlocks when multiple t!() calls appear in the
+    // same expression (e.g., `f(t!("a"), t!("b"))`).
     ($key:expr) => {{
-        $crate::global_instance().lock().get($key)
+        let __t_result = $crate::global_instance().lock().get($key);
+        __t_result
     }};
 
     // Key with single argument
@@ -66,7 +70,8 @@ macro_rules! t {
             $arg_key.to_string(),
             $crate::fluent_value_from($arg_val),
         );
-        $crate::global_instance().lock().get_with_args($key, args)
+        let __t_result = $crate::global_instance().lock().get_with_args($key, args);
+        __t_result
     }};
 
     // Key with multiple arguments
@@ -78,7 +83,8 @@ macro_rules! t {
                 $crate::fluent_value_from($arg_val),
             );
         )+
-        $crate::global_instance().lock().get_with_args($key, args)
+        let __t_result = $crate::global_instance().lock().get_with_args($key, args);
+        __t_result
     }};
 }
 
