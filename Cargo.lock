@@ -2264,14 +2264,12 @@ version = "1.0.0"
 dependencies = [
  "anyhow",
  "atty",
- "axum 0.8.8",
  "clap",
  "clap_complete",
  "dialoguer 0.12.0",
  "dirs 6.0.0",
  "dotenvy",
  "flate2",
- "hostname",
  "indicatif 0.18.3",
  "lib-client-github",
  "lib-console-output",
@@ -2288,7 +2286,6 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "toml 0.9.11+spec-1.1.0",
- "tower-http 0.6.8",
  "tracing",
  "zip",
 ]
@@ -2418,10 +2415,12 @@ name = "cocoon"
 version = "0.2.7"
 dependencies = [
  "async-trait",
+ "axum 0.8.8",
  "base64 0.22.1",
  "chrono",
  "futures",
  "glob",
+ "hostname",
  "inquire",
  "lib-env-parse",
  "lib-plugin-abi-v3",
@@ -2437,6 +2436,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-tungstenite 0.24.0",
+ "tower-http 0.6.8",
  "tracing",
  "tracing-subscriber",
  "url",

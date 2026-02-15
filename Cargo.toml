@@ -488,3 +488,7 @@ tempfile = "3"
 jsonwebtoken = "9"
 shellexpand = "3"
 lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "smtp-transport"] }
+
+[profile.release.package.cocoon]
+opt-level = "z"
+strip = true
