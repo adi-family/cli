@@ -34,6 +34,10 @@ pub enum DaemonError {
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
 
+    /// Request timed out
+    #[error("Daemon request timed out after {0}s")]
+    Timeout(u64),
+
     /// Other error
     #[error("{0}")]
     Other(#[from] anyhow::Error),

@@ -3,9 +3,13 @@
 use crate::error::{DaemonError, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use tracing::{debug, error, info};
+
+/// Default timeout for IPC requests (connect + send + receive)
+const IPC_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Unix socket server for daemon IPC
 pub struct UnixSocketServer {
@@ -132,10 +136,34 @@ impl UnixSocketClient {
         Req: Serialize,
         Resp: for<'de> Deserialize<'de>,
     {
+        self.send_with_timeout(request, IPC_TIMEOUT).await
+    }
+
+    /// Send a request with a custom timeout
+    pub async fn send_with_timeout<Req, Resp>(
+        &self,
+        request: &Req,
+        timeout: Duration,
+    ) -> Result<Resp>
+    where
+        Req: Serialize,
+        Resp: for<'de> Deserialize<'de>,
+    {
         if !self.is_available() {
             return Err(DaemonError::NotRunning);
         }
 
+        let timeout_secs = timeout.as_secs();
+        tokio::time::timeout(timeout, self.send_inner(request))
+            .await
+            .map_err(|_| DaemonError::Timeout(timeout_secs))?
+    }
+
+    async fn send_inner<Req, Resp>(&self, request: &Req) -> Result<Resp>
+    where
+        Req: Serialize,
+        Resp: for<'de> Deserialize<'de>,
+    {
         // Connect to socket
         let stream = UnixStream::connect(&self.socket_path)
             .await
