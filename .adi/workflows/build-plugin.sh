@@ -371,11 +371,54 @@ install_plugin() {
     
     # Update version file (tracks current active version)
     echo "$PLUGIN_VERSION" > "$version_file"
-    
+
+    # Update latest symlink (points to current version directory)
+    ln -sfn "$PLUGIN_VERSION" "$PLUGINS_DIR/$PLUGIN_ID/latest"
+
+    # Update command index symlinks
+    update_command_index "$install_dir/plugin.toml"
+
     success "Installed $PLUGIN_ID v$PLUGIN_VERSION"
     echo ""
     info "Installation directory: $install_dir"
     ls -la "$install_dir"
+}
+
+# Create/update command index symlinks for fast CLI command discovery.
+# Reads [cli] section from plugin.toml and creates symlinks in commands/ dir.
+update_command_index() {
+    local plugin_toml="$1"
+    local commands_dir="$PLUGINS_DIR/commands"
+    mkdir -p "$commands_dir"
+
+    # Parse command from [cli] section
+    local cli_command
+    cli_command=$(sed -n '/^\[cli\]/,/^\[/{/^command = /p;}' "$plugin_toml" | sed 's/command = "\(.*\)"/\1/' | tr -d '\n')
+
+    if [[ -z "$cli_command" ]]; then
+        return 0
+    fi
+
+    # Remove old symlinks for this plugin
+    for link in "$commands_dir"/*; do
+        [[ -L "$link" ]] || continue
+        local target
+        target=$(readlink "$link")
+        if [[ "$target" == "../$PLUGIN_ID/"* ]]; then
+            rm -f "$link"
+        fi
+    done
+
+    # Create main command symlink (points through latest/ for version-agnostic resolution)
+    ln -sf "../$PLUGIN_ID/latest/plugin.toml" "$commands_dir/$cli_command"
+
+    # Parse and create alias symlinks
+    local aliases_raw
+    aliases_raw=$(sed -n '/^\[cli\]/,/^\[/{/^aliases = /p;}' "$plugin_toml" | sed 's/aliases = \[//;s/\]//;s/"//g;s/,/ /g' | tr -d '\n')
+    for alias in $aliases_raw; do
+        alias=$(echo "$alias" | xargs)
+        [[ -n "$alias" ]] && ln -sf "../$PLUGIN_ID/latest/plugin.toml" "$commands_dir/$alias"
+    done
 }
 
 main() {
