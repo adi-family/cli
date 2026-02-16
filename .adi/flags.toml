@@ -1,0 +1,7 @@
+# File flagger configuration
+# check = "fast"   — mtime only (may false-trigger dirty)
+# check = "strict" — mtime first, then hash to confirm (no false triggers)
+check = "strict"
+
+[states.clean_code]
+description = "Clean code checked"

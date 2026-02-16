@@ -1,0 +1,14 @@
+[package]
+name = "flags-core"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Core library for ADI file flag tracking"
+authors = ["ADI Team"]
+
+[dependencies]
+sha2 = "0.10"
+hex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+thiserror = "2"

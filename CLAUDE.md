@@ -55,6 +55,7 @@ Components that users interact with via `adi` CLI need a plugin:
 - `browser-debug` (core, plugin, mcp) - `adi browser-debug`
 - `workflow` (plugin) - `adi workflow`
 - `linter` (plugin) - `adi lint`
+- `flags` (core, plugin) - `adi flags`
 
 ### Backend Services (no plugin)
 Services that run on servers and are called via HTTP don't need plugins:
@@ -98,6 +99,7 @@ Services that run on servers and are called via HTTP don't need plugins:
 - `crates/browser-debug` - Browser debugging + MCP
 - `crates/workflow` - Workflow automation
 - `crates/linter` - Code linting
+- `crates/flags` - File flag tracking (review freshness)
 - `crates/lang` - Language analyzers (rust, python, typescript, etc.)
 
 ### Backend Services
@@ -488,6 +490,16 @@ live.done();
 - `input` — Select, MultiSelect, Confirm, Input, Password (interactive, JSON stream, fallback modes)
 - Macros: `out_info!`, `out_error!`, `out_success!`, `out_warn!`, `out_debug!`, `out_trace!`
 - Dual-mode: text (human) + JSON stream (`SILK_MODE=true`) for WebRTC/cloud
+
+## File Flags (`adi.flags`)
+
+- `adi flags init` — create `.adi/flags.toml` (defines states + check mode)
+- `adi flags set <state> <files...>` — mark files as clean for a state
+- `adi flags status [state]` — show dirty files (modified since last flag)
+- `adi flags list [state]` — list tracked files
+- `adi flags clear <state> [files...]` — remove flags
+- `adi flags states` — list configured states
+- Config at `.adi/flags.toml`, index at `.adi/cache/flags/<state>`
 
 ## Cocoon
 - Cocoon is a containerized worker environment that connects to the signaling server

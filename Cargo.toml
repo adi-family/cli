@@ -45,6 +45,10 @@ members = [
     # Workflow components
     "crates/workflow/mcp",
 
+    # Flags components
+    "crates/flags/core",
+    "crates/flags/plugin",
+
     # Linter components
     "crates/linter/core",
 
@@ -270,6 +274,7 @@ tasks-core = { path = "crates/tasks/core" }
 knowledgebase-core = { path = "crates/knowledgebase/core" }
 agent-loop-core = { path = "crates/agent-loop/core" }
 auth-core = { path = "crates/auth/core" }
+flags-core = { path = "crates/flags/core" }
 linter-core = { path = "crates/linter/core" }
 llm-proxy-core = { path = "crates/llm-proxy/core" }
 hive-core = { path = "crates/hive/core" }

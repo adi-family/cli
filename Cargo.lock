@@ -3905,6 +3905,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 
 [[package]]
+name = "flags-core"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "serde",
+ "sha2",
+ "thiserror 2.0.18",
+ "toml 0.8.23",
+]
+
+[[package]]
+name = "flags-plugin"
+version = "3.0.0"
+dependencies = [
+ "async-trait",
+ "flags-core",
+ "lib-console-output",
+ "lib-plugin-abi-v3",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "flate2"
 version = "1.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
