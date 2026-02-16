@@ -1,5 +1,5 @@
 #!/bin/bash
-# ADI Plugins Release Script
+# ADI Plugins Release Script - Dynamic discovery of all plugins
 # Usage: adi workflow release-plugins
 # Example: adi workflow release-plugins
 
@@ -37,64 +37,91 @@ fi
 # Alias for compatibility
 ROOT_DIR="$PROJECT_ROOT"
 
+# Platform detection (fallback if prelude doesn't provide)
+if ! type get_platform &>/dev/null; then
+    get_platform() {
+        local os arch
+        os=$(uname -s | tr '[:upper:]' '[:lower:]')
+        arch=$(uname -m)
+        case "$os" in
+            darwin) os="darwin" ;;
+            linux) os="linux" ;;
+            mingw*|msys*|cygwin*) os="windows" ;;
+        esac
+        case "$arch" in
+            x86_64|amd64) arch="x86_64" ;;
+            arm64|aarch64) arch="aarch64" ;;
+        esac
+        echo "${os}-${arch}"
+    }
+fi
+
+if ! type get_lib_extension &>/dev/null; then
+    get_lib_extension() {
+        case "$1" in
+            darwin-*) echo "dylib" ;;
+            windows-*) echo "dll" ;;
+            *) echo "so" ;;
+        esac
+    }
+fi
+
 # Configuration
 REGISTRY_URL=$(require_value "${ADI_REGISTRY_URL:-https://adi-plugin-registry.the-ihor.com}" "ADI_REGISTRY_URL not set")
 
 # Bump semantic version
-# Usage: bump_version <version> <bump_type>
-# bump_type: patch, minor, major
 bump_version() {
     local version="$1"
     local bump_type="$2"
-    
-    # Parse version components
     local major minor patch
     IFS='.' read -r major minor patch <<< "$version"
-    
-    # Remove any pre-release suffix for bumping
     patch="${patch%%-*}"
-    
     case "$bump_type" in
-        patch)
-            patch=$((patch + 1))
-            ;;
-        minor)
-            minor=$((minor + 1))
-            patch=0
-            ;;
-        major)
-            major=$((major + 1))
-            minor=0
-            patch=0
-            ;;
-        *)
-            error "Unknown bump type: $bump_type. Use patch, minor, or major."
-            ;;
+        patch) patch=$((patch + 1)) ;;
+        minor) minor=$((minor + 1)); patch=0 ;;
+        major) major=$((major + 1)); minor=0; patch=0 ;;
+        *) error "Unknown bump type: $bump_type. Use patch, minor, or major." ;;
     esac
-    
     echo "${major}.${minor}.${patch}"
 }
 
-# Core plugins
-PLUGINS=(
-    "tasks-plugin:adi.tasks:ADI Tasks:core"
-    "agent-loop-plugin:adi.agent-loop:ADI Agent Loop:core"
-    "indexer-plugin:adi.indexer:ADI Indexer:core"
-    "knowledgebase-plugin:adi.knowledgebase:ADI Knowledgebase:core"
-    "linter-plugin:adi.linter:ADI Linter:core"
-    # Language plugins
-    "lang-rust:adi.lang.rust:Rust Language Support:language"
-    "lang-python:adi.lang.python:Python Language Support:language"
-    "lang-typescript:adi.lang.typescript:TypeScript Language Support:language"
-    "lang-cpp:adi.lang.cpp:C++ Language Support:language"
-    "lang-go:adi.lang.go:Go Language Support:language"
-    "lang-java:adi.lang.java:Java Language Support:language"
-    "lang-csharp:adi.lang.csharp:C# Language Support:language"
-    "lang-ruby:adi.lang.ruby:Ruby Language Support:language"
-    "lang-php:adi.lang.php:PHP Language Support:language"
-    "lang-swift:adi.lang.swift:Swift Language Support:language"
-    "lang-lua:adi.lang.lua:Lua Language Support:language"
-)
+# Ensure manifest-gen binary is available
+ensure_manifest_gen() {
+    local manifest_gen="$ROOT_DIR/target/release/manifest-gen"
+    if [[ ! -f "$manifest_gen" ]]; then
+        manifest_gen="$ROOT_DIR/target/debug/manifest-gen"
+    fi
+    if [[ ! -f "$manifest_gen" ]]; then
+        info "Building manifest-gen..."
+        (cd "$ROOT_DIR" && cargo build -p lib-plugin-manifest --features generate --release 2>/dev/null) || \
+        (cd "$ROOT_DIR" && cargo build -p lib-plugin-manifest --features generate 2>/dev/null)
+        manifest_gen="$ROOT_DIR/target/release/manifest-gen"
+        if [[ ! -f "$manifest_gen" ]]; then
+            manifest_gen="$ROOT_DIR/target/debug/manifest-gen"
+        fi
+    fi
+    require_file "$manifest_gen" "manifest-gen binary not found. Build with: cargo build -p lib-plugin-manifest --features generate"
+    echo "$manifest_gen"
+}
+
+# Dynamic plugin discovery
+# Finds all Cargo.toml files with [package.metadata.plugin] section
+# Output format per line: pkg_name|crate_dir (relative to ROOT_DIR)
+discover_plugins() {
+    find "$ROOT_DIR/crates" -name 'Cargo.toml' -not -path '*/target/*' -type f 2>/dev/null | sort | while read -r cargo_toml; do
+        if ! grep -q '\[package\.metadata\.plugin\]' "$cargo_toml" 2>/dev/null; then
+            continue
+        fi
+        local dir
+        dir=$(dirname "$cargo_toml")
+        local rel_dir="${dir#$ROOT_DIR/}"
+        local pkg_name
+        pkg_name=$(grep '^name = ' "$cargo_toml" | head -1 | sed 's/name = "\(.*\)"/\1/')
+        if [[ -n "$pkg_name" ]]; then
+            echo "${pkg_name}|${rel_dir}"
+        fi
+    done
+}
 
 # =============================================================================
 # Main Release Flow
@@ -103,7 +130,8 @@ PLUGINS=(
 main() {
     local bump_type=""
     local specific_plugin=""
-    
+    local auto_yes=false
+
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -115,17 +143,21 @@ main() {
                 specific_plugin="$2"
                 shift 2
                 ;;
+            --yes|-y)
+                auto_yes=true
+                shift
+                ;;
             -h|--help)
                 echo "Usage: $0 [OPTIONS]"
                 echo ""
                 echo "OPTIONS:"
                 echo "    --bump <type>      Version bump type: patch, minor, major"
-                echo "    --plugin <name>    Release specific plugin only"
+                echo "    --plugin <name>    Release specific plugin only (by package name or plugin ID)"
+                echo "    --yes, -y          Skip confirmation prompt"
                 echo "    -h, --help         Show this help"
                 exit 0
                 ;;
             *)
-                # Legacy positional args support
                 if [ -z "$specific_plugin" ] && [ "$1" != "" ]; then
                     specific_plugin="$1"
                 fi
@@ -134,49 +166,14 @@ main() {
         esac
     done
 
-    # Get current version from first plugin's Cargo.toml
-    local current_version
-    current_version=$(grep '^version = ' "$ROOT_DIR/crates/tasks/plugin/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
-    info "Current version: v$current_version"
-
-    local version="$current_version"
-
-    # Apply version bump if requested
-    if [ -n "$bump_type" ]; then
-        version=$(bump_version "$current_version" "$bump_type")
-        info "Bumping version: $current_version -> $version ($bump_type)"
-        
-        # Update Cargo.toml version fields (single source of truth)
-        info "Updating Cargo.toml versions to v$version..."
-        for plugin_spec in "${PLUGINS[@]}"; do
-            IFS=':' read -r crate_name _ _ _ <<< "$plugin_spec"
-            local cargo_file="$ROOT_DIR/crates/$crate_name/Cargo.toml"
-            # Handle plugin directory structures
-            case "$crate_name" in
-                lang-*) cargo_file="$ROOT_DIR/crates/lang/${crate_name#lang-}/plugin/Cargo.toml" ;;
-                knowledgebase-plugin) cargo_file="$ROOT_DIR/crates/knowledgebase/plugin/Cargo.toml" ;;
-                tasks-plugin) cargo_file="$ROOT_DIR/crates/tasks/plugin/Cargo.toml" ;;
-                linter-plugin) cargo_file="$ROOT_DIR/crates/linter/plugin/Cargo.toml" ;;
-            esac
-            if [ -f "$cargo_file" ]; then
-                # Skip workspace-managed versions
-                if grep -q 'version\.workspace' "$cargo_file" 2>/dev/null; then
-                    continue
-                fi
-                sed -i '' "s/^version = \"$current_version\"/version = \"$version\"/" "$cargo_file"
-            fi
-        done
-        success "Updated Cargo.toml versions"
-    fi
-
-    info "Releasing plugins v$version"
-    info "Registry: $REGISTRY_URL"
-    echo ""
-
     # Check prerequisites
     ensure_command "cargo"
     ensure_command "curl"
     ensure_command "jq" "brew install jq"
+
+    # Ensure manifest-gen
+    local manifest_gen
+    manifest_gen=$(ensure_manifest_gen)
 
     # Detect platform
     local platform
@@ -185,113 +182,142 @@ main() {
     lib_ext=$(get_lib_extension "$platform")
 
     info "Platform: $platform"
+    info "Registry: $REGISTRY_URL"
+    echo ""
+
+    # Discover all plugins
+    info "Discovering plugins..."
+    local PLUGIN_ENTRIES=()
+    while IFS= read -r line; do
+        [[ -n "$line" ]] && PLUGIN_ENTRIES+=("$line")
+    done < <(discover_plugins)
+
+    if [[ ${#PLUGIN_ENTRIES[@]} -eq 0 ]]; then
+        error "No plugins found in crates/"
+    fi
+
+    info "Found ${#PLUGIN_ENTRIES[@]} plugins"
     echo ""
 
     # Create dist directory
-    local dist_dir="$ROOT_DIR/dist/plugins-v$version"
+    local dist_dir="$ROOT_DIR/dist/plugins-release"
     rm -rf "$dist_dir"
     ensure_dir "$dist_dir"
 
     cd "$ROOT_DIR"
 
-    # If specific plugin is requested and it's a plugin ID (not in PLUGINS array),
-    # use release-plugin.sh directly which handles dynamic lookup
-    if [ -n "$specific_plugin" ]; then
-        local found=false
-        for plugin_spec in "${PLUGINS[@]}"; do
-            IFS=':' read -r crate_name plugin_id _ _ <<< "$plugin_spec"
-            if [ "$crate_name" == "$specific_plugin" ] || [ "$plugin_id" == "$specific_plugin" ]; then
-                found=true
-                break
+    # Track built plugins for the publish phase
+    # Format: plugin_id|plugin_version|plugin_name|plugin_type|archive_name
+    local built_plugins=()
+    local skipped=0
+    local failed=0
+
+    for entry in "${PLUGIN_ENTRIES[@]}"; do
+        local pkg_name crate_dir
+        IFS='|' read -r pkg_name crate_dir <<< "$entry"
+
+        # Skip if specific plugin requested and doesn't match
+        if [[ -n "$specific_plugin" ]]; then
+            local match=false
+            if [[ "$pkg_name" == "$specific_plugin" ]]; then
+                match=true
+            else
+                # Check plugin ID from Cargo.toml
+                local check_id
+                check_id=$(sed -n '/\[package\.metadata\.plugin\]/,/^\[/{/^id = /p;}' "$ROOT_DIR/$crate_dir/Cargo.toml" 2>/dev/null | sed 's/id = "\(.*\)"/\1/' | head -1 | tr -d ' ')
+                [[ "$check_id" == "$specific_plugin" ]] && match=true
             fi
-        done
-        
-        if [ "$found" = false ]; then
-            # Plugin not in hardcoded list, delegate to release-plugin.sh
-            info "Plugin '$specific_plugin' not in default list, using dynamic lookup..."
-            local bump_args=""
-            if [ -n "$bump_type" ]; then
-                bump_args="--bump $bump_type"
+            if [[ "$match" == "false" ]]; then
+                continue
             fi
-            "$WORKFLOWS_DIR/release-plugin.sh" "$specific_plugin" $bump_args
-            exit $?
         fi
-    fi
 
-    # Build and package plugins from hardcoded list
-    for plugin_spec in "${PLUGINS[@]}"; do
-        IFS=':' read -r crate_name plugin_id plugin_name plugin_type <<< "$plugin_spec"
-
-        # Skip if specific plugin requested and this isn't it
-        if [ -n "$specific_plugin" ] && [ "$crate_name" != "$specific_plugin" ] && [ "$plugin_id" != "$specific_plugin" ]; then
+        # Check if crate directory exists
+        if [[ ! -d "$ROOT_DIR/$crate_dir" ]]; then
+            warn "Skipping $pkg_name (directory not found: $crate_dir)"
+            skipped=$((skipped + 1))
             continue
         fi
 
-        # Map crate name to directory path
-        local crate_dir="$ROOT_DIR/crates/$crate_name"
-        case "$crate_name" in
-            lang-*) crate_dir="$ROOT_DIR/crates/lang/${crate_name#lang-}/plugin" ;;
-            knowledgebase-plugin) crate_dir="$ROOT_DIR/crates/knowledgebase/plugin" ;;
-            tasks-plugin) crate_dir="$ROOT_DIR/crates/tasks/plugin" ;;
-            linter-plugin) crate_dir="$ROOT_DIR/crates/linter/plugin" ;;
-        esac
+        echo "=== $pkg_name ($crate_dir) ==="
 
-        # Check if crate exists
-        if [ ! -d "$crate_dir" ]; then
-            warn "Skipping $crate_name (not found at $crate_dir)"
-            continue
+        # Apply version bump if requested
+        if [[ -n "$bump_type" ]]; then
+            local cargo_file="$ROOT_DIR/$crate_dir/Cargo.toml"
+            if grep -q 'version\.workspace\|version = { workspace' "$cargo_file" 2>/dev/null; then
+                info "Skipping version bump (workspace-managed)"
+            else
+                local current_ver
+                current_ver=$(grep '^version = ' "$cargo_file" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+                if [[ -n "$current_ver" ]]; then
+                    local new_ver
+                    new_ver=$(bump_version "$current_ver" "$bump_type")
+                    sed -i '' "s/^version = \"$current_ver\"/version = \"$new_ver\"/" "$cargo_file"
+                    info "Bumped version: $current_ver -> $new_ver"
+                fi
+            fi
         fi
-
-        echo "=== $plugin_name ($plugin_id) ==="
 
         # Build
-        info "Building $crate_name..."
-        if ! cargo build --release -p "$crate_name" 2>/dev/null; then
-            warn "Failed to build $crate_name"
-            continue
-        fi
-
-        # Package
-        local lib_name="lib${crate_name//-/_}.$lib_ext"
-        local lib_path="$ROOT_DIR/target/release/$lib_name"
-
-        if [ ! -f "$lib_path" ]; then
-            warn "Library not found: $lib_path"
+        info "Building $pkg_name..."
+        if ! cargo build --release -p "$pkg_name" --lib 2>&1; then
+            warn "Failed to build $pkg_name, skipping"
+            failed=$((failed + 1))
+            echo ""
             continue
         fi
 
         # Generate plugin.toml from Cargo.toml metadata
-        local manifest_gen
-        manifest_gen="${ROOT_DIR}/target/release/manifest-gen"
-        if [[ ! -f "$manifest_gen" ]]; then
-            manifest_gen="${ROOT_DIR}/target/debug/manifest-gen"
-        fi
         local generated_toml
-        generated_toml=$(mktemp "${TMPDIR:-/tmp}/plugin-XXXXXX").toml
-        "$manifest_gen" --cargo-toml "$crate_dir/Cargo.toml" --output "$generated_toml" 2>/dev/null || {
-            warn "Failed to generate manifest for $crate_name"
+        generated_toml=$(mktemp "${TMPDIR:-/tmp}/plugin-XXXXXX")
+        mv "$generated_toml" "${generated_toml}.toml"
+        generated_toml="${generated_toml}.toml"
+        if ! "$manifest_gen" --cargo-toml "$ROOT_DIR/$crate_dir/Cargo.toml" --output "$generated_toml" 2>/dev/null; then
+            warn "Failed to generate manifest for $pkg_name, skipping"
+            failed=$((failed + 1))
+            echo ""
             continue
-        }
+        fi
+
+        # Parse plugin metadata from generated manifest
+        local plugin_id plugin_version plugin_name plugin_type
+        plugin_id=$(sed -n '/^\[plugin\]/,/^\[/{/^id = /p;}' "$generated_toml" | sed 's/id = "\(.*\)"/\1/' | tr -d '\n')
+        plugin_version=$(sed -n '/^\[plugin\]/,/^\[/{/^version = /p;}' "$generated_toml" | sed 's/version = "\(.*\)"/\1/' | tr -d '\n')
+        plugin_name=$(sed -n '/^\[plugin\]/,/^\[/{/^name = /p;}' "$generated_toml" | sed 's/name = "\(.*\)"/\1/' | tr -d '\n')
+        plugin_type=$(sed -n '/^\[plugin\]/,/^\[/{/^type = /p;}' "$generated_toml" | sed 's/type = "\(.*\)"/\1/' | tr -d '\n')
+
+        if [[ -z "$plugin_id" ]]; then
+            warn "No plugin ID found for $pkg_name, skipping"
+            failed=$((failed + 1))
+            echo ""
+            continue
+        fi
+
+        # Find the built library
+        local lib_name="lib${pkg_name//-/_}.${lib_ext}"
+        local lib_path="$ROOT_DIR/target/release/$lib_name"
+
+        if [[ ! -f "$lib_path" ]]; then
+            warn "Library not found: $lib_path, skipping"
+            failed=$((failed + 1))
+            echo ""
+            continue
+        fi
 
         # Build web UI if present (sibling web/ directory with package.json)
         local web_js=""
-        local parent_crate_dir
-        parent_crate_dir=$(dirname "$crate_dir")
-        if [[ -f "$parent_crate_dir/web/package.json" ]]; then
+        local parent_dir
+        parent_dir=$(dirname "$ROOT_DIR/$crate_dir")
+        if [[ -f "$parent_dir/web/package.json" ]]; then
             info "Building web UI..."
-            if (cd "$parent_crate_dir/web" && npm install --silent && npm run build) 2>/dev/null; then
-                if [[ -f "$parent_crate_dir/web/dist/web.js" ]]; then
-                    web_js="$parent_crate_dir/web/dist/web.js"
-                    success "Web UI built"
-                fi
-            else
-                warn "Web UI build failed, skipping"
+            if (cd "$parent_dir/web" && npm install --silent && npm run build) 2>/dev/null; then
+                [[ -f "$parent_dir/web/dist/web.js" ]] && web_js="$parent_dir/web/dist/web.js"
             fi
         fi
 
         # Create package
         local pkg_dir
-        pkg_dir=$(create_temp_dir)
+        pkg_dir=$(mktemp -d)
         cp "$lib_path" "$pkg_dir/plugin.$lib_ext"
         cp "$generated_toml" "$pkg_dir/plugin.toml"
 
@@ -299,83 +325,93 @@ main() {
         if [[ -n "$web_js" ]]; then
             cp "$web_js" "$pkg_dir/web.js"
             pkg_files+=("web.js")
-        fi
-
-        # Save web.js to dist for later publish
-        if [[ -n "$web_js" ]]; then
             cp "$web_js" "$dist_dir/${plugin_id}-web.js"
         fi
 
-        local archive_name="${plugin_id}-v${version}-${platform}.tar.gz"
-        create_tarball "$dist_dir/$archive_name" "$pkg_dir" "${pkg_files[@]}"
+        local archive_name="${plugin_id}-v${plugin_version}-${platform}.tar.gz"
+        tar -czf "$dist_dir/$archive_name" -C "$pkg_dir" "${pkg_files[@]}"
+        rm -rf "$pkg_dir"
 
+        built_plugins+=("${plugin_id}|${plugin_version}|${plugin_name}|${plugin_type}|${archive_name}")
         success "Created $archive_name"
         echo ""
     done
 
+    if [[ ${#built_plugins[@]} -eq 0 ]]; then
+        warn "No plugins built successfully"
+        exit 1
+    fi
+
     # Generate checksums
     info "Generating checksums..."
-    cd "$dist_dir"
-    generate_checksums "SHA256SUMS" *.tar.gz 2>/dev/null || true
-    cd - >/dev/null
+    (cd "$dist_dir" && shasum -a 256 *.tar.gz > SHA256SUMS 2>/dev/null || true)
 
-    # Show artifacts
+    # Show summary
+    echo ""
+    info "Build summary:"
+    info "  Built: ${#built_plugins[@]}"
+    [[ $skipped -gt 0 ]] && info "  Skipped: $skipped"
+    [[ $failed -gt 0 ]] && info "  Failed: $failed"
     echo ""
     info "Release artifacts:"
-    ls -lh "$dist_dir"
+    ls -lh "$dist_dir"/*.tar.gz 2>/dev/null
     echo ""
 
     # Confirm publish
-    read -p "Publish to registry? [y/N] " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        info "Aborted. Artifacts are in $dist_dir"
-        exit 0
+    if [[ "$auto_yes" != "true" ]]; then
+        read -p "Publish ${#built_plugins[@]} plugins to registry? [y/N] " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            info "Aborted. Artifacts are in $dist_dir"
+            exit 0
+        fi
     fi
 
     # Publish to registry
     echo ""
-    for plugin_spec in "${PLUGINS[@]}"; do
-        IFS=':' read -r crate_name plugin_id plugin_name plugin_type <<< "$plugin_spec"
+    local published=0
+    local pub_failed=0
 
-        if [ -n "$specific_plugin" ] && [ "$crate_name" != "$specific_plugin" ] && [ "$plugin_id" != "$specific_plugin" ]; then
-            continue
-        fi
+    for bp in "${built_plugins[@]}"; do
+        local plugin_id plugin_version plugin_name plugin_type archive_name
+        IFS='|' read -r plugin_id plugin_version plugin_name plugin_type archive_name <<< "$bp"
 
-        local archive_name="${plugin_id}-v${version}-${platform}.tar.gz"
         local archive_path="$dist_dir/$archive_name"
-
-        if [ ! -f "$archive_path" ]; then
+        if [[ ! -f "$archive_path" ]]; then
             continue
         fi
 
-        info "Publishing $plugin_id v$version for $platform..."
+        info "Publishing $plugin_id v$plugin_version for $platform..."
 
-        local url="$REGISTRY_URL/v1/publish/plugins/$plugin_id/$version/$platform"
-        url="$url?name=$(echo "$plugin_name" | sed 's/ /%20/g')&plugin_type=$plugin_type&author=ADI%20Team"
+        local url="$REGISTRY_URL/v1/publish/plugins/$plugin_id/$plugin_version/$platform"
+        url="$url?name=$(echo "$plugin_name" | sed 's/ /%20/g')&plugin_type=${plugin_type:-extension}&author=ADI%20Team"
 
         local response
-        response=$(curl -s --max-time 300 -X POST "$url" -F "file=@$archive_path")
-        echo "$response" | jq . 2>/dev/null || echo "$response"
+        response=$(curl -s --max-time 300 -X POST "$url" -F "file=@$archive_path" 2>&1) || true
+
+        if echo "$response" | jq . 2>/dev/null; then
+            :
+        else
+            echo "$response"
+        fi
 
         # Publish web UI if present
         local web_js_path="$dist_dir/${plugin_id}-web.js"
         if [[ -f "$web_js_path" ]]; then
             info "Publishing web UI for $plugin_id..."
-            local web_response
-            web_response=$(curl -s --max-time 120 -X POST \
-                "$REGISTRY_URL/v1/publish/plugins/$plugin_id/$version/web" \
+            curl -s --max-time 120 -X POST \
+                "$REGISTRY_URL/v1/publish/plugins/$plugin_id/$plugin_version/web" \
                 -H "Content-Type: application/javascript" \
-                --data-binary "@$web_js_path")
-            echo "$web_response" | jq . 2>/dev/null || echo "$web_response"
-            success "Published web UI for $plugin_id"
+                --data-binary "@$web_js_path" | jq . 2>/dev/null || true
         fi
 
         success "Published $plugin_id"
+        published=$((published + 1))
         echo ""
     done
 
-    success "Done! Published plugins v$version"
+    echo ""
+    success "Done! Published $published/${#built_plugins[@]} plugins"
 }
 
 main "$@"
