@@ -43,7 +43,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Utils
 uuid = { version = "1", features = ["v4", "serde"] }
 base64 = "0.22"
-rand = "0.8"
+rand = "0.9"
 url = "2"
 
 [dev-dependencies]

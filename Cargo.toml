@@ -413,7 +413,7 @@ tar = "0.4"
 zip = "0.6"
 
 # File system
-dirs = "5"
+dirs = "6"
 directories = "5.0"
 walkdir = "2.5"
 ignore = "0.4"
