@@ -117,11 +117,16 @@ impl Console {
     /// Write a line to the appropriate output stream.
     fn write_line(&self, level: Level, line: &str) {
         let is_error = matches!(level, Level::Error);
+        let fg = if self.config.colors_enabled {
+            crate::theme::foreground_sgr()
+        } else {
+            ""
+        };
 
         if is_error {
-            let _ = writeln!(io::stderr(), "{}", line);
+            let _ = writeln!(io::stderr(), "{}{}", fg, line);
         } else {
-            let _ = writeln!(io::stdout(), "{}", line);
+            let _ = writeln!(io::stdout(), "{}{}", fg, line);
         }
     }
 

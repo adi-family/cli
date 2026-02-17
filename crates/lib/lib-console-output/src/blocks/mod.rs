@@ -47,7 +47,14 @@ pub trait Renderable: fmt::Display {
         let rendered = self.render();
         let lines = self.line_count();
         let term = Term::stdout();
-        let _ = write!(&term, "{}", rendered);
+        // Prepend foreground SGR to each line so unstyled text uses the theme color
+        let fg = crate::theme::foreground_sgr();
+        let with_fg: String = rendered
+            .lines()
+            .map(|l| format!("{}{}", fg, l))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let _ = write!(&term, "{}", with_fg);
         let _ = term.flush();
         LiveHandle { lines, term }
     }

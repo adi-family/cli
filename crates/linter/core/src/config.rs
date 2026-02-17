@@ -302,6 +302,7 @@ pub enum CommandTypeConfig {
     RegexRequire { pattern: String, message: String },
     MaxLineLength { max: usize },
     MaxFileSize { max: usize },
+    MaxFunctionLength { max: usize },
     Contains { text: String, message: String },
     NotContains { text: String, message: String },
 }
@@ -324,6 +325,9 @@ impl CommandTypeConfig {
             },
             CommandTypeConfig::MaxLineLength { max } => CommandType::MaxLineLength { max: *max },
             CommandTypeConfig::MaxFileSize { max } => CommandType::MaxFileSize { max: *max },
+            CommandTypeConfig::MaxFunctionLength { max } => {
+                CommandType::MaxFunctionLength { max: *max }
+            }
             CommandTypeConfig::Contains { text, message } => CommandType::Contains {
                 text: text.clone(),
                 message: message.clone(),
@@ -506,6 +510,7 @@ pub enum CommandConfig {
     RegexRequire { pattern: String, message: String },
     MaxLineLength { max: usize },
     MaxFileSize { max: usize },
+    MaxFunctionLength { max: usize },
     Contains { text: String, message: String },
     NotContains { text: String, message: String },
 }
@@ -596,6 +601,9 @@ impl IndividualRuleConfig {
                         CommandTypeConfig::MaxLineLength { max }
                     }
                     CommandConfig::MaxFileSize { max } => CommandTypeConfig::MaxFileSize { max },
+                    CommandConfig::MaxFunctionLength { max } => {
+                        CommandTypeConfig::MaxFunctionLength { max }
+                    }
                     CommandConfig::Contains { text, message } => {
                         CommandTypeConfig::Contains { text, message }
                     }

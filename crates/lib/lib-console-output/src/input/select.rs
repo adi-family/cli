@@ -5,7 +5,7 @@
 //! Single selection input component.
 
 use super::types::{generate_id, InputRequest, SelectOption, SelectOptionJson};
-use crate::{console as out_console, is_interactive, theme, OutputMode};
+use crate::{console as out_console, fg_println, is_interactive, theme, OutputMode};
 use chrono::Utc;
 use console::{Key, Term};
 use std::io::Write;
@@ -110,7 +110,7 @@ impl<T: Clone> Select<T> {
         }
 
         // Print prompt
-        println!("{}", theme::bold(&self.prompt));
+        fg_println!("{}", theme::bold(&self.prompt));
 
         // Initial render (don't clear on first render)
         self.render(&term, cursor, rendered_once);
@@ -129,17 +129,17 @@ impl<T: Clone> Select<T> {
                 Ok(Key::Enter) => {
                     if !self.options[cursor].disabled {
                         self.clear_options(&term);
-                        println!(
+                        fg_println!(
                             "{} {}",
                             theme::success(theme::icons::SUCCESS),
-                            self.options[cursor].label
+                            theme::foreground(&self.options[cursor].label)
                         );
                         return Some(self.options[cursor].value.clone());
                     }
                 }
                 Ok(Key::Escape | Key::Char('q')) => {
                     self.clear_options(&term);
-                    println!("{} Cancelled", theme::error(theme::icons::ERROR));
+                    fg_println!("{} {}", theme::error(theme::icons::ERROR), theme::foreground("Cancelled"));
                     return None;
                 }
                 _ => {}
@@ -155,7 +155,7 @@ impl<T: Clone> Select<T> {
         let mut prev_lines: usize = 0; // Track actual lines from previous render
 
         // Print prompt with filter hint
-        println!(
+        fg_println!(
             "{} {}",
             theme::bold(&self.prompt),
             theme::muted("(type to filter)")
@@ -253,10 +253,10 @@ impl<T: Clone> Select<T> {
                         let original_idx = filtered[cursor];
                         if !self.options[original_idx].disabled {
                             self.clear_filterable(&term, prev_lines);
-                            println!(
+                            fg_println!(
                                 "{} {}",
                                 theme::success(theme::icons::SUCCESS),
-                                self.options[original_idx].label
+                                theme::foreground(&self.options[original_idx].label)
                             );
                             return Some(self.options[original_idx].value.clone());
                         }
@@ -264,7 +264,7 @@ impl<T: Clone> Select<T> {
                 }
                 Ok(Key::Escape) => {
                     self.clear_filterable(&term, prev_lines);
-                    println!("{} Cancelled", theme::error(theme::icons::ERROR));
+                    fg_println!("{} {}", theme::error(theme::icons::ERROR), theme::foreground("Cancelled"));
                     return None;
                 }
                 Ok(Key::Backspace) => {
@@ -367,12 +367,12 @@ impl<T: Clone> Select<T> {
 
         // Render filter input line
         if filter.is_empty() {
-            println!("{}", theme::muted("  Type to filter..."));
+            fg_println!("{}", theme::muted("  Type to filter..."));
         } else {
-            println!(
+            fg_println!(
                 "  {} {} {}",
                 theme::muted("Filter:"),
-                filter,
+                theme::foreground(filter),
                 theme::muted(format!("({} matches)", filtered.len()))
             );
         }
@@ -381,12 +381,12 @@ impl<T: Clone> Select<T> {
 
         // Render filtered options with sliding window
         if filtered.is_empty() {
-            println!("{}", theme::error("  No matches"));
+            fg_println!("{}", theme::error("  No matches"));
             lines_rendered += 1;
         } else {
             // Show "N more above" if there are hidden options above
             if has_more_above {
-                println!(
+                fg_println!(
                     "{}",
                     theme::muted(format!("  ... {} more above", window_start))
                 );
@@ -416,17 +416,17 @@ impl<T: Clone> Select<T> {
                 } else if is_selected {
                     format!("{} {}{}", theme::brand(prefix), theme::brand(&opt.label), desc)
                 } else {
-                    format!("  {}{}", &opt.label, desc)
+                    format!("  {}{}", theme::foreground(&opt.label), desc)
                 };
 
-                println!("{}", line);
+                fg_println!("{}", line);
                 lines_rendered += 1;
             }
 
             // Show "and N more" if there are hidden options below
             if has_more_below {
                 let more_count = filtered.len() - window_end;
-                println!("{}", theme::muted(format!("  ... and {} more", more_count)));
+                fg_println!("{}", theme::muted(format!("  ... and {} more", more_count)));
                 lines_rendered += 1;
             }
         }
@@ -466,10 +466,10 @@ impl<T: Clone> Select<T> {
             } else if is_selected {
                 format!("{} {}{}", theme::brand(prefix), theme::brand(&opt.label), desc)
             } else {
-                format!("  {}{}", &opt.label, desc)
+                format!("  {}{}", theme::foreground(&opt.label), desc)
             };
 
-            println!("{}", line);
+            fg_println!("{}", line);
         }
     }
 
@@ -517,17 +517,17 @@ impl<T: Clone> Select<T> {
         let all_indices: Vec<usize> = (0..self.options.len()).collect();
         let max_width = self.max_label_width(&all_indices);
 
-        println!("{}", theme::bold(&self.prompt));
+        fg_println!("{}", theme::bold(&self.prompt));
         for (i, opt) in self.options.iter().enumerate() {
             let desc = self.format_description(opt, max_width);
             if opt.disabled {
-                println!(
+                fg_println!(
                     "  {} {} (disabled)",
                     theme::muted(format!("[{}]", i + 1)),
                     theme::muted(&opt.label)
                 );
             } else {
-                println!("  {} {}{}", theme::brand(format!("[{}]", i + 1)), &opt.label, desc);
+                fg_println!("  {} {}{}", theme::brand(format!("[{}]", i + 1)), theme::foreground(&opt.label), desc);
             }
         }
 

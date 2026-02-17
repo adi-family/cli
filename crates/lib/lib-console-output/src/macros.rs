@@ -95,6 +95,24 @@ macro_rules! out {
     };
 }
 
+/// Print a line with the theme foreground color applied.
+///
+/// Drop-in replacement for `println!` that prepends the foreground SGR code
+/// so unstyled text renders in the theme foreground color.
+///
+/// # Example
+/// ```ignore
+/// fg_println!("Hello, {}!", name);
+/// fg_println!();
+/// ```
+#[macro_export]
+macro_rules! fg_println {
+    () => { println!() };
+    ($($arg:tt)*) => {
+        println!("{}{}", $crate::theme::foreground_sgr(), format!($($arg)*))
+    };
+}
+
 /// Create a structured message with fields.
 ///
 /// # Example

@@ -59,6 +59,8 @@ TOKEN_MAP = [
 ]
 
 STATUS_MAP = [
+    ("foreground", "foreground"),
+    ("foregroundMuted", "foreground-muted"),
     ("success", "success"),
     ("successSoft", "success-soft"),
     ("error", "error"),

@@ -619,6 +619,7 @@ Interactive workflows are defined in `.adi/workflows/` directory. Each workflow 
 | `autodoc` | Generate API documentation with LLM enrichment | `adi workflow autodoc` |
 | `sync-theme` | Sync theme JSON to CSS + Rust outputs | `adi workflow sync-theme` |
 | `convert-sounds` | Convert audio files | `adi workflow convert-sounds` |
+| `reset` | Reset ADI installation (clean reinstall) | `adi workflow reset` |
 
 ### Workflow Structure
 
@@ -708,6 +709,24 @@ adi workflow autodoc
 **Requirements:**
 - `cargo-public-api` (auto-installed if missing)
 - `claude` CLI (for `--enrich` option)
+
+### Example: Reset Installation
+Remove all local ADI data for a clean reinstall:
+```bash
+# Interactive mode
+adi workflow reset
+
+# Full reset, no prompt
+.adi/workflows/reset.sh --scope all --yes
+
+# Reset only plugins
+.adi/workflows/reset.sh --scope plugins --yes
+
+# Clear only caches
+.adi/workflows/reset.sh --scope cache --yes
+```
+
+**Scopes:** `all`, `plugins`, `cache`, `config`, `hive`
 
 ## Setup
 ```bash

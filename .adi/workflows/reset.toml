@@ -1,0 +1,39 @@
+# Reset ADI Installation
+# Remove all local ADI data, plugins, caches, and configuration for a clean reinstall
+
+[workflow]
+name = "reset"
+description = "Reset ADI installation (remove all local data for clean reinstall)"
+
+[[inputs]]
+name = "scope"
+type = "select"
+prompt = "What to reset?"
+options = [
+    "all - Remove everything (full clean slate)",
+    "plugins - Remove only plugins and plugin data",
+    "cache - Remove only caches (registry, models)",
+    "config - Remove only configuration files",
+    "hive - Remove only hive daemon state",
+]
+default = "all - Remove everything (full clean slate)"
+
+[[inputs]]
+name = "confirm"
+type = "confirm"
+prompt = "This will permanently delete data. Are you sure?"
+default = false
+
+[[steps]]
+name = "Reset ADI installation"
+run = """
+SCOPE="{{ scope | split(' ') | first }}"
+CONFIRM="{{ confirm }}"
+
+if [ "$CONFIRM" != "true" ]; then
+    warn "Reset cancelled"
+    exit 0
+fi
+
+"$WORKFLOWS_DIR/reset.sh" --scope "$SCOPE"
+"""

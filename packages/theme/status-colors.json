@@ -1,20 +1,24 @@
 {
   "dark": {
-    "success": "#2ECC87",
-    "successSoft": "rgba(46,204,135,0.12)",
-    "error": "#FF4D6A",
-    "errorSoft": "rgba(255,77,106,0.12)",
-    "warning": "#E8A317",
-    "warningSoft": "rgba(232,163,23,0.12)",
+    "foreground": "#e0e0e0",
+    "foregroundMuted": "#a0a0a0",
+    "success": "#22cc00",
+    "successSoft": "rgba(34,204,0,0.12)",
+    "error": "#ff0000",
+    "errorSoft": "rgba(255,0,0,0.12)",
+    "warning": "#ffaa00",
+    "warningSoft": "rgba(255,170,0,0.12)",
     "info": "var(--adi-accent)"
   },
   "light": {
-    "success": "#1A9E62",
-    "successSoft": "rgba(26,158,98,0.08)",
-    "error": "#D03040",
-    "errorSoft": "rgba(208,48,64,0.08)",
-    "warning": "#B87D0A",
-    "warningSoft": "rgba(184,125,10,0.08)",
+    "foreground": "#1a1a1a",
+    "foregroundMuted": "#707070",
+    "success": "#128a00",
+    "successSoft": "rgba(18,138,0,0.08)",
+    "error": "#eb0000",
+    "errorSoft": "rgba(235,0,0,0.08)",
+    "warning": "#9e6900",
+    "warningSoft": "rgba(158,105,0,0.08)",
     "info": "var(--adi-accent)"
   }
 }

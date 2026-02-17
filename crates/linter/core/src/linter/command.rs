@@ -25,6 +25,8 @@ pub enum CommandType {
     MaxLineLength { max: usize },
     /// Error if file exceeds max size.
     MaxFileSize { max: usize },
+    /// Error if function exceeds max line count.
+    MaxFunctionLength { max: usize },
     /// Error if text is found.
     Contains { text: String, message: String },
     /// Error if text is NOT found.
@@ -121,6 +123,7 @@ impl CommandLinter {
             }
             CommandType::MaxLineLength { max } => self.check_max_line_length(ctx, *max),
             CommandType::MaxFileSize { max } => self.check_max_file_size(ctx, *max),
+            CommandType::MaxFunctionLength { max } => self.check_max_function_length(ctx, *max),
             CommandType::Contains { text, message } => self.check_contains(ctx, text, message),
             CommandType::NotContains { text, message } => {
                 self.check_not_contains(ctx, text, message)
@@ -371,6 +374,174 @@ impl CommandLinter {
             )]
         } else {
             Vec::new()
+        }
+    }
+
+    fn check_max_function_length(&self, ctx: &LintContext, max: usize) -> Vec<Diagnostic> {
+        let mut diagnostics = Vec::new();
+        let lines: Vec<&str> = ctx.content.lines().collect();
+        let ext = ctx
+            .file
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("");
+
+        // Language-specific function detection patterns
+        let is_brace_language = matches!(ext, "rs" | "ts" | "js" | "tsx" | "jsx" | "go" | "c" | "cpp" | "h" | "hpp" | "java" | "cs" | "swift" | "kt");
+        let is_python = ext == "py";
+
+        if is_brace_language {
+            self.check_brace_functions(&lines, ctx, max, &mut diagnostics);
+        } else if is_python {
+            self.check_python_functions(&lines, ctx, max, &mut diagnostics);
+        }
+
+        diagnostics
+    }
+
+    /// Detect functions in brace-delimited languages (Rust, TS, JS, Go, etc.)
+    /// by finding function signature lines and tracking brace depth.
+    fn check_brace_functions(
+        &self,
+        lines: &[&str],
+        ctx: &LintContext,
+        max: usize,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
+        let fn_pattern = Regex::new(
+            r#"(?x)
+            ^\s*
+            (?:pub\s*(?:\(crate\)\s*)?|async\s+|const\s+|unsafe\s+|extern\s+(?:"C"\s+)?|export\s+|default\s+|static\s+|private\s+|protected\s+|public\s+|override\s+|virtual\s+)*
+            (?:fn|func|function|def|fun)\s+
+            (\w+)
+            "#
+        ).expect("function pattern must compile");
+
+        let mut i = 0;
+        while i < lines.len() {
+            let line = lines[i];
+            if let Some(caps) = fn_pattern.captures(line) {
+                let fn_name = caps.get(1).map(|m| m.as_str()).unwrap_or("unknown");
+                let fn_start = i;
+
+                // Find the opening brace (may be on same line or next lines)
+                let mut brace_line = i;
+                let mut found_open = false;
+                while brace_line < lines.len() && brace_line < i + 5 {
+                    if lines[brace_line].contains('{') {
+                        found_open = true;
+                        break;
+                    }
+                    brace_line += 1;
+                }
+
+                if !found_open {
+                    i += 1;
+                    continue;
+                }
+
+                // Track brace depth to find function end
+                let mut depth = 0i32;
+                let mut fn_end = brace_line;
+                for j in brace_line..lines.len() {
+                    for ch in lines[j].chars() {
+                        match ch {
+                            '{' => depth += 1,
+                            '}' => depth -= 1,
+                            _ => {}
+                        }
+                    }
+                    if depth <= 0 {
+                        fn_end = j;
+                        break;
+                    }
+                }
+
+                let body_lines = fn_end.saturating_sub(fn_start);
+                if body_lines > max {
+                    diagnostics.push(Diagnostic::with_categories(
+                        &self.config.id,
+                        &self.config.id,
+                        self.config.categories.clone(),
+                        self.severity,
+                        format!(
+                            "Function '{}' is {} lines (max {})",
+                            fn_name, body_lines, max
+                        ),
+                        Location::new(
+                            ctx.file.clone(),
+                            fn_start as u32 + 1,
+                            1,
+                            fn_end as u32 + 1,
+                            1,
+                        ),
+                    ));
+                }
+
+                i = fn_end + 1;
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    /// Detect functions in Python by indentation-based block boundaries.
+    fn check_python_functions(
+        &self,
+        lines: &[&str],
+        ctx: &LintContext,
+        max: usize,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
+        let def_pattern =
+            Regex::new(r"^(\s*)(?:async\s+)?def\s+(\w+)").expect("python def pattern must compile");
+
+        let mut i = 0;
+        while i < lines.len() {
+            if let Some(caps) = def_pattern.captures(lines[i]) {
+                let indent = caps.get(1).map(|m| m.as_str().len()).unwrap_or(0);
+                let fn_name = caps.get(2).map(|m| m.as_str()).unwrap_or("unknown");
+                let fn_start = i;
+
+                // Find function end by indentation
+                let mut fn_end = i;
+                for j in (i + 1)..lines.len() {
+                    let line = lines[j];
+                    if line.trim().is_empty() {
+                        continue;
+                    }
+                    let line_indent = line.len() - line.trim_start().len();
+                    if line_indent <= indent {
+                        break;
+                    }
+                    fn_end = j;
+                }
+
+                let body_lines = fn_end.saturating_sub(fn_start);
+                if body_lines > max {
+                    diagnostics.push(Diagnostic::with_categories(
+                        &self.config.id,
+                        &self.config.id,
+                        self.config.categories.clone(),
+                        self.severity,
+                        format!(
+                            "Function '{}' is {} lines (max {})",
+                            fn_name, body_lines, max
+                        ),
+                        Location::new(
+                            ctx.file.clone(),
+                            fn_start as u32 + 1,
+                            1,
+                            fn_end as u32 + 1,
+                            1,
+                        ),
+                    ));
+                }
+
+                i = fn_end + 1;
+            } else {
+                i += 1;
+            }
         }
     }
 

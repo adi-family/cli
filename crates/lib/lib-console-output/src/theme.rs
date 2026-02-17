@@ -31,6 +31,21 @@ static ACTIVE_THEME: OnceLock<&'static Theme> = OnceLock::new();
 /// Active accent as ANSI 256-color index (cached from active theme).
 static ACCENT_256: OnceLock<u8> = OnceLock::new();
 
+// Design-system semantic colors (WCAG AA, color-blind safe).
+// Dark-on-dark variants — all pass 4.5:1+ contrast vs #0a0a0a.
+const SUCCESS_256: u8 = 40;  // #22cc00 → ANSI 256 (0,215,0)
+const ERROR_256: u8 = 196;   // #ff0000 → ANSI 256 (255,0,0)
+const WARNING_256: u8 = 214;  // #ffaa00 → ANSI 256 (255,175,0)
+const DEBUG_256: u8 = 39;     // #00bfff → ANSI 256 (0,175,255)
+/// Foreground ANSI 256-color index (cached from active theme's `dark.text`).
+static FOREGROUND_256: OnceLock<u8> = OnceLock::new();
+const MUTED_256: u8 = 247;    // #a0a0a0 → ANSI 256 gray (gray-400)
+
+/// Cached SGR escape sequence for the theme foreground color.
+static FOREGROUND_SGR_CACHE: OnceLock<String> = OnceLock::new();
+/// SGR reset sequence.
+pub const RESET_SGR: &str = "\x1b[0m";
+
 /// Initialize the active theme by ID. Call early in main().
 ///
 /// If not called, the theme auto-resolves from `ADI_THEME` env var
@@ -42,6 +57,10 @@ pub fn init(theme_id: &str) {
     let _ = ACTIVE_THEME.set(theme);
     let (r, g, b) = parse_hex(theme.dark.accent);
     let _ = ACCENT_256.set(rgb_to_ansi256(r, g, b));
+    let (r, g, b) = parse_hex(theme.dark.text);
+    let fg = rgb_to_ansi256(r, g, b);
+    let _ = FOREGROUND_256.set(fg);
+    let _ = FOREGROUND_SGR_CACHE.set(format!("\x1b[38;5;{}m", fg));
 }
 
 /// Get the active theme.
@@ -63,6 +82,22 @@ fn accent_color() -> u8 {
     })
 }
 
+/// Get the foreground color as ANSI 256-color index (from active theme's `dark.text`).
+fn foreground_color() -> u8 {
+    *FOREGROUND_256.get_or_init(|| {
+        let theme = active();
+        let (r, g, b) = parse_hex(theme.dark.text);
+        rgb_to_ansi256(r, g, b)
+    })
+}
+
+/// SGR escape sequence for the theme foreground color.
+pub fn foreground_sgr() -> &'static str {
+    FOREGROUND_SGR_CACHE.get_or_init(|| {
+        format!("\x1b[38;5;{}m", foreground_color())
+    })
+}
+
 /// Brand color — accent from active theme. Used for spinners, selections, interactive highlights.
 pub fn brand<D: std::fmt::Display>(val: D) -> StyledObject<D> {
     style(val).color256(accent_color())
@@ -78,29 +113,34 @@ pub fn info<D: std::fmt::Display>(val: D) -> StyledObject<D> {
     style(val).color256(accent_color())
 }
 
-/// Debug styling — cyan (distinct from brand for diagnostic context).
+/// Debug styling — blue #00bfff (distinct from brand for diagnostic context).
 pub fn debug<D: std::fmt::Display>(val: D) -> StyledObject<D> {
-    style(val).cyan()
+    style(val).color256(DEBUG_256)
 }
 
-/// Success styling — green (universal across all themes).
+/// Success styling — green #22cc00 (WCAG AA, universal across all themes).
 pub fn success<D: std::fmt::Display>(val: D) -> StyledObject<D> {
-    style(val).green()
+    style(val).color256(SUCCESS_256)
 }
 
-/// Warning styling — yellow (universal across all themes).
+/// Warning styling — amber #ffaa00 (WCAG AA, universal across all themes).
 pub fn warning<D: std::fmt::Display>(val: D) -> StyledObject<D> {
-    style(val).yellow()
+    style(val).color256(WARNING_256)
 }
 
-/// Error styling — red bold (universal across all themes).
+/// Error styling — red #ff0000 bold (WCAG AA, universal across all themes).
 pub fn error<D: std::fmt::Display>(val: D) -> StyledObject<D> {
-    style(val).red().bold()
+    style(val).color256(ERROR_256).bold()
 }
 
-/// Muted styling — dim text for trace-level and secondary information.
+/// Foreground styling — default text color from the active theme.
+pub fn foreground<D: std::fmt::Display>(val: D) -> StyledObject<D> {
+    style(val).color256(foreground_color())
+}
+
+/// Muted styling — gray-400 #a0a0a0 for trace-level and secondary information.
 pub fn muted<D: std::fmt::Display>(val: D) -> StyledObject<D> {
-    style(val).dim()
+    style(val).color256(MUTED_256)
 }
 
 /// Bold text without color.
@@ -153,6 +193,12 @@ pub const SPINNER_FRAMES: &[&str] = &[
     "\u{283C}", "\u{2834}", "\u{2826}", "\u{2827}",
     "\u{2807}", "\u{280F}",
 ]; // ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
+
+/// Convert a hex color (e.g. "#875fd7") to the closest ANSI 256-color index.
+pub fn hex_to_ansi256(hex: &str) -> u8 {
+    let (r, g, b) = parse_hex(hex);
+    rgb_to_ansi256(r, g, b)
+}
 
 /// Parse a hex color string (e.g. "#6C5CE7") to RGB.
 fn parse_hex(hex: &str) -> (u8, u8, u8) {

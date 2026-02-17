@@ -1,0 +1,28 @@
+# Maximum function length checker
+# Reports functions exceeding the configured line count threshold
+
+[rule]
+id = "max-function-length"
+type = "command"
+category = "code-quality"
+severity = "warning"
+
+[rule.command]
+type = "max-function-length"
+max = 40
+
+[rule.glob]
+patterns = [
+    "**/*.rs",
+    "**/*.ts",
+    "**/*.js",
+    "**/*.py",
+    "**/*.go",
+]
+exclude = [
+    "target/**",
+    "node_modules/**",
+    ".git/**",
+    "**/*.min.js",
+    "**/*.generated.*",
+]
