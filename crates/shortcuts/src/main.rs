@@ -45,7 +45,7 @@ struct ErrorResponse {
 fn load_config(path: &str) -> Config {
     let content = std::fs::read_to_string(path)
         .unwrap_or_else(|e| panic!("failed to read config at {path}: {e}"));
-    serde_yaml::from_str(&content)
+    serde_yml::from_str(&content)
         .unwrap_or_else(|e| panic!("failed to parse config at {path}: {e}"))
 }
 
