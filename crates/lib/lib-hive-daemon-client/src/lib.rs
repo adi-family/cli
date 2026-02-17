@@ -11,8 +11,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
-use tokio::sync::{mpsc, Mutex};
-use tracing::{debug, error, warn};
+use tokio::sync::Mutex;
+use tracing::debug;
 use uuid::Uuid;
 
 // Re-export types for convenience
@@ -299,7 +299,6 @@ pub struct DaemonClient {
 
 struct ClientInner {
     stream: Option<UnixStream>,
-    request_counter: u64,
 }
 
 impl DaemonClient {
@@ -309,7 +308,6 @@ impl DaemonClient {
             socket_path,
             inner: Arc::new(Mutex::new(ClientInner {
                 stream: None,
-                request_counter: 0,
             })),
         }
     }
