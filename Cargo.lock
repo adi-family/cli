@@ -4867,6 +4867,7 @@ dependencies = [
  "lib-plugin-abi-v3",
  "serde",
  "serde_json",
+ "tokio",
  "tracing",
 ]
 
