@@ -6,6 +6,10 @@ cli, rust, monorepo, workspace, submodules, meta-repo
 - License: BSL-1.0
 
 ## Code Guidelines
+
+### Comments Convention
+- Full guide: `docs/code-style/comments.md`
+
 - For translations and internationalization, prefer Fluent (https://projectfluent.org/)
 - Translation plugins follow naming pattern: `[plugin-id].[language-code]` (e.g., `adi.tasks.en-US`)
 - `lib-i18n-core`: Core library with Fluent integration, service discovery, and global `t!()` macro
