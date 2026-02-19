@@ -1,11 +1,9 @@
 use lib_migrations::SqlMigration;
 
-/// Returns all migrations for adi-tasks-core
 pub fn migrations() -> Vec<SqlMigration> {
     vec![migration_v1()]
 }
 
-/// V1: Initial schema with tasks, dependencies, and FTS
 fn migration_v1() -> SqlMigration {
     SqlMigration::new(
         1,

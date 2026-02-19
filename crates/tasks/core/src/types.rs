@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
-/// Unique identifier for a task
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TaskId(pub i64);
 
@@ -18,7 +17,6 @@ impl From<i64> for TaskId {
     }
 }
 
-/// Task status enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskStatus {
@@ -48,7 +46,6 @@ impl TaskStatus {
         matches!(self, Self::Done | Self::Cancelled)
     }
 
-    /// Get the display icon for this status
     pub fn icon(&self) -> &'static str {
         match self {
             Self::Todo => "○",
@@ -59,7 +56,7 @@ impl TaskStatus {
         }
     }
 
-    /// Get the color name for this status (for DOT graphs, etc.)
+    /// For DOT graphs
     pub fn color(&self) -> &'static str {
         match self {
             Self::Todo => "black",
@@ -92,7 +89,6 @@ impl FromStr for TaskStatus {
     }
 }
 
-/// A task with optional dependency on code symbols
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: TaskId,
@@ -148,7 +144,6 @@ impl Task {
     }
 }
 
-/// Task with its dependency information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskWithDependencies {
     pub task: Task,
@@ -158,7 +153,6 @@ pub struct TaskWithDependencies {
     pub dependents: Vec<Task>,
 }
 
-/// Statistics about the tasks system
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TasksStatus {
     pub total_tasks: u64,
@@ -171,7 +165,6 @@ pub struct TasksStatus {
     pub has_cycles: bool,
 }
 
-/// Input for creating a new task
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateTask {
     pub title: String,

@@ -8,7 +8,6 @@ use std::sync::Mutex;
 
 use super::TaskStorage;
 
-/// SQLite-based task storage with FTS5 support
 pub struct SqliteTaskStorage {
     conn: Mutex<Connection>,
 }
@@ -298,7 +297,6 @@ impl TaskStorage for SqliteTaskStorage {
     fn get_blocked_tasks(&self) -> Result<Vec<Task>> {
         let conn = self.conn.lock().unwrap();
 
-        // Tasks that have incomplete dependencies
         let mut stmt = conn.prepare(
             r#"SELECT DISTINCT t.id, t.title, t.description, t.status, t.symbol_id, t.project_path, t.created_at, t.updated_at
                FROM tasks t
@@ -318,7 +316,6 @@ impl TaskStorage for SqliteTaskStorage {
     fn get_ready_tasks(&self) -> Result<Vec<Task>> {
         let conn = self.conn.lock().unwrap();
 
-        // Tasks with no incomplete dependencies (or no dependencies at all)
         let mut stmt = conn.prepare(
             r#"SELECT t.id, t.title, t.description, t.status, t.symbol_id, t.project_path, t.created_at, t.updated_at
                FROM tasks t

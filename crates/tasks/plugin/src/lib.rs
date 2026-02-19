@@ -1,7 +1,3 @@
-//! ADI Tasks Plugin
-//!
-//! Task management with dependency tracking, using the Plugin SDK.
-
 use lib_plugin_prelude::*;
 use serde_json::json;
 use std::sync::Arc;
@@ -9,11 +5,6 @@ use tokio::sync::RwLock;
 
 use tasks_core::{CreateTask, TaskId, TaskManager, TaskStatus};
 
-// ============================================================================
-// CLI Argument Structs
-// ============================================================================
-
-/// Arguments for the `list` command
 #[derive(CliArgs)]
 pub struct ListArgs {
     #[arg(long)]
@@ -29,7 +20,6 @@ pub struct ListArgs {
     pub format: String,
 }
 
-/// Arguments for the `add` command
 #[derive(CliArgs)]
 pub struct AddArgs {
     #[arg(position = 0)]
@@ -42,14 +32,12 @@ pub struct AddArgs {
     pub depends_on: Option<String>,
 }
 
-/// Arguments for the `show` command
 #[derive(CliArgs)]
 pub struct ShowArgs {
     #[arg(position = 0)]
     pub id: i64,
 }
 
-/// Arguments for the `status` command
 #[derive(CliArgs)]
 pub struct StatusArgs {
     #[arg(position = 0)]
@@ -59,7 +47,6 @@ pub struct StatusArgs {
     pub status: String,
 }
 
-/// Arguments for the `delete` command
 #[derive(CliArgs)]
 pub struct DeleteArgs {
     #[arg(position = 0)]
@@ -69,7 +56,6 @@ pub struct DeleteArgs {
     pub force: bool,
 }
 
-/// Arguments for the `depend` command
 #[derive(CliArgs)]
 pub struct DependArgs {
     #[arg(position = 0)]
@@ -79,7 +65,6 @@ pub struct DependArgs {
     pub depends_on: i64,
 }
 
-/// Arguments for the `undepend` command
 #[derive(CliArgs)]
 pub struct UndependArgs {
     #[arg(position = 0)]
@@ -89,14 +74,12 @@ pub struct UndependArgs {
     pub depends_on: i64,
 }
 
-/// Arguments for the `graph` command
 #[derive(CliArgs)]
 pub struct GraphArgs {
     #[arg(long, default = "text".to_string())]
     pub format: String,
 }
 
-/// Arguments for the `search` command
 #[derive(CliArgs)]
 pub struct SearchArgs {
     #[arg(position = 0)]
@@ -106,18 +89,11 @@ pub struct SearchArgs {
     pub limit: i64,
 }
 
-// ============================================================================
-// Plugin Definition
-// ============================================================================
-
-/// ADI Tasks Plugin
 pub struct TasksPlugin {
-    /// Task manager instance
     tasks: Arc<RwLock<Option<TaskManager>>>,
 }
 
 impl TasksPlugin {
-    /// Create a new tasks plugin
     pub fn new() -> Self {
         let manager = TaskManager::open_global().ok();
         Self {
@@ -131,10 +107,6 @@ impl Default for TasksPlugin {
         Self::new()
     }
 }
-
-// ============================================================================
-// Plugin Trait Implementation
-// ============================================================================
 
 #[async_trait]
 impl Plugin for TasksPlugin {
@@ -157,10 +129,6 @@ impl Plugin for TasksPlugin {
         vec![SERVICE_CLI_COMMANDS]
     }
 }
-
-// ============================================================================
-// CLI Commands
-// ============================================================================
 
 #[async_trait]
 impl CliCommands for TasksPlugin {
@@ -201,11 +169,6 @@ impl CliCommands for TasksPlugin {
     }
 }
 
-// ============================================================================
-// Command Implementations
-// ============================================================================
-
-/// Get the localized scope label for a task
 fn scope_label(task: &tasks_core::Task) -> String {
     if task.is_global() {
         t!("tasks-list-scope-global")
@@ -215,7 +178,6 @@ fn scope_label(task: &tasks_core::Task) -> String {
 }
 
 impl TasksPlugin {
-    /// Get a read guard to the task manager, returning an error if not initialized.
     async fn manager(&self) -> std::result::Result<tokio::sync::RwLockReadGuard<'_, Option<TaskManager>>, String> {
         let guard = self.tasks.read().await;
         if guard.is_none() {
@@ -258,7 +220,6 @@ impl TasksPlugin {
         )
     }
 
-    /// List all tasks
     #[command(name = "list", description = "cmd-list-help")]
     async fn list(&self, args: ListArgs) -> CmdResult {
         let guard = self.manager().await?;
@@ -293,7 +254,6 @@ impl TasksPlugin {
         Ok(output.trim_end().to_string())
     }
 
-    /// Add a new task
     #[command(name = "add", description = "cmd-add-help")]
     async fn add(&self, args: AddArgs) -> CmdResult {
         let guard = self.manager().await?;
@@ -316,7 +276,6 @@ impl TasksPlugin {
         Ok(t!("tasks-add-created", "id" => id.0.to_string(), "title" => args.title.as_str()))
     }
 
-    /// Show task details
     #[command(name = "show", description = "cmd-show-help")]
     async fn show(&self, args: ShowArgs) -> CmdResult {
         let guard = self.manager().await?;
@@ -355,7 +314,6 @@ impl TasksPlugin {
         Ok(output.trim_end().to_string())
     }
 
-    /// Update task status
     #[command(name = "status", description = "cmd-status-help")]
     async fn status(&self, args: StatusArgs) -> CmdResult {
         let status: TaskStatus = args.status.parse().map_err(|_| {
@@ -368,7 +326,6 @@ impl TasksPlugin {
         Ok(t!("tasks-status-updated", "id" => args.id.to_string(), "status" => status.to_string()))
     }
 
-    /// Delete a task
     #[command(name = "delete", description = "cmd-delete-help")]
     async fn delete(&self, args: DeleteArgs) -> CmdResult {
         let guard = self.manager().await?;
@@ -388,7 +345,6 @@ impl TasksPlugin {
         Ok(t!("tasks-delete-success", "id" => args.id.to_string(), "title" => task.title.as_str()))
     }
 
-    /// Add dependency
     #[command(name = "depend", description = "cmd-depend-help")]
     async fn depend(&self, args: DependArgs) -> CmdResult {
         let guard = self.manager().await?;
@@ -397,7 +353,6 @@ impl TasksPlugin {
         Ok(t!("tasks-depend-success", "task_id" => args.task_id.to_string(), "depends_on" => args.depends_on.to_string()))
     }
 
-    /// Remove dependency
     #[command(name = "undepend", description = "cmd-undepend-help")]
     async fn undepend(&self, args: UndependArgs) -> CmdResult {
         let guard = self.manager().await?;
@@ -406,7 +361,6 @@ impl TasksPlugin {
         Ok(t!("tasks-undepend-success", "task_id" => args.task_id.to_string(), "depends_on" => args.depends_on.to_string()))
     }
 
-    /// Show dependency graph
     #[command(name = "graph", description = "cmd-graph-help")]
     async fn graph(&self, args: GraphArgs) -> CmdResult {
         let guard = self.manager().await?;
@@ -458,7 +412,6 @@ impl TasksPlugin {
         Ok(output.trim_end().to_string())
     }
 
-    /// Search tasks
     #[command(name = "search", description = "cmd-search-help")]
     async fn search(&self, args: SearchArgs) -> CmdResult {
         let limit = args.limit as usize;
@@ -478,7 +431,6 @@ impl TasksPlugin {
         Ok(output.trim_end().to_string())
     }
 
-    /// Show blocked tasks
     #[command(name = "blocked", description = "cmd-blocked-help")]
     async fn blocked(&self) -> CmdResult {
         let guard = self.manager().await?;
@@ -507,7 +459,6 @@ impl TasksPlugin {
         Ok(output.trim_end().to_string())
     }
 
-    /// Detect dependency cycles
     #[command(name = "cycles", description = "cmd-cycles-help")]
     async fn cycles(&self) -> CmdResult {
         let guard = self.manager().await?;
@@ -527,7 +478,6 @@ impl TasksPlugin {
         Ok(output.trim_end().to_string())
     }
 
-    /// Show task statistics
     #[command(name = "stats", description = "cmd-stats-help")]
     async fn stats(&self) -> CmdResult {
         let guard = self.manager().await?;
@@ -553,11 +503,6 @@ impl TasksPlugin {
     }
 }
 
-// ============================================================================
-// Plugin Entry Points
-// ============================================================================
-
-/// Create the plugin instance (v3 entry point)
 #[no_mangle]
 pub fn plugin_create() -> Box<dyn Plugin> {
     Box::new(TasksPlugin::new())

@@ -12,15 +12,12 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-/// Single project's task manager.
-/// Handles all task operations for one project.
 pub struct TaskManager {
     storage: Arc<dyn TaskStorage>,
     path: PathBuf,
 }
 
 impl TaskManager {
-    /// Open a task manager for a specific project.
     pub fn open(project_path: &Path) -> Result<Self> {
         let tasks_dir = project_path.join(".adi").join("tasks");
         std::fs::create_dir_all(&tasks_dir)?;
@@ -33,7 +30,6 @@ impl TaskManager {
         })
     }
 
-    /// Open global task manager.
     pub fn open_global() -> Result<Self> {
         let global_dir = Self::global_path();
         std::fs::create_dir_all(&global_dir)?;
@@ -46,7 +42,6 @@ impl TaskManager {
         })
     }
 
-    /// Get the global tasks directory path.
     pub fn global_path() -> PathBuf {
         dirs::data_local_dir()
             .unwrap_or_else(|| PathBuf::from("."))
@@ -54,19 +49,14 @@ impl TaskManager {
             .join("tasks")
     }
 
-    /// Get the project path.
     pub fn path(&self) -> &Path {
         &self.path
     }
 
-    /// Check if this is the global task manager.
     pub fn is_global(&self) -> bool {
         self.path == Self::global_path()
     }
 
-    // --- Task CRUD Operations ---
-
-    /// Create a new task.
     pub fn create_task(&self, input: CreateTask) -> Result<TaskId> {
         let mut task = Task::new(&input.title);
         task.description = input.description;
@@ -81,48 +71,37 @@ impl TaskManager {
         Ok(id)
     }
 
-    /// Get a task by ID.
     pub fn get_task(&self, id: TaskId) -> Result<Task> {
         self.storage.get_task(id)
     }
 
-    /// Update a task.
     pub fn update_task(&self, task: &Task) -> Result<()> {
         self.storage.update_task(task)
     }
 
-    /// Update task status.
     pub fn update_status(&self, id: TaskId, status: TaskStatus) -> Result<()> {
         let mut task = self.get_task(id)?;
         task.status = status;
         self.update_task(&task)
     }
 
-    /// Delete a task.
     pub fn delete_task(&self, id: TaskId) -> Result<()> {
         self.storage.delete_task(id)
     }
 
-    // --- Query Operations ---
-
-    /// List all tasks.
     pub fn list(&self) -> Result<Vec<Task>> {
         self.storage.list_tasks(None)
     }
 
-    /// Get tasks by status.
     pub fn get_by_status(&self, status: TaskStatus) -> Result<Vec<Task>> {
         self.storage.get_tasks_by_status(status)
     }
 
-    /// Search tasks using full-text search.
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<Task>> {
         self.storage.search_tasks_fts(query, limit)
     }
 
-    // --- Dependency Operations ---
-
-    /// Add a dependency between tasks.
+    /// Validates no cycle would be created before adding.
     pub fn add_dependency(&self, from: TaskId, to: TaskId) -> Result<()> {
         if graph::would_create_cycle(self.storage.as_ref(), from, to)? {
             return Err(Error::WouldCreateCycle { from, to });
@@ -130,22 +109,18 @@ impl TaskManager {
         self.storage.add_dependency(from, to)
     }
 
-    /// Remove a dependency between tasks.
     pub fn remove_dependency(&self, from: TaskId, to: TaskId) -> Result<()> {
         self.storage.remove_dependency(from, to)
     }
 
-    /// Get tasks that the given task depends on.
     pub fn get_dependencies(&self, id: TaskId) -> Result<Vec<Task>> {
         self.storage.get_dependencies(id)
     }
 
-    /// Get tasks that depend on the given task.
     pub fn get_dependents(&self, id: TaskId) -> Result<Vec<Task>> {
         self.storage.get_dependents(id)
     }
 
-    /// Get task with all its dependency information.
     pub fn get_task_with_dependencies(&self, id: TaskId) -> Result<TaskWithDependencies> {
         let task = self.get_task(id)?;
 
@@ -156,36 +131,28 @@ impl TaskManager {
         })
     }
 
-    // --- Graph Operations ---
-
-    /// Get tasks that are ready to work on (no incomplete dependencies).
+    /// Tasks with no incomplete dependencies (ready to start).
     pub fn get_ready(&self) -> Result<Vec<Task>> {
         self.storage.get_ready_tasks()
     }
 
-    /// Get tasks that are blocked by incomplete dependencies.
+    /// Tasks waiting on incomplete dependencies.
     pub fn get_blocked(&self) -> Result<Vec<Task>> {
         self.storage.get_blocked_tasks()
     }
 
-    /// Detect cycles in the dependency graph.
     pub fn detect_cycles(&self) -> Result<Vec<Vec<TaskId>>> {
         graph::detect_cycles(self.storage.as_ref())
     }
 
-    /// Get transitive dependencies of a task.
     pub fn get_transitive_dependencies(&self, id: TaskId) -> Result<Vec<TaskId>> {
         graph::get_transitive_dependencies(self.storage.as_ref(), id)
     }
 
-    /// Get transitive dependents of a task.
     pub fn get_transitive_dependents(&self, id: TaskId) -> Result<Vec<TaskId>> {
         graph::get_transitive_dependents(self.storage.as_ref(), id)
     }
 
-    // --- Status ---
-
-    /// Get status of this task manager.
     pub fn status(&self) -> Result<TasksStatus> {
         let mut status = self.storage.get_status()?;
         let cycles = self.detect_cycles()?;
@@ -193,16 +160,12 @@ impl TaskManager {
         Ok(status)
     }
 
-    // --- Symbol Linking ---
-
-    /// Link a task to a code symbol.
     pub fn link_to_symbol(&self, task_id: TaskId, symbol_id: i64) -> Result<()> {
         let mut task = self.get_task(task_id)?;
         task.symbol_id = Some(symbol_id);
         self.update_task(&task)
     }
 
-    /// Unlink a task from its code symbol.
     pub fn unlink_symbol(&self, task_id: TaskId) -> Result<()> {
         let mut task = self.get_task(task_id)?;
         task.symbol_id = None;
@@ -210,7 +173,6 @@ impl TaskManager {
     }
 }
 
-/// Collection of task managers across multiple projects.
 pub struct TaskManagerCollection {
     managers: HashMap<PathBuf, TaskManager>,
 }
@@ -222,15 +184,12 @@ impl Default for TaskManagerCollection {
 }
 
 impl TaskManagerCollection {
-    /// Create an empty collection.
     pub fn new() -> Self {
         Self {
             managers: HashMap::new(),
         }
     }
 
-    /// Add a project to the collection.
-    /// Returns the task manager for the project.
     pub fn add(&mut self, path: &Path) -> Result<&TaskManager> {
         let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
 
@@ -242,7 +201,6 @@ impl TaskManagerCollection {
         Ok(self.managers.get(&canonical).unwrap())
     }
 
-    /// Add global tasks to the collection.
     pub fn add_global(&mut self) -> Result<&TaskManager> {
         let global_path = TaskManager::global_path();
 
@@ -254,45 +212,37 @@ impl TaskManagerCollection {
         Ok(self.managers.get(&global_path).unwrap())
     }
 
-    /// Get a task manager by path.
     pub fn get(&self, path: &Path) -> Option<&TaskManager> {
         let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
         self.managers.get(&canonical)
     }
 
-    /// Get the global task manager if added.
     pub fn get_global(&self) -> Option<&TaskManager> {
         self.managers.get(&TaskManager::global_path())
     }
 
-    /// Remove a project from the collection.
     pub fn remove(&mut self, path: &Path) -> Option<TaskManager> {
         let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
         self.managers.remove(&canonical)
     }
 
-    /// Check if collection contains a project.
     pub fn contains(&self, path: &Path) -> bool {
         let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
         self.managers.contains_key(&canonical)
     }
 
-    /// Get number of projects in collection.
     pub fn len(&self) -> usize {
         self.managers.len()
     }
 
-    /// Check if collection is empty.
     pub fn is_empty(&self) -> bool {
         self.managers.is_empty()
     }
 
-    /// Iterate over all task managers.
     pub fn iter(&self) -> impl Iterator<Item = (&PathBuf, &TaskManager)> {
         self.managers.iter()
     }
 
-    /// List all tasks from all projects.
     pub fn list_all_tasks(&self) -> Result<Vec<Task>> {
         let mut tasks = Vec::new();
 
@@ -304,7 +254,6 @@ impl TaskManagerCollection {
         Ok(tasks)
     }
 
-    /// Get combined status across all projects.
     pub fn status(&self) -> Result<TasksStatus> {
         let mut combined = TasksStatus::default();
 
@@ -323,7 +272,6 @@ impl TaskManagerCollection {
         Ok(combined)
     }
 
-    /// Search tasks across all projects.
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<Task>> {
         let mut tasks = Vec::new();
 
@@ -338,7 +286,6 @@ impl TaskManagerCollection {
         Ok(tasks)
     }
 
-    /// Get tasks by status across all projects.
     pub fn get_by_status(&self, status: TaskStatus) -> Result<Vec<Task>> {
         let mut tasks = Vec::new();
 
@@ -349,7 +296,6 @@ impl TaskManagerCollection {
         Ok(tasks)
     }
 
-    /// Get ready tasks across all projects.
     pub fn get_ready(&self) -> Result<Vec<Task>> {
         let mut tasks = Vec::new();
 
@@ -360,7 +306,6 @@ impl TaskManagerCollection {
         Ok(tasks)
     }
 
-    /// Get blocked tasks across all projects.
     pub fn get_blocked(&self) -> Result<Vec<Task>> {
         let mut tasks = Vec::new();
 

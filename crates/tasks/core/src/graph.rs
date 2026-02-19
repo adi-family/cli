@@ -3,7 +3,6 @@ use crate::storage::TaskStorage;
 use crate::types::TaskId;
 use std::collections::{HashMap, HashSet};
 
-/// Detects cycles in the task dependency graph using DFS
 pub fn detect_cycles(storage: &dyn TaskStorage) -> Result<Vec<Vec<TaskId>>> {
     let deps = storage.get_all_dependencies()?;
 
@@ -68,7 +67,6 @@ fn dfs_detect_cycle(
     rec_stack.remove(&node);
 }
 
-/// Check if adding a dependency would create a cycle
 pub fn would_create_cycle(storage: &dyn TaskStorage, from: TaskId, to: TaskId) -> Result<bool> {
     // If there's a path from 'to' to 'from', adding from->to would create a cycle
     let deps = storage.get_all_dependencies()?;
@@ -102,7 +100,6 @@ pub fn would_create_cycle(storage: &dyn TaskStorage, from: TaskId, to: TaskId) -
     Ok(false)
 }
 
-/// Get all tasks that transitively depend on the given task
 pub fn get_transitive_dependents(storage: &dyn TaskStorage, id: TaskId) -> Result<Vec<TaskId>> {
     let deps = storage.get_all_dependencies()?;
 
@@ -135,7 +132,6 @@ pub fn get_transitive_dependents(storage: &dyn TaskStorage, id: TaskId) -> Resul
     Ok(result)
 }
 
-/// Get all tasks that the given task transitively depends on
 pub fn get_transitive_dependencies(storage: &dyn TaskStorage, id: TaskId) -> Result<Vec<TaskId>> {
     let deps = storage.get_all_dependencies()?;
 
