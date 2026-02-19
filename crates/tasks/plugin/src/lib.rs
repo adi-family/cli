@@ -182,7 +182,7 @@ impl CliCommands for TasksPlugin {
     }
 
     async fn run_command(&self, ctx: &CliContext) -> Result<CliResult> {
-        let result = match ctx.subcommand.as_deref() {
+        match ctx.subcommand.as_deref() {
             Some("list") => self.__sdk_cmd_handler_list(ctx).await,
             Some("add") => self.__sdk_cmd_handler_add(ctx).await,
             Some("show") => self.__sdk_cmd_handler_show(ctx).await,
@@ -197,9 +197,7 @@ impl CliCommands for TasksPlugin {
             Some("stats") => self.__sdk_cmd_handler_stats(ctx).await,
             Some(cmd) => Ok(CliResult::error(format!("Unknown command: {}", cmd))),
             None => Ok(CliResult::success(self.help())),
-        };
-
-        result
+        }
     }
 }
 
@@ -207,7 +205,25 @@ impl CliCommands for TasksPlugin {
 // Command Implementations
 // ============================================================================
 
+/// Get the localized scope label for a task
+fn scope_label(task: &tasks_core::Task) -> String {
+    if task.is_global() {
+        t!("tasks-list-scope-global")
+    } else {
+        t!("tasks-list-scope-project")
+    }
+}
+
 impl TasksPlugin {
+    /// Get a read guard to the task manager, returning an error if not initialized.
+    async fn manager(&self) -> std::result::Result<tokio::sync::RwLockReadGuard<'_, Option<TaskManager>>, String> {
+        let guard = self.tasks.read().await;
+        if guard.is_none() {
+            return Err(t!("error-not-initialized"));
+        }
+        Ok(guard)
+    }
+
     fn help(&self) -> String {
         format!(
             "{}\n\n{}\n  \
@@ -245,8 +261,8 @@ impl TasksPlugin {
     /// List all tasks
     #[command(name = "list", description = "cmd-list-help")]
     async fn list(&self, args: ListArgs) -> CmdResult {
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
 
         let task_list = if args.ready {
             tasks.get_ready().map_err(|e| e.to_string())?
@@ -271,19 +287,8 @@ impl TasksPlugin {
 
         let mut output = String::new();
         for task in task_list {
-            let status_icon = match task.status {
-                TaskStatus::Todo => "○",
-                TaskStatus::InProgress => "◐",
-                TaskStatus::Done => "●",
-                TaskStatus::Blocked => "✕",
-                TaskStatus::Cancelled => "○",
-            };
-            let scope = if task.is_global() {
-                t!("tasks-list-scope-global")
-            } else {
-                t!("tasks-list-scope-project")
-            };
-            output.push_str(&format!("{} #{} {} {}\n", status_icon, task.id.0, task.title, scope));
+            let scope = scope_label(&task);
+            output.push_str(&format!("{} #{} {} {}\n", task.status.icon(), task.id.0, task.title, scope));
         }
         Ok(output.trim_end().to_string())
     }
@@ -291,8 +296,8 @@ impl TasksPlugin {
     /// Add a new task
     #[command(name = "add", description = "cmd-add-help")]
     async fn add(&self, args: AddArgs) -> CmdResult {
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
 
         let depends_on_ids: Vec<i64> = args
             .depends_on
@@ -314,8 +319,8 @@ impl TasksPlugin {
     /// Show task details
     #[command(name = "show", description = "cmd-show-help")]
     async fn show(&self, args: ShowArgs) -> CmdResult {
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
 
         let task_with_deps = tasks.get_task_with_dependencies(TaskId(args.id)).map_err(|e| e.to_string())?;
         let task = &task_with_deps.task;
@@ -357,8 +362,8 @@ impl TasksPlugin {
             t!("tasks-status-invalid-status", "status" => args.status.as_str())
         })?;
 
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
         tasks.update_status(TaskId(args.id), status).map_err(|e| e.to_string())?;
         Ok(t!("tasks-status-updated", "id" => args.id.to_string(), "status" => status.to_string()))
     }
@@ -366,8 +371,8 @@ impl TasksPlugin {
     /// Delete a task
     #[command(name = "delete", description = "cmd-delete-help")]
     async fn delete(&self, args: DeleteArgs) -> CmdResult {
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
 
         let task = tasks.get_task(TaskId(args.id)).map_err(|e| e.to_string())?;
 
@@ -386,8 +391,8 @@ impl TasksPlugin {
     /// Add dependency
     #[command(name = "depend", description = "cmd-depend-help")]
     async fn depend(&self, args: DependArgs) -> CmdResult {
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
         tasks.add_dependency(TaskId(args.task_id), TaskId(args.depends_on)).map_err(|e| e.to_string())?;
         Ok(t!("tasks-depend-success", "task_id" => args.task_id.to_string(), "depends_on" => args.depends_on.to_string()))
     }
@@ -395,8 +400,8 @@ impl TasksPlugin {
     /// Remove dependency
     #[command(name = "undepend", description = "cmd-undepend-help")]
     async fn undepend(&self, args: UndependArgs) -> CmdResult {
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
         tasks.remove_dependency(TaskId(args.task_id), TaskId(args.depends_on)).map_err(|e| e.to_string())?;
         Ok(t!("tasks-undepend-success", "task_id" => args.task_id.to_string(), "depends_on" => args.depends_on.to_string()))
     }
@@ -404,8 +409,8 @@ impl TasksPlugin {
     /// Show dependency graph
     #[command(name = "graph", description = "cmd-graph-help")]
     async fn graph(&self, args: GraphArgs) -> CmdResult {
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
         let all_tasks = tasks.list().map_err(|e| e.to_string())?;
 
         if args.format == "json" {
@@ -424,14 +429,7 @@ impl TasksPlugin {
             let mut output = String::from("digraph tasks {\n  rankdir=LR;\n");
             for task in &all_tasks {
                 let label = task.title.replace('"', "\\\"");
-                let color = match task.status {
-                    TaskStatus::Done => "green",
-                    TaskStatus::InProgress => "blue",
-                    TaskStatus::Blocked => "red",
-                    TaskStatus::Cancelled => "gray",
-                    TaskStatus::Todo => "black",
-                };
-                output.push_str(&format!("  {} [label=\"{}\" color=\"{}\"];\n", task.id.0, label, color));
+                output.push_str(&format!("  {} [label=\"{}\" color=\"{}\"];\n", task.id.0, label, task.status.color()));
 
                 let deps = tasks.get_dependencies(task.id).map_err(|e| e.to_string())?;
                 for dep in deps {
@@ -449,14 +447,7 @@ impl TasksPlugin {
 
         let mut output = format!("{}\n\n", t!("tasks-graph-title"));
         for task in &all_tasks {
-            let status_icon = match task.status {
-                TaskStatus::Todo => "○",
-                TaskStatus::InProgress => "◐",
-                TaskStatus::Done => "●",
-                TaskStatus::Blocked => "✕",
-                TaskStatus::Cancelled => "○",
-            };
-            output.push_str(&format!("{} #{} {}\n", status_icon, task.id.0, task.title));
+            output.push_str(&format!("{} #{} {}\n", task.status.icon(), task.id.0, task.title));
 
             let deps = tasks.get_dependencies(task.id).map_err(|e| e.to_string())?;
             for (i, dep) in deps.iter().enumerate() {
@@ -471,8 +462,8 @@ impl TasksPlugin {
     #[command(name = "search", description = "cmd-search-help")]
     async fn search(&self, args: SearchArgs) -> CmdResult {
         let limit = args.limit as usize;
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
 
         let results = tasks.search(&args.query, limit).map_err(|e| e.to_string())?;
 
@@ -482,14 +473,7 @@ impl TasksPlugin {
 
         let mut output = format!("{}\n\n", t!("tasks-search-results", "count" => results.len().to_string(), "query" => args.query.as_str()));
         for task in results {
-            let status_icon = match task.status {
-                TaskStatus::Todo => "○",
-                TaskStatus::InProgress => "◐",
-                TaskStatus::Done => "●",
-                TaskStatus::Blocked => "✕",
-                TaskStatus::Cancelled => "○",
-            };
-            output.push_str(&format!("{} #{} {}\n", status_icon, task.id.0, task.title));
+            output.push_str(&format!("{} #{} {}\n", task.status.icon(), task.id.0, task.title));
         }
         Ok(output.trim_end().to_string())
     }
@@ -497,8 +481,8 @@ impl TasksPlugin {
     /// Show blocked tasks
     #[command(name = "blocked", description = "cmd-blocked-help")]
     async fn blocked(&self) -> CmdResult {
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
         let blocked = tasks.get_blocked().map_err(|e| e.to_string())?;
 
         if blocked.is_empty() {
@@ -526,8 +510,8 @@ impl TasksPlugin {
     /// Detect dependency cycles
     #[command(name = "cycles", description = "cmd-cycles-help")]
     async fn cycles(&self) -> CmdResult {
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
         let cycles = tasks.detect_cycles().map_err(|e| e.to_string())?;
 
         if cycles.is_empty() {
@@ -546,8 +530,8 @@ impl TasksPlugin {
     /// Show task statistics
     #[command(name = "stats", description = "cmd-stats-help")]
     async fn stats(&self) -> CmdResult {
-        let guard = self.tasks.read().await;
-        let tasks = guard.as_ref().ok_or_else(|| t!("error-not-initialized"))?;
+        let guard = self.manager().await?;
+        let tasks = guard.as_ref().unwrap();
         let status = tasks.status().map_err(|e| e.to_string())?;
 
         let mut output = format!("{}\n\n", t!("tasks-stats-title"));

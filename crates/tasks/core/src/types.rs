@@ -47,6 +47,28 @@ impl TaskStatus {
     pub fn is_complete(&self) -> bool {
         matches!(self, Self::Done | Self::Cancelled)
     }
+
+    /// Get the display icon for this status
+    pub fn icon(&self) -> &'static str {
+        match self {
+            Self::Todo => "○",
+            Self::InProgress => "◐",
+            Self::Done => "●",
+            Self::Blocked => "✕",
+            Self::Cancelled => "○",
+        }
+    }
+
+    /// Get the color name for this status (for DOT graphs, etc.)
+    pub fn color(&self) -> &'static str {
+        match self {
+            Self::Todo => "black",
+            Self::InProgress => "blue",
+            Self::Done => "green",
+            Self::Blocked => "red",
+            Self::Cancelled => "gray",
+        }
+    }
 }
 
 impl fmt::Display for TaskStatus {

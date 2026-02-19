@@ -142,23 +142,21 @@ impl TaskStorage for SqliteTaskStorage {
     fn list_tasks(&self, project_path: Option<&str>) -> Result<Vec<Task>> {
         let conn = self.conn.lock().unwrap();
 
-        let mut stmt = match project_path {
-            Some(path) => {
-                let mut stmt = conn.prepare(
-                    "SELECT id, title, description, status, symbol_id, project_path, created_at, updated_at
-                     FROM tasks WHERE project_path = ?1 ORDER BY created_at DESC",
-                )?;
-                let tasks = stmt
-                    .query_map(params![path], Self::row_to_task)?
-                    .collect::<rusqlite::Result<Vec<_>>>()?;
-                return Ok(tasks);
-            }
-            None => conn.prepare(
+        if let Some(path) = project_path {
+            let mut stmt = conn.prepare(
                 "SELECT id, title, description, status, symbol_id, project_path, created_at, updated_at
-                 FROM tasks ORDER BY created_at DESC",
-            )?,
-        };
+                 FROM tasks WHERE project_path = ?1 ORDER BY created_at DESC",
+            )?;
+            let tasks = stmt
+                .query_map(params![path], Self::row_to_task)?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            return Ok(tasks);
+        }
 
+        let mut stmt = conn.prepare(
+            "SELECT id, title, description, status, symbol_id, project_path, created_at, updated_at
+             FROM tasks ORDER BY created_at DESC",
+        )?;
         let tasks = stmt
             .query_map([], Self::row_to_task)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
