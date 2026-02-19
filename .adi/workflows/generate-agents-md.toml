@@ -1,0 +1,29 @@
+# Generate AGENTS.md
+# Discovers crate structure dynamically and generates documentation
+
+[workflow]
+name = "generate-agents-md"
+description = "Generate AGENTS.md with crate structure documentation"
+
+[[inputs]]
+name = "output"
+type = "select"
+prompt = "Output destination"
+options = [
+    "agents.md - Write to agents.md (Recommended)",
+    "stdout - Print to console only"
+]
+default = "agents.md - Write to agents.md (Recommended)"
+
+[[steps]]
+name = "Generate AGENTS.md"
+run = """
+OUTPUT="{{ output | split(' ') | first }}"
+
+if [ "$OUTPUT" = "stdout" ]; then
+    "$WORKFLOWS_DIR/generate-agents-md.sh" /dev/stdout
+else
+    "$WORKFLOWS_DIR/generate-agents-md.sh" agents.md
+    success "Generated agents.md"
+fi
+"""
