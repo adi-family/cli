@@ -1,0 +1,21 @@
+[package]
+name = "lib-plugin-prelude"
+version = "1.0.0"
+edition = "2021"
+authors = ["ADI Team"]
+description = "Plugin prelude for ADI ecosystem - re-exports SDK macros and runtime types"
+license = "BSL-1.0"
+
+[dependencies]
+# Re-export SDK macros
+lib-plugin-sdk = { path = "../lib-plugin-sdk" }
+
+# Re-export runtime types
+lib-plugin-abi-v3 = { path = "../lib-plugin-abi-v3" }
+
+# Re-export i18n
+lib-i18n-core = { path = "../lib-i18n-core" }
+
+# Re-export async support
+async-trait = "0.1"
+tokio = { version = "1.0", features = ["sync"] }

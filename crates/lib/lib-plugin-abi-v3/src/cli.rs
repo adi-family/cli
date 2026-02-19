@@ -26,13 +26,18 @@ use std::path::PathBuf;
 ///             CliCommand {
 ///                 name: "list".to_string(),
 ///                 description: "List all tasks".to_string(),
-///                 usage: "tasks list [--status <status>]".to_string(),
+///                 args: vec![
+///                     CliArg::optional("--status", CliArgType::String),
+///                     CliArg::optional("--limit", CliArgType::Int),
+///                 ],
 ///                 has_subcommands: false,
 ///             },
 ///             CliCommand {
 ///                 name: "create".to_string(),
 ///                 description: "Create a new task".to_string(),
-///                 usage: "tasks create <title>".to_string(),
+///                 args: vec![
+///                     CliArg::positional(0, "title", CliArgType::String, true),
+///                 ],
 ///                 has_subcommands: false,
 ///             },
 ///         ]
@@ -71,11 +76,95 @@ pub struct CliCommand {
     /// Human-readable description
     pub description: String,
 
-    /// Usage string (e.g., "tasks list [--filter <filter>]")
-    pub usage: String,
+    /// Command arguments schema
+    pub args: Vec<CliArg>,
 
     /// Whether this command has subcommands
     pub has_subcommands: bool,
+}
+
+/// CLI argument definition for schema generation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CliArg {
+    /// Argument name (e.g., "--status" or "title")
+    pub name: String,
+
+    /// Argument type
+    pub arg_type: CliArgType,
+
+    /// Whether argument is required
+    pub required: bool,
+
+    /// Position for positional args (None = flag/option)
+    pub position: Option<u8>,
+}
+
+impl CliArg {
+    /// Create a required flag/option (e.g., --config)
+    pub fn required(name: impl Into<String>, arg_type: CliArgType) -> Self {
+        Self {
+            name: name.into(),
+            arg_type,
+            required: true,
+            position: None,
+        }
+    }
+
+    /// Create an optional flag/option (e.g., --verbose)
+    pub fn optional(name: impl Into<String>, arg_type: CliArgType) -> Self {
+        Self {
+            name: name.into(),
+            arg_type,
+            required: false,
+            position: None,
+        }
+    }
+
+    /// Create a positional argument (e.g., <file>)
+    pub fn positional(position: u8, name: impl Into<String>, arg_type: CliArgType, required: bool) -> Self {
+        Self {
+            name: name.into(),
+            arg_type,
+            required,
+            position: Some(position),
+        }
+    }
+}
+
+/// CLI argument types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CliArgType {
+    /// String value
+    String,
+    /// Integer value (i64)
+    Int,
+    /// Floating point value (f64)
+    Float,
+    /// Boolean flag
+    Bool,
+}
+
+/// Trait for types that can be parsed from CLI arguments
+/// 
+/// Implemented by #[derive(CliArgs)] macro
+pub trait CliArgs: Sized {
+    /// Get the schema for these arguments
+    fn schema() -> Vec<CliArg>;
+
+    /// Parse arguments from CLI context
+    fn parse(ctx: &CliContext) -> std::result::Result<Self, String>;
+}
+
+/// Empty args for commands with no arguments
+impl CliArgs for () {
+    fn schema() -> Vec<CliArg> {
+        vec![]
+    }
+
+    fn parse(_ctx: &CliContext) -> std::result::Result<Self, String> {
+        Ok(())
+    }
 }
 
 /// CLI execution context

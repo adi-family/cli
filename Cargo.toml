@@ -34,9 +34,6 @@ members = [
 
     # Tasks components
     "crates/tasks/core",
-    "crates/tasks/cli",
-    "crates/tasks/http",
-    "crates/tasks/mcp",
 
     # Tools components (CLI tool index for LLM agents)
     "crates/tools/core",
@@ -156,6 +153,9 @@ members = [
     "crates/lib/lib-client/trello",
 
     # Plugin system
+    "crates/lib/lib-plugin-abi-v3",
+    "crates/lib/lib-plugin-sdk",
+    "crates/lib/lib-plugin-prelude",
     "crates/lib/lib-plugin-manifest",
     "crates/lib/lib-plugin-verify",
     "crates/lib/lib-plugin-registry",

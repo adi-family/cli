@@ -25,6 +25,10 @@ pub enum PluginError {
     #[error("Command execution failed: {0}")]
     CommandFailed(String),
 
+    /// Invalid input
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
     /// HTTP request failed
     #[error("HTTP request failed: {0}")]
     HttpRequestFailed(String),

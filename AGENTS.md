@@ -143,6 +143,6 @@ Available workflows in `.adi/workflows/`. Run with `adi wf <name>` or directly v
 
 **Additional guidelines:**
 - [`comments`](docs/code-style/comments.md): Comments must add value. If a comment restates what the code
-- [`plugin-abi`](docs/code-style/plugin-abi.md): Use `lib-plugin-abi-v3` for all ADI plugins.
+- [`plugin-sdk`](docs/code-style/plugin-sdk.md): Use `lib-plugin-prelude` for all ADI plugins.
 - [`translations`](docs/code-style/translations.md): Use Mozilla Fluent (.ftl) for all user-facing strings.
 

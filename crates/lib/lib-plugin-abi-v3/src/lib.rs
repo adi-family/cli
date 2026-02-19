@@ -74,7 +74,6 @@ pub use core::*;
 // Service traits (CLI plugins)
 pub mod cli;
 pub mod http;
-pub mod mcp;
 
 // Language analyzer traits (Indexer plugins)
 pub mod lang;
@@ -93,6 +92,12 @@ pub mod hooks;
 
 // Log streaming trait
 pub mod logs;
+
+// WebRTC handlers (for peer-to-peer communication)
+pub mod webrtc;
+
+// Daemon service traits (for background services)
+pub mod daemon;
 
 // Error handling
 mod error;
@@ -113,9 +118,6 @@ pub type PluginCreateFn = fn() -> Box<dyn Plugin>;
 // Service type identifiers for capability discovery
 pub const SERVICE_CLI_COMMANDS: &str = "cli.commands";
 pub const SERVICE_HTTP_ROUTES: &str = "http.routes";
-pub const SERVICE_MCP_TOOLS: &str = "mcp.tools";
-pub const SERVICE_MCP_RESOURCES: &str = "mcp.resources";
-pub const SERVICE_MCP_PROMPTS: &str = "mcp.prompts";
 pub const SERVICE_LANGUAGE_ANALYZER: &str = "indexer.lang";
 pub const SERVICE_EMBEDDER: &str = "indexer.embed";
 pub const SERVICE_RUNNER: &str = "orchestration.runner";
@@ -125,3 +127,6 @@ pub const SERVICE_PROXY_MIDDLEWARE: &str = "orchestration.proxy";
 pub const SERVICE_OBSERVABILITY_SINK: &str = "orchestration.obs";
 pub const SERVICE_ROLLOUT_STRATEGY: &str = "orchestration.rollout";
 pub const SERVICE_LOG_PROVIDER: &str = "logs.provider";
+pub const SERVICE_WEBRTC_HANDLERS: &str = "webrtc.handlers";
+pub const SERVICE_DAEMON_SERVICE: &str = "daemon.service";
+pub const SERVICE_GLOBAL_COMMANDS: &str = "cli.global";

@@ -1,8 +1,8 @@
 #!/bin/bash
-# Generate agents.md with crate structure documentation
+# Generate AGENTS.md with crate structure documentation
 set -e
 
-OUTPUT="${1:-agents.md}"
+OUTPUT="${1:-AGENTS.md}"
 
 # Find crates with plugin/ = user-facing
 USER_FACING=$(find crates/*/plugin -name Cargo.toml 2>/dev/null | cut -d/ -f2 | sort -u)
