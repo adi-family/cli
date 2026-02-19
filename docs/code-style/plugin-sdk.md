@@ -135,52 +135,184 @@ let msg = t!("greeting", "name" => name, "count" => count.to_string());
 
 ---
 
-## 3. CLI Commands
+## 3. CLI Commands with Typed Arguments
 
-### Plugin Commands (`adi <plugin> <cmd>`)
+CLI commands use typed argument structs for:
+- **Schema generation** - AI agents can discover commands via `adi --schema`
+- **Type-safe parsing** - Arguments are parsed into Rust types automatically
+- **Validation** - Required fields and type errors are handled automatically
+
+### Defining Argument Structs
+
+```rust
+use lib_plugin_prelude::*;
+
+/// Arguments for the `list` command
+#[derive(CliArgs)]
+pub struct ListArgs {
+    /// Filter by status (optional flag)
+    #[arg(long)]
+    pub status: Option<String>,
+
+    /// Show only ready tasks (boolean flag)
+    #[arg(long)]
+    pub ready: bool,
+
+    /// Output format with default value
+    #[arg(long, default = "text".to_string())]
+    pub format: String,
+
+    /// Limit results (optional with type conversion)
+    #[arg(long)]
+    pub limit: Option<i64>,
+}
+
+/// Arguments for the `add` command  
+#[derive(CliArgs)]
+pub struct AddArgs {
+    /// Task title (required positional argument)
+    #[arg(position = 0)]
+    pub title: String,
+
+    /// Task description (optional flag)
+    #[arg(long)]
+    pub description: Option<String>,
+
+    /// Dependencies (custom long name)
+    #[arg(long = "depends-on")]
+    pub depends_on: Option<String>,
+}
+```
+
+### Argument Attributes
+
+| Attribute | Description | Example |
+|-----------|-------------|---------|
+| `#[arg(long)]` | Long flag `--name` | `--status todo` |
+| `#[arg(long = "custom")]` | Custom flag name | `--depends-on 1,2` |
+| `#[arg(short = 'n')]` | Short flag `-n` | `-s todo` |
+| `#[arg(position = 0)]` | Positional argument | `add "my task"` |
+| `#[arg(default = expr)]` | Default value | `default = 10` |
+
+### Type Mapping
+
+| Rust Type | CLI Type | Required | Example |
+|-----------|----------|----------|---------|
+| `String` | String | yes | `--name foo` |
+| `Option<String>` | String | no | `--name foo` or omit |
+| `i64` | Int | yes | `--limit 10` |
+| `Option<i64>` | Int | no | `--limit 10` or omit |
+| `bool` | Bool | no (flag) | `--verbose` |
+| `f64` | Float | yes | `--rate 0.5` |
+
+### Implementing Commands
+
+```rust
+impl TasksPlugin {
+    /// List all tasks
+    #[command(name = "list", description = "cmd-list-help")]
+    async fn list(&self, args: ListArgs) -> CmdResult {
+        // args.status, args.ready, args.format, args.limit - all typed!
+        let tasks = if args.ready {
+            self.db.get_ready()?
+        } else if let Some(status) = &args.status {
+            self.db.get_by_status(status)?
+        } else {
+            self.db.list()?
+        };
+
+        if args.format == "json" {
+            Ok(serde_json::to_string_pretty(&tasks)?)
+        } else {
+            Ok(format_tasks_text(&tasks))
+        }
+    }
+
+    /// Add a new task
+    #[command(name = "add", description = "cmd-add-help")]
+    async fn add(&self, args: AddArgs) -> CmdResult {
+        let id = self.db.create(&args.title, args.description)?;
+        Ok(t!("task-created", "id" => id.to_string()))
+    }
+
+    /// Command with no arguments
+    #[command(name = "stats", description = "cmd-stats-help")]
+    async fn stats(&self) -> CmdResult {
+        let stats = self.db.get_stats()?;
+        Ok(format!("Total: {}", stats.total))
+    }
+}
+```
+
+### Registering Commands
+
+The `#[command]` macro generates:
+- `__sdk_cmd_meta_<fn>()` - Returns `CliCommand` with schema
+- `__sdk_cmd_handler_<fn>(ctx)` - Parses args and calls function
 
 ```rust
 #[async_trait]
 impl CliCommands for TasksPlugin {
     async fn list_commands(&self) -> Vec<CliCommand> {
         vec![
-            CliCommand {
-                name: "list".to_string(),
-                description: t!("cmd-list-help"),
-                usage: "list [--status <status>]".to_string(),
-                has_subcommands: false,
-            },
-            CliCommand {
-                name: "add".to_string(),
-                description: t!("cmd-add-help"),
-                usage: "add <title>".to_string(),
-                has_subcommands: false,
-            },
+            Self::__sdk_cmd_meta_list(),
+            Self::__sdk_cmd_meta_add(),
+            Self::__sdk_cmd_meta_stats(),
         ]
     }
 
     async fn run_command(&self, ctx: &CliContext) -> Result<CliResult> {
         match ctx.subcommand.as_deref() {
-            Some("list") => self.cmd_list(ctx).await,
-            Some("add") => self.cmd_add(ctx).await,
+            Some("list") => self.__sdk_cmd_handler_list(ctx).await,
+            Some("add") => self.__sdk_cmd_handler_add(ctx).await,
+            Some("stats") => self.__sdk_cmd_handler_stats(ctx).await,
             _ => Ok(CliResult::error("Unknown command")),
         }
     }
 }
+```
 
-impl TasksPlugin {
-    async fn cmd_list(&self, ctx: &CliContext) -> CmdResult {
-        let status: Option<String> = ctx.option("status");
-        let tasks = self.db.list(status)?;
-        Ok(format!("{:?}", tasks))
-    }
+### Generated Schema
 
-    async fn cmd_add(&self, ctx: &CliContext) -> CmdResult {
-        let title = ctx.arg(0).ok_or("Missing title")?;
-        let id = self.db.create(title)?;
-        Ok(t!("task-created", "id" => id.to_string()))
-    }
+The schema is available for AI agents via `adi --schema`:
+
+```json
+{
+  "commands": [{
+    "name": "tasks",
+    "commands": [{
+      "name": "list",
+      "description": "List all tasks",
+      "args": [
+        {"name": "--status", "type": "string", "required": false},
+        {"name": "--ready", "type": "bool", "required": false},
+        {"name": "--format", "type": "string", "required": false},
+        {"name": "--limit", "type": "int", "required": false}
+      ]
+    }, {
+      "name": "add",
+      "description": "Add a new task",
+      "args": [
+        {"name": "title", "type": "string", "required": true, "position": 0},
+        {"name": "--description", "type": "string", "required": false},
+        {"name": "--depends-on", "type": "string", "required": false}
+      ]
+    }]
+  }]
 }
+```
+
+### Error Handling
+
+Parse errors provide clear messages:
+
+```
+$ adi tasks add
+error: Missing required argument: title
+
+$ adi tasks list --limit abc
+error: Invalid value for --limit
+```
 ```
 
 ### Global Commands (`adi <cmd>`)
