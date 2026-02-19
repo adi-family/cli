@@ -126,24 +126,6 @@ impl Task {
     }
 }
 
-/// Represents a dependency between tasks
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Dependency {
-    /// The task that depends on another
-    pub from_task_id: TaskId,
-    /// The task that must be completed first
-    pub to_task_id: TaskId,
-}
-
-impl Dependency {
-    pub fn new(from: TaskId, to: TaskId) -> Self {
-        Self {
-            from_task_id: from,
-            to_task_id: to,
-        }
-    }
-}
-
 /// Task with its dependency information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskWithDependencies {

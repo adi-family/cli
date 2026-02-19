@@ -6,9 +6,7 @@ pub mod types;
 
 pub use error::{Error, Result};
 pub use storage::{SqliteTaskStorage, TaskStorage};
-pub use types::{
-    CreateTask, Dependency, Task, TaskId, TaskStatus, TaskWithDependencies, TasksStatus,
-};
+pub use types::{CreateTask, Task, TaskId, TaskStatus, TaskWithDependencies, TasksStatus};
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

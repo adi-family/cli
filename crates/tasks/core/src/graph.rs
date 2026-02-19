@@ -168,55 +168,6 @@ pub fn get_transitive_dependencies(storage: &dyn TaskStorage, id: TaskId) -> Res
     Ok(result)
 }
 
-/// Topological sort of tasks (respecting dependencies)
-pub fn topological_sort(storage: &dyn TaskStorage) -> Result<Vec<TaskId>> {
-    let deps = storage.get_all_dependencies()?;
-
-    // Build adjacency list and in-degree count
-    let mut graph: HashMap<TaskId, Vec<TaskId>> = HashMap::new();
-    let mut in_degree: HashMap<TaskId, usize> = HashMap::new();
-    let mut all_nodes: HashSet<TaskId> = HashSet::new();
-
-    for (from, to) in deps {
-        graph.entry(from).or_default().push(to);
-        *in_degree.entry(to).or_insert(0) += 1;
-        in_degree.entry(from).or_insert(0);
-        all_nodes.insert(from);
-        all_nodes.insert(to);
-    }
-
-    // Kahn's algorithm
-    let mut queue: Vec<TaskId> = all_nodes
-        .iter()
-        .filter(|&&n| *in_degree.get(&n).unwrap_or(&0) == 0)
-        .copied()
-        .collect();
-
-    let mut result = Vec::new();
-
-    while let Some(node) = queue.pop() {
-        result.push(node);
-
-        if let Some(neighbors) = graph.get(&node) {
-            for &neighbor in neighbors {
-                if let Some(degree) = in_degree.get_mut(&neighbor) {
-                    *degree -= 1;
-                    if *degree == 0 {
-                        queue.push(neighbor);
-                    }
-                }
-            }
-        }
-    }
-
-    // If result doesn't contain all nodes, there's a cycle
-    if result.len() != all_nodes.len() {
-        // Return what we have - cycle detection should be done separately
-    }
-
-    Ok(result)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

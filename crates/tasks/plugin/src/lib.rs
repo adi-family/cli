@@ -5,7 +5,7 @@
 use lib_plugin_prelude::*;
 use serde_json::json;
 use std::sync::Arc;
-use tokio::sync::RwLock as TokioRwLock;
+use tokio::sync::RwLock;
 
 use tasks_core::{CreateTask, TaskId, TaskManager, TaskStatus};
 
@@ -113,7 +113,7 @@ pub struct SearchArgs {
 /// ADI Tasks Plugin
 pub struct TasksPlugin {
     /// Task manager instance
-    tasks: Arc<TokioRwLock<Option<TaskManager>>>,
+    tasks: Arc<RwLock<Option<TaskManager>>>,
 }
 
 impl TasksPlugin {
@@ -121,7 +121,7 @@ impl TasksPlugin {
     pub fn new() -> Self {
         let manager = TaskManager::open_global().ok();
         Self {
-            tasks: Arc::new(TokioRwLock::new(manager)),
+            tasks: Arc::new(RwLock::new(manager)),
         }
     }
 }
@@ -576,11 +576,5 @@ impl TasksPlugin {
 /// Create the plugin instance (v3 entry point)
 #[no_mangle]
 pub fn plugin_create() -> Box<dyn Plugin> {
-    Box::new(TasksPlugin::new())
-}
-
-/// Create the CLI commands interface (for separate trait object)
-#[no_mangle]
-pub fn plugin_create_cli() -> Box<dyn CliCommands> {
     Box::new(TasksPlugin::new())
 }
