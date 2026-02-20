@@ -1,20 +1,51 @@
+//! Graph algorithms for task dependency management.
+//!
+//! This module provides algorithms for:
+//! - Cycle detection in dependency graphs
+//! - Checking if adding an edge would create a cycle
+//! - Computing transitive dependencies and dependents
+
 use crate::error::Result;
 use crate::storage::TaskStorage;
 use crate::types::TaskId;
 use std::collections::{HashMap, HashSet};
 
+/// Builds an adjacency list from dependency edges.
+fn build_adjacency_list(deps: &[(TaskId, TaskId)]) -> HashMap<TaskId, Vec<TaskId>> {
+    let mut graph: HashMap<TaskId, Vec<TaskId>> = HashMap::new();
+    for &(from, to) in deps {
+        graph.entry(from).or_default().push(to);
+    }
+    graph
+}
+
+/// Builds a reverse adjacency list (to -> from mapping) from dependency edges.
+fn build_reverse_adjacency_list(deps: &[(TaskId, TaskId)]) -> HashMap<TaskId, Vec<TaskId>> {
+    let mut graph: HashMap<TaskId, Vec<TaskId>> = HashMap::new();
+    for &(from, to) in deps {
+        graph.entry(to).or_default().push(from);
+    }
+    graph
+}
+
+/// Collects all unique nodes from dependency edges.
+fn collect_all_nodes(deps: &[(TaskId, TaskId)]) -> HashSet<TaskId> {
+    let mut nodes = HashSet::new();
+    for &(from, to) in deps {
+        nodes.insert(from);
+        nodes.insert(to);
+    }
+    nodes
+}
+
+/// Detects all cycles in the dependency graph.
+///
+/// Returns a list of cycles, where each cycle is a list of TaskIds
+/// forming a circular dependency.
 pub fn detect_cycles(storage: &dyn TaskStorage) -> Result<Vec<Vec<TaskId>>> {
     let deps = storage.get_all_dependencies()?;
-
-    // Build adjacency list
-    let mut graph: HashMap<TaskId, Vec<TaskId>> = HashMap::new();
-    let mut all_nodes: HashSet<TaskId> = HashSet::new();
-
-    for (from, to) in deps {
-        graph.entry(from).or_default().push(to);
-        all_nodes.insert(from);
-        all_nodes.insert(to);
-    }
+    let graph = build_adjacency_list(&deps);
+    let all_nodes = collect_all_nodes(&deps);
 
     let mut cycles = Vec::new();
     let mut visited: HashSet<TaskId> = HashSet::new();
@@ -67,101 +98,75 @@ fn dfs_detect_cycle(
     rec_stack.remove(&node);
 }
 
+/// Checks if adding an edge from `from` to `to` would create a cycle.
+///
+/// Returns true if adding the dependency would create a circular dependency.
 pub fn would_create_cycle(storage: &dyn TaskStorage, from: TaskId, to: TaskId) -> Result<bool> {
     // If there's a path from 'to' to 'from', adding from->to would create a cycle
     let deps = storage.get_all_dependencies()?;
+    let graph = build_adjacency_list(&deps);
 
-    // Build adjacency list
-    let mut graph: HashMap<TaskId, Vec<TaskId>> = HashMap::new();
-    for (f, t) in deps {
-        graph.entry(f).or_default().push(t);
-    }
+    // Check if 'from' is reachable from 'to' using iterative DFS
+    Ok(is_reachable(&graph, to, from))
+}
 
-    // Check if 'from' is reachable from 'to'
-    let mut visited: HashSet<TaskId> = HashSet::new();
-    let mut stack = vec![to];
+/// Checks if `target` is reachable from `start` in the given graph.
+fn is_reachable(graph: &HashMap<TaskId, Vec<TaskId>>, start: TaskId, target: TaskId) -> bool {
+    let mut visited = HashSet::new();
+    let mut stack = vec![start];
 
     while let Some(current) = stack.pop() {
-        if current == from {
-            return Ok(true); // Adding from->to would create a cycle
+        if current == target {
+            return true;
         }
 
         if visited.insert(current) {
             if let Some(neighbors) = graph.get(&current) {
-                for &neighbor in neighbors {
-                    if !visited.contains(&neighbor) {
-                        stack.push(neighbor);
-                    }
-                }
+                stack.extend(neighbors.iter().filter(|n| !visited.contains(n)));
             }
         }
     }
 
-    Ok(false)
+    false
 }
 
+/// Returns all tasks that transitively depend on the given task.
+///
+/// This includes both direct dependents and their dependents, recursively.
 pub fn get_transitive_dependents(storage: &dyn TaskStorage, id: TaskId) -> Result<Vec<TaskId>> {
     let deps = storage.get_all_dependencies()?;
-
-    // Build reverse adjacency list (to -> from mapping)
-    let mut reverse_graph: HashMap<TaskId, Vec<TaskId>> = HashMap::new();
-    for (from, to) in deps {
-        reverse_graph.entry(to).or_default().push(from);
-    }
-
-    let mut result = Vec::new();
-    let mut visited: HashSet<TaskId> = HashSet::new();
-    let mut stack = vec![id];
-
-    while let Some(current) = stack.pop() {
-        if visited.insert(current) {
-            if current != id {
-                result.push(current);
-            }
-
-            if let Some(dependents) = reverse_graph.get(&current) {
-                for &dependent in dependents {
-                    if !visited.contains(&dependent) {
-                        stack.push(dependent);
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(result)
+    let reverse_graph = build_reverse_adjacency_list(&deps);
+    Ok(collect_reachable(&reverse_graph, id))
 }
 
+/// Returns all tasks that the given task transitively depends on.
+///
+/// This includes both direct dependencies and their dependencies, recursively.
 pub fn get_transitive_dependencies(storage: &dyn TaskStorage, id: TaskId) -> Result<Vec<TaskId>> {
     let deps = storage.get_all_dependencies()?;
+    let graph = build_adjacency_list(&deps);
+    Ok(collect_reachable(&graph, id))
+}
 
-    // Build adjacency list
-    let mut graph: HashMap<TaskId, Vec<TaskId>> = HashMap::new();
-    for (from, to) in deps {
-        graph.entry(from).or_default().push(to);
-    }
-
+/// Collects all nodes reachable from `start` in the given graph, excluding `start` itself.
+fn collect_reachable(graph: &HashMap<TaskId, Vec<TaskId>>, start: TaskId) -> Vec<TaskId> {
     let mut result = Vec::new();
-    let mut visited: HashSet<TaskId> = HashSet::new();
-    let mut stack = vec![id];
+    let mut visited = HashSet::new();
+    let mut stack = vec![start];
 
     while let Some(current) = stack.pop() {
         if visited.insert(current) {
-            if current != id {
+            if current != start {
                 result.push(current);
             }
 
-            if let Some(dependencies) = graph.get(&current) {
-                for &dependency in dependencies {
-                    if !visited.contains(&dependency) {
-                        stack.push(dependency);
-                    }
-                }
+            if let Some(neighbors) = graph.get(&current) {
+                stack.extend(neighbors.iter().filter(|n| !visited.contains(n)));
             }
         }
     }
 
-    Ok(result)
+    result
 }
 
 #[cfg(test)]

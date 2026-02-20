@@ -1,15 +1,27 @@
+//! SQLite-backed storage implementation for tasks.
+
 use crate::error::{Error, Result};
 use crate::migrations::migrations;
-use crate::types::{Task, TaskId, TaskStatus, TasksStatus};
+use crate::types::{unix_timestamp_now, Task, TaskId, TaskStatus, TasksStatus};
 use lib_migrations::{MigrationRunner, SqliteMigrationBackend};
 use rusqlite::{params, Connection};
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
 use super::TaskStorage;
 
+/// SQLite-backed implementation of [`TaskStorage`].
 pub struct SqliteTaskStorage {
     conn: Mutex<Connection>,
+}
+
+impl SqliteTaskStorage {
+    /// Acquires the database connection lock, handling mutex poisoning gracefully.
+    fn lock_conn(&self) -> Result<MutexGuard<'_, Connection>> {
+        self.conn
+            .lock()
+            .map_err(|_| Error::Storage("Database mutex poisoned".into()))
+    }
 }
 
 impl SqliteTaskStorage {
@@ -48,7 +60,7 @@ impl SqliteTaskStorage {
         let status = status_str.parse().unwrap_or(TaskStatus::Todo);
 
         Ok(Task {
-            id: TaskId(row.get(0)?),
+            id: TaskId::new(row.get(0)?),
             title: row.get(1)?,
             description: row.get(2)?,
             status,
@@ -62,7 +74,7 @@ impl SqliteTaskStorage {
 
 impl TaskStorage for SqliteTaskStorage {
     fn create_task(&self, task: &Task) -> Result<TaskId> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         conn.execute(
             r#"INSERT INTO tasks (title, description, status, symbol_id, project_path, created_at, updated_at)
@@ -78,16 +90,16 @@ impl TaskStorage for SqliteTaskStorage {
             ],
         )?;
 
-        Ok(TaskId(conn.last_insert_rowid()))
+        Ok(TaskId::new(conn.last_insert_rowid()))
     }
 
     fn get_task(&self, id: TaskId) -> Result<Task> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         conn.query_row(
             "SELECT id, title, description, status, symbol_id, project_path, created_at, updated_at
              FROM tasks WHERE id = ?1",
-            params![id.0],
+            params![id.get()],
             Self::row_to_task,
         )
         .map_err(|e| match e {
@@ -97,12 +109,8 @@ impl TaskStorage for SqliteTaskStorage {
     }
 
     fn update_task(&self, task: &Task) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
-
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(0);
+        let conn = self.lock_conn()?;
+        let now = unix_timestamp_now();
 
         let rows = conn.execute(
             r#"UPDATE tasks
@@ -115,7 +123,7 @@ impl TaskStorage for SqliteTaskStorage {
                 task.symbol_id,
                 task.project_path,
                 now,
-                task.id.0,
+                task.id.get(),
             ],
         )?;
 
@@ -127,9 +135,9 @@ impl TaskStorage for SqliteTaskStorage {
     }
 
     fn delete_task(&self, id: TaskId) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
-        let rows = conn.execute("DELETE FROM tasks WHERE id = ?1", params![id.0])?;
+        let rows = conn.execute("DELETE FROM tasks WHERE id = ?1", params![id.get()])?;
 
         if rows == 0 {
             return Err(Error::TaskNotFound(id));
@@ -139,7 +147,7 @@ impl TaskStorage for SqliteTaskStorage {
     }
 
     fn list_tasks(&self, project_path: Option<&str>) -> Result<Vec<Task>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         if let Some(path) = project_path {
             let mut stmt = conn.prepare(
@@ -164,7 +172,7 @@ impl TaskStorage for SqliteTaskStorage {
     }
 
     fn get_tasks_by_status(&self, status: TaskStatus) -> Result<Vec<Task>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         let mut stmt = conn.prepare(
             "SELECT id, title, description, status, symbol_id, project_path, created_at, updated_at
@@ -179,7 +187,7 @@ impl TaskStorage for SqliteTaskStorage {
     }
 
     fn search_tasks_fts(&self, query: &str, limit: usize) -> Result<Vec<Task>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         let mut stmt = conn.prepare(
             "SELECT t.id, t.title, t.description, t.status, t.symbol_id, t.project_path, t.created_at, t.updated_at
@@ -202,12 +210,12 @@ impl TaskStorage for SqliteTaskStorage {
             return Err(Error::SelfDependency(from));
         }
 
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         // Verify both tasks exist
         let from_exists: bool = conn.query_row(
             "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = ?1)",
-            params![from.0],
+            params![from.get()],
             |row| row.get(0),
         )?;
 
@@ -217,7 +225,7 @@ impl TaskStorage for SqliteTaskStorage {
 
         let to_exists: bool = conn.query_row(
             "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = ?1)",
-            params![to.0],
+            params![to.get()],
             |row| row.get(0),
         )?;
 
@@ -227,18 +235,18 @@ impl TaskStorage for SqliteTaskStorage {
 
         conn.execute(
             "INSERT OR IGNORE INTO task_dependencies (from_task_id, to_task_id) VALUES (?1, ?2)",
-            params![from.0, to.0],
+            params![from.get(), to.get()],
         )?;
 
         Ok(())
     }
 
     fn remove_dependency(&self, from: TaskId, to: TaskId) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         let rows = conn.execute(
             "DELETE FROM task_dependencies WHERE from_task_id = ?1 AND to_task_id = ?2",
-            params![from.0, to.0],
+            params![from.get(), to.get()],
         )?;
 
         if rows == 0 {
@@ -249,7 +257,7 @@ impl TaskStorage for SqliteTaskStorage {
     }
 
     fn get_dependencies(&self, id: TaskId) -> Result<Vec<Task>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         let mut stmt = conn.prepare(
             "SELECT t.id, t.title, t.description, t.status, t.symbol_id, t.project_path, t.created_at, t.updated_at
@@ -259,14 +267,14 @@ impl TaskStorage for SqliteTaskStorage {
         )?;
 
         let tasks = stmt
-            .query_map(params![id.0], Self::row_to_task)?
+            .query_map(params![id.get()], Self::row_to_task)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
 
         Ok(tasks)
     }
 
     fn get_dependents(&self, id: TaskId) -> Result<Vec<Task>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         let mut stmt = conn.prepare(
             "SELECT t.id, t.title, t.description, t.status, t.symbol_id, t.project_path, t.created_at, t.updated_at
@@ -276,18 +284,18 @@ impl TaskStorage for SqliteTaskStorage {
         )?;
 
         let tasks = stmt
-            .query_map(params![id.0], Self::row_to_task)?
+            .query_map(params![id.get()], Self::row_to_task)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
 
         Ok(tasks)
     }
 
     fn dependency_exists(&self, from: TaskId, to: TaskId) -> Result<bool> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         let exists: bool = conn.query_row(
             "SELECT EXISTS(SELECT 1 FROM task_dependencies WHERE from_task_id = ?1 AND to_task_id = ?2)",
-            params![from.0, to.0],
+            params![from.get(), to.get()],
             |row| row.get(0),
         )?;
 
@@ -295,93 +303,106 @@ impl TaskStorage for SqliteTaskStorage {
     }
 
     fn get_blocked_tasks(&self) -> Result<Vec<Task>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
+
+        // Use parameterized status values for consistency
+        let done = TaskStatus::Done.as_str();
+        let cancelled = TaskStatus::Cancelled.as_str();
 
         let mut stmt = conn.prepare(
             r#"SELECT DISTINCT t.id, t.title, t.description, t.status, t.symbol_id, t.project_path, t.created_at, t.updated_at
                FROM tasks t
                JOIN task_dependencies d ON t.id = d.from_task_id
                JOIN tasks dep ON d.to_task_id = dep.id
-               WHERE t.status NOT IN ('done', 'cancelled')
-                 AND dep.status NOT IN ('done', 'cancelled')"#,
+               WHERE t.status NOT IN (?1, ?2)
+                 AND dep.status NOT IN (?1, ?2)"#,
         )?;
 
         let tasks = stmt
-            .query_map([], Self::row_to_task)?
+            .query_map(params![done, cancelled], Self::row_to_task)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
 
         Ok(tasks)
     }
 
     fn get_ready_tasks(&self) -> Result<Vec<Task>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
+
+        // Use parameterized status values for consistency
+        let done = TaskStatus::Done.as_str();
+        let cancelled = TaskStatus::Cancelled.as_str();
 
         let mut stmt = conn.prepare(
             r#"SELECT t.id, t.title, t.description, t.status, t.symbol_id, t.project_path, t.created_at, t.updated_at
                FROM tasks t
-               WHERE t.status NOT IN ('done', 'cancelled')
+               WHERE t.status NOT IN (?1, ?2)
                  AND NOT EXISTS (
                      SELECT 1 FROM task_dependencies d
                      JOIN tasks dep ON d.to_task_id = dep.id
                      WHERE d.from_task_id = t.id
-                       AND dep.status NOT IN ('done', 'cancelled')
+                       AND dep.status NOT IN (?1, ?2)
                  )
                ORDER BY t.created_at ASC"#,
         )?;
 
         let tasks = stmt
-            .query_map([], Self::row_to_task)?
+            .query_map(params![done, cancelled], Self::row_to_task)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
 
         Ok(tasks)
     }
 
     fn get_all_dependencies(&self) -> Result<Vec<(TaskId, TaskId)>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         let mut stmt = conn.prepare("SELECT from_task_id, to_task_id FROM task_dependencies")?;
 
         let deps = stmt
-            .query_map([], |row| Ok((TaskId(row.get(0)?), TaskId(row.get(1)?))))?
+            .query_map([], |row| {
+                Ok((TaskId::new(row.get(0)?), TaskId::new(row.get(1)?)))
+            })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
 
         Ok(deps)
     }
 
     fn get_status(&self) -> Result<TasksStatus> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
-        let total_tasks: u64 =
-            conn.query_row("SELECT COUNT(*) FROM tasks", [], |row| row.get(0))?;
-
-        let todo_count: u64 = conn.query_row(
-            "SELECT COUNT(*) FROM tasks WHERE status = 'todo'",
-            [],
-            |row| row.get(0),
-        )?;
-
-        let in_progress_count: u64 = conn.query_row(
-            "SELECT COUNT(*) FROM tasks WHERE status = 'in_progress'",
-            [],
-            |row| row.get(0),
-        )?;
-
-        let done_count: u64 = conn.query_row(
-            "SELECT COUNT(*) FROM tasks WHERE status = 'done'",
-            [],
-            |row| row.get(0),
-        )?;
-
-        let blocked_count: u64 = conn.query_row(
-            "SELECT COUNT(*) FROM tasks WHERE status = 'blocked'",
-            [],
-            |row| row.get(0),
-        )?;
-
-        let cancelled_count: u64 = conn.query_row(
-            "SELECT COUNT(*) FROM tasks WHERE status = 'cancelled'",
-            [],
-            |row| row.get(0),
+        // Single query to get all task counts by status
+        let (
+            total_tasks,
+            todo_count,
+            in_progress_count,
+            done_count,
+            blocked_count,
+            cancelled_count,
+        ): (u64, u64, u64, u64, u64, u64) = conn.query_row(
+            r#"SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN status = ?1 THEN 1 ELSE 0 END) as todo,
+                SUM(CASE WHEN status = ?2 THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN status = ?3 THEN 1 ELSE 0 END) as done,
+                SUM(CASE WHEN status = ?4 THEN 1 ELSE 0 END) as blocked,
+                SUM(CASE WHEN status = ?5 THEN 1 ELSE 0 END) as cancelled
+               FROM tasks"#,
+            params![
+                TaskStatus::Todo.as_str(),
+                TaskStatus::InProgress.as_str(),
+                TaskStatus::Done.as_str(),
+                TaskStatus::Blocked.as_str(),
+                TaskStatus::Cancelled.as_str(),
+            ],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                ))
+            },
         )?;
 
         let total_dependencies: u64 =

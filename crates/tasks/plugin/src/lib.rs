@@ -249,7 +249,7 @@ impl TasksPlugin {
         let mut output = String::new();
         for task in task_list {
             let scope = scope_label(&task);
-            output.push_str(&format!("{} #{} {} {}\n", task.status.icon(), task.id.0, task.title, scope));
+            output.push_str(&format!("{} #{} {} {}\n", task.status.icon(), task.id.get(), task.title, scope));
         }
         Ok(output.trim_end().to_string())
     }
@@ -269,11 +269,11 @@ impl TasksPlugin {
             input = input.with_description(desc);
         }
         if !depends_on_ids.is_empty() {
-            input = input.with_dependencies(depends_on_ids.into_iter().map(TaskId).collect());
+            input = input.with_dependencies(depends_on_ids.into_iter().map(TaskId::new).collect());
         }
 
         let id = tasks.create_task(input).map_err(|e| e.to_string())?;
-        Ok(t!("tasks-add-created", "id" => id.0.to_string(), "title" => args.title.as_str()))
+        Ok(t!("tasks-add-created", "id" => id.get().to_string(), "title" => args.title.as_str()))
     }
 
     #[command(name = "show", description = "cmd-show-help")]
@@ -281,10 +281,10 @@ impl TasksPlugin {
         let guard = self.manager().await?;
         let tasks = guard.as_ref().unwrap();
 
-        let task_with_deps = tasks.get_task_with_dependencies(TaskId(args.id)).map_err(|e| e.to_string())?;
+        let task_with_deps = tasks.get_task_with_dependencies(TaskId::new(args.id)).map_err(|e| e.to_string())?;
         let task = &task_with_deps.task;
 
-        let mut output = format!("{}\n", t!("tasks-show-title", "id" => task.id.0.to_string()));
+        let mut output = format!("{}\n", t!("tasks-show-title", "id" => task.id.get().to_string()));
         output.push_str(&format!("  {}\n", t!("tasks-show-field-title", "title" => task.title.as_str())));
         output.push_str(&format!("  {}\n", t!("tasks-show-field-status", "status" => format!("{:?}", task.status))));
 
@@ -301,13 +301,13 @@ impl TasksPlugin {
         if !task_with_deps.depends_on.is_empty() {
             output.push_str(&format!("\n  {}\n", t!("tasks-show-dependencies")));
             for dep in &task_with_deps.depends_on {
-                output.push_str(&format!("    #{}: {}\n", dep.id.0, dep.title));
+                output.push_str(&format!("    #{}: {}\n", dep.id.get(), dep.title));
             }
         }
         if !task_with_deps.dependents.is_empty() {
             output.push_str(&format!("\n  {}\n", t!("tasks-show-dependents")));
             for dep in &task_with_deps.dependents {
-                output.push_str(&format!("    #{}: {}\n", dep.id.0, dep.title));
+                output.push_str(&format!("    #{}: {}\n", dep.id.get(), dep.title));
             }
         }
 
@@ -322,7 +322,7 @@ impl TasksPlugin {
 
         let guard = self.manager().await?;
         let tasks = guard.as_ref().unwrap();
-        tasks.update_status(TaskId(args.id), status).map_err(|e| e.to_string())?;
+        tasks.update_status(TaskId::new(args.id), status).map_err(|e| e.to_string())?;
         Ok(t!("tasks-status-updated", "id" => args.id.to_string(), "status" => status.to_string()))
     }
 
@@ -331,7 +331,7 @@ impl TasksPlugin {
         let guard = self.manager().await?;
         let tasks = guard.as_ref().unwrap();
 
-        let task = tasks.get_task(TaskId(args.id)).map_err(|e| e.to_string())?;
+        let task = tasks.get_task(TaskId::new(args.id)).map_err(|e| e.to_string())?;
 
         if !args.force {
             return Ok(format!(
@@ -341,7 +341,7 @@ impl TasksPlugin {
             ));
         }
 
-        tasks.delete_task(TaskId(args.id)).map_err(|e| e.to_string())?;
+        tasks.delete_task(TaskId::new(args.id)).map_err(|e| e.to_string())?;
         Ok(t!("tasks-delete-success", "id" => args.id.to_string(), "title" => task.title.as_str()))
     }
 
@@ -349,7 +349,7 @@ impl TasksPlugin {
     async fn depend(&self, args: DependArgs) -> CmdResult {
         let guard = self.manager().await?;
         let tasks = guard.as_ref().unwrap();
-        tasks.add_dependency(TaskId(args.task_id), TaskId(args.depends_on)).map_err(|e| e.to_string())?;
+        tasks.add_dependency(TaskId::new(args.task_id), TaskId::new(args.depends_on)).map_err(|e| e.to_string())?;
         Ok(t!("tasks-depend-success", "task_id" => args.task_id.to_string(), "depends_on" => args.depends_on.to_string()))
     }
 
@@ -357,7 +357,7 @@ impl TasksPlugin {
     async fn undepend(&self, args: UndependArgs) -> CmdResult {
         let guard = self.manager().await?;
         let tasks = guard.as_ref().unwrap();
-        tasks.remove_dependency(TaskId(args.task_id), TaskId(args.depends_on)).map_err(|e| e.to_string())?;
+        tasks.remove_dependency(TaskId::new(args.task_id), TaskId::new(args.depends_on)).map_err(|e| e.to_string())?;
         Ok(t!("tasks-undepend-success", "task_id" => args.task_id.to_string(), "depends_on" => args.depends_on.to_string()))
     }
 
@@ -373,7 +373,7 @@ impl TasksPlugin {
                 let deps = tasks.get_dependencies(task.id).map_err(|e| e.to_string())?;
                 graph_data.push(json!({
                     "task": task,
-                    "dependencies": deps.iter().map(|d| d.id.0).collect::<Vec<_>>()
+                    "dependencies": deps.iter().map(|d| d.id.get()).collect::<Vec<_>>()
                 }));
             }
             return serde_json::to_string_pretty(&graph_data).map_err(|e| e.to_string());
@@ -383,11 +383,11 @@ impl TasksPlugin {
             let mut output = String::from("digraph tasks {\n  rankdir=LR;\n");
             for task in &all_tasks {
                 let label = task.title.replace('"', "\\\"");
-                output.push_str(&format!("  {} [label=\"{}\" color=\"{}\"];\n", task.id.0, label, task.status.color()));
+                output.push_str(&format!("  {} [label=\"{}\" color=\"{}\"];\n", task.id.get(), label, task.status.color()));
 
                 let deps = tasks.get_dependencies(task.id).map_err(|e| e.to_string())?;
                 for dep in deps {
-                    output.push_str(&format!("  {} -> {};\n", task.id.0, dep.id.0));
+                    output.push_str(&format!("  {} -> {};\n", task.id.get(), dep.id.get()));
                 }
             }
             output.push_str("}\n");
@@ -401,12 +401,12 @@ impl TasksPlugin {
 
         let mut output = format!("{}\n\n", t!("tasks-graph-title"));
         for task in &all_tasks {
-            output.push_str(&format!("{} #{} {}\n", task.status.icon(), task.id.0, task.title));
+            output.push_str(&format!("{} #{} {}\n", task.status.icon(), task.id.get(), task.title));
 
             let deps = tasks.get_dependencies(task.id).map_err(|e| e.to_string())?;
             for (i, dep) in deps.iter().enumerate() {
                 let prefix = if i == deps.len() - 1 { "  └─" } else { "  ├─" };
-                output.push_str(&format!("{} {}\n", prefix, t!("tasks-graph-depends-on", "id" => dep.id.0.to_string(), "title" => dep.title.as_str())));
+                output.push_str(&format!("{} {}\n", prefix, t!("tasks-graph-depends-on", "id" => dep.id.get().to_string(), "title" => dep.title.as_str())));
             }
         }
         Ok(output.trim_end().to_string())
@@ -426,7 +426,7 @@ impl TasksPlugin {
 
         let mut output = format!("{}\n\n", t!("tasks-search-results", "count" => results.len().to_string(), "query" => args.query.as_str()));
         for task in results {
-            output.push_str(&format!("{} #{} {}\n", task.status.icon(), task.id.0, task.title));
+            output.push_str(&format!("{} #{} {}\n", task.status.icon(), task.id.get(), task.title));
         }
         Ok(output.trim_end().to_string())
     }
@@ -443,14 +443,14 @@ impl TasksPlugin {
 
         let mut output = format!("{}\n\n", t!("tasks-blocked-title"));
         for task in blocked {
-            output.push_str(&format!("✕ #{} {}\n", task.id.0, task.title));
+            output.push_str(&format!("✕ #{} {}\n", task.id.get(), task.title));
 
             let blockers = tasks.get_dependencies(task.id).map_err(|e| e.to_string())?;
             let incomplete_blockers: Vec<_> = blockers.iter().filter(|t| !t.status.is_complete()).collect();
 
             for blocker in incomplete_blockers {
                 output.push_str(&format!("  └─ {}\n", t!("tasks-blocked-by", 
-                    "id" => blocker.id.0.to_string(), 
+                    "id" => blocker.id.get().to_string(), 
                     "title" => blocker.title.as_str(), 
                     "status" => format!("{:?}", blocker.status)
                 )));
@@ -472,8 +472,8 @@ impl TasksPlugin {
         let mut output = format!("{}\n\n", t!("tasks-cycles-found", "count" => cycles.len().to_string()));
         for (i, cycle) in cycles.iter().enumerate() {
             output.push_str(&format!("  {} ", t!("tasks-cycles-item", "number" => (i + 1).to_string())));
-            let cycle_str = cycle.iter().map(|id| format!("#{}", id.0)).collect::<Vec<_>>().join(" -> ");
-            output.push_str(&format!("{} -> #{}\n", cycle_str, cycle.first().map(|id| id.0).unwrap_or(0)));
+            let cycle_str = cycle.iter().map(|id| format!("#{}", id.get())).collect::<Vec<_>>().join(" -> ");
+            output.push_str(&format!("{} -> #{}\n", cycle_str, cycle.first().map(|id| id.get()).unwrap_or(0)));
         }
         Ok(output.trim_end().to_string())
     }
