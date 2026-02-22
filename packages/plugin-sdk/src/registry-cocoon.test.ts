@@ -20,6 +20,7 @@ describe('CocoonPluginRegistry', () => {
 
     it('returns null when version matches latest', async () => {
       vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
         json: async () => ({ version: '1.2.0' }),
       } as Response);
 
@@ -30,6 +31,7 @@ describe('CocoonPluginRegistry', () => {
 
     it('returns new version when update available', async () => {
       vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
         json: async () => ({ version: '1.3.0' }),
       } as Response);
 
@@ -40,12 +42,25 @@ describe('CocoonPluginRegistry', () => {
 
     it('calls correct latest endpoint', async () => {
       vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
         json: async () => ({ version: '1.2.0' }),
       } as Response);
 
       const reg = new CocoonPluginRegistry(BASE);
       await reg.checkLatest('tasks', '1.2.0');
       expect(fetch).toHaveBeenCalledWith(`${BASE}/v1/plugins/tasks/latest`);
+    });
+
+    it('throws when registry returns non-2xx', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        json: async () => ({}),
+      } as Response);
+
+      const reg = new CocoonPluginRegistry(BASE);
+      await expect(reg.checkLatest('tasks', '1.2.0')).rejects.toThrow('checkLatest failed: 404');
     });
   });
 });

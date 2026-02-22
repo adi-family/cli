@@ -35,11 +35,13 @@ describe('AdiPlugin', () => {
     expect(new HooksPlugin().dependencies).toEqual(['other']);
   });
 
-  it('_init() injects bus — onRegister can call this.bus.emit without throwing', async () => {
+  it('_init() injects bus — this.bus is accessible in onRegister()', async () => {
     const bus = createEventBus();
+    const emitSpy = vi.spyOn(bus, 'emit');
     const plugin = new HooksPlugin();
     await plugin._init(bus);
-    expect(plugin.registerCalls).toEqual(['called']);
+    // onRegister emits 'route:register' via this.bus — verify it went through
+    expect(emitSpy).toHaveBeenCalledWith('route:register', { path: '/hooks', element: 'hooks-view' });
   });
 
   it('_init() calls onRegister()', async () => {
@@ -71,5 +73,10 @@ describe('AdiPlugin', () => {
     await plugin._init(bus);
     await plugin._destroy();
     expect(plugin.unregisterCalls).toEqual(['called']);
+  });
+
+  it('accessing bus before _init() throws a clear error', () => {
+    const plugin = new HooksPlugin();
+    expect(() => (plugin as unknown as { bus: unknown }).bus).toThrow("accessed bus before _init()");
   });
 });

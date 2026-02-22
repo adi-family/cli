@@ -13,6 +13,9 @@ export class CocoonPluginRegistry implements PluginRegistry {
     currentVersion: string
   ): Promise<{ version: string } | null> {
     const res = await fetch(`${this.baseUrl}/v1/plugins/${id}/latest`);
+    if (!res.ok) {
+      throw new Error(`checkLatest failed: ${res.status} ${res.statusText}`);
+    }
     const { version } = (await res.json()) as { version: string };
     return version !== currentVersion ? { version } : null;
   }
