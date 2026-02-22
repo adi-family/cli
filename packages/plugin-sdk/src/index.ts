@@ -13,3 +13,5 @@ export type {
 export { createEventBus } from './bus.js';
 
 export { AdiPlugin } from './plugin.js';
+
+export { CocoonPluginRegistry } from './registry-cocoon.js';
