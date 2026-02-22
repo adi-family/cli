@@ -9,10 +9,34 @@ import {
   upgradePlugin,
 } from '@adi-family/sdk-plugin';
 
+interface Connection {
+  id: string;
+  services: string[];
+  request<T>(service: string, method: string, params?: unknown): Promise<T>;
+  stream<T>(service: string, method: string, params?: unknown): AsyncGenerator<T>;
+  httpProxy(service: string, path: string, init?: RequestInit): Promise<Response>;
+  httpDirect(url: string, init?: RequestInit): Promise<Response>;
+}
+
+declare global {
+  interface Window {
+    sdk: {
+      getConnections(): Map<string, Connection>;
+      bus: typeof bus;
+    };
+  }
+}
+
 const cocoonUrl = (): string =>
   (globalThis as unknown as Record<string, string>)['COCOON_URL'] ?? 'http://localhost:4200';
 
 const bus = createEventBus();
+
+const connections = new Map<string, Connection>();
+(window as unknown as { sdk: object }).sdk = {
+  getConnections: () => connections,
+  bus,
+};
 
 // Register service worker for plugin bundle caching.
 await registerPluginSW(new URL('./plugin-sw.js', import.meta.url), bus);
