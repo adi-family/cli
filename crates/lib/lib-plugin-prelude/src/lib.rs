@@ -98,6 +98,18 @@ pub use lib_plugin_abi_v3::{
 // === Translations ===
 pub use lib_i18n_core::t;
 
+/// Convenience initializer for plugin-local i18n.
+///
+/// cdylib plugins have their own copy of the `lib-i18n-core` static, so the
+/// host's `init_global()` does not reach into their address space. Each plugin
+/// must initialize its own copy.
+pub fn init_plugin_i18n(default_lang: &str, ftl_content: &str) {
+    let mut i18n = lib_i18n_core::I18n::new_standalone();
+    let _ = i18n.load_embedded(default_lang, ftl_content);
+    let _ = i18n.set_language(default_lang);
+    lib_i18n_core::init_global(i18n);
+}
+
 // === Async Support ===
 pub use tokio::sync::RwLock;
 

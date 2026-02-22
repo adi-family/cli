@@ -4972,7 +4972,7 @@ dependencies = [
 
 [[package]]
 name = "hive-plugin"
-version = "0.1.15"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7235,6 +7235,7 @@ dependencies = [
  "lib-i18n-core",
  "lib-plugin-abi-v3",
  "lib-plugin-sdk",
+ "serde_json",
  "tokio",
 ]
 
@@ -14763,13 +14764,11 @@ dependencies = [
 name = "workflow-plugin"
 version = "3.0.0"
 dependencies = [
- "async-trait",
  "dirs 6.0.0",
  "glob",
  "lib-console-output",
- "lib-plugin-abi-v3",
+ "lib-plugin-prelude",
  "minijinja",
- "once_cell",
  "regex",
  "serde",
  "serde_json",

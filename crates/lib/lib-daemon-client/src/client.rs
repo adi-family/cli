@@ -306,7 +306,6 @@ impl CommandOutput {
 fn start_daemon() -> Result<u32> {
     let exe = std::env::current_exe()?;
     let log_path = paths::daemon_log_path();
-    let pid_path = paths::daemon_pid_path();
 
     if let Some(parent) = log_path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -316,7 +315,6 @@ fn start_daemon() -> Result<u32> {
         .args(["daemon", "run"])
         .stdout(log_path.display().to_string())
         .stderr(log_path.display().to_string())
-        .pid_file(pid_path.display().to_string())
         .env("RUST_LOG", "info");
 
     let pid = spawn_background(&config)?;
