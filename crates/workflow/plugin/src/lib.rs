@@ -11,8 +11,7 @@ mod prelude;
 mod prompts;
 mod template;
 
-use lib_plugin_abi_v3::*;
-use lib_plugin_abi_v3::cli::{CliCommand, CliCommands, CliContext, CliResult};
+use lib_plugin_prelude::*;
 
 pub struct WorkflowPlugin;
 
@@ -25,12 +24,15 @@ impl Plugin for WorkflowPlugin {
             version: env!("CARGO_PKG_VERSION").to_string(),
             plugin_type: PluginType::Core,
             author: Some("ADI Team".to_string()),
-            description: Some("Run workflows defined in TOML files with interactive prompts".to_string()),
+            description: Some(
+                "Run workflows defined in TOML files with interactive prompts".to_string(),
+            ),
             category: None,
         }
     }
 
-    async fn init(&mut self, _ctx: &PluginContext) -> Result<()> {
+    async fn init(&mut self, ctx: &PluginContext) -> Result<()> {
+        PluginCtx::init(ctx);
         Ok(())
     }
 
@@ -46,25 +48,25 @@ impl CliCommands for WorkflowPlugin {
             CliCommand {
                 name: "run".to_string(),
                 description: "Run a workflow by name".to_string(),
-                usage: "workflow run <name> [--arg=value]".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "list".to_string(),
                 description: "List available workflows".to_string(),
-                usage: "workflow list".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "show".to_string(),
                 description: "Show workflow definition".to_string(),
-                usage: "workflow show <name>".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "--completions".to_string(),
                 description: "Output completion suggestions (internal use)".to_string(),
-                usage: "workflow --completions <position> [args...]".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
         ]

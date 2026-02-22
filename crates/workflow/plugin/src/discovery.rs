@@ -8,9 +8,9 @@ use crate::parser::{load_workflow, WorkflowScope, WorkflowSummary};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-/// Get the global workflows directory (~/.adi/workflows/)
-fn global_workflows_dir() -> Option<PathBuf> {
-    dirs::home_dir().map(|h| h.join(".adi").join("workflows"))
+/// Get the global workflows directory (<plugin-data-dir>/workflows/)
+fn global_workflows_dir() -> PathBuf {
+    lib_plugin_prelude::PluginCtx::data_dir().join("workflows")
 }
 
 /// Get the local workflows directory (./.adi/workflows/)
@@ -23,15 +23,14 @@ pub fn discover_workflows(cwd: &Path) -> Vec<WorkflowSummary> {
     let mut workflows: HashMap<String, WorkflowSummary> = HashMap::new();
 
     // First, add global workflows
-    if let Some(global_dir) = global_workflows_dir() {
-        if global_dir.exists() {
-            for entry in std::fs::read_dir(&global_dir).into_iter().flatten() {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.extension().is_some_and(|ext| ext == "toml") {
-                        if let Some(summary) = load_workflow_summary(&path, WorkflowScope::Global) {
-                            workflows.insert(summary.name.clone(), summary);
-                        }
+    let global_dir = global_workflows_dir();
+    if global_dir.exists() {
+        for entry in std::fs::read_dir(&global_dir).into_iter().flatten() {
+            if let Ok(entry) = entry {
+                let path = entry.path();
+                if path.extension().is_some_and(|ext| ext == "toml") {
+                    if let Some(summary) = load_workflow_summary(&path, WorkflowScope::Global) {
+                        workflows.insert(summary.name.clone(), summary);
                     }
                 }
             }
@@ -78,11 +77,9 @@ pub fn find_workflow(cwd: &Path, name: &str) -> Option<PathBuf> {
     }
 
     // Check global
-    if let Some(global_dir) = global_workflows_dir() {
-        let global_path = global_dir.join(format!("{}.toml", name));
-        if global_path.exists() {
-            return Some(global_path);
-        }
+    let global_path = global_workflows_dir().join(format!("{}.toml", name));
+    if global_path.exists() {
+        return Some(global_path);
     }
 
     None
