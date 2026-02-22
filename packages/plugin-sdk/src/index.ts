@@ -17,4 +17,4 @@ export { AdiPlugin } from './plugin.js';
 export { CocoonPluginRegistry } from './registry-cocoon.js';
 
 export { registerPlugin, loadPlugins, upgradePlugin, registerPluginSW } from './registry.js';
-export type { LoadPluginsOptions } from './registry.js';
+export type { LoadPluginsOptions, UpgradePluginOptions } from './registry.js';

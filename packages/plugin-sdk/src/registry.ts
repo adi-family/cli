@@ -34,9 +34,7 @@ export async function loadPlugins(
 
   // Phase 1: Fetch + import all plugin modules concurrently.
   // Each module calls registerPlugin() as a side effect.
-  await Promise.allSettled(
-    pluginDescriptors.map((d) => fetchAndImport(d))
-  );
+  await Promise.allSettled(pluginDescriptors.map((d) => fetchAndImport(d)));
 
   // Phase 2: Resolve dependency graph.
   const plugins = [...registry.values()];
@@ -45,6 +43,12 @@ export async function loadPlugins(
   const loaded: string[] = [];
   const failed: string[] = [...cycled];
   const timedOut: string[] = [];
+
+  // Mark descriptors that failed to import (never called registerPlugin).
+  const registeredIds = new Set(plugins.map((p) => p.id));
+  for (const d of pluginDescriptors) {
+    if (!registeredIds.has(d.id)) failed.push(d.id);
+  }
 
   // Phase 3: Initialize in topological order.
   for (const plugin of order) {
@@ -61,10 +65,17 @@ export async function loadPlugins(
   bus.emit('loading-finished', { loaded, failed, timedOut });
 }
 
+export interface UpgradePluginOptions {
+  /** Timeout for the new plugin's onRegister in ms. Default: 5000. */
+  timeout?: number;
+}
+
 export async function upgradePlugin(
   bus: EventBus,
-  descriptor: PluginDescriptor
+  descriptor: PluginDescriptor,
+  options: UpgradePluginOptions = {}
 ): Promise<void> {
+  const timeout = options.timeout ?? 5000;
   const { id, installedVersion } = descriptor;
   const existing = registry.get(id);
   const fromVersion = existing?.version ?? 'unknown';
@@ -85,9 +96,14 @@ export async function upgradePlugin(
     const newPlugin = registry.get(id);
     if (!newPlugin) throw new Error(`Plugin ${id} did not call registerPlugin()`);
 
-    await newPlugin._init(bus);
-    descriptors.set(id, descriptor);
+    const result = await initWithTimeout(newPlugin, bus, timeout);
+    if (result === 'timeout') {
+      throw new Error(`Plugin ${id} timed out during upgrade`);
+    } else if (result === 'error') {
+      throw new Error(`Plugin ${id} errored during upgrade`);
+    }
 
+    descriptors.set(id, descriptor);
     bus.emit('plugin:upgraded', { pluginId: id, fromVersion, toVersion: installedVersion });
   } catch (err) {
     bus.emit('plugin:upgrade-failed', {
@@ -97,11 +113,17 @@ export async function upgradePlugin(
   }
 }
 
+let swMessageController: AbortController | undefined;
+
 export async function registerPluginSW(
   swUrl: URL | string,
   bus: EventBus
 ): Promise<void> {
   if (!('serviceWorker' in navigator)) return;
+
+  // Remove previous listener if re-registering.
+  swMessageController?.abort();
+  swMessageController = new AbortController();
 
   const reg = await navigator.serviceWorker.register(swUrl, { type: 'module' });
 
@@ -130,7 +152,7 @@ export async function registerPluginSW(
         })
         .catch(() => null);
     }
-  });
+  }, { signal: swMessageController.signal });
 
   await reg.update().catch(() => null);
 }
@@ -175,6 +197,9 @@ async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
     descriptor.installedVersion
   );
   const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch plugin bundle: ${res.status} ${res.statusText} (${url})`);
+  }
   const blob = await res.blob();
   const blobUrl = URL.createObjectURL(blob);
   try {
