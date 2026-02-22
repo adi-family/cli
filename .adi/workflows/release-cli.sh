@@ -27,7 +27,7 @@ DIST_DIR="$PROJECT_ROOT/dist/cli"
 TARGETS=(
     "aarch64-apple-darwin"
     "x86_64-unknown-linux-musl"
-    "x86_64-pc-windows-gnu"
+    # "x86_64-pc-windows-gnu"  # Disabled: lib-daemon-core uses Unix-only APIs
 )
 
 usage() {
