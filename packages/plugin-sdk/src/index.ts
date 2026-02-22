@@ -11,3 +11,5 @@ export type {
 } from './types.js';
 
 export { createEventBus } from './bus.js';
+
+export { AdiPlugin } from './plugin.js';
