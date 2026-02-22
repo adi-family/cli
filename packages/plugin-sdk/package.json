@@ -1,6 +1,6 @@
 {
   "name": "@adi-family/sdk-plugin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Strictly-typed event-based plugin SDK for ADI apps",
   "license": "MIT",
   "type": "module",
