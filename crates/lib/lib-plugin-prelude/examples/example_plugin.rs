@@ -14,8 +14,16 @@ impl Database {
 
     fn list(&self, _status: Option<String>) -> std::io::Result<Vec<Task>> {
         Ok(vec![
-            Task { id: 1, title: "Task 1".into(), status: "todo".into() },
-            Task { id: 2, title: "Task 2".into(), status: "done".into() },
+            Task {
+                id: 1,
+                title: "Task 1".into(),
+                status: "todo".into(),
+            },
+            Task {
+                id: 2,
+                title: "Task 2".into(),
+                status: "done".into(),
+            },
         ])
     }
 }
@@ -49,7 +57,9 @@ impl Plugin for TasksPlugin {
     }
 
     async fn init(&mut self, ctx: &PluginContext) -> Result<()> {
-        self.db = Database::open(ctx.data_dir.clone()).map_err(|e| PluginError::InitFailed(e.to_string()))?;
+        PluginCtx::init(ctx);
+        self.db = Database::open(PluginCtx::data_dir().to_path_buf())
+            .map_err(|e| PluginError::InitFailed(e.to_string()))?;
         Ok(())
     }
 
@@ -73,19 +83,22 @@ impl CliCommands for TasksPlugin {
         match ctx.subcommand.as_deref() {
             Some("list") => {
                 let status: Option<String> = ctx.option("status");
-                self.list_tasks(status).await
+                self.list_tasks(status)
+                    .await
                     .map(|s| CliResult::success(s))
                     .map_err(|e| PluginError::CommandFailed(e))
             }
             Some("add") => {
-                let title = ctx.arg(0)
+                let title = ctx
+                    .arg(0)
                     .ok_or_else(|| PluginError::CommandFailed("Missing title".to_string()))?
                     .to_string();
-                self.add_task(title).await
+                self.add_task(title)
+                    .await
                     .map(|s| CliResult::success(s))
                     .map_err(|e| PluginError::CommandFailed(e))
             }
-            _ => Ok(CliResult::error("Unknown command"))
+            _ => Ok(CliResult::error("Unknown command")),
         }
     }
 }
@@ -95,13 +108,13 @@ impl TasksPlugin {
     #[command(name = "list", description = "List all tasks")]
     async fn list_tasks(&self, status: Option<String>) -> CmdResult {
         let tasks = self.db.list(status).map_err(|e| e.to_string())?;
-        
+
         let output: String = tasks
             .iter()
             .map(|t| format!("#{} {} [{}]", t.id, t.title, t.status))
             .collect::<Vec<_>>()
             .join("\n");
-        
+
         Ok(output)
     }
 

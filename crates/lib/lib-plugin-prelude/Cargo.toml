@@ -19,3 +19,6 @@ lib-i18n-core = { path = "../lib-i18n-core" }
 # Re-export async support
 async-trait = "0.1"
 tokio = { version = "1.0", features = ["sync"] }
+
+# PluginCtx needs Value
+serde_json = "1.0"

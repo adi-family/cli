@@ -46,6 +46,10 @@
 //! }
 //! ```
 
+// === Static Plugin Context ===
+mod ctx;
+pub use ctx::PluginCtx;
+
 // === SDK Macros ===
 pub use lib_plugin_sdk::{
     command, daemon_cmd, daemon_service, daemon_sudo, global_command, http_routes, plugin,
