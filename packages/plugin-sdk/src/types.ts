@@ -29,6 +29,14 @@ export type EventHandler<K extends keyof EventRegistry> = (
 /** Correlation ID injected by send() into outgoing payloads. */
 export type WithCid<T> = T & { _cid: string };
 
+/** Handle returned by bus.send() — call .wait() or .handle() to receive the reply. */
+export interface SendHandle<T> {
+  /** Await the correlated :ok reply. Rejects on timeout. */
+  wait(): Promise<T>;
+  /** Register a one-shot callback for the correlated :ok reply. No timeout. */
+  handle(cb: (reply: T) => void): void;
+}
+
 /** The strictly-typed event bus. */
 export interface EventBus {
   /** Broadcast to all subscribers. Queued FIFO if no subscribers yet. */
@@ -53,7 +61,7 @@ export interface EventBus {
   send<K extends ReplyableEvent>(
     event: K,
     payload: EventRegistry[K]
-  ): Promise<EventRegistry[`${K}:ok`]>;
+  ): SendHandle<EventRegistry[`${K}:ok`]>;
 }
 
 /**

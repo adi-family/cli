@@ -118,7 +118,7 @@ describe('EventBus — send', () => {
       const p = payload as { value: number; _cid: string };
       bus.emit('test:ping:ok', { echo: p.value, _cid: p._cid });
     });
-    const result = await bus.send('test:ping', { value: 7 });
+    const result = await bus.send('test:ping', { value: 7 }).wait();
     expect(result.echo).toBe(7);
   });
 
@@ -129,12 +129,44 @@ describe('EventBus — send', () => {
       bus.emit('test:ping:ok', { echo: 0, _cid: 'wrong' });
       bus.emit('test:ping:ok', { echo: p.value, _cid: p._cid });
     });
-    const result = await bus.send('test:ping', { value: 3 });
+    const result = await bus.send('test:ping', { value: 3 }).wait();
     expect(result.echo).toBe(3);
   });
 
   it('send rejects with timeout error when no reply arrives', async () => {
     const bus = createEventBus({ sendTimeout: 50 });
-    await expect(bus.send('test:ping', { value: 1 })).rejects.toThrow('timed out');
+    await expect(bus.send('test:ping', { value: 1 }).wait()).rejects.toThrow('timed out');
+  });
+
+  it('handle() calls callback when :ok arrives with matching _cid', async () => {
+    const bus = createEventBus();
+    bus.on('test:ping', (payload) => {
+      const p = payload as { value: number; _cid: string };
+      bus.emit('test:ping:ok', { echo: p.value, _cid: p._cid });
+    });
+    await new Promise<void>((resolve) => {
+      bus.send('test:ping', { value: 42 }).handle(({ echo }) => {
+        expect(echo).toBe(42);
+        resolve();
+      });
+    });
+  });
+
+  it('handle() ignores :ok replies with wrong _cid', async () => {
+    const bus = createEventBus();
+    let callCount = 0;
+    bus.on('test:ping', (payload) => {
+      const p = payload as { value: number; _cid: string };
+      bus.emit('test:ping:ok', { echo: 0, _cid: 'wrong' });
+      bus.emit('test:ping:ok', { echo: p.value, _cid: p._cid });
+    });
+    await new Promise<void>((resolve) => {
+      bus.send('test:ping', { value: 5 }).handle(({ echo }) => {
+        callCount++;
+        expect(echo).toBe(5);
+        resolve();
+      });
+    });
+    expect(callCount).toBe(1);
   });
 });

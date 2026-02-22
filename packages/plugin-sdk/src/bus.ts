@@ -4,6 +4,7 @@ import type {
   EventBus,
   EventHandler,
   ReplyableEvent,
+  SendHandle,
   WithCid,
 } from './types.js';
 
@@ -79,30 +80,50 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
   function send<K extends ReplyableEvent>(
     event: K,
     payload: EventRegistry[K]
-  ): Promise<EventRegistry[`${K}:ok`]> {
+  ): SendHandle<EventRegistry[`${K}:ok`]> {
     const cid = crypto.randomUUID();
     const payloadWithCid = { ...(payload as object), _cid: cid } as unknown as EventRegistry[K];
     const replyEvent = `${event as string}:ok` as `${K}:ok`;
 
-    return new Promise((resolve, reject) => {
-      let cleanup: (() => void) | undefined;
+    // Emit immediately — handler starts working before .wait()/.handle() is called.
+    // FIFO queue buffers any :ok reply that arrives before the caller subscribes.
+    emit(event, payloadWithCid);
 
-      const timer = setTimeout(() => {
-        cleanup?.();
-        reject(new Error(`send('${event as string}') timed out after ${sendTimeoutMs}ms`));
-      }, sendTimeoutMs);
-
-      const unsub = on(replyEvent as keyof EventRegistry, (reply) => {
-        const typed = reply as WithCid<EventRegistry[`${K}:ok`]>;
-        if (typed._cid === cid) {
-          clearTimeout(timer);
-          unsub();
-          resolve(typed);
-        }
-      });
-      cleanup = unsub;
-      emit(event, payloadWithCid);
-    });
+    return {
+      wait(): Promise<EventRegistry[`${K}:ok`]> {
+        return new Promise((resolve, reject) => {
+          // Use a ref cell to break the TDZ: the handler captures `unsubRef`
+          // by reference so it can call unsub() even when the FIFO flush fires
+          // synchronously inside `on()` before `unsub` is assigned.
+          const unsubRef: { fn?: () => void } = {};
+          const timer = setTimeout(() => {
+            unsubRef.fn?.();
+            reject(new Error(`send('${event as string}') timed out after ${sendTimeoutMs}ms`));
+          }, sendTimeoutMs);
+          const unsub = on(replyEvent as keyof EventRegistry, (reply) => {
+            const typed = reply as WithCid<EventRegistry[`${K}:ok`]>;
+            if (typed._cid === cid) {
+              clearTimeout(timer);
+              unsubRef.fn?.();
+              resolve(typed);
+            }
+          });
+          unsubRef.fn = unsub;
+        });
+      },
+      handle(cb: (reply: EventRegistry[`${K}:ok`]) => void): void {
+        // Same ref-cell pattern to avoid TDZ when FIFO flushes synchronously.
+        const unsubRef: { fn?: () => void } = {};
+        const unsub = on(replyEvent as keyof EventRegistry, (reply) => {
+          const typed = reply as WithCid<EventRegistry[`${K}:ok`]>;
+          if (typed._cid === cid) {
+            unsubRef.fn?.();
+            cb(typed);
+          }
+        });
+        unsubRef.fn = unsub;
+      },
+    };
   }
 
   return { emit, on, once, send };
