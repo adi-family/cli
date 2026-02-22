@@ -7,6 +7,7 @@ import {
   registerPluginSW,
   CocoonPluginRegistry,
   upgradePlugin,
+  type EventBus,
 } from '@adi-family/sdk-plugin';
 
 interface Connection {
@@ -22,7 +23,7 @@ declare global {
   interface Window {
     sdk: {
       getConnections(): Map<string, Connection>;
-      bus: typeof bus;
+      bus: EventBus;
     };
   }
 }
