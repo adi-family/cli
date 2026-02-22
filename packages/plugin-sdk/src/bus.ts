@@ -1,0 +1,90 @@
+// src/bus.ts
+import type {
+  EventRegistry,
+  EventBus,
+  EventHandler,
+  ReplyableEvent,
+  WithCid,
+} from './types.js';
+
+interface ChannelState {
+  handlers: Set<EventHandler<never>>;
+  queue: unknown[];
+}
+
+export function createEventBus(): EventBus {
+  const channels = new Map<string, ChannelState>();
+
+  function getChannel(event: string): ChannelState {
+    if (!channels.has(event)) {
+      channels.set(event, { handlers: new Set(), queue: [] });
+    }
+    return channels.get(event)!;
+  }
+
+  function emit<K extends keyof EventRegistry>(
+    event: K,
+    payload: EventRegistry[K]
+  ): void {
+    const ch = getChannel(event as string);
+    if (ch.handlers.size === 0) {
+      ch.queue.push(payload);
+    } else {
+      for (const h of ch.handlers) {
+        (h as EventHandler<K>)(payload);
+      }
+    }
+  }
+
+  function on<K extends keyof EventRegistry>(
+    event: K,
+    handler: EventHandler<K>
+  ): () => void {
+    const ch = getChannel(event as string);
+    ch.handlers.add(handler as EventHandler<never>);
+    if (ch.queue.length > 0) {
+      const flushed = ch.queue.splice(0);
+      for (const payload of flushed) {
+        handler(payload as EventRegistry[K]);
+      }
+    }
+    return () => {
+      ch.handlers.delete(handler as EventHandler<never>);
+    };
+  }
+
+  function once<K extends keyof EventRegistry>(
+    event: K,
+    handler: EventHandler<K>
+  ): () => void {
+    let unsub: (() => void) | undefined;
+    const wrapper: EventHandler<K> = (payload) => {
+      handler(payload);
+      unsub?.();
+    };
+    unsub = on(event, wrapper);
+    return unsub;
+  }
+
+  function send<K extends ReplyableEvent>(
+    event: K,
+    payload: EventRegistry[K]
+  ): Promise<EventRegistry[`${K}:ok`]> {
+    const cid = crypto.randomUUID();
+    const payloadWithCid = { ...(payload as object), _cid: cid } as EventRegistry[K];
+    const replyEvent = `${event as string}:ok` as `${K}:ok`;
+
+    return new Promise((resolve) => {
+      const unsub = on(replyEvent as keyof EventRegistry, (reply) => {
+        const typed = reply as WithCid<EventRegistry[`${K}:ok`]>;
+        if (typed._cid === cid) {
+          unsub();
+          resolve(typed);
+        }
+      });
+      emit(event, payloadWithCid);
+    });
+  }
+
+  return { emit, on, once, send };
+}

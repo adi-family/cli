@@ -9,3 +9,5 @@ export type {
   PluginRegistry,
   PluginDescriptor,
 } from './types.js';
+
+export { createEventBus } from './bus.js';
