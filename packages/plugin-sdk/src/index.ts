@@ -1,3 +1,5 @@
+import './events.js';
+
 export type {
   EventRegistry,
   EventBus,
