@@ -1,7 +1,8 @@
-export type TaskStatus = "todo" | "in_progress" | "done" | "blocked" | "cancelled";
+export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'blocked' | 'cancelled';
 
 export interface Task {
   id: number;
+  cocoonId: string;              // which connection this task lives on
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -28,11 +29,11 @@ export interface TasksStats {
   has_cycles: boolean;
 }
 
-export interface CocoonClient {
+export interface Connection {
   id: string;
   services: string[];
-  request<T = unknown>(service: string, method: string, params?: unknown): Promise<T>;
-  stream<T = unknown>(service: string, method: string, params?: unknown): AsyncGenerator<T>;
+  request<T>(service: string, method: string, params?: unknown): Promise<T>;
+  stream<T>(service: string, method: string, params?: unknown): AsyncGenerator<T>;
   httpProxy(service: string, path: string, init?: RequestInit): Promise<Response>;
   httpDirect(url: string, init?: RequestInit): Promise<Response>;
 }

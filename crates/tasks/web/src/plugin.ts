@@ -1,194 +1,124 @@
-import { LitElement, html, type TemplateResult } from "lit";
-import { state } from "lit/decorators.js";
-import type { CocoonClient, Task, TaskStatus, TaskWithDependencies, TasksStats } from "./types";
-import { listTasks, getStats, getTask, createTask, updateTask, deleteTask, searchTasks } from "./api";
-import { renderTaskList } from "./views/task-list";
-import { renderTaskDetail } from "./views/task-detail";
-import { renderTaskForm } from "./views/task-form";
+import { AdiPlugin } from '@adi-family/sdk-plugin';
+import type { WithCid } from '@adi-family/sdk-plugin';
+import * as api from './api.js';
+import type { Connection, Task, TasksStats } from './types.js';
+import './events.js';
 
-type View = "list" | "detail" | "create";
+function connectionsWithTasks(): Connection[] {
+  return [...window.sdk.getConnections().values()]
+    .filter(c => c.services.includes('tasks'));
+}
 
-export class TasksPlugin extends LitElement {
-  static id = "adi.tasks";
-  static services = ["tasks"];
+function getConnection(cocoonId: string): Connection {
+  const c = window.sdk.getConnections().get(cocoonId);
+  if (!c) throw new Error(`Connection '${cocoonId}' not found`);
+  return c;
+}
 
-  cocoons: ReadonlyMap<string, CocoonClient> = new Map();
+function emptyStats(): TasksStats {
+  return {
+    total_tasks: 0, todo_count: 0, in_progress_count: 0,
+    done_count: 0, blocked_count: 0, cancelled_count: 0,
+    total_dependencies: 0, has_cycles: false,
+  };
+}
 
-  @state() private tasks: Task[] = [];
-  @state() private stats: TasksStats | null = null;
-  @state() private selectedTask: TaskWithDependencies | null = null;
-  @state() private filter: TaskStatus | null = null;
-  @state() private searchQuery = "";
-  @state() private view: View = "list";
-  @state() private loading = false;
-  @state() private submitting = false;
-  @state() private confirmingDelete = false;
-  @state() private error: string | null = null;
+function mergeStats(a: TasksStats, b: TasksStats): TasksStats {
+  return {
+    total_tasks:        a.total_tasks        + b.total_tasks,
+    todo_count:         a.todo_count         + b.todo_count,
+    in_progress_count:  a.in_progress_count  + b.in_progress_count,
+    done_count:         a.done_count         + b.done_count,
+    blocked_count:      a.blocked_count      + b.blocked_count,
+    cancelled_count:    a.cancelled_count    + b.cancelled_count,
+    total_dependencies: a.total_dependencies + b.total_dependencies,
+    has_cycles:         a.has_cycles         || b.has_cycles,
+  };
+}
 
-  private get client(): CocoonClient | null {
-    const first = this.cocoons.values().next();
-    return first.done ? null : first.value;
-  }
+export class TasksPlugin extends AdiPlugin {
+  readonly id = 'adi.tasks';
+  readonly version = '0.1.0';
 
-  createRenderRoot() {
-    return this;
-  }
-
-  onCocoonConnected(_cocoonId: string, _services: string[]) {
-    this.loadData();
-  }
-
-  onCocoonDisconnected(_cocoonId: string) {
-    if (this.cocoons.size === 0) {
-      this.tasks = [];
-      this.stats = null;
-      this.selectedTask = null;
-      this.view = "list";
+  async onRegister(): Promise<void> {
+    const { AdiTasksElement } = await import('./component.js');
+    if (!customElements.get('adi-tasks')) {
+      customElements.define('adi-tasks', AdiTasksElement);
     }
-  }
 
-  private async loadData() {
-    const c = this.client;
-    if (!c) return;
-    this.loading = true;
-    this.error = null;
-    try {
-      const [tasks, stats] = await Promise.all([
-        this.searchQuery
-          ? searchTasks(c, this.searchQuery)
-          : listTasks(c, this.filter ? { status: this.filter } : undefined),
-        getStats(c),
+    this.bus.emit('route:register', { path: '/tasks', element: 'adi-tasks' });
+    this.bus.emit('nav:add', { id: 'tasks', label: 'Tasks', path: '/tasks', icon: '✓' });
+
+    this.bus.on('tasks:list', async (p) => {
+      const { _cid, status } = p as WithCid<typeof p>;
+      const conns = connectionsWithTasks();
+      const [taskResults, statsResults] = await Promise.all([
+        Promise.allSettled(conns.map(c => api.listTasks(c, { status }))),
+        Promise.allSettled(conns.map(c => api.getStats(c))),
       ]);
-      this.tasks = tasks;
-      this.stats = stats;
-    } catch (e) {
-      this.error = e instanceof Error ? e.message : String(e);
-    } finally {
-      this.loading = false;
-    }
-  }
+      const tasks: Task[] = taskResults.flatMap((r, i) =>
+        r.status === 'fulfilled'
+          ? r.value.map(t => ({ ...t, cocoonId: conns[i].id }))
+          : []
+      );
+      const stats = statsResults.reduce(
+        (acc, r) => r.status === 'fulfilled' ? mergeStats(acc, r.value) : acc,
+        emptyStats()
+      );
+      this.bus.emit('tasks:list:ok', { tasks, stats, _cid });
+    });
 
-  private async loadTaskDetail(taskId: number) {
-    const c = this.client;
-    if (!c) return;
-    this.loading = true;
-    this.confirmingDelete = false;
-    try {
-      this.selectedTask = await getTask(c, taskId);
-      this.view = "detail";
-    } catch (e) {
-      this.error = e instanceof Error ? e.message : String(e);
-    } finally {
-      this.loading = false;
-    }
-  }
+    this.bus.on('tasks:search', async (p) => {
+      const { _cid, query, limit } = p as WithCid<typeof p>;
+      const conns = connectionsWithTasks();
+      const results = await Promise.allSettled(conns.map(c => api.searchTasks(c, query, limit)));
+      const tasks: Task[] = results.flatMap((r, i) =>
+        r.status === 'fulfilled'
+          ? r.value.map(t => ({ ...t, cocoonId: conns[i].id }))
+          : []
+      );
+      this.bus.emit('tasks:search:ok', { tasks, _cid });
+    });
 
-  private async handleStatusChange(taskId: number, status: TaskStatus) {
-    const c = this.client;
-    if (!c) return;
-    try {
-      await updateTask(c, { task_id: taskId, status });
-      await this.loadTaskDetail(taskId);
-    } catch (e) {
-      this.error = e instanceof Error ? e.message : String(e);
-    }
-  }
+    this.bus.on('tasks:stats', async (p) => {
+      const { _cid } = p as WithCid<typeof p>;
+      const conns = connectionsWithTasks();
+      const results = await Promise.allSettled(conns.map(c => api.getStats(c)));
+      const stats = results.reduce(
+        (acc, r) => r.status === 'fulfilled' ? mergeStats(acc, r.value) : acc,
+        emptyStats()
+      );
+      this.bus.emit('tasks:stats:ok', { stats, _cid });
+    });
 
-  private async handleDelete(taskId: number) {
-    if (taskId === -1) {
-      this.confirmingDelete = true;
-      return;
-    }
-    const c = this.client;
-    if (!c) return;
-    try {
-      await deleteTask(c, taskId);
-      this.view = "list";
-      this.selectedTask = null;
-      this.confirmingDelete = false;
-      await this.loadData();
-    } catch (e) {
-      this.error = e instanceof Error ? e.message : String(e);
-    }
-  }
+    this.bus.on('tasks:get', async (p) => {
+      const { _cid, task_id, cocoonId } = p as WithCid<typeof p>;
+      const raw = await api.getTask(getConnection(cocoonId), task_id);
+      const task = {
+        ...raw,
+        task: { ...raw.task, cocoonId },
+        depends_on: raw.depends_on.map(t => ({ ...t, cocoonId })),
+        dependents:  raw.dependents.map(t => ({ ...t, cocoonId })),
+      };
+      this.bus.emit('tasks:get:ok', { task, _cid });
+    });
 
-  private async handleCreate(title: string, description: string) {
-    const c = this.client;
-    if (!c) return;
-    this.submitting = true;
-    try {
-      await createTask(c, { title, description: description || undefined });
-      this.view = "list";
-      await this.loadData();
-    } catch (e) {
-      this.error = e instanceof Error ? e.message : String(e);
-    } finally {
-      this.submitting = false;
-    }
-  }
+    this.bus.on('tasks:create', async (p) => {
+      const { _cid, cocoonId, title, description, depends_on } = p as WithCid<typeof p>;
+      const raw = await api.createTask(getConnection(cocoonId), { title, description, depends_on });
+      this.bus.emit('tasks:create:ok', { task: { ...raw, cocoonId }, _cid });
+    });
 
-  private handleFilterChange(status: TaskStatus | null) {
-    this.filter = status;
-    this.searchQuery = "";
-    this.loadData();
-  }
+    this.bus.on('tasks:update', async (p) => {
+      const { _cid, cocoonId, task_id, title, description, status } = p as WithCid<typeof p>;
+      const raw = await api.updateTask(getConnection(cocoonId), { task_id, title, description, status });
+      this.bus.emit('tasks:update:ok', { task: { ...raw, cocoonId }, _cid });
+    });
 
-  private searchTimeout: ReturnType<typeof setTimeout> | null = null;
-
-  private handleSearch(query: string) {
-    this.searchQuery = query;
-    if (this.searchTimeout) clearTimeout(this.searchTimeout);
-    this.searchTimeout = setTimeout(() => this.loadData(), 300);
-  }
-
-  render(): TemplateResult {
-    if (this.cocoons.size === 0) {
-      return html`
-        <div class="text-center py-12 text-gray-500 text-sm">
-          <p class="mb-1">No cocoon connected</p>
-          <p class="text-xs text-gray-600">Connect a cocoon with the tasks service to manage your tasks</p>
-        </div>
-      `;
-    }
-
-    if (this.error) {
-      return html`
-        <div class="space-y-3">
-          <div class="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-300">
-            ${this.error}
-          </div>
-          <button
-            class="text-sm text-gray-400 hover:text-gray-200 transition-colors"
-            @click=${() => { this.error = null; this.loadData(); }}
-          >
-            Dismiss &amp; retry
-          </button>
-        </div>
-      `;
-    }
-
-    switch (this.view) {
-      case "detail":
-        return renderTaskDetail(this.selectedTask, this.loading, this.confirmingDelete, {
-          onBack: () => { this.view = "list"; this.confirmingDelete = false; this.loadData(); },
-          onStatusChange: (id, s) => this.handleStatusChange(id, s),
-          onDelete: (id) => this.handleDelete(id),
-          onSelectTask: (id) => this.loadTaskDetail(id),
-        });
-
-      case "create":
-        return renderTaskForm(this.submitting, {
-          onSubmit: (title, desc) => this.handleCreate(title, desc),
-          onCancel: () => { this.view = "list"; },
-        });
-
-      default:
-        return renderTaskList(this.tasks, this.stats, this.filter, this.searchQuery, this.loading, {
-          onSelectTask: (id) => this.loadTaskDetail(id),
-          onCreateTask: () => { this.view = "create"; },
-          onFilterChange: (s) => this.handleFilterChange(s),
-          onSearch: (q) => this.handleSearch(q),
-        });
-    }
+    this.bus.on('tasks:delete', async (p) => {
+      const { _cid, cocoonId, task_id } = p as WithCid<typeof p>;
+      await api.deleteTask(getConnection(cocoonId), task_id);
+      this.bus.emit('tasks:delete:ok', { _cid });
+    });
   }
 }
