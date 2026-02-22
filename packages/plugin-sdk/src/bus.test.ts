@@ -92,6 +92,23 @@ describe('EventBus — once', () => {
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler).toHaveBeenCalledWith({ value: 1 });
   });
+
+  it('once returns a no-op unsubscribe after synchronous flush', () => {
+    const bus = createEventBus();
+    bus.emit('test:ping', { value: 10 }); // pre-queue event
+    const handler = vi.fn();
+    const unsub = bus.once('test:ping', handler); // flushes synchronously
+
+    // Calling unsub on an already-fired once() must not throw.
+    expect(() => unsub()).not.toThrow();
+
+    // A second once() registration on the same event should work normally.
+    const handler2 = vi.fn();
+    bus.once('test:ping', handler2);
+    bus.emit('test:ping', { value: 20 });
+    expect(handler2).toHaveBeenCalledTimes(1);
+    expect(handler2).toHaveBeenCalledWith({ value: 20 });
+  });
 });
 
 describe('EventBus — send', () => {

@@ -29,13 +29,14 @@ bus.on('plugin:update-available', ({ pluginId, newVersion }) => {
   });
 });
 
-// Load plugins — URLs come from Cocoon service discovery at runtime.
-await loadPlugins(bus, [
-  // Populated at runtime from Cocoon
-], { timeout: 5000 });
-
+// Subscribe before loadPlugins so we don't miss the event via FIFO queue.
 bus.on('loading-finished', ({ loaded, failed, timedOut }) => {
   console.info('[plugins] loaded:', loaded);
   if (failed.length) console.warn('[plugins] failed:', failed);
   if (timedOut.length) console.warn('[plugins] timed out:', timedOut);
 });
+
+// Load plugins — URLs come from Cocoon service discovery at runtime.
+await loadPlugins(bus, [
+  // Populated at runtime from Cocoon
+], { timeout: 5000 });

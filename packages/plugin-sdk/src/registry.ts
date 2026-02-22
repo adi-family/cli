@@ -13,6 +13,8 @@ export function registerPlugin(plugin: AdiPlugin): void {
 export function _resetRegistry(): void {
   registry.clear();
   descriptors.clear();
+  swMessageController?.abort();
+  swMessageController = undefined;
 }
 
 export interface LoadPluginsOptions {
@@ -99,8 +101,10 @@ export async function upgradePlugin(
     const result = await initWithTimeout(newPlugin, bus, timeout);
     if (result === 'timeout') {
       throw new Error(`Plugin ${id} timed out during upgrade`);
-    } else if (result === 'error') {
-      throw new Error(`Plugin ${id} errored during upgrade`);
+    } else if (typeof result === 'object') {
+      throw new Error(
+        `Plugin ${id} errored during upgrade: ${result.error instanceof Error ? result.error.message : String(result.error)}`
+      );
     }
 
     descriptors.set(id, descriptor);
@@ -177,17 +181,19 @@ async function checkForUpdates(
   );
 }
 
+type InitResult = 'ok' | 'timeout' | { error: unknown };
+
 async function initWithTimeout(
   plugin: AdiPlugin,
   bus: EventBus,
   timeoutMs: number
-): Promise<'ok' | 'timeout' | 'error'> {
+): Promise<InitResult> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve('timeout'), timeoutMs);
     plugin
       ._init(bus)
       .then(() => { clearTimeout(timer); resolve('ok'); })
-      .catch(() => { clearTimeout(timer); resolve('error'); });
+      .catch((err: unknown) => { clearTimeout(timer); resolve({ error: err }); });
   });
 }
 

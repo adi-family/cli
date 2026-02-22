@@ -4,16 +4,29 @@
 //   navigator.serviceWorker.register(new URL('./sw.js', import.meta.url), { type: 'module' });
 
 const CACHE_VERSION = 'v1';
+const CACHE_PREFIX = 'adi-plugin-';
 
 /** Builds the cache key for a given plugin bundle URL. */
 function cacheKey(url: string): string {
-  return `adi-plugin-${CACHE_VERSION}-${url}`;
+  return `${CACHE_PREFIX}${CACHE_VERSION}-${url}`;
 }
 
 /** Returns true if this request is for a plugin bundle. */
 function isPluginBundle(url: string): boolean {
   return url.includes('/v1/plugins/');
 }
+
+self.addEventListener('activate', (event) => {
+  (event as ExtendableEvent).waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((k) => k.startsWith(CACHE_PREFIX) && !k.startsWith(`${CACHE_PREFIX}${CACHE_VERSION}-`))
+          .map((k) => caches.delete(k))
+      )
+    )
+  );
+});
 
 self.addEventListener('fetch', (event: Event) => {
   const fetchEvent = event as FetchEvent;

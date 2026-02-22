@@ -69,7 +69,10 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
     unsub = on(event, wrapper);
     // If the queue was flushed synchronously, wrapper already fired but
     // couldn't unsub (unsub was undefined at that moment). Clean up now.
-    if (fired) unsub();
+    if (fired) {
+      unsub(); // cleanup if queue was flushed synchronously
+      return () => {}; // already fired, return no-op
+    }
     return unsub;
   }
 

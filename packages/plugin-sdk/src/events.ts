@@ -52,7 +52,6 @@ declare module './types.js' {
       label: string;
       path: string;
       icon?: string;
-      _cid?: string;
     };
 
     /** Reply to nav:add. Host emits after adding the nav item. */
