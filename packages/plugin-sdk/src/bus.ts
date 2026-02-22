@@ -12,7 +12,8 @@ interface ChannelState {
   queue: unknown[];
 }
 
-export function createEventBus(): EventBus {
+export function createEventBus(options: { sendTimeout?: number } = {}): EventBus {
+  const sendTimeoutMs = options.sendTimeout ?? 30_000;
   const channels = new Map<string, ChannelState>();
 
   function getChannel(event: string): ChannelState {
@@ -57,12 +58,18 @@ export function createEventBus(): EventBus {
     event: K,
     handler: EventHandler<K>
   ): () => void {
+    let fired = false;
     let unsub: (() => void) | undefined;
     const wrapper: EventHandler<K> = (payload) => {
+      if (fired) return;
+      fired = true;
       handler(payload);
       unsub?.();
     };
     unsub = on(event, wrapper);
+    // If the queue was flushed synchronously, wrapper already fired but
+    // couldn't unsub (unsub was undefined at that moment). Clean up now.
+    if (fired) unsub();
     return unsub;
   }
 
@@ -74,14 +81,23 @@ export function createEventBus(): EventBus {
     const payloadWithCid = { ...(payload as object), _cid: cid } as EventRegistry[K];
     const replyEvent = `${event as string}:ok` as `${K}:ok`;
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      let cleanup: (() => void) | undefined;
+
+      const timer = setTimeout(() => {
+        cleanup?.();
+        reject(new Error(`send('${event as string}') timed out after ${sendTimeoutMs}ms`));
+      }, sendTimeoutMs);
+
       const unsub = on(replyEvent as keyof EventRegistry, (reply) => {
         const typed = reply as WithCid<EventRegistry[`${K}:ok`]>;
         if (typed._cid === cid) {
+          clearTimeout(timer);
           unsub();
           resolve(typed);
         }
       });
+      cleanup = unsub;
       emit(event, payloadWithCid);
     });
   }

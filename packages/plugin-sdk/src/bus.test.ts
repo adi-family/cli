@@ -82,6 +82,16 @@ describe('EventBus — once', () => {
     bus.once('test:ping', handler);
     expect(handler).toHaveBeenCalledWith({ value: 5 });
   });
+
+  it('once fires at most once even when queue is flushed then emitted again', () => {
+    const bus = createEventBus();
+    bus.emit('test:ping', { value: 1 });  // queue before subscriber
+    const handler = vi.fn();
+    bus.once('test:ping', handler);        // flushes queue synchronously
+    bus.emit('test:ping', { value: 2 });  // should NOT call handler again
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({ value: 1 });
+  });
 });
 
 describe('EventBus — send', () => {
@@ -104,5 +114,10 @@ describe('EventBus — send', () => {
     });
     const result = await bus.send('test:ping', { value: 3 });
     expect(result.echo).toBe(3);
+  });
+
+  it('send rejects with timeout error when no reply arrives', async () => {
+    const bus = createEventBus({ sendTimeout: 50 });
+    await expect(bus.send('test:ping', { value: 1 })).rejects.toThrow('timed out');
   });
 });
