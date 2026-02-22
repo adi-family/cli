@@ -81,7 +81,7 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
     payload: EventRegistry[K]
   ): Promise<EventRegistry[`${K}:ok`]> {
     const cid = crypto.randomUUID();
-    const payloadWithCid = { ...(payload as object), _cid: cid } as EventRegistry[K];
+    const payloadWithCid = { ...(payload as object), _cid: cid } as unknown as EventRegistry[K];
     const replyEvent = `${event as string}:ok` as `${K}:ok`;
 
     return new Promise((resolve, reject) => {
