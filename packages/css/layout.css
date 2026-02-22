@@ -1,0 +1,49 @@
+/* ─── Section separator (ADID: 1px line + vertical padding) ─── */
+
+.section-separator {
+  border-bottom: 1px solid var(--adi-border);
+  padding-top: 120px;
+  padding-bottom: 120px;
+}
+
+@media (max-width: 768px) {
+  .section-separator {
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
+}
+
+/* ─── Container widths ─── */
+
+.container-narrow {
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.container-content {
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.container-wide {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .container-narrow,
+  .container-content,
+  .container-wide {
+    padding-left: 4rem;
+    padding-right: 4rem;
+  }
+}

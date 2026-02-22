@@ -1,0 +1,42 @@
+/* ─── Modal / overlay ─── */
+
+.overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: color-mix(in srgb, var(--adi-bg) 60%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.overlay-panel {
+  border-radius: 1rem;
+  border: 1px solid var(--adi-border);
+  background: var(--adi-surface);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Dropdown ─── */
+
+.dropdown-panel {
+  border-radius: 0.75rem;
+  border: 1px solid var(--adi-border);
+  background: var(--adi-surface);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--adi-text-muted);
+  transition: background-color 150ms, color 150ms;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: var(--adi-surface-alt);
+  color: var(--adi-text);
+}

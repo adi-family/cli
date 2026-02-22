@@ -1,0 +1,17 @@
+{
+  "name": "@adi-family/sdk-parts-css",
+  "version": "0.1.0",
+  "description": "ADID CSS component snippets — AX system, tokens, glass, cards, buttons, prose",
+  "license": "MIT",
+  "files": [
+    "*.css",
+    "CLAUDE.md"
+  ],
+  "keywords": [
+    "css",
+    "design-system",
+    "adid",
+    "components",
+    "snippets"
+  ]
+}

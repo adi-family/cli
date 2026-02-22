@@ -1,0 +1,30 @@
+/* ─── Tailwind v4 theme mapping ─── */
+/* Maps ADI design tokens to Tailwind color/font utilities */
+/* Usage: bg-bg, text-accent, font-heading, border-border, etc. */
+
+@theme inline {
+  --color-bg: var(--adi-bg);
+  --color-surface: var(--adi-surface);
+  --color-surface-alt: var(--adi-surface-alt);
+  --color-accent: var(--adi-accent);
+  --color-accent-soft: var(--adi-accent-soft);
+  --color-text: var(--adi-text);
+  --color-text-muted: var(--adi-text-muted);
+  --color-border: var(--adi-border);
+
+  --color-success: var(--adi-success);
+  --color-success-soft: var(--adi-success-soft);
+  --color-error: var(--adi-error);
+  --color-error-soft: var(--adi-error-soft);
+  --color-warning: var(--adi-warning);
+  --color-warning-soft: var(--adi-warning-soft);
+  --color-info: var(--adi-info);
+
+  --font-heading: var(--adi-font-heading);
+  --font-body: var(--adi-font-body);
+  --font-mono: var(--adi-font-mono-body);
+
+  --animate-fade-in: fade-in 0.6s ease-out forwards;
+  --animate-fade-in-up: fade-in-up 0.8s ease-out forwards;
+  --animate-slide-in-left: slide-in-left 0.6s ease-out forwards;
+}

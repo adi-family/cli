@@ -1,0 +1,146 @@
+/* ─── ADID Design Tokens ─── */
+/* Standalone tokens from the design system (dark mode default). */
+/* Use these when NOT importing packages/theme/generated/adi-theme.css. */
+/* Defines both raw names (--brand, --gray-*) and --adi-* aliases. */
+
+:root {
+  /* ── Raw design-system names ── */
+
+  /* Brand */
+  --brand: #875fd7;
+  --brand-glow: rgba(135, 95, 215, 0.4);
+  --brand-dim: rgba(135, 95, 215, 0.12);
+
+  /* Semantic (dark / on-black) */
+  --red: #ff0000;
+  --yellow: #ffaa00;
+  --green: #22cc00;
+  --blue: #00bfff;
+
+  /* Semantic (light / on-white) */
+  --red-light: #eb0000;
+  --yellow-light: #9e6900;
+  --green-light: #128a00;
+  --blue-light: #006aff;
+
+  /* Neutrals */
+  --white: #ffffff;
+  --gray-50: #fafafa;
+  --gray-100: #f0f0f0;
+  --gray-200: #e0e0e0;
+  --gray-300: #c0c0c0;
+  --gray-400: #a0a0a0;
+  --gray-500: #707070;
+  --gray-600: #505050;
+  --gray-700: #2a2a2a;
+  --gray-750: #1a1a1a;
+  --gray-800: #141414;
+  --gray-850: #0e0e0e;
+  --gray-900: #0a0a0a;
+  --black: #0a0a0a;
+
+  /* Borders */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hover: rgba(255, 255, 255, 0.14);
+  --scrollbar-hover: rgba(255, 255, 255, 0.14);
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono-display: 'Space Mono', ui-monospace, monospace;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* AX axes */
+  --l: 1rem;
+  --t: 1rem;
+  --r: 12px;
+
+  /* ── Theme aliases (--adi-*) ── */
+  /* Maps to the same values so CSS snippets work without the theme package */
+
+  --adi-bg: #0a0a0a;
+  --adi-surface: #0e0e0e;
+  --adi-surface-alt: #141414;
+  --adi-accent: #875fd7;
+  --adi-accent-soft: rgba(135, 95, 215, 0.12);
+  --adi-text: #e0e0e0;
+  --adi-text-muted: #a0a0a0;
+  --adi-border: rgba(255, 255, 255, 0.07);
+  --adi-gradient: linear-gradient(135deg, #875fd7 0%, #a78bfa 100%);
+
+  --adi-font-heading: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --adi-font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --adi-font-mono-heading: 'Space Mono', ui-monospace, monospace;
+  --adi-font-mono-body: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  --adi-foreground: #e0e0e0;
+  --adi-foreground-muted: #a0a0a0;
+  --adi-success: #22cc00;
+  --adi-success-soft: rgba(34, 204, 0, 0.12);
+  --adi-error: #ff0000;
+  --adi-error-soft: rgba(255, 0, 0, 0.12);
+  --adi-warning: #ffaa00;
+  --adi-warning-soft: rgba(255, 170, 0, 0.12);
+  --adi-info: var(--adi-accent);
+}
+
+/* ── Light mode ── */
+
+[data-mode="light"], .light {
+  --border: rgba(0, 0, 0, 0.07);
+  --border-hover: rgba(0, 0, 0, 0.14);
+  --scrollbar-hover: rgba(0, 0, 0, 0.14);
+
+  --adi-bg: #fafafa;
+  --adi-surface: #ffffff;
+  --adi-surface-alt: #f0f0f0;
+  --adi-accent: #6b4bb5;
+  --adi-accent-soft: rgba(107, 75, 181, 0.07);
+  --adi-text: #0a0a0a;
+  --adi-text-muted: #707070;
+  --adi-border: rgba(0, 0, 0, 0.07);
+  --adi-gradient: linear-gradient(135deg, #875fd7 0%, #a78bfa 100%);
+
+  --adi-foreground: #1a1a1a;
+  --adi-foreground-muted: #707070;
+  --adi-success: #128a00;
+  --adi-success-soft: rgba(18, 138, 0, 0.08);
+  --adi-error: #eb0000;
+  --adi-error-soft: rgba(235, 0, 0, 0.08);
+  --adi-warning: #9e6900;
+  --adi-warning-soft: rgba(158, 105, 0, 0.08);
+  --adi-info: var(--adi-accent);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-mode="dark"]):not(.dark) {
+    --border: rgba(0, 0, 0, 0.07);
+    --border-hover: rgba(0, 0, 0, 0.14);
+    --scrollbar-hover: rgba(0, 0, 0, 0.14);
+
+    --adi-bg: #fafafa;
+    --adi-surface: #ffffff;
+    --adi-surface-alt: #f0f0f0;
+    --adi-accent: #6b4bb5;
+    --adi-accent-soft: rgba(107, 75, 181, 0.07);
+    --adi-text: #0a0a0a;
+    --adi-text-muted: #707070;
+    --adi-border: rgba(0, 0, 0, 0.07);
+    --adi-gradient: linear-gradient(135deg, #875fd7 0%, #a78bfa 100%);
+
+    --adi-foreground: #1a1a1a;
+    --adi-foreground-muted: #707070;
+    --adi-success: #128a00;
+    --adi-success-soft: rgba(18, 138, 0, 0.08);
+    --adi-error: #eb0000;
+    --adi-error-soft: rgba(235, 0, 0, 0.08);
+    --adi-warning: #9e6900;
+    --adi-warning-soft: rgba(158, 105, 0, 0.08);
+    --adi-info: var(--adi-accent);
+  }
+}

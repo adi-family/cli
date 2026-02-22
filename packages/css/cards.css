@@ -1,0 +1,85 @@
+/* ─── Card grid: 1px gap IS the border (ADID pattern) ─── */
+
+.card-grid {
+  display: grid;
+  gap: 1px;
+  background: var(--adi-border);
+}
+
+.card-grid > * {
+  background: var(--adi-surface);
+}
+
+/* ─── Gradient-bordered box ─── */
+/* Faint gradient border that intensifies on hover + glow behind */
+
+.gradient-box {
+  position: relative;
+  border-radius: 12px;
+  background: var(--adi-surface);
+  isolation: isolate;
+}
+
+.gradient-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--adi-gradient);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.25;
+  transition: opacity 400ms ease;
+  pointer-events: none;
+}
+
+.gradient-box:hover::before {
+  opacity: 0.7;
+}
+
+.gradient-box::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--adi-gradient);
+  opacity: 0;
+  filter: blur(40px);
+  transition: opacity 400ms ease;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.gradient-box:hover::after {
+  opacity: 0.06;
+}
+
+/* ─── Card hover: brand line on top ─── */
+
+.card-hover {
+  position: relative;
+  transition: background-color 250ms ease;
+}
+
+.card-hover::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--adi-gradient);
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.card-hover:hover {
+  background: var(--adi-surface-alt);
+}
+
+.card-hover:hover::before {
+  opacity: 1;
+}

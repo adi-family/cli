@@ -1,0 +1,9 @@
+/* ─── Glass morphism ─── */
+/* Usage: add .glass to headers, overlays, floating panels */
+/* Auto-adapts to light/dark via --adi-bg */
+
+.glass {
+  background: color-mix(in srgb, var(--adi-bg) 85%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}

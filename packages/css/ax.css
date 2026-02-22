@@ -1,0 +1,129 @@
+/* ─── AX: Three-Axis Cascading Variable System ─── */
+/* --l (layout/spacing), --t (text sizing), --r (radius) */
+/* Named methodology like BEM. @property registration lets */
+/* calc(var(--l) * 0.5) resolve the inherited value before reassignment. */
+
+@property --l {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 1rem;
+}
+
+@property --t {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 1rem;
+}
+
+@property --r {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 12px;
+}
+
+/* ─── --l context classes (spacing) ─── */
+
+.l-1\/4 { --l: calc(var(--l) * 0.25); }
+.l-1\/2 { --l: calc(var(--l) * 0.5); }
+.l-3\/4 { --l: calc(var(--l) * 0.75); }
+.l-2    { --l: calc(var(--l) * 2); }
+.l-3    { --l: calc(var(--l) * 3); }
+
+/* ─── --t context classes (text) ─── */
+
+.t-1\/2 { --t: calc(var(--t) * 0.5); }
+.t-3\/4 { --t: calc(var(--t) * 0.75); }
+.t-7\/8 { --t: calc(var(--t) * 0.875); }
+.t-2    { --t: calc(var(--t) * 2); }
+.t-3    { --t: calc(var(--t) * 3); }
+
+/* ─── Shortcut combos ─── */
+
+.compact  { --l: calc(var(--l) * 0.75); --t: calc(var(--t) * 0.875); }
+.spacious { --l: calc(var(--l) * 1.5);  --t: calc(var(--t) * 1.125); }
+.dense    { --l: calc(var(--l) * 0.5);  --t: calc(var(--t) * 0.75); }
+
+/* ─── Spacing utilities (--l based) ─── */
+
+.p-v-025 { padding-block: calc(var(--l) * 0.25); }
+.p-v-05  { padding-block: calc(var(--l) * 0.5); }
+.p-v-075 { padding-block: calc(var(--l) * 0.75); }
+.p-v-1   { padding-block: var(--l); }
+.p-v-15  { padding-block: calc(var(--l) * 1.5); }
+.p-v-2   { padding-block: calc(var(--l) * 2); }
+.p-v-3   { padding-block: calc(var(--l) * 3); }
+
+.p-h-025 { padding-inline: calc(var(--l) * 0.25); }
+.p-h-05  { padding-inline: calc(var(--l) * 0.5); }
+.p-h-075 { padding-inline: calc(var(--l) * 0.75); }
+.p-h-1   { padding-inline: var(--l); }
+.p-h-15  { padding-inline: calc(var(--l) * 1.5); }
+.p-h-2   { padding-inline: calc(var(--l) * 2); }
+.p-h-3   { padding-inline: calc(var(--l) * 3); }
+
+.g-025 { gap: calc(var(--l) * 0.25); }
+.g-05  { gap: calc(var(--l) * 0.5); }
+.g-075 { gap: calc(var(--l) * 0.75); }
+.g-1   { gap: var(--l); }
+.g-15  { gap: calc(var(--l) * 1.5); }
+.g-2   { gap: calc(var(--l) * 2); }
+.g-3   { gap: calc(var(--l) * 3); }
+
+/* ─── Text size utilities (--t based, Major Third 1.25 scale) ─── */
+
+.text-xs   { font-size: calc(var(--t) * 0.75); }
+.text-sm   { font-size: calc(var(--t) * 0.875); }
+.text-base { font-size: var(--t); }
+.text-lg   { font-size: calc(var(--t) * 1.25); }
+.text-xl   { font-size: calc(var(--t) * 1.563); }
+.text-2xl  { font-size: calc(var(--t) * 1.953); }
+.text-3xl  { font-size: calc(var(--t) * 2.441); }
+.text-4xl  { font-size: calc(var(--t) * 3.052); }
+
+/* ─── Radius utilities (--r based) ─── */
+/* --r cascades: set on outer, inner inherits and subtracts padding. */
+/* Formula: inner_radius = max(0, outer_radius - padding) */
+
+.r-sm   { --r: 6px; }
+.r-md   { --r: 8px; }
+.r-lg   { --r: 12px; }
+.r-xl   { --r: 16px; }
+.r-2xl  { --r: 24px; }
+.r-pill { --r: 9999px; }
+
+.rounded     { border-radius: var(--r); }
+
+/* Associated inner radius: subtract parent's padding from --r. */
+/* Use on direct children of a rounded+padded parent. */
+/* The --r-pad variable captures the padding used by the parent. */
+
+@property --r-pad {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+/* Sets both radius and tracks the padding for children */
+.rounded-p-025 { border-radius: var(--r); padding: calc(var(--l) * 0.25); --r-pad: calc(var(--l) * 0.25); }
+.rounded-p-05  { border-radius: var(--r); padding: calc(var(--l) * 0.5);  --r-pad: calc(var(--l) * 0.5); }
+.rounded-p-075 { border-radius: var(--r); padding: calc(var(--l) * 0.75); --r-pad: calc(var(--l) * 0.75); }
+.rounded-p-1   { border-radius: var(--r); padding: var(--l);              --r-pad: var(--l); }
+.rounded-p-15  { border-radius: var(--r); padding: calc(var(--l) * 1.5);  --r-pad: calc(var(--l) * 1.5); }
+.rounded-p-175 { border-radius: var(--r); padding: calc(var(--l) * 1.75); --r-pad: calc(var(--l) * 1.75); }
+.rounded-p-2   { border-radius: var(--r); padding: calc(var(--l) * 2);    --r-pad: calc(var(--l) * 2); }
+
+/* Inner element: auto-associates radius with parent's padding */
+.rounded-inner {
+  border-radius: max(0px, calc(var(--r) - var(--r-pad)));
+}
+
+/* ─── Component padding patterns (--l multiples) ─── */
+/* Cards: 1.75 x --l */
+/* Primary button: 0.75 x --l block, 1.75 x --l inline */
+/* Ghost button: 0.5 x --l block, 1 x --l inline */
+/* Badge: 0.188 x --l block, 0.625 x --l inline */
+/* Input: 0.625 x --l block, 0.875 x --l inline */
+/* Table cell: 0.75 x --l block, 1.25 x --l inline */
+/* Stat card: 1 x --l */
+/* Nav bar: 0.5 x --l block, 1 x --l inline */
+/* Sidebar item: 0.375 x --l block, 0.5 x --l inline */

@@ -1,0 +1,18 @@
+/* ─── Glow ─── */
+
+.glow {
+  box-shadow: 0 0 60px var(--adi-accent-soft, rgba(135, 95, 215, 0.2));
+}
+
+.glow-sm {
+  box-shadow: 0 0 30px var(--adi-accent-soft, rgba(135, 95, 215, 0.15));
+}
+
+/* ─── Gradient text ─── */
+
+.gradient-text {
+  background: var(--adi-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
