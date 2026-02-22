@@ -111,7 +111,7 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
           unsubRef.fn = unsub;
         });
       },
-      handle(cb: (reply: EventRegistry[`${K}:ok`]) => void): void {
+      handle(cb: (reply: EventRegistry[`${K}:ok`]) => void): () => void {
         // Same ref-cell pattern to avoid TDZ when FIFO flushes synchronously.
         const unsubRef: { fn?: () => void } = {};
         const unsub = on(replyEvent as keyof EventRegistry, (reply) => {
@@ -122,6 +122,7 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
           }
         });
         unsubRef.fn = unsub;
+        return unsub;
       },
     };
   }

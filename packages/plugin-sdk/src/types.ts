@@ -34,7 +34,7 @@ export interface SendHandle<T> {
   /** Await the correlated :ok reply. Rejects on timeout. */
   wait(): Promise<T>;
   /** Register a one-shot callback for the correlated :ok reply. No timeout. */
-  handle(cb: (reply: T) => void): void;
+  handle(cb: (reply: T) => void): () => void;
 }
 
 /** The strictly-typed event bus. */
