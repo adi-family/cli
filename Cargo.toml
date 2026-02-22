@@ -16,6 +16,7 @@ members = [
     "crates/lib/lib-cli-common",
     "crates/lib/lib-console-output",
     "crates/lib/lib-shortcuts",
+    "crates/lib/lib-daemon-client",
     "crates/lib/lib-daemon-core",
     "crates/lib/lib-http-common",
     "crates/lib/lib-migrations",

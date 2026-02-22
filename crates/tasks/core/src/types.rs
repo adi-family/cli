@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
-/// Returns the current Unix timestamp in seconds.
 #[inline]
 pub fn unix_timestamp_now() -> i64 {
     std::time::SystemTime::now()
@@ -19,18 +18,15 @@ pub fn unix_timestamp_now() -> i64 {
         .unwrap_or(0)
 }
 
-/// Unique identifier for a task.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TaskId(i64);
 
 impl TaskId {
-    /// Creates a new TaskId from a raw i64 value.
     #[inline]
     pub const fn new(id: i64) -> Self {
         Self(id)
     }
 
-    /// Returns the raw i64 value of this TaskId.
     #[inline]
     #[must_use]
     pub const fn get(self) -> i64 {
@@ -50,19 +46,13 @@ impl From<i64> for TaskId {
     }
 }
 
-/// Status of a task in its lifecycle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskStatus {
-    /// Task is pending, not yet started
     Todo,
-    /// Task is actively being worked on
     InProgress,
-    /// Task has been completed successfully
     Done,
-    /// Task is blocked by dependencies
     Blocked,
-    /// Task has been cancelled
     Cancelled,
 }
 
@@ -70,7 +60,6 @@ pub enum TaskStatus {
 pub const COMPLETE_STATUSES_SQL: &str = "('done', 'cancelled')";
 
 impl TaskStatus {
-    /// Returns the string representation of this status.
     #[must_use]
     pub const fn as_str(&self) -> &'static str {
         match self {
@@ -82,13 +71,11 @@ impl TaskStatus {
         }
     }
 
-    /// Parses a status from a string, returning None if invalid.
     #[must_use]
     pub fn parse(s: &str) -> Option<Self> {
         s.parse().ok()
     }
 
-    /// Returns true if this status represents a completed task.
     #[must_use]
     pub const fn is_complete(&self) -> bool {
         matches!(self, Self::Done | Self::Cancelled)
@@ -140,31 +127,22 @@ impl FromStr for TaskStatus {
     }
 }
 
-/// A task with its metadata and relationships.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
-    /// Unique identifier for this task
     pub id: TaskId,
-    /// Short title describing the task
     pub title: String,
-    /// Optional detailed description
     pub description: Option<String>,
-    /// Current status in the task lifecycle
     pub status: TaskStatus,
-    /// Optional link to indexer symbol (adi-core SymbolId)
+    /// Link to indexer symbol (adi-core SymbolId).
     pub symbol_id: Option<i64>,
-    /// Project path for project-scoped tasks, None for global tasks
+    /// Project path for project-scoped tasks, None for global tasks.
     pub project_path: Option<String>,
-    /// Unix timestamp when task was created
     pub created_at: i64,
-    /// Unix timestamp when task was last updated
     pub updated_at: i64,
 }
 
 impl Task {
-    /// Creates a new task with the given title.
-    ///
-    /// The task starts with `Todo` status and timestamps set to now.
+    /// Creates a new task with `Todo` status and timestamps set to now.
     /// The `id` will be assigned by storage when persisted.
     pub fn new(title: impl Into<String>) -> Self {
         let now = unix_timestamp_now();
@@ -181,14 +159,12 @@ impl Task {
         }
     }
 
-    /// Sets the description for this task.
     #[must_use]
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
     }
 
-    /// Sets the project path for this task.
     #[must_use]
     pub fn with_project(mut self, project_path: impl Into<String>) -> Self {
         self.project_path = Some(project_path.into());
@@ -202,60 +178,42 @@ impl Task {
         self
     }
 
-    /// Returns true if this is a global task (not project-scoped).
     #[must_use]
     pub fn is_global(&self) -> bool {
         self.project_path.is_none()
     }
 }
 
-/// A task bundled with its dependency relationships.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskWithDependencies {
-    /// The task itself
     pub task: Task,
-    /// Tasks this task depends on (must complete first)
+    /// Tasks this task depends on (must complete first).
     pub depends_on: Vec<Task>,
-    /// Tasks that depend on this task
+    /// Tasks that depend on this task.
     pub dependents: Vec<Task>,
 }
 
-/// Aggregate statistics about tasks in a store.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TasksStatus {
-    /// Total number of tasks
     pub total_tasks: u64,
-    /// Number of tasks in Todo status
     pub todo_count: u64,
-    /// Number of tasks in InProgress status
     pub in_progress_count: u64,
-    /// Number of tasks in Done status
     pub done_count: u64,
-    /// Number of tasks in Blocked status
     pub blocked_count: u64,
-    /// Number of tasks in Cancelled status
     pub cancelled_count: u64,
-    /// Total number of dependency edges
     pub total_dependencies: u64,
-    /// Whether any dependency cycles exist
     pub has_cycles: bool,
 }
 
-/// Input data for creating a new task.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateTask {
-    /// Title for the new task
     pub title: String,
-    /// Optional description
     pub description: Option<String>,
-    /// Optional symbol ID to link to
     pub symbol_id: Option<i64>,
-    /// Task IDs this task depends on
     pub depends_on: Vec<TaskId>,
 }
 
 impl CreateTask {
-    /// Creates a new CreateTask input with the given title.
     pub fn new(title: impl Into<String>) -> Self {
         Self {
             title: title.into(),
@@ -265,14 +223,12 @@ impl CreateTask {
         }
     }
 
-    /// Sets the description for the new task.
     #[must_use]
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
     }
 
-    /// Sets the dependencies for the new task.
     #[must_use]
     pub fn with_dependencies(mut self, deps: Vec<TaskId>) -> Self {
         self.depends_on = deps;

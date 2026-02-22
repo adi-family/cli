@@ -1,0 +1,52 @@
+{
+  "name": "@adi-family/sdk-ui-components",
+  "version": "0.1.0",
+  "description": "ADI shared Lit web components — buttons, inputs, loading indicators with Tailwind styling",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./buttons": {
+      "types": "./dist/buttons/index.d.ts",
+      "import": "./dist/buttons/index.js"
+    },
+    "./inputs": {
+      "types": "./dist/inputs/index.d.ts",
+      "import": "./dist/inputs/index.js"
+    },
+    "./feedback": {
+      "types": "./dist/feedback/index.d.ts",
+      "import": "./dist/feedback/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "CLAUDE.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "lit": "^3.3.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "keywords": [
+    "lit",
+    "web-components",
+    "design-system",
+    "adid",
+    "tailwind",
+    "buttons",
+    "inputs"
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "version": 3,
+  "middleware": {
+    "/": {
+      "files": [
+        "server/edge-runtime-webpack.js",
+        "server/src/middleware.js"
+      ],
+      "name": "src/middleware",
+      "page": "/",
+      "matchers": [
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?(?:\\/((?!api|trpc|_next|_vercel|.*\\..*).*))(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/((?!api|trpc|_next|_vercel|.*\\..*).*)"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "KjfbIENuLY45JBjjQkTfa",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "DrzDHoImxc2dm+xyBRosrNZoGg2lw2wMEV/RL/7gh0w=",
+        "__NEXT_PREVIEW_MODE_ID": "df30576c19800eaaa2f9b7c24fd8b4fe",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "c1dfa0ae1b013a8a97596be13619e0beeb23754ab571b38822fe9e3324d8bf6e",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "9d45c387cd0036fa9eb62b031a98044a14fe98655d05f6a93acbfdee115a5dd4"
+      }
+    }
+  },
+  "functions": {
+    "/api/og/route": {
+      "files": [
+        "server/server-reference-manifest.js",
+        "server/app/api/og/route_client-reference-manifest.js",
+        "server/middleware-build-manifest.js",
+        "server/middleware-react-loadable-manifest.js",
+        "server/next-font-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "server/edge-runtime-webpack.js",
+        "server/app/api/og/route.js"
+      ],
+      "name": "app/api/og/route",
+      "page": "/api/og/route",
+      "matchers": [
+        {
+          "regexp": "^/api/og$",
+          "originalSource": "/api/og"
+        }
+      ],
+      "wasm": [
+        {
+          "name": "wasm_77d9faebf7af9e421806970ce10a58e9d83116d7",
+          "filePath": "server/edge-chunks/wasm_77d9faebf7af9e421806970ce10a58e9d83116d7.wasm"
+        },
+        {
+          "name": "wasm_ef4866ecae192fd87727067cf2c0c0cf9fb8b020",
+          "filePath": "server/edge-chunks/wasm_ef4866ecae192fd87727067cf2c0c0cf9fb8b020.wasm"
+        }
+      ],
+      "assets": [
+        {
+          "name": "noto-sans-v27-latin-regular.5dda3fca77107598.ttf",
+          "filePath": "server/edge-chunks/asset_noto-sans-v27-latin-regular.5dda3fca77107598.ttf"
+        }
+      ],
+      "env": {
+        "__NEXT_BUILD_ID": "KjfbIENuLY45JBjjQkTfa",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "DrzDHoImxc2dm+xyBRosrNZoGg2lw2wMEV/RL/7gh0w=",
+        "__NEXT_PREVIEW_MODE_ID": "df30576c19800eaaa2f9b7c24fd8b4fe",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "c1dfa0ae1b013a8a97596be13619e0beeb23754ab571b38822fe9e3324d8bf6e",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "9d45c387cd0036fa9eb62b031a98044a14fe98655d05f6a93acbfdee115a5dd4"
+      }
+    }
+  },
+  "sortedMiddleware": [
+    "/"
+  ]
+}

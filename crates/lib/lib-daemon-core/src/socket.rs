@@ -35,22 +35,18 @@ impl UnixSocketServer {
     pub async fn bind<P: AsRef<Path>>(path: P) -> Result<Self> {
         let socket_path = path.as_ref().to_path_buf();
 
-        // Remove existing socket file
         if socket_path.exists() {
             std::fs::remove_file(&socket_path)?;
         }
 
-        // Ensure directory exists
         if let Some(parent) = socket_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
 
-        // Bind socket
         let listener = UnixListener::bind(&socket_path).map_err(|e| {
             DaemonError::SocketError(format!("Failed to bind socket: {}", e))
         })?;
 
-        // Set permissions (user only)
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -92,7 +88,6 @@ impl UnixSocketServer {
 
 impl Drop for UnixSocketServer {
     fn drop(&mut self) {
-        // Clean up socket file on drop
         if self.socket_path.exists() {
             let _ = std::fs::remove_file(&self.socket_path);
         }
@@ -164,7 +159,6 @@ impl UnixSocketClient {
         Req: Serialize,
         Resp: for<'de> Deserialize<'de>,
     {
-        // Connect to socket
         let stream = UnixStream::connect(&self.socket_path)
             .await
             .map_err(|e| {
@@ -174,12 +168,10 @@ impl UnixSocketClient {
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
 
-        // Send request
         let request_json = serde_json::to_string(request)?;
         writer.write_all(request_json.as_bytes()).await?;
         writer.write_all(b"\n").await?;
 
-        // Read response
         let mut response_line = String::new();
         reader.read_line(&mut response_line).await?;
 
@@ -189,7 +181,6 @@ impl UnixSocketClient {
             ));
         }
 
-        // Deserialize response
         let response: Resp = serde_json::from_str(response_line.trim())?;
         Ok(response)
     }
@@ -267,17 +258,14 @@ impl ConnectionHandler {
                 continue;
             }
 
-            // Process request
             let response = match handler(request_line).await {
                 Ok(response_json) => response_json,
                 Err(e) => {
                     error!("Request handler error: {}", e);
-                    // Send error response
                     format!(r#"{{"type":"error","message":"{}"}}"#, e)
                 }
             };
 
-            // Send response
             let mut w = writer.lock().await;
             w.write_all(response.as_bytes()).await?;
             w.write_all(b"\n").await?;

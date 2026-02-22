@@ -244,8 +244,6 @@ impl TaskStore for SqliteTaskStore {
     }
 
     async fn can_run(&self, _task: &Task) -> bool {
-        // Default implementation: can run any task
-        // Override this in specific implementations based on device capabilities
         true
     }
 }

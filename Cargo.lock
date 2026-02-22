@@ -2272,7 +2272,7 @@ checksum = "c3e64b0cc0439b12df2fa678eae89a1c56a529fd067a9115f7827f1fffd22b32"
 
 [[package]]
 name = "cli"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2285,6 +2285,7 @@ dependencies = [
  "interprocess",
  "lib-client-github",
  "lib-console-output",
+ "lib-daemon-client",
  "lib-daemon-core",
  "lib-env-parse",
  "lib-i18n-core",
@@ -4973,14 +4974,17 @@ dependencies = [
 name = "hive-plugin"
 version = "0.1.15"
 dependencies = [
+ "anyhow",
+ "async-trait",
  "ctrlc",
  "dirs 6.0.0",
  "futures",
  "hive-core",
  "lib-console-output",
+ "lib-daemon-client",
  "lib-plugin-abi-v3",
+ "lib-plugin-prelude",
  "libc",
- "nix 0.29.0",
  "once_cell",
  "serde",
  "serde_json",
@@ -6932,6 +6936,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "lib-daemon-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dirs 6.0.0",
+ "lib-daemon-core",
+ "lib-env-parse",
+ "libc",
+ "rkyv 0.8.15",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "lib-daemon-core"
 version = "0.1.0"
 dependencies = [
@@ -6998,7 +7016,6 @@ name = "lib-hive-daemon-client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "chrono",
  "dirs 6.0.0",
  "serde",
@@ -11990,7 +12007,6 @@ dependencies = [
 name = "tasks-core"
 version = "0.8.3"
 dependencies = [
- "async-trait",
  "dirs 6.0.0",
  "lib-migrations",
  "rusqlite",
@@ -11998,7 +12014,6 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
- "tokio",
  "tracing",
 ]
 

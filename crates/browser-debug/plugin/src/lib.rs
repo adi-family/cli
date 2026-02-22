@@ -46,7 +46,6 @@ impl CliCommands for BrowserDebugPlugin {
     }
 
     async fn run_command(&self, _ctx: &CliContext) -> Result<CliResult> {
-        // TODO: Implement full browser debugging from v2.bak
         Ok(CliResult::error("Browser debug plugin not yet fully migrated to v3. See lib.rs.v2.bak for reference."))
     }
 }

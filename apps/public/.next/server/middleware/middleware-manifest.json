@@ -1,0 +1,31 @@
+{
+  "sorted_middleware": [],
+  "middleware": {
+    "/": {
+      "files": [
+        "server/edge/chunks/projects_adi-family_cli_apps_public_c4f9df72._.js",
+        "server/edge/chunks/[root-of-the-server]__608ce402._.js",
+        "server/edge/chunks/turbopack-projects_adi-family_cli_apps_public_edge-wrapper_da82f8bc.js"
+      ],
+      "name": "middleware",
+      "page": "/",
+      "matchers": [
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/((?!api|trpc|_next|_vercel|.*\\..*).*){(\\\\.json)}?",
+          "originalSource": "/((?!api|trpc|_next|_vercel|.*\\..*).*)"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "development",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "DrzDHoImxc2dm+xyBRosrNZoGg2lw2wMEV/RL/7gh0w=",
+        "__NEXT_PREVIEW_MODE_ID": "a482256fa84286b15451e428e5b0b98c",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "9cc2ceb6b917f4eda789bf39b1f53b050fb0ffa9520146fdb71df4a06e512bbc",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "c7b5dbb070a7d1fe6f377430c1f8a4d024e7ad9c68d5408fe03c7c35a6d870db"
+      }
+    }
+  },
+  "instrumentation": null,
+  "functions": {}
+}

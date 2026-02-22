@@ -52,12 +52,12 @@ impl RustBlockExtractor {
 
     /// Parse a file and return the block-based output
     pub fn parse_file(&mut self, source: &str, file_path: &str) -> crate::Result<FlowMapOutput> {
-        let tree = self
-            .parser
-            .parse(source, None)
-            .ok_or_else(|| crate::ParseError::ParseFailed {
-                path: file_path.to_string(),
-            })?;
+        let tree =
+            self.parser
+                .parse(source, None)
+                .ok_or_else(|| crate::ParseError::ParseFailed {
+                    path: file_path.to_string(),
+                })?;
 
         let mut output = FlowMapOutput::new()
             .with_file(file_path.to_string())
@@ -111,7 +111,6 @@ impl RustBlockExtractor {
                 Some(id)
             }
 
-            // Use declarations (imports)
             "use_declaration" => {
                 let imports = self.extract_use_names(node, source);
                 let target = self.get_use_path(node, source);
@@ -139,7 +138,6 @@ impl RustBlockExtractor {
                 Some(id)
             }
 
-            // Module declarations
             "mod_item" => {
                 let name = node
                     .child_by_field_name("name")
@@ -172,19 +170,15 @@ impl RustBlockExtractor {
                 Some(id)
             }
 
-            // Function declarations
             "function_item" => self.extract_function(node, source, file_path, output, is_top_level),
 
-            // Impl blocks
             "impl_item" => self.extract_impl(node, source, file_path, output, is_top_level),
 
             // Trait definitions
             "trait_item" => self.extract_trait(node, source, file_path, output, is_top_level),
 
-            // Struct definitions
             "struct_item" => self.extract_struct(node, source, file_path, output, is_top_level),
 
-            // Enum definitions
             "enum_item" => self.extract_enum(node, source, file_path, output, is_top_level),
 
             // Type alias
@@ -299,16 +293,13 @@ impl RustBlockExtractor {
             "while_expression" => {
                 self.extract_loop(node, source, file_path, output, scope, BlockType::While)
             }
-            "for_expression" => {
-                self.extract_for_loop(node, source, file_path, output, scope)
-            }
+            "for_expression" => self.extract_for_loop(node, source, file_path, output, scope),
 
             // Call expressions
             "call_expression" => {
                 self.extract_call_expression(node, source, file_path, output, scope)
             }
 
-            // Method call expressions
             "method_call_expression" => {
                 self.extract_method_call(node, source, file_path, output, scope)
             }
@@ -356,10 +347,12 @@ impl RustBlockExtractor {
                     uses = self.extract_used_identifiers(&value, source, scope);
                 }
 
-                let block =
-                    Block::new(label.unwrap_or_else(|| "break".to_string()), BlockType::Break)
-                        .with_uses(uses)
-                        .with_location(self.node_location(node, file_path));
+                let block = Block::new(
+                    label.unwrap_or_else(|| "break".to_string()),
+                    BlockType::Break,
+                )
+                .with_uses(uses)
+                .with_location(self.node_location(node, file_path));
 
                 Some(output.add_block_auto(block))
             }
@@ -380,9 +373,7 @@ impl RustBlockExtractor {
             }
 
             // Closure expressions
-            "closure_expression" => {
-                self.extract_closure(node, source, file_path, output, scope)
-            }
+            "closure_expression" => self.extract_closure(node, source, file_path, output, scope),
 
             // Macro invocations
             "macro_invocation" => {
@@ -516,7 +507,6 @@ impl RustBlockExtractor {
                 Some(output.add_block_auto(block))
             }
 
-            // Struct expressions (instantiation)
             "struct_expression" => {
                 let name = node
                     .child_by_field_name("name")
@@ -605,33 +595,17 @@ impl RustBlockExtractor {
             }
 
             // Skip these node types (comments don't contribute to flow)
-            "line_comment"
-            | "block_comment"
-            | "{"
-            | "}"
-            | "("
-            | ")"
-            | "["
-            | "]"
-            | ","
-            | ";"
-            | ":"
-            | "::"
-            | "->"
-            | "=>"
-            | "." => None,
-            "identifier"
-            | "field_identifier"
-            | "type_identifier"
-            | "primitive_type"
-            | "string_literal"
-            | "raw_string_literal"
-            | "char_literal"
-            | "integer_literal"
-            | "float_literal"
-            | "boolean_literal" => None,
-            "visibility_modifier" | "lifetime" | "generic_type" | "type_parameters"
-            | "type_arguments" | "where_clause" => None,
+            "line_comment" | "block_comment" | "{" | "}" | "(" | ")" | "[" | "]" | "," | ";"
+            | ":" | "::" | "->" | "=>" | "." => None,
+            "identifier" | "field_identifier" | "type_identifier" | "primitive_type"
+            | "string_literal" | "raw_string_literal" | "char_literal" | "integer_literal"
+            | "float_literal" | "boolean_literal" => None,
+            "visibility_modifier"
+            | "lifetime"
+            | "generic_type"
+            | "type_parameters"
+            | "type_arguments"
+            | "where_clause" => None,
 
             // Default: recursively extract children
             _ => {
@@ -1010,9 +984,7 @@ impl RustBlockExtractor {
                 Some(output.add_block_auto(block))
             }
 
-            "function_item" => {
-                self.extract_impl_member(node, source, file_path, output, scope)
-            }
+            "function_item" => self.extract_impl_member(node, source, file_path, output, scope),
 
             "type_item" | "associated_type" => {
                 let name = node
@@ -1292,15 +1264,17 @@ impl RustBlockExtractor {
             }
         }
 
-        let block =
-            Block::new(format!("if {}", self.truncate(&condition_text, 30)), BlockType::If)
-                .with_uses(uses)
-                .with_children(children)
-                .with_location(self.node_location(node, file_path))
-                .with_metadata(BlockMetadata {
-                    condition: Some(condition_text),
-                    ..Default::default()
-                });
+        let block = Block::new(
+            format!("if {}", self.truncate(&condition_text, 30)),
+            BlockType::If,
+        )
+        .with_uses(uses)
+        .with_children(children)
+        .with_location(self.node_location(node, file_path))
+        .with_metadata(BlockMetadata {
+            condition: Some(condition_text),
+            ..Default::default()
+        });
 
         Some(output.add_block_auto(block))
     }
@@ -1314,7 +1288,9 @@ impl RustBlockExtractor {
         scope: &mut Scope,
     ) -> Option<BlockId> {
         let value = node.child_by_field_name("value");
-        let value_text = value.map(|v| self.node_text(&v, source)).unwrap_or_default();
+        let value_text = value
+            .map(|v| self.node_text(&v, source))
+            .unwrap_or_default();
         let uses = value
             .map(|v| self.extract_used_identifiers(&v, source, scope))
             .unwrap_or_default();
@@ -1383,8 +1359,7 @@ impl RustBlockExtractor {
 
         // Extract body
         if let Some(body) = node.child_by_field_name("body") {
-            if let Some(body_id) =
-                self.extract_node(&body, source, file_path, output, scope, false)
+            if let Some(body_id) = self.extract_node(&body, source, file_path, output, scope, false)
             {
                 children.push(body_id);
             }
@@ -1438,8 +1413,7 @@ impl RustBlockExtractor {
 
         // Extract body
         if let Some(body) = node.child_by_field_name("body") {
-            if let Some(body_id) =
-                self.extract_node(&body, source, file_path, output, scope, false)
+            if let Some(body_id) = self.extract_node(&body, source, file_path, output, scope, false)
             {
                 children.push(body_id);
             }
@@ -1809,10 +1783,7 @@ impl RustBlockExtractor {
                     } else {
                         // Simple identifier parameter
                         let name = self.node_text(&child, source);
-                        if !name.is_empty()
-                            && name != "|"
-                            && name != ","
-                            && !name.starts_with(':')
+                        if !name.is_empty() && name != "|" && name != "," && !name.starts_with(':')
                         {
                             scope.define(&name);
                             params.push(name);
@@ -1868,7 +1839,12 @@ impl RustBlockExtractor {
         names
     }
 
-    fn extract_used_identifiers(&self, node: &Node, source: &str, scope: &mut Scope) -> Vec<String> {
+    fn extract_used_identifiers(
+        &self,
+        node: &Node,
+        source: &str,
+        scope: &mut Scope,
+    ) -> Vec<String> {
         let mut identifiers = Vec::new();
 
         match node.kind() {
@@ -1905,7 +1881,12 @@ impl RustBlockExtractor {
     fn extract_use_names(&self, node: &Node, source: &str) -> Vec<String> {
         let mut names = Vec::new();
 
-        fn collect_use_names(node: &Node, source: &str, names: &mut Vec<String>, extractor: &RustBlockExtractor) {
+        fn collect_use_names(
+            node: &Node,
+            source: &str,
+            names: &mut Vec<String>,
+            extractor: &RustBlockExtractor,
+        ) {
             match node.kind() {
                 "identifier" => {
                     names.push(extractor.node_text(node, source));
@@ -1957,7 +1938,12 @@ impl RustBlockExtractor {
             .map(|a| self.node_text(&a, source))
     }
 
-    fn extract_attributes(&self, node: &Node, source: &str, output: &mut FlowMapOutput) -> Vec<BlockId> {
+    fn extract_attributes(
+        &self,
+        node: &Node,
+        source: &str,
+        output: &mut FlowMapOutput,
+    ) -> Vec<BlockId> {
         let mut attributes = Vec::new();
 
         // Look for attribute_item siblings before this node
@@ -2325,10 +2311,7 @@ fn create_order(user_id: u64, items: Vec<Item>) -> Order {
             }
         }
 
-        assert!(
-            found_uses || found_produces,
-            "Data flow should be tracked"
-        );
+        assert!(found_uses || found_produces, "Data flow should be tracked");
     }
 
     #[test]

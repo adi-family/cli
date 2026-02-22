@@ -1,6 +1,6 @@
 use lib_flowmap_core::{Block, BlockId, BlockMetadata, BlockType, FlowMapOutput, Location};
-use tree_sitter::{Node, Parser};
 use std::collections::HashSet;
+use tree_sitter::{Node, Parser};
 
 /// Block-based extractor for TypeScript/JavaScript
 /// Parses complete AST into flat block library with data flow tracking
@@ -63,12 +63,12 @@ impl BlockExtractor {
 
     /// Parse a file and return the block-based output
     pub fn parse_file(&mut self, source: &str, file_path: &str) -> crate::Result<FlowMapOutput> {
-        let tree = self
-            .parser
-            .parse(source, None)
-            .ok_or_else(|| crate::ParseError::ParseFailed {
-                path: file_path.to_string(),
-            })?;
+        let tree =
+            self.parser
+                .parse(source, None)
+                .ok_or_else(|| crate::ParseError::ParseFailed {
+                    path: file_path.to_string(),
+                })?;
 
         let mut output = FlowMapOutput::new()
             .with_file(file_path.to_string())
@@ -114,7 +114,9 @@ impl BlockExtractor {
                 let mut cursor = node.walk();
 
                 for child in node.children(&mut cursor) {
-                    if let Some(child_id) = self.extract_node(&child, source, file_path, output, scope, true) {
+                    if let Some(child_id) =
+                        self.extract_node(&child, source, file_path, output, scope, true)
+                    {
                         module_children.push(child_id);
                     }
                 }
@@ -165,20 +167,28 @@ impl BlockExtractor {
                 let mut children = Vec::new();
 
                 if let Some(decl) = node.child_by_field_name("declaration") {
-                    if let Some(child_id) = self.extract_node(&decl, source, file_path, output, scope, false) {
+                    if let Some(child_id) =
+                        self.extract_node(&decl, source, file_path, output, scope, false)
+                    {
                         children.push(child_id);
                     }
                 }
 
                 // Handle export default expression
                 if let Some(value) = node.child_by_field_name("value") {
-                    if let Some(child_id) = self.extract_node(&value, source, file_path, output, scope, false) {
+                    if let Some(child_id) =
+                        self.extract_node(&value, source, file_path, output, scope, false)
+                    {
                         children.push(child_id);
                     }
                 }
 
                 let is_default = self.has_child_kind(node, "default");
-                let block_type = if is_default { BlockType::ExportDefault } else { BlockType::Export };
+                let block_type = if is_default {
+                    BlockType::ExportDefault
+                } else {
+                    BlockType::Export
+                };
 
                 let block = Block::new("export", block_type)
                     .with_children(children)
@@ -195,25 +205,27 @@ impl BlockExtractor {
                 Some(id)
             }
 
-            // Function declarations
             "function_declaration" => {
                 self.extract_function(node, source, file_path, output, is_top_level)
             }
 
             // Arrow functions
-            "arrow_function" => {
-                self.extract_arrow_function(node, source, file_path, output)
-            }
+            "arrow_function" => self.extract_arrow_function(node, source, file_path, output),
 
-            // Function expressions
             "function_expression" | "function" => {
                 self.extract_function(node, source, file_path, output, false)
             }
 
             // Generator functions
-            "generator_function_declaration" | "generator_function" => {
-                self.extract_function_with_type(node, source, file_path, output, BlockType::Generator, false)
-            }
+            "generator_function_declaration" | "generator_function" => self
+                .extract_function_with_type(
+                    node,
+                    source,
+                    file_path,
+                    output,
+                    BlockType::Generator,
+                    false,
+                ),
 
             // Class declarations
             "class_declaration" | "class" => {
@@ -221,14 +233,17 @@ impl BlockExtractor {
             }
 
             // Variable declarations
-            "lexical_declaration" | "variable_declaration" => {
-                self.extract_variable_declaration(node, source, file_path, output, scope, is_top_level)
-            }
+            "lexical_declaration" | "variable_declaration" => self.extract_variable_declaration(
+                node,
+                source,
+                file_path,
+                output,
+                scope,
+                is_top_level,
+            ),
 
             // If statements
-            "if_statement" => {
-                self.extract_if_statement(node, source, file_path, output, scope)
-            }
+            "if_statement" => self.extract_if_statement(node, source, file_path, output, scope),
 
             // Switch statements
             "switch_statement" => {
@@ -236,16 +251,24 @@ impl BlockExtractor {
             }
 
             // Try statements
-            "try_statement" => {
-                self.extract_try_statement(node, source, file_path, output, scope)
-            }
+            "try_statement" => self.extract_try_statement(node, source, file_path, output, scope),
 
             // Loops
-            "for_statement" => self.extract_loop(node, source, file_path, output, scope, BlockType::For),
-            "for_in_statement" => self.extract_loop(node, source, file_path, output, scope, BlockType::ForIn),
-            "for_of_statement" => self.extract_loop(node, source, file_path, output, scope, BlockType::ForOf),
-            "while_statement" => self.extract_loop(node, source, file_path, output, scope, BlockType::While),
-            "do_statement" => self.extract_loop(node, source, file_path, output, scope, BlockType::DoWhile),
+            "for_statement" => {
+                self.extract_loop(node, source, file_path, output, scope, BlockType::For)
+            }
+            "for_in_statement" => {
+                self.extract_loop(node, source, file_path, output, scope, BlockType::ForIn)
+            }
+            "for_of_statement" => {
+                self.extract_loop(node, source, file_path, output, scope, BlockType::ForOf)
+            }
+            "while_statement" => {
+                self.extract_loop(node, source, file_path, output, scope, BlockType::While)
+            }
+            "do_statement" => {
+                self.extract_loop(node, source, file_path, output, scope, BlockType::DoWhile)
+            }
 
             // Expression statements
             "expression_statement" => {
@@ -267,9 +290,7 @@ impl BlockExtractor {
             }
 
             // New expressions
-            "new_expression" => {
-                self.extract_new_expression(node, source, file_path, output, scope)
-            }
+            "new_expression" => self.extract_new_expression(node, source, file_path, output, scope),
 
             // Assignment expressions
             "assignment_expression" => {
@@ -288,17 +309,25 @@ impl BlockExtractor {
 
             // Break/continue
             "break_statement" => {
-                let label = node.child_by_field_name("label")
+                let label = node
+                    .child_by_field_name("label")
                     .map(|n| self.node_text(&n, source));
-                let block = Block::new(label.unwrap_or_else(|| "break".to_string()), BlockType::Break)
-                    .with_location(self.node_location(node, file_path));
+                let block = Block::new(
+                    label.unwrap_or_else(|| "break".to_string()),
+                    BlockType::Break,
+                )
+                .with_location(self.node_location(node, file_path));
                 Some(output.add_block_auto(block))
             }
             "continue_statement" => {
-                let label = node.child_by_field_name("label")
+                let label = node
+                    .child_by_field_name("label")
                     .map(|n| self.node_text(&n, source));
-                let block = Block::new(label.unwrap_or_else(|| "continue".to_string()), BlockType::Continue)
-                    .with_location(self.node_location(node, file_path));
+                let block = Block::new(
+                    label.unwrap_or_else(|| "continue".to_string()),
+                    BlockType::Continue,
+                )
+                .with_location(self.node_location(node, file_path));
                 Some(output.add_block_auto(block))
             }
 
@@ -309,7 +338,11 @@ impl BlockExtractor {
                     uses.extend(self.extract_used_identifiers(&arg, source, scope));
                 }
                 let is_delegate = self.has_child_kind(node, "*");
-                let block_type = if is_delegate { BlockType::YieldFrom } else { BlockType::Yield };
+                let block_type = if is_delegate {
+                    BlockType::YieldFrom
+                } else {
+                    BlockType::Yield
+                };
 
                 let block = Block::new("yield", block_type)
                     .with_uses(uses)
@@ -320,7 +353,8 @@ impl BlockExtractor {
 
             // Interface declarations (TypeScript)
             "interface_declaration" => {
-                let name = node.child_by_field_name("name")
+                let name = node
+                    .child_by_field_name("name")
                     .map(|n| self.node_text(&n, source))
                     .unwrap_or_else(|| "interface".to_string());
 
@@ -337,7 +371,8 @@ impl BlockExtractor {
 
             // Type aliases (TypeScript)
             "type_alias_declaration" => {
-                let name = node.child_by_field_name("name")
+                let name = node
+                    .child_by_field_name("name")
                     .map(|n| self.node_text(&n, source))
                     .unwrap_or_else(|| "type".to_string());
 
@@ -352,10 +387,7 @@ impl BlockExtractor {
                 Some(id)
             }
 
-            // Enum declarations (TypeScript)
-            "enum_declaration" => {
-                self.extract_enum(node, source, file_path, output, is_top_level)
-            }
+            "enum_declaration" => self.extract_enum(node, source, file_path, output, is_top_level),
 
             // Statement block
             "statement_block" => {
@@ -366,7 +398,9 @@ impl BlockExtractor {
                     if child.kind() == "{" || child.kind() == "}" {
                         continue;
                     }
-                    if let Some(child_id) = self.extract_node(&child, source, file_path, output, scope, false) {
+                    if let Some(child_id) =
+                        self.extract_node(&child, source, file_path, output, scope, false)
+                    {
                         children.push(child_id);
                     }
                 }
@@ -397,19 +431,25 @@ impl BlockExtractor {
                     uses.extend(self.extract_used_identifiers(&cond, source, scope));
                 }
                 if let Some(cons) = consequence {
-                    if let Some(id) = self.extract_node(&cons, source, file_path, output, scope, false) {
+                    if let Some(id) =
+                        self.extract_node(&cons, source, file_path, output, scope, false)
+                    {
                         children.push(id);
                     }
                     uses.extend(self.extract_used_identifiers(&cons, source, scope));
                 }
                 if let Some(alt) = alternative {
-                    if let Some(id) = self.extract_node(&alt, source, file_path, output, scope, false) {
+                    if let Some(id) =
+                        self.extract_node(&alt, source, file_path, output, scope, false)
+                    {
                         children.push(id);
                     }
                     uses.extend(self.extract_used_identifiers(&alt, source, scope));
                 }
 
-                let cond_text = condition.map(|c| self.node_text(&c, source)).unwrap_or_default();
+                let cond_text = condition
+                    .map(|c| self.node_text(&c, source))
+                    .unwrap_or_default();
                 let block = Block::new(format!("{} ? : ", cond_text), BlockType::Ternary)
                     .with_uses(uses)
                     .with_children(children)
@@ -425,20 +465,26 @@ impl BlockExtractor {
             // Binary expressions
             "binary_expression" => {
                 let uses = self.extract_used_identifiers(node, source, scope);
-                let block = Block::new(self.truncate(&self.node_text(node, source), 50), BlockType::Binary)
-                    .with_uses(uses)
-                    .with_location(self.node_location(node, file_path))
-                    .with_code(self.node_text(node, source));
+                let block = Block::new(
+                    self.truncate(&self.node_text(node, source), 50),
+                    BlockType::Binary,
+                )
+                .with_uses(uses)
+                .with_location(self.node_location(node, file_path))
+                .with_code(self.node_text(node, source));
                 Some(output.add_block_auto(block))
             }
 
             // Unary expressions
             "unary_expression" | "update_expression" => {
                 let uses = self.extract_used_identifiers(node, source, scope);
-                let block = Block::new(self.truncate(&self.node_text(node, source), 50), BlockType::Unary)
-                    .with_uses(uses)
-                    .with_location(self.node_location(node, file_path))
-                    .with_code(self.node_text(node, source));
+                let block = Block::new(
+                    self.truncate(&self.node_text(node, source), 50),
+                    BlockType::Unary,
+                )
+                .with_uses(uses)
+                .with_location(self.node_location(node, file_path))
+                .with_code(self.node_text(node, source));
                 Some(output.add_block_auto(block))
             }
 
@@ -457,12 +503,15 @@ impl BlockExtractor {
                             }
                             if let Some(value) = child.child_by_field_name("value") {
                                 uses.extend(self.extract_used_identifiers(&value, source, scope));
-                                if let Some(id) = self.extract_node(&value, source, file_path, output, scope, false) {
+                                if let Some(id) = self
+                                    .extract_node(&value, source, file_path, output, scope, false)
+                                {
                                     children.push(id);
                                 }
                             }
                         }
-                        "shorthand_property_identifier" | "shorthand_property_identifier_pattern" => {
+                        "shorthand_property_identifier"
+                        | "shorthand_property_identifier_pattern" => {
                             let name = self.node_text(&child, source);
                             produces.push(name.clone());
                             uses.push(name);
@@ -495,7 +544,9 @@ impl BlockExtractor {
                         continue;
                     }
                     uses.extend(self.extract_used_identifiers(&child, source, scope));
-                    if let Some(id) = self.extract_node(&child, source, file_path, output, scope, false) {
+                    if let Some(id) =
+                        self.extract_node(&child, source, file_path, output, scope, false)
+                    {
                         children.push(id);
                     }
                 }
@@ -567,8 +618,16 @@ impl BlockExtractor {
             }
 
             // Skip these node types (no block needed, comments don't contribute to flow)
-            "comment" | "hash_bang_line" | "{" | "}" | "(" | ")" | "[" | "]" | "," | ";" | ":" | "=>" => None,
-            "identifier" | "property_identifier" | "string" | "number" | "true" | "false" | "null" | "undefined" => None,
+            "comment" | "hash_bang_line" | "{" | "}" | "(" | ")" | "[" | "]" | "," | ";" | ":"
+            | "=>" => None,
+            "identifier"
+            | "property_identifier"
+            | "string"
+            | "number"
+            | "true"
+            | "false"
+            | "null"
+            | "undefined" => None,
             "type_annotation" | "type_identifier" | "predefined_type" | "generic_type" => None,
 
             // Default: create unknown block for unhandled cases
@@ -578,7 +637,9 @@ impl BlockExtractor {
                 let mut cursor = node.walk();
 
                 for child in node.children(&mut cursor) {
-                    if let Some(child_id) = self.extract_node(&child, source, file_path, output, scope, false) {
+                    if let Some(child_id) =
+                        self.extract_node(&child, source, file_path, output, scope, false)
+                    {
                         children.push(child_id);
                     }
                 }
@@ -586,9 +647,12 @@ impl BlockExtractor {
                 if children.is_empty() && !self.is_significant_node(kind) {
                     None
                 } else if children.is_empty() {
-                    let block = Block::new(self.truncate(&self.node_text(node, source), 50), BlockType::Unknown)
-                        .with_location(self.node_location(node, file_path))
-                        .with_code(self.node_text(node, source));
+                    let block = Block::new(
+                        self.truncate(&self.node_text(node, source), 50),
+                        BlockType::Unknown,
+                    )
+                    .with_location(self.node_location(node, file_path))
+                    .with_code(self.node_text(node, source));
                     Some(output.add_block_auto(block))
                 } else {
                     let block = Block::new(kind.to_string(), BlockType::Statement)
@@ -609,7 +673,11 @@ impl BlockExtractor {
         is_top_level: bool,
     ) -> Option<BlockId> {
         let is_async = self.has_child_kind(node, "async");
-        let block_type = if is_async { BlockType::AsyncFunction } else { BlockType::Function };
+        let block_type = if is_async {
+            BlockType::AsyncFunction
+        } else {
+            BlockType::Function
+        };
         self.extract_function_with_type(node, source, file_path, output, block_type, is_top_level)
     }
 
@@ -622,7 +690,8 @@ impl BlockExtractor {
         block_type: BlockType,
         is_top_level: bool,
     ) -> Option<BlockId> {
-        let name = node.child_by_field_name("name")
+        let name = node
+            .child_by_field_name("name")
             .map(|n| self.node_text(&n, source))
             .unwrap_or_else(|| "anonymous".to_string());
 
@@ -636,15 +705,21 @@ impl BlockExtractor {
 
         // Extract body
         if let Some(body) = node.child_by_field_name("body") {
-            if let Some(body_id) = self.extract_node(&body, source, file_path, output, &mut scope, false) {
+            if let Some(body_id) =
+                self.extract_node(&body, source, file_path, output, &mut scope, false)
+            {
                 children.push(body_id);
             }
         }
 
-        let return_type = node.child_by_field_name("return_type")
+        let return_type = node
+            .child_by_field_name("return_type")
             .map(|n| self.node_text(&n, source));
 
-        let is_async = matches!(block_type, BlockType::AsyncFunction | BlockType::AsyncMethod);
+        let is_async = matches!(
+            block_type,
+            BlockType::AsyncFunction | BlockType::AsyncMethod
+        );
 
         let block = Block::new(name, block_type)
             .with_uses(scope.used_external.into_iter().collect())
@@ -677,12 +752,15 @@ impl BlockExtractor {
         let mut children = Vec::new();
 
         if let Some(body) = node.child_by_field_name("body") {
-            if let Some(body_id) = self.extract_node(&body, source, file_path, output, &mut scope, false) {
+            if let Some(body_id) =
+                self.extract_node(&body, source, file_path, output, &mut scope, false)
+            {
                 children.push(body_id);
             }
         }
 
-        let return_type = node.child_by_field_name("return_type")
+        let return_type = node
+            .child_by_field_name("return_type")
             .map(|n| self.node_text(&n, source));
 
         let block = Block::new("arrow", BlockType::Arrow)
@@ -707,7 +785,8 @@ impl BlockExtractor {
         output: &mut FlowMapOutput,
         is_top_level: bool,
     ) -> Option<BlockId> {
-        let name = node.child_by_field_name("name")
+        let name = node
+            .child_by_field_name("name")
             .map(|n| self.node_text(&n, source))
             .unwrap_or_else(|| "anonymous".to_string());
 
@@ -722,7 +801,9 @@ impl BlockExtractor {
         if let Some(body) = node.child_by_field_name("body") {
             let mut cursor = body.walk();
             for child in body.children(&mut cursor) {
-                if let Some(member_id) = self.extract_class_member(&child, source, file_path, output, &mut scope) {
+                if let Some(member_id) =
+                    self.extract_class_member(&child, source, file_path, output, &mut scope)
+                {
                     children.push(member_id);
                 }
             }
@@ -753,7 +834,8 @@ impl BlockExtractor {
     ) -> Option<BlockId> {
         match node.kind() {
             "method_definition" => {
-                let name = node.child_by_field_name("name")
+                let name = node
+                    .child_by_field_name("name")
                     .map(|n| self.node_text(&n, source))
                     .unwrap_or_else(|| "method".to_string());
 
@@ -785,7 +867,9 @@ impl BlockExtractor {
 
                 // Extract body
                 if let Some(body) = node.child_by_field_name("body") {
-                    if let Some(body_id) = self.extract_node(&body, source, file_path, output, scope, false) {
+                    if let Some(body_id) =
+                        self.extract_node(&body, source, file_path, output, scope, false)
+                    {
                         children.push(body_id);
                     }
                 }
@@ -805,13 +889,18 @@ impl BlockExtractor {
             }
 
             "field_definition" | "public_field_definition" => {
-                let name = node.child_by_field_name("name")
+                let name = node
+                    .child_by_field_name("name")
                     .or_else(|| node.child_by_field_name("property"))
                     .map(|n| self.node_text(&n, source))
                     .unwrap_or_else(|| "field".to_string());
 
                 let is_static = self.has_child_kind(node, "static");
-                let block_type = if is_static { BlockType::StaticProperty } else { BlockType::Property };
+                let block_type = if is_static {
+                    BlockType::StaticProperty
+                } else {
+                    BlockType::Property
+                };
 
                 let mut uses = Vec::new();
                 if let Some(value) = node.child_by_field_name("value") {
@@ -852,7 +941,10 @@ impl BlockExtractor {
         scope: &mut Scope,
         is_top_level: bool,
     ) -> Option<BlockId> {
-        let kind_str = node.child(0).map(|n| self.node_text(&n, source)).unwrap_or_default();
+        let kind_str = node
+            .child(0)
+            .map(|n| self.node_text(&n, source))
+            .unwrap_or_default();
         let block_type = match kind_str.as_str() {
             "const" => BlockType::Const,
             "let" => BlockType::Let,
@@ -864,7 +956,8 @@ impl BlockExtractor {
 
         for child in node.children(&mut cursor) {
             if child.kind() == "variable_declarator" {
-                let name = child.child_by_field_name("name")
+                let name = child
+                    .child_by_field_name("name")
                     .map(|n| self.extract_binding_pattern(&n, source, scope))
                     .unwrap_or_default();
 
@@ -875,7 +968,9 @@ impl BlockExtractor {
                     uses = self.extract_used_identifiers(&value, source, scope);
 
                     // Extract complex expressions in value
-                    if let Some(val_id) = self.extract_node(&value, source, file_path, output, scope, false) {
+                    if let Some(val_id) =
+                        self.extract_node(&value, source, file_path, output, scope, false)
+                    {
                         value_children.push(val_id);
                     }
                 }
@@ -940,14 +1035,20 @@ impl BlockExtractor {
         scope: &mut Scope,
     ) -> Option<BlockId> {
         let condition = node.child_by_field_name("condition");
-        let condition_text = condition.map(|c| self.node_text(&c, source)).unwrap_or_default();
+        let condition_text = condition
+            .map(|c| self.node_text(&c, source))
+            .unwrap_or_default();
 
-        let mut uses = condition.map(|c| self.extract_used_identifiers(&c, source, scope)).unwrap_or_default();
+        let mut uses = condition
+            .map(|c| self.extract_used_identifiers(&c, source, scope))
+            .unwrap_or_default();
         let mut children = Vec::new();
 
         // Then branch
         if let Some(consequence) = node.child_by_field_name("consequence") {
-            if let Some(then_id) = self.extract_node(&consequence, source, file_path, output, scope, false) {
+            if let Some(then_id) =
+                self.extract_node(&consequence, source, file_path, output, scope, false)
+            {
                 children.push(then_id);
             }
         }
@@ -956,13 +1057,20 @@ impl BlockExtractor {
         if let Some(alternative) = node.child_by_field_name("alternative") {
             if alternative.kind() == "if_statement" {
                 // else-if chain
-                if let Some(else_if_id) = self.extract_if_statement(&alternative, source, file_path, output, scope) {
+                if let Some(else_if_id) =
+                    self.extract_if_statement(&alternative, source, file_path, output, scope)
+                {
                     children.push(else_if_id);
                 }
             } else if alternative.kind() == "else_clause" {
                 // else block
-                if let Some(else_body) = alternative.child_by_field_name("body").or_else(|| alternative.child(1)) {
-                    if let Some(else_id) = self.extract_node(&else_body, source, file_path, output, scope, false) {
+                if let Some(else_body) = alternative
+                    .child_by_field_name("body")
+                    .or_else(|| alternative.child(1))
+                {
+                    if let Some(else_id) =
+                        self.extract_node(&else_body, source, file_path, output, scope, false)
+                    {
                         let else_block = Block::new("else", BlockType::Else)
                             .with_children(vec![else_id])
                             .with_location(self.node_location(&alternative, file_path));
@@ -970,7 +1078,9 @@ impl BlockExtractor {
                     }
                 }
             } else {
-                if let Some(else_id) = self.extract_node(&alternative, source, file_path, output, scope, false) {
+                if let Some(else_id) =
+                    self.extract_node(&alternative, source, file_path, output, scope, false)
+                {
                     let else_block = Block::new("else", BlockType::Else)
                         .with_children(vec![else_id])
                         .with_location(self.node_location(&alternative, file_path));
@@ -979,14 +1089,17 @@ impl BlockExtractor {
             }
         }
 
-        let block = Block::new(format!("if {}", self.truncate(&condition_text, 30)), BlockType::If)
-            .with_uses(uses)
-            .with_children(children)
-            .with_location(self.node_location(node, file_path))
-            .with_metadata(BlockMetadata {
-                condition: Some(condition_text),
-                ..Default::default()
-            });
+        let block = Block::new(
+            format!("if {}", self.truncate(&condition_text, 30)),
+            BlockType::If,
+        )
+        .with_uses(uses)
+        .with_children(children)
+        .with_location(self.node_location(node, file_path))
+        .with_metadata(BlockMetadata {
+            condition: Some(condition_text),
+            ..Default::default()
+        });
 
         Some(output.add_block_auto(block))
     }
@@ -1000,8 +1113,12 @@ impl BlockExtractor {
         scope: &mut Scope,
     ) -> Option<BlockId> {
         let value = node.child_by_field_name("value");
-        let value_text = value.map(|v| self.node_text(&v, source)).unwrap_or_default();
-        let uses = value.map(|v| self.extract_used_identifiers(&v, source, scope)).unwrap_or_default();
+        let value_text = value
+            .map(|v| self.node_text(&v, source))
+            .unwrap_or_default();
+        let uses = value
+            .map(|v| self.extract_used_identifiers(&v, source, scope))
+            .unwrap_or_default();
 
         let mut children = Vec::new();
 
@@ -1010,14 +1127,22 @@ impl BlockExtractor {
             for child in body.children(&mut cursor) {
                 match child.kind() {
                     "switch_case" => {
-                        let case_value = child.child_by_field_name("value")
+                        let case_value = child
+                            .child_by_field_name("value")
                             .map(|v| self.node_text(&v, source));
 
                         let mut case_children = Vec::new();
                         let mut case_cursor = child.walk();
                         for case_child in child.children(&mut case_cursor) {
                             if case_child.kind() != "case" && case_child.kind() != ":" {
-                                if let Some(id) = self.extract_node(&case_child, source, file_path, output, scope, false) {
+                                if let Some(id) = self.extract_node(
+                                    &case_child,
+                                    source,
+                                    file_path,
+                                    output,
+                                    scope,
+                                    false,
+                                ) {
                                     case_children.push(id);
                                 }
                             }
@@ -1037,7 +1162,14 @@ impl BlockExtractor {
                         let mut default_cursor = child.walk();
                         for default_child in child.children(&mut default_cursor) {
                             if default_child.kind() != "default" && default_child.kind() != ":" {
-                                if let Some(id) = self.extract_node(&default_child, source, file_path, output, scope, false) {
+                                if let Some(id) = self.extract_node(
+                                    &default_child,
+                                    source,
+                                    file_path,
+                                    output,
+                                    scope,
+                                    false,
+                                ) {
                                     default_children.push(id);
                                 }
                             }
@@ -1054,14 +1186,17 @@ impl BlockExtractor {
             }
         }
 
-        let block = Block::new(format!("switch {}", self.truncate(&value_text, 30)), BlockType::Switch)
-            .with_uses(uses)
-            .with_children(children)
-            .with_location(self.node_location(node, file_path))
-            .with_metadata(BlockMetadata {
-                condition: Some(value_text),
-                ..Default::default()
-            });
+        let block = Block::new(
+            format!("switch {}", self.truncate(&value_text, 30)),
+            BlockType::Switch,
+        )
+        .with_uses(uses)
+        .with_children(children)
+        .with_location(self.node_location(node, file_path))
+        .with_metadata(BlockMetadata {
+            condition: Some(value_text),
+            ..Default::default()
+        });
 
         Some(output.add_block_auto(block))
     }
@@ -1078,7 +1213,8 @@ impl BlockExtractor {
 
         // Try block
         if let Some(body) = node.child_by_field_name("body") {
-            if let Some(try_id) = self.extract_node(&body, source, file_path, output, scope, false) {
+            if let Some(try_id) = self.extract_node(&body, source, file_path, output, scope, false)
+            {
                 let try_block = Block::new("try", BlockType::Try)
                     .with_children(vec![try_id])
                     .with_location(self.node_location(&body, file_path));
@@ -1088,18 +1224,24 @@ impl BlockExtractor {
 
         // Catch clause
         if let Some(handler) = node.child_by_field_name("handler") {
-            let catch_param = handler.child_by_field_name("parameter")
+            let catch_param = handler
+                .child_by_field_name("parameter")
                 .map(|p| self.node_text(&p, source));
 
             let mut catch_children = Vec::new();
             if let Some(catch_body) = handler.child_by_field_name("body") {
-                if let Some(catch_body_id) = self.extract_node(&catch_body, source, file_path, output, scope, false) {
+                if let Some(catch_body_id) =
+                    self.extract_node(&catch_body, source, file_path, output, scope, false)
+                {
                     catch_children.push(catch_body_id);
                 }
             }
 
             let catch_block = Block::new(
-                format!("catch({})", catch_param.clone().unwrap_or_else(|| "e".to_string())),
+                format!(
+                    "catch({})",
+                    catch_param.clone().unwrap_or_else(|| "e".to_string())
+                ),
                 BlockType::Catch,
             )
             .with_produces(catch_param.into_iter().collect())
@@ -1112,7 +1254,9 @@ impl BlockExtractor {
         // Finally clause
         if let Some(finalizer) = node.child_by_field_name("finalizer") {
             if let Some(finally_body) = finalizer.child_by_field_name("body") {
-                if let Some(finally_id) = self.extract_node(&finally_body, source, file_path, output, scope, false) {
+                if let Some(finally_id) =
+                    self.extract_node(&finally_body, source, file_path, output, scope, false)
+                {
                     let finally_block = Block::new("finally", BlockType::Finally)
                         .with_children(vec![finally_id])
                         .with_location(self.node_location(&finalizer, file_path));
@@ -1152,7 +1296,8 @@ impl BlockExtractor {
 
         // Extract initializer (for for loops)
         if let Some(init) = node.child_by_field_name("initializer") {
-            if let Some(init_id) = self.extract_node(&init, source, file_path, output, scope, false) {
+            if let Some(init_id) = self.extract_node(&init, source, file_path, output, scope, false)
+            {
                 children.push(init_id);
             }
         }
@@ -1174,14 +1319,19 @@ impl BlockExtractor {
 
         // Extract body
         if let Some(body) = node.child_by_field_name("body") {
-            if let Some(body_id) = self.extract_node(&body, source, file_path, output, scope, false) {
+            if let Some(body_id) = self.extract_node(&body, source, file_path, output, scope, false)
+            {
                 children.push(body_id);
             }
         }
 
-        let condition_text = node.child_by_field_name("condition")
+        let condition_text = node
+            .child_by_field_name("condition")
             .map(|c| self.node_text(&c, source))
-            .or_else(|| node.child_by_field_name("right").map(|r| self.node_text(&r, source)));
+            .or_else(|| {
+                node.child_by_field_name("right")
+                    .map(|r| self.node_text(&r, source))
+            });
 
         let name = match loop_type {
             BlockType::For => "for".to_string(),
@@ -1189,7 +1339,9 @@ impl BlockExtractor {
             BlockType::ForOf => "for...of".to_string(),
             BlockType::ForAwait => "for await...of".to_string(),
             BlockType::While => format!("while {}", condition_text.clone().unwrap_or_default()),
-            BlockType::DoWhile => format!("do...while {}", condition_text.clone().unwrap_or_default()),
+            BlockType::DoWhile => {
+                format!("do...while {}", condition_text.clone().unwrap_or_default())
+            }
             _ => "loop".to_string(),
         };
 
@@ -1234,7 +1386,9 @@ impl BlockExtractor {
 
                 // Extract complex expressions in arguments
                 if self.is_complex_expression(&arg) {
-                    if let Some(arg_id) = self.extract_node(&arg, source, file_path, output, scope, false) {
+                    if let Some(arg_id) =
+                        self.extract_node(&arg, source, file_path, output, scope, false)
+                    {
                         children.push(arg_id);
                     }
                 }
@@ -1242,8 +1396,14 @@ impl BlockExtractor {
         }
 
         let (block_type, name) = if callee.kind() == "member_expression" {
-            let object = callee.child_by_field_name("object").map(|o| self.node_text(&o, source)).unwrap_or_default();
-            let method = callee.child_by_field_name("property").map(|p| self.node_text(&p, source)).unwrap_or_default();
+            let object = callee
+                .child_by_field_name("object")
+                .map(|o| self.node_text(&o, source))
+                .unwrap_or_default();
+            let method = callee
+                .child_by_field_name("property")
+                .map(|p| self.node_text(&p, source))
+                .unwrap_or_default();
             (BlockType::MethodCall, format!("{}.{}", object, method))
         } else {
             (BlockType::Call, callee_text)
@@ -1270,7 +1430,8 @@ impl BlockExtractor {
         let mut children = Vec::new();
 
         // Extract the awaited expression
-        if let Some(arg_id) = self.extract_node(&argument, source, file_path, output, scope, false) {
+        if let Some(arg_id) = self.extract_node(&argument, source, file_path, output, scope, false)
+        {
             children.push(arg_id);
         }
 
@@ -1309,7 +1470,9 @@ impl BlockExtractor {
                 uses.extend(self.extract_used_identifiers(&arg, source, scope));
 
                 if self.is_complex_expression(&arg) {
-                    if let Some(arg_id) = self.extract_node(&arg, source, file_path, output, scope, false) {
+                    if let Some(arg_id) =
+                        self.extract_node(&arg, source, file_path, output, scope, false)
+                    {
                         children.push(arg_id);
                     }
                 }
@@ -1341,7 +1504,9 @@ impl BlockExtractor {
 
         let mut children = Vec::new();
         if self.is_complex_expression(&right) {
-            if let Some(right_id) = self.extract_node(&right, source, file_path, output, scope, false) {
+            if let Some(right_id) =
+                self.extract_node(&right, source, file_path, output, scope, false)
+            {
                 children.push(right_id);
             }
         }
@@ -1378,7 +1543,9 @@ impl BlockExtractor {
             if child.kind() != "return" && child.kind() != ";" {
                 uses.extend(self.extract_used_identifiers(&child, source, scope));
                 if self.is_complex_expression(&child) {
-                    if let Some(child_id) = self.extract_node(&child, source, file_path, output, scope, false) {
+                    if let Some(child_id) =
+                        self.extract_node(&child, source, file_path, output, scope, false)
+                    {
                         children.push(child_id);
                     }
                 }
@@ -1410,7 +1577,9 @@ impl BlockExtractor {
         for child in node.children(&mut cursor) {
             if child.kind() != "throw" && child.kind() != ";" {
                 uses.extend(self.extract_used_identifiers(&child, source, scope));
-                if let Some(child_id) = self.extract_node(&child, source, file_path, output, scope, false) {
+                if let Some(child_id) =
+                    self.extract_node(&child, source, file_path, output, scope, false)
+                {
                     children.push(child_id);
                 }
             }
@@ -1433,7 +1602,8 @@ impl BlockExtractor {
         output: &mut FlowMapOutput,
         is_top_level: bool,
     ) -> Option<BlockId> {
-        let name = node.child_by_field_name("name")
+        let name = node
+            .child_by_field_name("name")
             .map(|n| self.node_text(&n, source))
             .unwrap_or_else(|| "enum".to_string());
 
@@ -1443,7 +1613,8 @@ impl BlockExtractor {
             let mut cursor = body.walk();
             for child in body.children(&mut cursor) {
                 if child.kind() == "enum_assignment" || child.kind() == "property_identifier" {
-                    let member_name = child.child_by_field_name("name")
+                    let member_name = child
+                        .child_by_field_name("name")
                         .or_else(|| Some(child))
                         .map(|n| self.node_text(&n, source))
                         .unwrap_or_default();
@@ -1476,7 +1647,8 @@ impl BlockExtractor {
             let mut cursor = params_node.walk();
             for child in params_node.children(&mut cursor) {
                 match child.kind() {
-                    "required_parameter" | "optional_parameter" | "rest_parameter" | "identifier" => {
+                    "required_parameter" | "optional_parameter" | "rest_parameter"
+                    | "identifier" => {
                         let names = self.extract_binding_pattern(&child, source, scope);
                         for name in names {
                             scope.define(&name);
@@ -1535,7 +1707,12 @@ impl BlockExtractor {
         names
     }
 
-    fn extract_used_identifiers(&self, node: &Node, source: &str, scope: &mut Scope) -> Vec<String> {
+    fn extract_used_identifiers(
+        &self,
+        node: &Node,
+        source: &str,
+        scope: &mut Scope,
+    ) -> Vec<String> {
         let mut identifiers = Vec::new();
 
         match node.kind() {
@@ -1587,9 +1764,13 @@ impl BlockExtractor {
                                 let mut imports_cursor = clause_child.walk();
                                 for import_child in clause_child.children(&mut imports_cursor) {
                                     if import_child.kind() == "import_specifier" {
-                                        if let Some(alias) = import_child.child_by_field_name("alias") {
+                                        if let Some(alias) =
+                                            import_child.child_by_field_name("alias")
+                                        {
                                             names.push(self.node_text(&alias, source));
-                                        } else if let Some(name_node) = import_child.child_by_field_name("name") {
+                                        } else if let Some(name_node) =
+                                            import_child.child_by_field_name("name")
+                                        {
                                             names.push(self.node_text(&name_node, source));
                                         }
                                     }
@@ -1612,14 +1793,18 @@ impl BlockExtractor {
     }
 
     fn get_import_source(&self, node: &Node, source: &str) -> Option<String> {
-        node.child_by_field_name("source")
-            .map(|s| {
-                let text = self.node_text(&s, source);
-                text.trim_matches(|c| c == '"' || c == '\'').to_string()
-            })
+        node.child_by_field_name("source").map(|s| {
+            let text = self.node_text(&s, source);
+            text.trim_matches(|c| c == '"' || c == '\'').to_string()
+        })
     }
 
-    fn extract_decorators(&self, node: &Node, source: &str, output: &mut FlowMapOutput) -> Vec<BlockId> {
+    fn extract_decorators(
+        &self,
+        node: &Node,
+        source: &str,
+        output: &mut FlowMapOutput,
+    ) -> Vec<BlockId> {
         let mut decorators = Vec::new();
 
         let mut cursor = node.walk();
@@ -1661,32 +1846,82 @@ impl BlockExtractor {
     fn is_complex_expression(&self, node: &Node) -> bool {
         matches!(
             node.kind(),
-            "call_expression" | "await_expression" | "new_expression" | "arrow_function"
-            | "function_expression" | "object" | "array" | "ternary_expression"
+            "call_expression"
+                | "await_expression"
+                | "new_expression"
+                | "arrow_function"
+                | "function_expression"
+                | "object"
+                | "array"
+                | "ternary_expression"
         )
     }
 
     fn is_significant_node(&self, kind: &str) -> bool {
         matches!(
             kind,
-            "function_declaration" | "class_declaration" | "method_definition"
-            | "export_statement" | "import_statement"
+            "function_declaration"
+                | "class_declaration"
+                | "method_definition"
+                | "export_statement"
+                | "import_statement"
         )
     }
 
     fn is_builtin(&self, name: &str) -> bool {
         matches!(
             name,
-            "console" | "window" | "document" | "global" | "globalThis" | "process"
-            | "require" | "module" | "exports" | "__dirname" | "__filename"
-            | "Promise" | "Array" | "Object" | "String" | "Number" | "Boolean"
-            | "Date" | "Math" | "JSON" | "Error" | "TypeError" | "RangeError"
-            | "Map" | "Set" | "WeakMap" | "WeakSet" | "Symbol" | "BigInt"
-            | "Reflect" | "Proxy" | "Intl" | "ArrayBuffer" | "DataView"
-            | "Uint8Array" | "Int32Array" | "Float64Array"
-            | "setTimeout" | "setInterval" | "clearTimeout" | "clearInterval"
-            | "fetch" | "URL" | "URLSearchParams" | "Headers" | "Request" | "Response"
-            | "undefined" | "null" | "NaN" | "Infinity"
+            "console"
+                | "window"
+                | "document"
+                | "global"
+                | "globalThis"
+                | "process"
+                | "require"
+                | "module"
+                | "exports"
+                | "__dirname"
+                | "__filename"
+                | "Promise"
+                | "Array"
+                | "Object"
+                | "String"
+                | "Number"
+                | "Boolean"
+                | "Date"
+                | "Math"
+                | "JSON"
+                | "Error"
+                | "TypeError"
+                | "RangeError"
+                | "Map"
+                | "Set"
+                | "WeakMap"
+                | "WeakSet"
+                | "Symbol"
+                | "BigInt"
+                | "Reflect"
+                | "Proxy"
+                | "Intl"
+                | "ArrayBuffer"
+                | "DataView"
+                | "Uint8Array"
+                | "Int32Array"
+                | "Float64Array"
+                | "setTimeout"
+                | "setInterval"
+                | "clearTimeout"
+                | "clearInterval"
+                | "fetch"
+                | "URL"
+                | "URLSearchParams"
+                | "Headers"
+                | "Request"
+                | "Response"
+                | "undefined"
+                | "null"
+                | "NaN"
+                | "Infinity"
         )
     }
 
@@ -1795,6 +2030,9 @@ function createOrder(userId, items) {
             }
         }
 
-        assert!(found_uses_user || found_produces_user, "Data flow should be tracked");
+        assert!(
+            found_uses_user || found_produces_user,
+            "Data flow should be tracked"
+        );
     }
 }

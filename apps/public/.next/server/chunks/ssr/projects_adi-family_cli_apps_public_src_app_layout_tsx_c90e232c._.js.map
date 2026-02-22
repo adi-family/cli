@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/mgorunuch/projects/adi-family/cli/apps/public/src/app/layout.tsx"],"sourcesContent":["import type { ReactNode } from \"react\";\n\ntype Props = {\n  children: ReactNode;\n};\n\nexport default function RootLayout({children}: Props) {\n  return children;\n}\n"],"names":[],"mappings":";;;;AAMe,SAAS,WAAW,EAAC,QAAQ,EAAQ;IAClD,OAAO;AACT","debugId":null}}]
+}

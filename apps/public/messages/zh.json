@@ -1,0 +1,139 @@
+{
+  "meta": {
+    "title": "ADI — 智能体开发基础设施",
+    "titleTemplate": "{title} | ADI",
+    "description": "构建、部署和编排自主AI智能体。30+个Rust库，插件架构，容器化运行时。个人用户免费。",
+    "ogTitle": "ADI — 智能体开发基础设施"
+  },
+  "nav": {
+    "home": "首页",
+    "app": "应用",
+    "privacy": "隐私政策",
+    "terms": "使用条款",
+    "toggleMenu": "切换菜单"
+  },
+  "hero": {
+    "badge": "请选择以继续",
+    "titleBefore": "在开始之前 —",
+    "titleHighlight": "你是谁？",
+    "paths": {
+      "individual": {
+        "title": "个人开发者",
+        "description": "免费CLI，本地智能体，自带API密钥"
+      },
+      "team": {
+        "title": "工程团队",
+        "description": "共享基础设施，团队工作流，数据分析"
+      },
+      "enterprise": {
+        "title": "企业",
+        "description": "私有部署，SSO，审计日志，专属支持"
+      },
+      "contributor": {
+        "title": "开源贡献者",
+        "description": "30+ Rust crate，插件SDK，源码可用"
+      },
+      "platform": {
+        "title": "平台开发者",
+        "description": "将智能体运行时嵌入您自己的产品"
+      }
+    },
+    "footnote": "每条路径展示定制化的功能、定价和文档。"
+  },
+  "notFound": {
+    "code": "404",
+    "title": "页面未找到",
+    "description": "您查找的页面不存在或已被移动。",
+    "backHome": "返回首页"
+  },
+  "underConstruction": {
+    "title": "建设中",
+    "description": "此部分正在建设中，请稍后再来。",
+    "badge": "进行中"
+  },
+  "footer": {
+    "copyright": "ADI © {year}"
+  },
+  "personas": {
+    "developers": {
+      "metaTitle": "ADI 个人开发者版",
+      "metaDescription": "免费CLI，本地智能体，自带API密钥。由你掌控的AI开发工具。",
+      "badge": "面向开发者",
+      "headline": "你的AI智能体，你的密钥，你的设备",
+      "subheadline": "安装CLI，接入API密钥，开始使用自主智能体。个人使用永久免费。",
+      "featuresTitle": "你将获得",
+      "flowTitle": "使用流程",
+      "audiencesTitle": "为你而建",
+      "expects": "期望",
+      "frustrations": "痛点",
+      "ctaTitle": "立即开始",
+      "ctaDescription": "一条命令安装。自带API密钥。无需注册。",
+      "ctaPrimary": "在GitHub查看",
+      "ctaSecondary": "阅读文档"
+    },
+    "teams": {
+      "metaTitle": "ADI 工程团队版",
+      "metaDescription": "共享基础设施、团队工作流和使用分析。",
+      "badge": "面向团队",
+      "headline": "在团队中扩展AI智能体",
+      "subheadline": "共享配置、集中密钥管理和使用分析。从一名开发者扩展到整个工程团队。",
+      "featuresTitle": "团队功能",
+      "flowTitle": "团队配置流程",
+      "audiencesTitle": "谁在使用",
+      "expects": "期望",
+      "frustrations": "痛点",
+      "ctaTitle": "开始团队使用",
+      "ctaDescription": "从免费版开始。准备好时升级团队功能。",
+      "ctaPrimary": "在GitHub查看",
+      "ctaSecondary": "阅读文档"
+    },
+    "enterprise": {
+      "metaTitle": "ADI 企业版",
+      "metaDescription": "支持SSO、审计日志和专属支持的私有部署AI基础设施。",
+      "badge": "面向企业",
+      "headline": "AI智能体留在你的网络中",
+      "subheadline": "私有部署、SSO集成、审计日志和专属支持。为需要控制权的组织而建。",
+      "featuresTitle": "企业功能",
+      "flowTitle": "评估流程",
+      "audiencesTitle": "关键利益相关者",
+      "expects": "期望",
+      "frustrations": "痛点",
+      "ctaTitle": "联系我们",
+      "ctaDescription": "预约演示或请求安全审查。我们会根据你的需求定制部署方案。",
+      "ctaPrimary": "联系销售",
+      "ctaSecondary": "安全白皮书"
+    },
+    "contributors": {
+      "metaTitle": "参与ADI开源贡献",
+      "metaDescription": "30+个Rust crate、插件SDK和活跃社区。一起来构建。",
+      "badge": "开源项目",
+      "headline": "30+ Rust crate，一起来构建",
+      "subheadline": "开源基础设施、插件SDK和不断增长的生态系统。无论你编写crate还是插件，这里都有你的位置。",
+      "featuresTitle": "贡献领域",
+      "flowTitle": "入门指南",
+      "audiencesTitle": "贡献者画像",
+      "expects": "期望",
+      "frustrations": "痛点",
+      "ctaTitle": "开始贡献",
+      "ctaDescription": "克隆仓库，选择issue，提交你的第一个PR。",
+      "ctaPrimary": "在GitHub查看",
+      "ctaSecondary": "新手issue"
+    },
+    "platform-builders": {
+      "metaTitle": "ADI 平台开发者版",
+      "metaDescription": "将ADI的智能体运行时、crate和插件系统嵌入你自己的产品。",
+      "badge": "面向平台",
+      "headline": "将智能体能力嵌入你的产品",
+      "subheadline": "使用ADI的Rust crate、智能体运行时和插件系统作为你平台的构建块。无需从零开始。",
+      "featuresTitle": "集成接口",
+      "flowTitle": "集成路径",
+      "audiencesTitle": "开发者画像",
+      "expects": "期望",
+      "frustrations": "痛点",
+      "ctaTitle": "开始集成",
+      "ctaDescription": "浏览crate目录，试用运行时API，或联系我们洽谈合作。",
+      "ctaPrimary": "查看crate",
+      "ctaSecondary": "API文档"
+    }
+  }
+}

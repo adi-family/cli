@@ -83,7 +83,6 @@ impl<T: Transport + 'static> McpClient<T> {
                                 }
                             }
                         }
-                        // TODO: Handle notifications from server
                     }
                     Ok(None) => {
                         debug!("Transport closed");

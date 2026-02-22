@@ -1,0 +1,6 @@
+{
+  "/robots.txt/route": "app/robots.txt/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/[locale]/page": "app/[locale]/page.js",
+  "/api/og/route": "app/api/og/route.js"
+}

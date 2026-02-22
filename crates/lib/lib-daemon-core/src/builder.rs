@@ -298,7 +298,6 @@ impl Daemon {
     pub async fn spawn(&self) -> Result<u32> {
         self.ensure_base_dir()?;
 
-        // Check if already running
         if let Some(pid) = self.get_pid()? {
             if is_process_running(pid) {
                 return Err(DaemonError::AlreadyRunning(pid));
@@ -412,7 +411,6 @@ impl Daemon {
 
     /// Get the daemon status
     pub async fn status(&self) -> Result<DaemonStatus> {
-        // Check service manager first
         if self.use_service_manager {
             let manager = get_service_manager();
             if manager.is_installed(&self.name).await? {
@@ -431,7 +429,6 @@ impl Daemon {
             }
         }
 
-        // Check PID file
         let state = if let Some(pid) = self.get_pid()? {
             if is_process_running(pid) {
                 ServiceStatus::Running { pid: Some(pid) }
@@ -475,7 +472,6 @@ impl Daemon {
 
     /// Get recent logs
     pub async fn logs(&self, lines: usize) -> Result<String> {
-        // Try service manager first
         if self.use_service_manager {
             let manager = get_service_manager();
             if manager.is_installed(&self.name).await? {
@@ -483,7 +479,6 @@ impl Daemon {
             }
         }
 
-        // Fall back to reading log file
         if self.log_file.exists() {
             let output = tokio::process::Command::new("tail")
                 .args(["-n", &lines.to_string()])

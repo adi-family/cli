@@ -21,6 +21,12 @@
   initial-value: 12px;
 }
 
+:root {
+  --l: 1rem;
+  --t: 1rem;
+  --r: 12px;
+}
+
 /* ─── --l context classes (spacing) ─── */
 
 .l-1\/4 { --l: calc(var(--l) * 0.25); }
@@ -68,6 +74,53 @@
 .g-15  { gap: calc(var(--l) * 1.5); }
 .g-2   { gap: calc(var(--l) * 2); }
 .g-3   { gap: calc(var(--l) * 3); }
+
+/* ─── Size utilities (--l based, width + height) ─── */
+
+.s-05  { width: calc(var(--l) * 0.5);  height: calc(var(--l) * 0.5); }
+.s-075 { width: calc(var(--l) * 0.75); height: calc(var(--l) * 0.75); }
+.s-1   { width: var(--l);              height: var(--l); }
+.s-15  { width: calc(var(--l) * 1.5);  height: calc(var(--l) * 1.5); }
+.s-2   { width: calc(var(--l) * 2);    height: calc(var(--l) * 2); }
+.s-3   { width: calc(var(--l) * 3);    height: calc(var(--l) * 3); }
+.s-4   { width: calc(var(--l) * 4);    height: calc(var(--l) * 4); }
+.s-5   { width: calc(var(--l) * 5);    height: calc(var(--l) * 5); }
+
+.h-l-1  { height: var(--l); }
+.h-l-15 { height: calc(var(--l) * 1.5); }
+.h-l-2  { height: calc(var(--l) * 2); }
+.h-l-3  { height: calc(var(--l) * 3); }
+.h-l-4  { height: calc(var(--l) * 4); }
+.h-l-5  { height: calc(var(--l) * 5); }
+
+/* ─── Icon size utilities (--t based, matches text scale) ─── */
+
+.icon-xs { width: calc(var(--t) * 0.75);  height: calc(var(--t) * 0.75); }
+.icon-sm { width: calc(var(--t) * 0.875); height: calc(var(--t) * 0.875); }
+.icon-1  { width: var(--t);               height: var(--t); }
+.icon-lg { width: calc(var(--t) * 1.25);  height: calc(var(--t) * 1.25); }
+.icon-xl { width: calc(var(--t) * 1.563); height: calc(var(--t) * 1.563); }
+
+/* ─── Margin utilities (--l based) ─── */
+
+.m-v-025 { margin-block: calc(var(--l) * 0.25); }
+.m-v-05  { margin-block: calc(var(--l) * 0.5); }
+.m-v-075 { margin-block: calc(var(--l) * 0.75); }
+.m-v-1   { margin-block: var(--l); }
+.m-v-15  { margin-block: calc(var(--l) * 1.5); }
+.m-v-2   { margin-block: calc(var(--l) * 2); }
+
+.m-t-025 { margin-block-start: calc(var(--l) * 0.25); }
+.m-t-05  { margin-block-start: calc(var(--l) * 0.5); }
+.m-t-075 { margin-block-start: calc(var(--l) * 0.75); }
+.m-t-1   { margin-block-start: var(--l); }
+.m-t-15  { margin-block-start: calc(var(--l) * 1.5); }
+
+.m-b-025 { margin-block-end: calc(var(--l) * 0.25); }
+.m-b-05  { margin-block-end: calc(var(--l) * 0.5); }
+.m-b-075 { margin-block-end: calc(var(--l) * 0.75); }
+.m-b-1   { margin-block-end: var(--l); }
+.m-b-15  { margin-block-end: calc(var(--l) * 1.5); }
 
 /* ─── Text size utilities (--t based, Major Third 1.25 scale) ─── */
 

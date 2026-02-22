@@ -90,16 +90,12 @@ pub mod obs;
 pub mod rollout;
 pub mod hooks;
 
-// Log streaming trait
 pub mod logs;
 
-// WebRTC handlers (for peer-to-peer communication)
 pub mod webrtc;
 
-// Daemon service traits (for background services)
 pub mod daemon;
 
-// Error handling
 mod error;
 pub use error::{PluginError, Result};
 

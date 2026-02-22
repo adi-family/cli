@@ -34,3 +34,5 @@
 - **Common traits**: Always implement `Debug`. Add `Clone`, `PartialEq`, `Hash`, `Default` where meaningful. Don't block `Send`/`Sync` accidentally.
 
 - **Documentation**: First line = summary. Add `# Examples`, `# Errors`, `# Panics`, `# Safety` sections as needed. Use `?` in examples, not `unwrap()`.
+
+- **Module structure**: When a subdirectory contains only 2 files (`mod.rs` + one impl), flatten to sibling files: `foo/mod.rs` + `foo/bar.rs` → `foo.rs` + `foo_bar.rs`. Use `#[path = "foo_bar.rs"] mod bar;`. Subdirectories justified with 3+ files.

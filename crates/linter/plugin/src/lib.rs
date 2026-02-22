@@ -58,7 +58,6 @@ impl CliCommands for LinterPlugin {
     }
 
     async fn run_command(&self, _ctx: &CliContext) -> Result<CliResult> {
-        // TODO: Implement full linting functionality from v2.bak
         Ok(CliResult::error("Linter plugin not yet fully migrated to v3. See lib.rs.v2.bak for reference."))
     }
 }

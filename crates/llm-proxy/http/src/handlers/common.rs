@@ -157,8 +157,6 @@ impl ProxyContext {
         )
         .await?;
 
-        // TODO: Send to analytics service
-
         Ok(())
     }
 }

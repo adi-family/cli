@@ -363,12 +363,12 @@ services:
         NEXT_PUBLIC_SITE_URL: "http://adi.local"
     restart: on-failure
 
-  web-app:
+  app:
     runner:
       type: script
       script:
         run: npm run dev
-        working_dir: apps/web-app
+        working_dir: apps/app
     rollout:
       type: recreate
       recreate:
@@ -384,7 +384,6 @@ services:
     environment:
       static:
         PORT: "8035"
-        VITE_SIGNALING_URL: "/api/signaling/ws"
     restart: on-failure
 
   # ---------------------------------------------------------------------------
@@ -614,30 +613,5 @@ services:
       - logging
     restart: on-failure
 
-  # ---------------------------------------------------------------------------
-  # Documentation
-  # ---------------------------------------------------------------------------
 
-  persona-analytics:
-    runner:
-      type: script
-      script:
-        run: npm run dev
-        working_dir: apps/persona-analytics
-    rollout:
-      type: recreate
-      recreate:
-        ports:
-          http: 8051
-    proxy:
-      - host: persona-analytics.adi.local
-        path: /
-    healthcheck:
-      type: tcp
-      tcp:
-        port: "{{runtime.port.http}}"
-    environment:
-      static:
-        PORT: "8051"
-    restart: on-failure
 

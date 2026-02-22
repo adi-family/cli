@@ -219,22 +219,17 @@ fn spawn_background_unix(config: &SpawnConfig) -> Result<u32> {
     use std::fs::OpenOptions;
     use std::os::unix::process::CommandExt;
 
-    // Build the command
     let mut cmd = Command::new(&config.executable);
     cmd.args(&config.args);
 
-    // Set working directory
     if let Some(ref dir) = config.working_dir {
         cmd.current_dir(dir);
     }
 
-    // Set environment variables
     for (key, value) in &config.env {
         cmd.env(key, value);
     }
 
-    // Create a new session (detach from controlling terminal)
-    // This is the key to making it a daemon
     unsafe {
         cmd.pre_exec(|| {
             // Create new session, become session leader
@@ -243,7 +238,6 @@ fn spawn_background_unix(config: &SpawnConfig) -> Result<u32> {
         });
     }
 
-    // Handle stdout redirection
     if let Some(ref stdout_path) = config.stdout_file {
         ensure_parent_dir(stdout_path)?;
         let file = OpenOptions::new()
@@ -255,7 +249,6 @@ fn spawn_background_unix(config: &SpawnConfig) -> Result<u32> {
         cmd.stdout(std::process::Stdio::null());
     }
 
-    // Handle stderr redirection
     if let Some(ref stderr_path) = config.stderr_file {
         ensure_parent_dir(stderr_path)?;
         let file = OpenOptions::new()
@@ -267,10 +260,8 @@ fn spawn_background_unix(config: &SpawnConfig) -> Result<u32> {
         cmd.stderr(std::process::Stdio::null());
     }
 
-    // Stdin always null for daemon
     cmd.stdin(std::process::Stdio::null());
 
-    // Spawn the process
     let child = cmd.spawn().map_err(|e| {
         DaemonError::Other(anyhow::anyhow!("Failed to spawn process: {}", e))
     })?;
@@ -278,7 +269,6 @@ fn spawn_background_unix(config: &SpawnConfig) -> Result<u32> {
     let pid = child.id();
     debug!("Spawned background process with PID {}", pid);
 
-    // Write PID file if specified
     if let Some(ref pid_path) = config.pid_file {
         ensure_parent_dir(pid_path)?;
         std::fs::write(pid_path, pid.to_string())?;
@@ -299,20 +289,16 @@ fn spawn_background_windows(config: &SpawnConfig) -> Result<u32> {
     let mut cmd = Command::new(&config.executable);
     cmd.args(&config.args);
 
-    // Set working directory
     if let Some(ref dir) = config.working_dir {
         cmd.current_dir(dir);
     }
 
-    // Set environment variables
     for (key, value) in &config.env {
         cmd.env(key, value);
     }
 
-    // Windows-specific: detach from console
     cmd.creation_flags(CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS | CREATE_NO_WINDOW);
 
-    // Handle stdout redirection
     if let Some(ref stdout_path) = config.stdout_file {
         ensure_parent_dir(stdout_path)?;
         let file = std::fs::OpenOptions::new()
@@ -324,7 +310,6 @@ fn spawn_background_windows(config: &SpawnConfig) -> Result<u32> {
         cmd.stdout(std::process::Stdio::null());
     }
 
-    // Handle stderr redirection
     if let Some(ref stderr_path) = config.stderr_file {
         ensure_parent_dir(stderr_path)?;
         let file = std::fs::OpenOptions::new()
@@ -338,7 +323,6 @@ fn spawn_background_windows(config: &SpawnConfig) -> Result<u32> {
 
     cmd.stdin(std::process::Stdio::null());
 
-    // Spawn the process
     let child = cmd.spawn().map_err(|e| {
         DaemonError::Other(anyhow::anyhow!("Failed to spawn process: {}", e))
     })?;
@@ -346,7 +330,6 @@ fn spawn_background_windows(config: &SpawnConfig) -> Result<u32> {
     let pid = child.id();
     debug!("Spawned background process with PID {}", pid);
 
-    // Write PID file if specified
     if let Some(ref pid_path) = config.pid_file {
         ensure_parent_dir(pid_path)?;
         std::fs::write(pid_path, pid.to_string())?;

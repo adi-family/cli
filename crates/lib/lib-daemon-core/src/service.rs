@@ -247,16 +247,13 @@ impl SystemdManager {
     fn generate_unit(&self, config: &ServiceConfig) -> String {
         let mut unit = String::new();
 
-        // [Unit] section
         unit.push_str("[Unit]\n");
         unit.push_str(&format!("Description={}\n", config.description));
         unit.push_str("After=network.target\n\n");
 
-        // [Service] section
         unit.push_str("[Service]\n");
         unit.push_str("Type=simple\n");
 
-        // Build ExecStart
         let mut exec_start = config.executable.display().to_string();
         for arg in &config.args {
             exec_start.push(' ');
@@ -275,12 +272,10 @@ impl SystemdManager {
             unit.push_str(&format!("WorkingDirectory={}\n", dir.display()));
         }
 
-        // Environment variables
         for (key, value) in &config.env {
             unit.push_str(&format!("Environment=\"{}={}\"\n", key, value));
         }
 
-        // Restart policy
         match config.restart_policy {
             RestartPolicy::Never => unit.push_str("Restart=no\n"),
             RestartPolicy::OnFailure => {
@@ -293,7 +288,6 @@ impl SystemdManager {
             }
         }
 
-        // Logging
         if let Some(ref stdout) = config.stdout_log {
             unit.push_str(&format!("StandardOutput=append:{}\n", stdout.display()));
         }
@@ -303,7 +297,6 @@ impl SystemdManager {
 
         unit.push('\n');
 
-        // [Install] section
         unit.push_str("[Install]\n");
         unit.push_str("WantedBy=default.target\n");
 
@@ -322,17 +315,14 @@ impl ServiceManager for SystemdManager {
     async fn install(&self, config: &ServiceConfig) -> Result<()> {
         let service_path = self.service_path(&config.name);
 
-        // Ensure directory exists
         if let Some(parent) = service_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
 
-        // Generate and write unit file
         let unit_content = self.generate_unit(config);
         std::fs::write(&service_path, &unit_content)?;
         info!("Created systemd unit: {}", service_path.display());
 
-        // Reload systemd
         let mut args = self.systemctl_args();
         args.push("daemon-reload");
         
@@ -349,7 +339,6 @@ impl ServiceManager for SystemdManager {
             )));
         }
 
-        // Enable if autostart
         if config.autostart {
             self.enable_autostart(&config.name).await?;
         }
@@ -358,13 +347,9 @@ impl ServiceManager for SystemdManager {
     }
 
     async fn uninstall(&self, name: &str) -> Result<()> {
-        // Stop service first
         self.stop(name).await.ok();
-
-        // Disable autostart
         self.disable_autostart(name).await.ok();
 
-        // Remove unit file
         let service_path = self.service_path(name);
         if service_path.exists() {
             std::fs::remove_file(&service_path)?;
@@ -678,12 +663,10 @@ impl ServiceManager for LaunchdManager {
     async fn install(&self, config: &ServiceConfig) -> Result<()> {
         let plist_path = self.plist_path(&config.name);
 
-        // Ensure directory exists
         if let Some(parent) = plist_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
 
-        // Generate and write plist
         let plist_content = self.generate_plist(config);
         std::fs::write(&plist_path, &plist_content)?;
         info!("Created launchd plist: {}", plist_path.display());
@@ -692,10 +675,8 @@ impl ServiceManager for LaunchdManager {
     }
 
     async fn uninstall(&self, name: &str) -> Result<()> {
-        // Stop/unload service first
         self.stop(name).await.ok();
 
-        // Remove plist
         let plist_path = self.plist_path(name);
         if plist_path.exists() {
             std::fs::remove_file(&plist_path)?;

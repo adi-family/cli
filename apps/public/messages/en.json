@@ -1,0 +1,139 @@
+{
+  "meta": {
+    "title": "ADI — Agent Development Infrastructure",
+    "titleTemplate": "{title} | ADI",
+    "description": "Build, deploy, and orchestrate autonomous AI agents. 30+ Rust libraries, plugin architecture, containerized runtime. Free for individuals.",
+    "ogTitle": "ADI — Agent Development Infrastructure"
+  },
+  "nav": {
+    "home": "Home",
+    "app": "App",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "toggleMenu": "Toggle menu"
+  },
+  "hero": {
+    "badge": "Select to continue",
+    "titleBefore": "Before we start —",
+    "titleHighlight": "who are you?",
+    "paths": {
+      "individual": {
+        "title": "Individual Developer",
+        "description": "Free CLI, local agents, bring your own keys"
+      },
+      "team": {
+        "title": "Engineering Team",
+        "description": "Shared infrastructure, team workflows, analytics"
+      },
+      "enterprise": {
+        "title": "Enterprise",
+        "description": "Self-hosted, SSO, audit logs, dedicated support"
+      },
+      "contributor": {
+        "title": "Open Source Contributor",
+        "description": "30+ Rust crates, plugin SDK, source-available"
+      },
+      "platform": {
+        "title": "Platform Builder",
+        "description": "Embed agent runtime into your own product"
+      }
+    },
+    "footnote": "Each path shows tailored features, pricing, and documentation."
+  },
+  "notFound": {
+    "code": "404",
+    "title": "Page not found",
+    "description": "The page you're looking for doesn't exist or has been moved.",
+    "backHome": "Back to home"
+  },
+  "underConstruction": {
+    "title": "Under Construction",
+    "description": "This section is being built. Check back soon.",
+    "badge": "In Progress"
+  },
+  "footer": {
+    "copyright": "ADI © {year}"
+  },
+  "personas": {
+    "developers": {
+      "metaTitle": "ADI for Individual Developers",
+      "metaDescription": "Free CLI, local agents, bring your own keys. AI-powered development that you control.",
+      "badge": "For developers",
+      "headline": "Your AI agent, your keys, your machine",
+      "subheadline": "Install the CLI, plug in your API keys, and start building with autonomous agents. Free forever for individual use.",
+      "featuresTitle": "What you get",
+      "flowTitle": "How it works",
+      "audiencesTitle": "Built for you",
+      "expects": "Expects",
+      "frustrations": "Frustrations",
+      "ctaTitle": "Start building now",
+      "ctaDescription": "One command to install. Bring your own API keys. No account required.",
+      "ctaPrimary": "View on GitHub",
+      "ctaSecondary": "Read the docs"
+    },
+    "teams": {
+      "metaTitle": "ADI for Engineering Teams",
+      "metaDescription": "Shared infrastructure, team workflows, and usage analytics for engineering teams.",
+      "badge": "For teams",
+      "headline": "Scale AI agents across your team",
+      "subheadline": "Shared configuration, centralized key management, and usage analytics. From one developer to your whole engineering org.",
+      "featuresTitle": "Team capabilities",
+      "flowTitle": "Team setup flow",
+      "audiencesTitle": "Who uses this",
+      "expects": "Expects",
+      "frustrations": "Frustrations",
+      "ctaTitle": "Get started with your team",
+      "ctaDescription": "Start with the free tier. Add team features when you're ready.",
+      "ctaPrimary": "View on GitHub",
+      "ctaSecondary": "Read the docs"
+    },
+    "enterprise": {
+      "metaTitle": "ADI for Enterprise",
+      "metaDescription": "Self-hosted AI agent infrastructure with SSO, audit logs, and dedicated support.",
+      "badge": "For enterprise",
+      "headline": "AI agents that stay on your network",
+      "subheadline": "Self-hosted deployment, SSO integration, audit logging, and dedicated support. Built for organizations that need control.",
+      "featuresTitle": "Enterprise capabilities",
+      "flowTitle": "Evaluation flow",
+      "audiencesTitle": "Key stakeholders",
+      "expects": "Expects",
+      "frustrations": "Frustrations",
+      "ctaTitle": "Talk to us",
+      "ctaDescription": "Schedule a demo or request a security review. We'll tailor the deployment to your requirements.",
+      "ctaPrimary": "Contact sales",
+      "ctaSecondary": "Security whitepaper"
+    },
+    "contributors": {
+      "metaTitle": "Contribute to ADI",
+      "metaDescription": "30+ Rust crates, plugin SDK, and an active community. Come build with us.",
+      "badge": "Open source",
+      "headline": "30+ Rust crates. Come build with us.",
+      "subheadline": "Source-available infrastructure, plugin SDK, and a growing ecosystem. Whether you write crates or plugins — there's room for you.",
+      "featuresTitle": "Contribution areas",
+      "flowTitle": "Getting started",
+      "audiencesTitle": "Contributor profiles",
+      "expects": "Expects",
+      "frustrations": "Frustrations",
+      "ctaTitle": "Start contributing",
+      "ctaDescription": "Clone the repo, pick an issue, and ship your first PR.",
+      "ctaPrimary": "View on GitHub",
+      "ctaSecondary": "Good first issues"
+    },
+    "platform-builders": {
+      "metaTitle": "ADI for Platform Builders",
+      "metaDescription": "Embed ADI's agent runtime, crates, and plugin system into your own product.",
+      "badge": "For platforms",
+      "headline": "Embed agent intelligence into your product",
+      "subheadline": "Use ADI's Rust crates, agent runtime, and plugin system as building blocks for your own platform. No need to build from scratch.",
+      "featuresTitle": "Integration surface",
+      "flowTitle": "Integration path",
+      "audiencesTitle": "Builder profiles",
+      "expects": "Expects",
+      "frustrations": "Frustrations",
+      "ctaTitle": "Start integrating",
+      "ctaDescription": "Explore the crate catalog, try the runtime API, or reach out for partnership.",
+      "ctaPrimary": "View crates",
+      "ctaSecondary": "API documentation"
+    }
+  }
+}

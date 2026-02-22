@@ -84,12 +84,10 @@ impl IpcServer {
         let inner = match &endpoint {
             #[cfg(unix)]
             IpcEndpoint::UnixSocket(path) => {
-                // Remove existing socket
                 if path.exists() {
                     std::fs::remove_file(path)?;
                 }
 
-                // Ensure parent directory exists
                 if let Some(parent) = path.parent() {
                     std::fs::create_dir_all(parent)?;
                 }
@@ -98,7 +96,6 @@ impl IpcServer {
                     DaemonError::SocketError(format!("Failed to bind Unix socket: {}", e))
                 })?;
 
-                // Set permissions (user only)
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::PermissionsExt;
@@ -179,9 +176,8 @@ impl IpcServer {
     }
 }
 
-impl Drop for IpcServer {
+    impl Drop for IpcServer {
     fn drop(&mut self) {
-        // Clean up Unix socket file
         #[cfg(unix)]
         if let IpcEndpoint::UnixSocket(path) = &self.endpoint {
             let _ = std::fs::remove_file(path);
@@ -346,8 +342,7 @@ impl IpcClient {
         Resp: for<'de> Deserialize<'de>,
     {
         let stream = self.connect().await?;
-        
-        // Use the stream for request/response
+
         match stream {
             #[cfg(unix)]
             IpcStream::Unix(stream) => {
@@ -374,13 +369,11 @@ where
     let (reader, mut writer) = tokio::io::split(stream);
     let mut reader = BufReader::new(reader);
 
-    // Send request
     let request_json = serde_json::to_string(request)?;
     writer.write_all(request_json.as_bytes()).await?;
     writer.write_all(b"\n").await?;
     writer.flush().await?;
 
-    // Read response
     let mut response_line = String::new();
     reader.read_line(&mut response_line).await?;
 
@@ -484,7 +477,6 @@ mod tests {
         let socket_path = temp_dir.path().join("test.sock");
         let endpoint = IpcEndpoint::UnixSocket(socket_path.clone());
 
-        // Start server
         let server = IpcServer::bind(endpoint.clone()).await.unwrap();
 
         // Spawn echo handler
@@ -505,7 +497,6 @@ mod tests {
         // Give server time to start
         tokio::time::sleep(Duration::from_millis(50)).await;
 
-        // Connect client
         let client = IpcClient::new(IpcEndpoint::UnixSocket(socket_path));
         assert!(client.is_available());
 

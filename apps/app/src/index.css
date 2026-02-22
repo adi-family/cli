@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@import "../../../packages/theme/generated/adi-theme.css";
+
+@theme {
+  --color-bg: var(--adi-bg);
+  --color-surface: var(--adi-surface);
+  --color-surface-alt: var(--adi-surface-alt);
+  --color-accent: var(--adi-accent);
+  --color-accent-soft: var(--adi-accent-soft);
+  --color-text: var(--adi-text);
+  --color-text-muted: var(--adi-text-muted);
+  --color-border: var(--adi-border);
+
+  --font-heading: var(--adi-font-heading);
+  --font-body: var(--adi-font-body);
+  --font-mono: var(--adi-font-mono-body);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply m-0 min-h-screen flex flex-col font-body leading-normal antialiased;
+    @apply bg-bg text-text-muted;
+  }
+}
