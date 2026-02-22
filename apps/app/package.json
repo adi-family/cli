@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@adi-family/sdk-plugin": "file:../../packages/plugin-sdk",
     "lit": "^3.3.1"
   },
   "devDependencies": {
