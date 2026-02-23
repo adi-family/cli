@@ -304,6 +304,13 @@ impl CommandOutput {
 }
 
 fn start_daemon() -> Result<u32> {
+    // If a launchd plist is installed, delegate to launchctl so the daemon runs
+    // under launchd and receives socket-activated file descriptors (e.g. port 80).
+    #[cfg(target_os = "macos")]
+    if let Some(pid) = try_kickstart_via_launchd() {
+        return Ok(pid);
+    }
+
     let exe = std::env::current_exe()?;
     let log_path = paths::daemon_log_path();
 
@@ -321,6 +328,40 @@ fn start_daemon() -> Result<u32> {
     debug!("Daemon spawned with PID {}", pid);
 
     Ok(pid)
+}
+
+/// Attempt to start the daemon via launchctl kickstart when a plist is installed.
+/// Returns `Some(0)` on success (PID is not yet known), `None` if not applicable.
+#[cfg(target_os = "macos")]
+fn try_kickstart_via_launchd() -> Option<u32> {
+    use std::process::Command;
+
+    let label = "com.adi.adi-daemon";
+    let home = std::env::var("HOME").ok()?;
+    let plist_path = format!("{}/Library/LaunchAgents/{}.plist", home, label);
+
+    if !std::path::Path::new(&plist_path).exists() {
+        return None;
+    }
+
+    let uid = unsafe { libc::getuid() };
+    let target = format!("gui/{}/{}", uid, label);
+
+    debug!("launchd plist found, using launchctl kickstart {}", target);
+
+    let output = Command::new("launchctl")
+        .args(["kickstart", "-k", &target])
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        info!("Daemon started via launchctl kickstart");
+        Some(0)
+    } else {
+        let err = String::from_utf8_lossy(&output.stderr);
+        debug!("launchctl kickstart failed: {}", err);
+        None
+    }
 }
 
 fn deserialize_response(archived: &ArchivedResponse) -> Result<Response> {

@@ -114,6 +114,7 @@ pub mod builder;
 pub mod ipc_transport;
 pub mod platform;
 pub mod service;
+pub mod socket_activation;
 
 // Re-exports from existing modules
 pub use config::DaemonConfig;
@@ -129,5 +130,8 @@ pub use ipc_transport::{IpcClient, IpcEndpoint, IpcServer, IpcStream};
 pub use platform::{is_process_running, kill_process, spawn_background, wait_for_exit, Platform, SpawnConfig};
 pub use service::{
     get_service_manager, LaunchdManager, RestartPolicy, ServiceConfig, ServiceManager,
-    ServiceStatus, SystemdManager,
+    ServiceStatus, SocketDefinition, SystemdManager,
+};
+pub use socket_activation::{
+    prepare_activated_fds_for_children, receive_activated_listeners, ActivatedListeners,
 };

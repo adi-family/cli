@@ -4,13 +4,11 @@ import './components/app-root.ts';
 import {
   createEventBus,
   loadPlugins,
-  registerPlugin,
   registerPluginSW,
   CocoonPluginRegistry,
   upgradePlugin,
   type EventBus,
 } from '@adi-family/sdk-plugin';
-import { TasksPlugin } from '../../../crates/tasks/web/src/index.ts';
 
 interface Connection {
   id: string;
@@ -41,8 +39,6 @@ const connections = new Map<string, Connection>();
   bus,
 };
 
-registerPlugin(new TasksPlugin());
-
 // Register service worker for plugin bundle caching.
 await registerPluginSW(new URL('./plugin-sw.js', import.meta.url), bus);
 
@@ -65,9 +61,9 @@ bus.on('loading-finished', ({ loaded, failed, timedOut }) => {
   if (timedOut.length) console.warn('[plugins] timed out:', timedOut);
 });
 
-// Load plugins — URLs come from Cocoon service discovery at runtime.
-await loadPlugins(bus, [
-  // Populated at runtime from Cocoon
-], { timeout: 5000 });
+// Discover and load plugins from the registry at runtime.
+const registry = new CocoonPluginRegistry(cocoonUrl());
+const pluginDescriptors = await registry.listPlugins();
+await loadPlugins(bus, pluginDescriptors, { timeout: 5000 });
 
 window.dispatchEvent(new Event('sdk-ready'));

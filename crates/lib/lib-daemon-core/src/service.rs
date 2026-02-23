@@ -43,6 +43,17 @@ impl ServiceStatus {
     }
 }
 
+/// Socket definition for socket activation (launchd / systemd).
+#[derive(Debug, Clone)]
+pub struct SocketDefinition {
+    /// Socket name (used in plist Sockets dict key and systemd unit name).
+    pub name: String,
+    /// Bind address (e.g. "127.0.0.1").
+    pub address: String,
+    /// Port number.
+    pub port: u16,
+}
+
 /// Service configuration
 #[derive(Debug, Clone)]
 pub struct ServiceConfig {
@@ -66,6 +77,8 @@ pub struct ServiceConfig {
     pub restart_policy: RestartPolicy,
     /// Start on boot/login
     pub autostart: bool,
+    /// Sockets for OS-level socket activation.
+    pub sockets: Vec<SocketDefinition>,
 }
 
 impl ServiceConfig {
@@ -82,6 +95,7 @@ impl ServiceConfig {
             stderr_log: None,
             restart_policy: RestartPolicy::OnFailure,
             autostart: false,
+            sockets: Vec::new(),
         }
     }
 
@@ -134,6 +148,16 @@ impl ServiceConfig {
     /// Enable autostart on boot/login
     pub fn autostart(mut self, enabled: bool) -> Self {
         self.autostart = enabled;
+        self
+    }
+
+    /// Add a socket definition for OS-level socket activation.
+    pub fn socket<S: Into<String>, A: Into<String>>(mut self, name: S, address: A, port: u16) -> Self {
+        self.sockets.push(SocketDefinition {
+            name: name.into(),
+            address: address.into(),
+            port,
+        });
         self
     }
 }
@@ -244,12 +268,39 @@ impl SystemdManager {
         }
     }
 
+    fn socket_unit_path(&self, name: &str) -> PathBuf {
+        self.service_dir().join(format!("{}.socket", name))
+    }
+
+    fn generate_socket_unit(&self, config: &ServiceConfig) -> String {
+        let mut unit = String::new();
+
+        unit.push_str("[Unit]\n");
+        unit.push_str(&format!("Description=Socket activation for {}\n\n", config.description));
+
+        unit.push_str("[Socket]\n");
+        for sock in &config.sockets {
+            unit.push_str(&format!("ListenStream={}:{}\n", sock.address, sock.port));
+        }
+        unit.push_str("ReusePort=true\n\n");
+
+        unit.push_str("[Install]\n");
+        unit.push_str("WantedBy=sockets.target\n");
+
+        unit
+    }
+
     fn generate_unit(&self, config: &ServiceConfig) -> String {
         let mut unit = String::new();
 
         unit.push_str("[Unit]\n");
         unit.push_str(&format!("Description={}\n", config.description));
-        unit.push_str("After=network.target\n\n");
+        let mut after = "After=network.target".to_string();
+        if !config.sockets.is_empty() {
+            after.push_str(&format!("\nRequires={}.socket\nAfter={}.socket", config.name, config.name));
+        }
+        unit.push_str(&after);
+        unit.push_str("\n\n");
 
         unit.push_str("[Service]\n");
         unit.push_str("Type=simple\n");
@@ -319,13 +370,21 @@ impl ServiceManager for SystemdManager {
             std::fs::create_dir_all(parent)?;
         }
 
+        // Write .socket unit if sockets are configured
+        if !config.sockets.is_empty() {
+            let socket_path = self.socket_unit_path(&config.name);
+            let socket_content = self.generate_socket_unit(config);
+            std::fs::write(&socket_path, &socket_content)?;
+            info!("Created systemd socket unit: {}", socket_path.display());
+        }
+
         let unit_content = self.generate_unit(config);
         std::fs::write(&service_path, &unit_content)?;
         info!("Created systemd unit: {}", service_path.display());
 
         let mut args = self.systemctl_args();
         args.push("daemon-reload");
-        
+
         let output = tokio::process::Command::new("systemctl")
             .args(&args)
             .output()
@@ -350,6 +409,22 @@ impl ServiceManager for SystemdManager {
         self.stop(name).await.ok();
         self.disable_autostart(name).await.ok();
 
+        // Stop and remove .socket unit if it exists
+        let socket_path = self.socket_unit_path(name);
+        if socket_path.exists() {
+            let socket_unit = format!("{}.socket", name);
+            let mut stop_args = self.systemctl_args();
+            stop_args.push("stop");
+            stop_args.push(&socket_unit);
+            let _ = tokio::process::Command::new("systemctl")
+                .args(&stop_args)
+                .output()
+                .await;
+
+            std::fs::remove_file(&socket_path)?;
+            info!("Removed systemd socket unit: {}", socket_path.display());
+        }
+
         let service_path = self.service_path(name);
         if service_path.exists() {
             std::fs::remove_file(&service_path)?;
@@ -359,7 +434,7 @@ impl ServiceManager for SystemdManager {
         // Reload systemd
         let mut args = self.systemctl_args();
         args.push("daemon-reload");
-        
+
         tokio::process::Command::new("systemctl")
             .args(&args)
             .output()
@@ -369,6 +444,23 @@ impl ServiceManager for SystemdManager {
     }
 
     async fn start(&self, name: &str) -> Result<()> {
+        // Start .socket unit first if it exists
+        let socket_path = self.socket_unit_path(name);
+        if socket_path.exists() {
+            let socket_unit = format!("{}.socket", name);
+            let mut socket_args = self.systemctl_args();
+            socket_args.push("start");
+            socket_args.push(&socket_unit);
+            let output = tokio::process::Command::new("systemctl")
+                .args(&socket_args)
+                .output()
+                .await?;
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                warn!("Failed to start socket unit: {}", stderr);
+            }
+        }
+
         let mut args = self.systemctl_args();
         args.push("start");
         args.push(name);
@@ -643,6 +735,28 @@ impl LaunchdManager {
             plist.push_str("    <true/>\n");
         } else {
             plist.push_str("    <false/>\n");
+        }
+
+        // Socket activation
+        if !config.sockets.is_empty() {
+            plist.push_str("    <key>Sockets</key>\n");
+            plist.push_str("    <dict>\n");
+            for sock in &config.sockets {
+                plist.push_str(&format!("        <key>{}</key>\n", sock.name));
+                plist.push_str("        <dict>\n");
+                plist.push_str(&format!(
+                    "            <key>SockServiceName</key>\n            <string>{}</string>\n",
+                    sock.port
+                ));
+                plist.push_str(&format!(
+                    "            <key>SockNodeName</key>\n            <string>{}</string>\n",
+                    sock.address
+                ));
+                plist.push_str("            <key>SockType</key>\n            <string>stream</string>\n");
+                plist.push_str("            <key>SockFamily</key>\n            <string>IPv4</string>\n");
+                plist.push_str("        </dict>\n");
+            }
+            plist.push_str("    </dict>\n");
         }
 
         plist.push_str("</dict>\n");
@@ -1105,5 +1219,80 @@ mod tests {
         assert!(plist.contains("<key>EnvironmentVariables</key>"));
         assert!(plist.contains("<key>RunAtLoad</key>"));
         assert!(plist.contains("<true/>"));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn test_launchd_plist_with_sockets() {
+        let manager = LaunchdManager::new();
+        let config = ServiceConfig::new("test", "/usr/bin/test")
+            .description("Test")
+            .socket("ProxyListeners", "127.0.0.1", 80);
+
+        let plist = manager.generate_plist(&config);
+
+        assert!(plist.contains("<key>Sockets</key>"));
+        assert!(plist.contains("<key>ProxyListeners</key>"));
+        assert!(plist.contains("<key>SockServiceName</key>"));
+        assert!(plist.contains("<string>80</string>"));
+        assert!(plist.contains("<key>SockNodeName</key>"));
+        assert!(plist.contains("<string>127.0.0.1</string>"));
+        assert!(plist.contains("<key>SockType</key>"));
+        assert!(plist.contains("<string>stream</string>"));
+        assert!(plist.contains("<key>SockFamily</key>"));
+        assert!(plist.contains("<string>IPv4</string>"));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn test_launchd_plist_without_sockets() {
+        let manager = LaunchdManager::new();
+        let config = ServiceConfig::new("test", "/usr/bin/test")
+            .description("Test");
+
+        let plist = manager.generate_plist(&config);
+        assert!(!plist.contains("<key>Sockets</key>"));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn test_systemd_socket_unit_generation() {
+        let manager = SystemdManager::new();
+        let config = ServiceConfig::new("test", "/usr/bin/test")
+            .description("Test service")
+            .socket("ProxyListeners", "127.0.0.1", 80);
+
+        let socket_unit = manager.generate_socket_unit(&config);
+        assert!(socket_unit.contains("[Socket]"));
+        assert!(socket_unit.contains("ListenStream=127.0.0.1:80"));
+        assert!(socket_unit.contains("[Install]"));
+        assert!(socket_unit.contains("WantedBy=sockets.target"));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn test_systemd_unit_with_sockets_has_requires() {
+        let manager = SystemdManager::new();
+        let config = ServiceConfig::new("test", "/usr/bin/test")
+            .description("Test service")
+            .socket("ProxyListeners", "127.0.0.1", 80);
+
+        let unit = manager.generate_unit(&config);
+        assert!(unit.contains("Requires=test.socket"));
+        assert!(unit.contains("After=test.socket"));
+    }
+
+    #[test]
+    fn test_service_config_socket_builder() {
+        let config = ServiceConfig::new("test", "/usr/bin/test")
+            .socket("ProxyListeners", "127.0.0.1", 80)
+            .socket("AdminListeners", "0.0.0.0", 443);
+
+        assert_eq!(config.sockets.len(), 2);
+        assert_eq!(config.sockets[0].name, "ProxyListeners");
+        assert_eq!(config.sockets[0].address, "127.0.0.1");
+        assert_eq!(config.sockets[0].port, 80);
+        assert_eq!(config.sockets[1].name, "AdminListeners");
+        assert_eq!(config.sockets[1].port, 443);
     }
 }
