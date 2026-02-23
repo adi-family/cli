@@ -541,7 +541,7 @@
 
         <!-- Empty state -->
         <div id="emptyState" class="empty-state">
-          <p>Click "Select" to pick an element,<br>then describe your change above.</p>
+          <p>Describe your change above and generate,<br>or click "Select" to pick a specific element.</p>
           <p class="hint">Press Escape to cancel selection.</p>
         </div>
 
@@ -617,21 +617,21 @@
   const outputBox = $("#outputBox");
 
   // Load saved API key
-  chrome.storage?.local?.get(["anthropicApiKey"], (stored) => {
-    if (stored?.anthropicApiKey) apiKeyInput.value = stored.anthropicApiKey;
+  chrome.storage.local.get(["anthropicApiKey"]).then((stored) => {
+    if (stored.anthropicApiKey) apiKeyInput.value = stored.anthropicApiKey;
     updateGenerateBtn();
   });
 
   // Save API key on change
   apiKeyInput.addEventListener("input", () => {
-    chrome.storage?.local?.set({ anthropicApiKey: apiKeyInput.value.trim() });
+    chrome.storage.local.set({ anthropicApiKey: apiKeyInput.value.trim() });
     updateGenerateBtn();
   });
 
   taskInput.addEventListener("input", updateGenerateBtn);
 
   function updateGenerateBtn() {
-    generateBtn.disabled = !taskInput.value.trim() || !apiKeyInput.value.trim() || !lastResult;
+    generateBtn.disabled = !taskInput.value.trim() || !apiKeyInput.value.trim();
   }
 
   function updatePickBtn(active) {
@@ -662,7 +662,7 @@
 
   // ========== Generate Prompt ==========
   generateBtn.addEventListener("click", async () => {
-    if (!lastResult || !taskInput.value.trim() || !apiKeyInput.value.trim()) return;
+    if (!taskInput.value.trim() || !apiKeyInput.value.trim()) return;
 
     generateBtn.disabled = true;
     generateBtn.textContent = "Generating...";
@@ -672,44 +672,55 @@
 
     try {
       const contextParts = [];
-      contextParts.push(`Page: ${lastResult.pageTitle} (${lastResult.pageUrl})`);
-      contextParts.push(`Selected element: <${lastResult.htmlTag}>`);
-      if (lastResult.textContent) contextParts.push(`Element text: "${lastResult.textContent}"`);
-      contextParts.push(`HTML path: ${lastResult.htmlPath}`);
-      if (lastResult.reactComponentChain) contextParts.push(`React component path: ${lastResult.reactComponentChain}`);
-      if (lastResult.snippet) contextParts.push(`HTML snippet:\n${lastResult.snippet}`);
+      contextParts.push(`Page: ${document.title} (${window.location.href})`);
 
-      if (lastResult.reactComponents && lastResult.reactComponents.length > 0) {
-        const tree = lastResult.reactComponents.map((c, i) => {
-          let line = `  ${i + 1}. ${c.name}`;
-          if (c.source) line += ` (${c.source})`;
-          if (c.props) line += "\n     Props: " + Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(", ");
-          if (c.state) line += "\n     State: " + Object.entries(c.state).map(([k, v]) => `${k}=${v}`).join(", ");
-          if (c.hooks) line += "\n     Hooks: " + c.hooks.map((h) => `${h.type}[${h.index}]=${h.value}`).join(", ");
-          return line;
-        }).join("\n");
-        contextParts.push(`React component tree:\n${tree}`);
+      if (lastResult) {
+        contextParts.push(`Selected element: <${lastResult.htmlTag}>`);
+        if (lastResult.textContent) contextParts.push(`Element text: "${lastResult.textContent}"`);
+        contextParts.push(`HTML path: ${lastResult.htmlPath}`);
+        if (lastResult.reactComponentChain) contextParts.push(`React component path: ${lastResult.reactComponentChain}`);
+        if (lastResult.snippet) contextParts.push(`HTML snippet:\n${lastResult.snippet}`);
+
+        if (lastResult.reactComponents && lastResult.reactComponents.length > 0) {
+          const tree = lastResult.reactComponents.map((c, i) => {
+            let line = `  ${i + 1}. ${c.name}`;
+            if (c.source) line += ` (${c.source})`;
+            if (c.props) line += "\n     Props: " + Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(", ");
+            if (c.state) line += "\n     State: " + Object.entries(c.state).map(([k, v]) => `${k}=${v}`).join(", ");
+            if (c.hooks) line += "\n     Hooks: " + c.hooks.map((h) => `${h.type}[${h.index}]=${h.value}`).join(", ");
+            return line;
+          }).join("\n");
+          contextParts.push(`React component tree:\n${tree}`);
+        }
       }
 
-      const systemPrompt = `You are a prompt engineer. You generate concise, actionable prompts for a coding agent (like Claude Code or Cursor) that needs to modify a specific UI element in a web application.
+      const systemPrompt = `You are a context refinement assistant. Given a user's intent and inspected UI element data, produce a structured context summary that groups all relevant information about where the change happens, what is involved, and how the codebase is structured around it.
 
-Your output must be a single prompt that the user can paste directly into a coding agent. The prompt should:
-1. Clearly state what change to make
-2. Include the exact file path / React component to find (based on the component path and source info)
-3. Include the HTML structure context so the agent can quickly locate the element
-4. Be direct and specific - no preamble, no explanation of what a prompt is
-5. Use the React component hierarchy to identify which file(s) to edit
-6. Mention the relevant props/state if they relate to the change
+Your output must be a single structured context block with these sections:
+- **Where**: File path(s) and React component(s) to locate, derived from the component hierarchy and source info
+- **What**: The element, its role in the UI, relevant props/state/hooks, and the surrounding HTML structure
+- **Intent**: The user's described change, restated clearly and concisely
 
-Output ONLY the prompt text, nothing else.`;
+Rules:
+- No call to action, no instructions, no imperative commands
+- No preamble or explanation — just the structured context
+- Be specific: use exact component names, file paths, prop names, CSS classes
+- Group related details together rather than listing them flat
+- If console errors are relevant to the intent, include them under a **Console** section
+- Omit sections that have no meaningful content
 
-      const userMessage = `The user wants to make this change:
-"${taskInput.value.trim()}"
+Output ONLY the structured context block.`;
 
-Here is the context about the selected element:
-${contextParts.join("\n\n")}
+      if (consoleEntries.length > 0) {
+        const recent = consoleEntries.slice(-50);
+        const lines = recent.map((e) => `[${e.type}] ${e.text}`).join("\n");
+        contextParts.push(`Browser console (last ${recent.length} entries):\n${lines}`);
+      }
 
-Generate a prompt for a coding agent to make this change.`;
+      const userMessage = `User intent: "${taskInput.value.trim()}"
+
+Inspected element context:
+${contextParts.join("\n\n")}`;
 
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -869,8 +880,10 @@ Generate a prompt for a coding agent to make this change.`;
 
   // ========== Console Panel ==========
   let consoleEntryCount = 0;
+  const consoleEntries = []; // kept for prompt context
 
   function appendConsoleEntry(entry) {
+    consoleEntries.push(entry);
     const logEl = $("#consoleLog");
     if (!logEl) return;
 
@@ -915,8 +928,10 @@ Generate a prompt for a coding agent to make this change.`;
     const logEl = $("#consoleLog");
     logEl.innerHTML = '<div class="console-log-empty">No console output yet.</div>';
     consoleEntryCount = 0;
+    consoleEntries.length = 0;
     const countEl = $("#consoleCount");
     if (countEl) countEl.textContent = 0;
+    chrome.runtime.sendMessage({ action: "clearHistory" });
   });
 
   // ========== Mount ==========

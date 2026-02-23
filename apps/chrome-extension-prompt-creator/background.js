@@ -115,6 +115,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === "getHistory" && sender.tab?.id) {
     sendResponse({ entries: tabLogs.get(sender.tab.id) || [] });
   }
+  if (msg.action === "clearHistory" && sender.tab?.id) {
+    tabLogs.delete(sender.tab.id);
+  }
 });
 
 // ========== Auto-attach to all tabs ==========
