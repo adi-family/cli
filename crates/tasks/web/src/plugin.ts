@@ -47,78 +47,106 @@ export class TasksPlugin extends AdiPlugin {
     }
 
     this.bus.emit('route:register', { path: '/tasks', element: 'adi-tasks' });
-    this.bus.emit('nav:add', { id: 'tasks', label: 'Tasks', path: '/tasks', icon: '✓' });
+    this.bus.send('nav:add', { id: 'tasks', label: 'Tasks', path: '/tasks', icon: '✓' }).handle(() => {});
 
     this.bus.on('tasks:list', async (p) => {
       const { _cid, status } = p as WithCid<typeof p>;
-      const conns = connectionsWithTasks();
-      const [taskResults, statsResults] = await Promise.all([
-        Promise.allSettled(conns.map(c => api.listTasks(c, { status }))),
-        Promise.allSettled(conns.map(c => api.getStats(c))),
-      ]);
-      const tasks: Task[] = taskResults.flatMap((r, i) =>
-        r.status === 'fulfilled'
-          ? r.value.map(t => ({ ...t, cocoonId: conns[i].id }))
-          : []
-      );
-      const stats = statsResults.reduce(
-        (acc, r) => r.status === 'fulfilled' ? mergeStats(acc, r.value) : acc,
-        emptyStats()
-      );
-      this.bus.emit('tasks:list:ok', { tasks, stats, _cid });
+      try {
+        const conns = connectionsWithTasks();
+        const [taskResults, statsResults] = await Promise.all([
+          Promise.allSettled(conns.map(c => api.listTasks(c, { status }))),
+          Promise.allSettled(conns.map(c => api.getStats(c))),
+        ]);
+        const tasks: Task[] = taskResults.flatMap((r, i) =>
+          r.status === 'fulfilled'
+            ? r.value.map(t => ({ ...t, cocoonId: conns[i].id }))
+            : []
+        );
+        const stats = statsResults.reduce(
+          (acc, r) => r.status === 'fulfilled' ? mergeStats(acc, r.value) : acc,
+          emptyStats()
+        );
+        this.bus.emit('tasks:list:ok', { tasks, stats, _cid });
+      } catch (err) {
+        console.error('[TasksPlugin] tasks:list error:', err);
+      }
     });
 
     this.bus.on('tasks:search', async (p) => {
       const { _cid, query, limit } = p as WithCid<typeof p>;
-      const conns = connectionsWithTasks();
-      const results = await Promise.allSettled(conns.map(c => api.searchTasks(c, query, limit)));
-      const tasks: Task[] = results.flatMap((r, i) =>
-        r.status === 'fulfilled'
-          ? r.value.map(t => ({ ...t, cocoonId: conns[i].id }))
-          : []
-      );
-      this.bus.emit('tasks:search:ok', { tasks, _cid });
+      try {
+        const conns = connectionsWithTasks();
+        const results = await Promise.allSettled(conns.map(c => api.searchTasks(c, query, limit)));
+        const tasks: Task[] = results.flatMap((r, i) =>
+          r.status === 'fulfilled'
+            ? r.value.map(t => ({ ...t, cocoonId: conns[i].id }))
+            : []
+        );
+        this.bus.emit('tasks:search:ok', { tasks, _cid });
+      } catch (err) {
+        console.error('[TasksPlugin] tasks:search error:', err);
+      }
     });
 
     this.bus.on('tasks:stats', async (p) => {
       const { _cid } = p as WithCid<typeof p>;
-      const conns = connectionsWithTasks();
-      const results = await Promise.allSettled(conns.map(c => api.getStats(c)));
-      const stats = results.reduce(
-        (acc, r) => r.status === 'fulfilled' ? mergeStats(acc, r.value) : acc,
-        emptyStats()
-      );
-      this.bus.emit('tasks:stats:ok', { stats, _cid });
+      try {
+        const conns = connectionsWithTasks();
+        const results = await Promise.allSettled(conns.map(c => api.getStats(c)));
+        const stats = results.reduce(
+          (acc, r) => r.status === 'fulfilled' ? mergeStats(acc, r.value) : acc,
+          emptyStats()
+        );
+        this.bus.emit('tasks:stats:ok', { stats, _cid });
+      } catch (err) {
+        console.error('[TasksPlugin] tasks:stats error:', err);
+      }
     });
 
     this.bus.on('tasks:get', async (p) => {
       const { _cid, task_id, cocoonId } = p as WithCid<typeof p>;
-      const raw = await api.getTask(getConnection(cocoonId), task_id);
-      const task = {
-        ...raw,
-        task: { ...raw.task, cocoonId },
-        depends_on: raw.depends_on.map(t => ({ ...t, cocoonId })),
-        dependents:  raw.dependents.map(t => ({ ...t, cocoonId })),
-      };
-      this.bus.emit('tasks:get:ok', { task, _cid });
+      try {
+        const raw = await api.getTask(getConnection(cocoonId), task_id);
+        const task = {
+          ...raw,
+          task: { ...raw.task, cocoonId },
+          depends_on: raw.depends_on.map(t => ({ ...t, cocoonId })),
+          dependents:  raw.dependents.map(t => ({ ...t, cocoonId })),
+        };
+        this.bus.emit('tasks:get:ok', { task, _cid });
+      } catch (err) {
+        console.error('[TasksPlugin] tasks:get error:', err);
+      }
     });
 
     this.bus.on('tasks:create', async (p) => {
       const { _cid, cocoonId, title, description, depends_on } = p as WithCid<typeof p>;
-      const raw = await api.createTask(getConnection(cocoonId), { title, description, depends_on });
-      this.bus.emit('tasks:create:ok', { task: { ...raw, cocoonId }, _cid });
+      try {
+        const raw = await api.createTask(getConnection(cocoonId), { title, description, depends_on });
+        this.bus.emit('tasks:create:ok', { task: { ...raw, cocoonId }, _cid });
+      } catch (err) {
+        console.error('[TasksPlugin] tasks:create error:', err);
+      }
     });
 
     this.bus.on('tasks:update', async (p) => {
       const { _cid, cocoonId, task_id, title, description, status } = p as WithCid<typeof p>;
-      const raw = await api.updateTask(getConnection(cocoonId), { task_id, title, description, status });
-      this.bus.emit('tasks:update:ok', { task: { ...raw, cocoonId }, _cid });
+      try {
+        const raw = await api.updateTask(getConnection(cocoonId), { task_id, title, description, status });
+        this.bus.emit('tasks:update:ok', { task: { ...raw, cocoonId }, _cid });
+      } catch (err) {
+        console.error('[TasksPlugin] tasks:update error:', err);
+      }
     });
 
     this.bus.on('tasks:delete', async (p) => {
       const { _cid, cocoonId, task_id } = p as WithCid<typeof p>;
-      await api.deleteTask(getConnection(cocoonId), task_id);
-      this.bus.emit('tasks:delete:ok', { _cid });
+      try {
+        await api.deleteTask(getConnection(cocoonId), task_id);
+        this.bus.emit('tasks:delete:ok', { _cid });
+      } catch (err) {
+        console.error('[TasksPlugin] tasks:delete error:', err);
+      }
     });
   }
 }

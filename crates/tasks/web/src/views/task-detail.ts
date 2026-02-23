@@ -1,23 +1,8 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import type { Task, TaskStatus, TaskWithDependencies } from '../types.js';
+import { STATUS_COLORS, STATUS_LABELS } from './shared.js';
 
 const STATUS_OPTIONS: TaskStatus[] = ['todo', 'in_progress', 'done', 'blocked', 'cancelled'];
-
-const STATUS_COLORS: Record<TaskStatus, string> = {
-  todo: 'bg-gray-500/20 text-gray-300',
-  in_progress: 'bg-blue-500/20 text-blue-300',
-  done: 'bg-green-500/20 text-green-300',
-  blocked: 'bg-red-500/20 text-red-300',
-  cancelled: 'bg-gray-600/20 text-gray-400',
-};
-
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: 'Todo',
-  in_progress: 'In Progress',
-  done: 'Done',
-  blocked: 'Blocked',
-  cancelled: 'Cancelled',
-};
 
 const formatTime = (ts: number): string =>
   new Date(ts * 1000).toLocaleString();

@@ -37,61 +37,80 @@ export class AdiTasksElement extends LitElement {
 
   private get bus() { return window.sdk.bus; }
 
-  private loadData(): void {
+  private async loadData(): Promise<void> {
     this.loading = true;
     this.error = null;
-    if (this.searchQuery.trim()) {
-      this.bus.send('tasks:search', { query: this.searchQuery }).handle((result) => {
+    try {
+      if (this.searchQuery.trim()) {
+        this.stats = null;
+        const result = await this.bus.send('tasks:search', { query: this.searchQuery }).wait();
         this.tasks = result.tasks;
-        this.loading = false;
-      });
-    } else {
-      this.bus.send('tasks:list', { status: this.filter }).handle((result) => {
+      } else {
+        const result = await this.bus.send('tasks:list', { status: this.filter }).wait();
         this.tasks = result.tasks;
         this.stats = result.stats;
-        this.loading = false;
-      });
+      }
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : 'Failed to load tasks';
+    } finally {
+      this.loading = false;
     }
   }
 
-  private loadDetail(task: Task): void {
+  private async loadDetail(task: Task): Promise<void> {
     this.loading = true;
-    this.bus.send('tasks:get', { task_id: task.id, cocoonId: task.cocoonId }).handle((result) => {
+    try {
+      const result = await this.bus.send('tasks:get', { task_id: task.id, cocoonId: task.cocoonId }).wait();
       this.selectedTask = result.task;
       this.view = 'detail';
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : 'Failed to load task';
+    } finally {
       this.loading = false;
-    });
+    }
   }
 
-  private handleStatusChange(task: Task, status: TaskStatus): void {
-    this.bus.send('tasks:update', { task_id: task.id, cocoonId: task.cocoonId, status }).handle((result) => {
+  private async handleStatusChange(task: Task, status: TaskStatus): Promise<void> {
+    try {
+      const result = await this.bus.send('tasks:update', { task_id: task.id, cocoonId: task.cocoonId, status }).wait();
       this.tasks = this.tasks.map(t =>
         t.id === task.id && t.cocoonId === task.cocoonId ? result.task : t
       );
       if (this.selectedTask?.task.id === task.id) {
         this.selectedTask = { ...this.selectedTask, task: result.task };
       }
-    });
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : 'Failed to update task';
+    }
   }
 
-  private handleDelete(task: Task): void {
+  private async handleDelete(task: Task): Promise<void> {
     if (!this.confirmingDelete) { this.confirmingDelete = true; return; }
     this.submitting = true;
-    this.bus.send('tasks:delete', { task_id: task.id, cocoonId: task.cocoonId }).handle(() => {
+    try {
+      await this.bus.send('tasks:delete', { task_id: task.id, cocoonId: task.cocoonId }).wait();
       this.tasks = this.tasks.filter(t => !(t.id === task.id && t.cocoonId === task.cocoonId));
       this.view = 'list';
-      this.submitting = false;
       this.confirmingDelete = false;
-    });
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : 'Failed to delete task';
+      this.confirmingDelete = false;
+    } finally {
+      this.submitting = false;
+    }
   }
 
-  private handleCreate(data: { title: string; description?: string; cocoonId: string }): void {
+  private async handleCreate(data: { title: string; description?: string; cocoonId: string }): Promise<void> {
     this.submitting = true;
-    this.bus.send('tasks:create', data).handle((result) => {
+    try {
+      const result = await this.bus.send('tasks:create', data).wait();
       this.tasks = [...this.tasks, result.task];
       this.view = 'list';
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : 'Failed to create task';
+    } finally {
       this.submitting = false;
-    });
+    }
   }
 
   private handleFilterChange(status: TaskStatus | undefined): void {
@@ -112,7 +131,7 @@ export class AdiTasksElement extends LitElement {
         task: this.selectedTask,
         submitting: this.submitting,
         confirmingDelete: this.confirmingDelete,
-        onBack: () => { this.view = 'list'; this.selectedTask = null; },
+        onBack: () => { this.view = 'list'; this.selectedTask = null; this.confirmingDelete = false; },
         onStatusChange: (status) => this.handleStatusChange(this.selectedTask!.task, status),
         onDelete: () => this.handleDelete(this.selectedTask!.task),
         onNavigate: (task) => this.loadDetail(task),
