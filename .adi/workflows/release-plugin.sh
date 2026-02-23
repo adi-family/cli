@@ -74,7 +74,7 @@ Release a single plugin to the ADI plugin registry.
 
 OPTIONS:
     --no-push           Build only, skip publishing
-    --local             Push to local registry (localhost:8019)
+    --local             Push to local registry (adi.test/registry)
     --bump <type>       Version bump type: patch, minor, major
     -h, --help          Show this help
 
@@ -504,7 +504,7 @@ main() {
                 shift
                 ;;
             --local)
-                registry="http://localhost:8019"
+                registry="http://adi.test/registry"
                 shift
                 ;;
             --bump)

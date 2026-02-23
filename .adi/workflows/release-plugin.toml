@@ -36,7 +36,7 @@ type = "select"
 prompt = "Target registry"
 options = [
     "production - adi-plugin-registry.the-ihor.com",
-    "local - localhost:8019",
+    "local - adi.test/registry",
     "dry-run - Build only, no publish"
 ]
 default = "production - adi-plugin-registry.the-ihor.com"
