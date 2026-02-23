@@ -186,6 +186,7 @@ members = [
     "crates/workflow/plugin",
     "crates/llm-proxy/plugin",
     "crates/hive/plugin",
+    "crates/hive/integration-tests",
     "crates/llm-extract-plugin",
     "crates/lib/lib-typespec-api/plugin",
     "crates/cocoon",

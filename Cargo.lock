@@ -4900,6 +4900,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "hive-integration-tests"
+version = "0.8.4"
+dependencies = [
+ "hive-env-dotenv",
+ "hive-health-http",
+ "hive-health-tcp",
+ "hive-runner-compose",
+ "hive-runner-docker",
+ "lib-plugin-abi-v3",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "hive-obs-file"
 version = "0.8.4"
 dependencies = [
@@ -4982,9 +4998,9 @@ dependencies = [
  "hive-core",
  "lib-console-output",
  "lib-daemon-client",
+ "lib-daemon-core",
  "lib-plugin-abi-v3",
  "lib-plugin-prelude",
- "libc",
  "once_cell",
  "serde",
  "serde_json",
