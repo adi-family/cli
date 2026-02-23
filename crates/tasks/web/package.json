@@ -9,7 +9,7 @@
     "dev": "vite build --watch"
   },
   "dependencies": {
-    "@adi-family/sdk-plugin": "file:../../packages/plugin-sdk",
+    "@adi-family/sdk-plugin": "^0.2.0",
     "lit": "^3.3.1"
   },
   "devDependencies": {
