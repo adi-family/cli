@@ -1,4 +1,4 @@
-import { LitElement, html } from 'lit';
+import { LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
 import type { Task, TasksStats, TaskWithDependencies, TaskStatus, Connection } from './types.js';
 import { renderTaskList } from './views/task-list.js';
