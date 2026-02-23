@@ -132,6 +132,7 @@ export class AdiTasksElement extends LitElement {
         submitting: this.submitting,
         confirmingDelete: this.confirmingDelete,
         onBack: () => { this.view = 'list'; this.selectedTask = null; this.confirmingDelete = false; },
+        onCancelDelete: () => { this.confirmingDelete = false; },
         onStatusChange: (status) => this.handleStatusChange(this.selectedTask!.task, status),
         onDelete: () => this.handleDelete(this.selectedTask!.task),
         onNavigate: (task) => this.loadDetail(task),

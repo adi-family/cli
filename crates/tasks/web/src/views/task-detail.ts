@@ -13,6 +13,7 @@ interface TaskDetailProps {
   confirmingDelete: boolean;
   onBack(): void;
   onStatusChange(status: TaskStatus): void;
+  onCancelDelete(): void;
   onDelete(): void;
   onNavigate(task: Task): void;
 }
@@ -42,7 +43,7 @@ const depList = (label: string, tasks: Task[], onNavigate: (task: Task) => void)
 };
 
 export function renderTaskDetail(props: TaskDetailProps): TemplateResult {
-  const { task: data, submitting, confirmingDelete, onBack, onStatusChange, onDelete, onNavigate } = props;
+  const { task: data, submitting, confirmingDelete, onBack, onCancelDelete, onStatusChange, onDelete, onNavigate } = props;
   const { task, depends_on, dependents } = data;
 
   return html`
@@ -101,7 +102,7 @@ export function renderTaskDetail(props: TaskDetailProps): TemplateResult {
                   </button>
                   <button
                     class="px-3 py-1 rounded text-sm bg-white/5 text-gray-400 hover:bg-white/10 transition-colors"
-                    @click=${onBack}
+                    @click=${onCancelDelete}
                   >
                     Cancel
                   </button>

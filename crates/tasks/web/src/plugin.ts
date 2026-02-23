@@ -69,6 +69,7 @@ export class TasksPlugin extends AdiPlugin {
         this.bus.emit('tasks:list:ok', { tasks, stats, _cid });
       } catch (err) {
         console.error('[TasksPlugin] tasks:list error:', err);
+        this.bus.emit('tasks:list:ok', { tasks: [], stats: emptyStats(), _cid });
       }
     });
 
@@ -85,6 +86,7 @@ export class TasksPlugin extends AdiPlugin {
         this.bus.emit('tasks:search:ok', { tasks, _cid });
       } catch (err) {
         console.error('[TasksPlugin] tasks:search error:', err);
+        this.bus.emit('tasks:search:ok', { tasks: [], _cid });
       }
     });
 
@@ -100,6 +102,7 @@ export class TasksPlugin extends AdiPlugin {
         this.bus.emit('tasks:stats:ok', { stats, _cid });
       } catch (err) {
         console.error('[TasksPlugin] tasks:stats error:', err);
+        this.bus.emit('tasks:stats:ok', { stats: emptyStats(), _cid });
       }
     });
 

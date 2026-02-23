@@ -112,16 +112,19 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
         });
       },
       handle(cb: (reply: EventRegistry[`${K}:ok`]) => void): () => void {
-        // Same ref-cell pattern to avoid TDZ when FIFO flushes synchronously.
+        let fired = false;
         const unsubRef: { fn?: () => void } = {};
         const unsub = on(replyEvent as keyof EventRegistry, (reply) => {
           const typed = reply as WithCid<EventRegistry[`${K}:ok`]>;
           if (typed._cid === cid) {
+            if (fired) return;
+            fired = true;
             unsubRef.fn?.();
             cb(typed);
           }
         });
         unsubRef.fn = unsub;
+        if (fired) { unsub(); return () => {}; }
         return unsub;
       },
     };
