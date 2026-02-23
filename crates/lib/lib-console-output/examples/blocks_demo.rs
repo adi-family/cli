@@ -80,7 +80,7 @@ fn main() {
         .entry("Version", "0.5.0")
         .entry("Uptime", "3600s")
         .entry("Running services", &format!("{}/{}", theme::success("4"), "5"))
-        .entry("Proxy", &theme::brand("http://adi.local").to_string());
+        .entry("Proxy", &theme::brand("http://adi.test").to_string());
     print!("{}", kv);
 
     // Section + List (bullets)

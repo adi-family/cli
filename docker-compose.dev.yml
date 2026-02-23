@@ -53,7 +53,7 @@ services:
       - "--fingerprint"
       - "--lt-cred-mech"
       - "--user=adi:adi"
-      - "--realm=adi.local"
+      - "--realm=adi.test"
       - "--no-tls"
       - "--no-dtls"
       - "--no-cli"

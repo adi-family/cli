@@ -6,7 +6,7 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { siteConfig } from "@/lib/site";
 import { locales, localeLabels, type Locale } from "@/i18n/routing";
 
-const APP_BASE_URL = "https://app.adi.local";
+const APP_BASE_URL = "http://app.adi.test";
 
 const navItems = [
   { key: "home" as const, href: "/" as const },

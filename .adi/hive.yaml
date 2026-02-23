@@ -1,23 +1,4 @@
-# =============================================================================
-# ADI Local Development - Hive Configuration
-# =============================================================================
-# Usage: adi hive up
-#
-# This replaces .adi/workflows/dev.sh with a declarative configuration.
-# All services that were in dev.sh are now managed by Hive.
-#
-# Default services to start: postgres, timescaledb, coturn, signaling, logging,
-#                           auth, platform, web, web-app, flowmap,
-#                           analytics-ingestion, analytics, llm-proxy
-#
-# Optional services: balance, credentials, cocoon, registry, codegen
-# =============================================================================
-
 version: "1"
-
-# -----------------------------------------------------------------------------
-# Global Defaults
-# -----------------------------------------------------------------------------
 
 defaults:
   # File-based logging with rotation (defaults to ~/.adi/hive/logs/)
@@ -45,11 +26,12 @@ defaults:
 # Reverse Proxy Configuration
 # -----------------------------------------------------------------------------
 # Hosts:
-#   - adi.local              (local development)
+#   - adi.test              (local development)
 
 proxy:
   bind:
-    - "127.0.0.1:8080"
+    - "0.0.0.0:80"
+  debug: true
 
 # -----------------------------------------------------------------------------
 # Global Observability
@@ -77,10 +59,6 @@ environment:
 # =============================================================================
 
 services:
-  # ---------------------------------------------------------------------------
-  # Infrastructure: Databases
-  # ---------------------------------------------------------------------------
-
   postgres:
     runner:
       type: docker
@@ -96,6 +74,13 @@ services:
           POSTGRES_USER: adi
           POSTGRES_PASSWORD: adi
           POSTGRES_DB: adi
+        security:
+          cap_add:
+            - CHOWN
+            - FOWNER
+            - SETGID
+            - SETUID
+            - DAC_OVERRIDE
     rollout:
       type: recreate
       recreate:
@@ -125,6 +110,13 @@ services:
           POSTGRES_USER: adi
           POSTGRES_PASSWORD: adi
           POSTGRES_DB: adi_analytics
+        security:
+          cap_add:
+            - CHOWN
+            - FOWNER
+            - SETGID
+            - SETUID
+            - DAC_OVERRIDE
     rollout:
       type: recreate
       recreate:
@@ -158,10 +150,16 @@ services:
           - "--fingerprint"
           - "--lt-cred-mech"
           - "--user=adi:adi"
-          - "--realm=adi.local"
+          - "--realm=adi.test"
           - "--no-tls"
           - "--no-dtls"
           - "--no-cli"
+        security:
+          cap_add:
+            - NET_BIND_SERVICE
+            - SETGID
+            - SETUID
+          no_new_privileges: false
     rollout:
       type: recreate
       recreate:
@@ -193,7 +191,7 @@ services:
         ports:
           http: 8011
     proxy:
-      - host: adi.local
+      - host: adi.test
         path: /api/signaling
         strip_prefix: true
     healthcheck:
@@ -231,7 +229,7 @@ services:
         ports:
           http: 8040
     proxy:
-      - host: adi.local
+      - host: adi.test
         path: /api/logging
         strip_prefix: true
     healthcheck:
@@ -269,7 +267,7 @@ services:
         ports:
           http: 8012
     proxy:
-      - host: adi.local
+      - host: adi.test
         path: /api/auth
         strip_prefix: true
     healthcheck:
@@ -314,7 +312,7 @@ services:
         ports:
           http: 8015
     proxy:
-      - host: adi.local
+      - host: adi.test
         path: /api/platform
         strip_prefix: true
     healthcheck:
@@ -327,8 +325,8 @@ services:
         PORT: "8015"
         DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_platform"
         JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
-        PUBLIC_BASE_URL: ${env.PUBLIC_BASE_URL:-http://adi.local}
-        CORS_ORIGIN: "http://adi.local"
+        PUBLIC_BASE_URL: ${env.PUBLIC_BASE_URL:-http://adi.test}
+        CORS_ORIGIN: "http://adi.test"
         LOGGING_URL: "http://localhost:8040"
     depends_on:
       - postgres
@@ -351,7 +349,7 @@ services:
         ports:
           http: 8048
     proxy:
-      - host: adi.local
+      - host: adi.test
         path: /
     healthcheck:
       type: tcp
@@ -360,7 +358,7 @@ services:
     environment:
       static:
         PORT: "8048"
-        NEXT_PUBLIC_SITE_URL: "http://adi.local"
+        NEXT_PUBLIC_SITE_URL: "http://adi.test"
     restart: on-failure
 
   app:
@@ -375,8 +373,8 @@ services:
         ports:
           http: 8035
     proxy:
-      - host: adi.local
-        path: /app
+      - host: app.adi.test
+        path: /
     healthcheck:
       type: tcp
       tcp:
@@ -407,7 +405,7 @@ services:
         ports:
           http: 8022
     proxy:
-      - host: adi.local
+      - host: adi.test
         path: /api/analytics-ingestion
         strip_prefix: true
     healthcheck:
@@ -442,7 +440,7 @@ services:
         ports:
           http: 8023
     proxy:
-      - host: adi.local
+      - host: adi.test
         path: /api/analytics
         strip_prefix: true
     healthcheck:
@@ -477,7 +475,7 @@ services:
         ports:
           http: 8029
     proxy:
-      - host: adi.local
+      - host: adi.test
         path: /api/llm-proxy
         strip_prefix: true
     healthcheck:
@@ -521,7 +519,7 @@ services:
         ports:
           http: 8030
     proxy:
-      - host: adi.local
+      - host: adi.test
         path: /api/balance
         strip_prefix: true
     healthcheck:
@@ -559,7 +557,7 @@ services:
         ports:
           http: 8033
     proxy:
-      - host: adi.local
+      - host: adi.test
         path: /api/credentials
         strip_prefix: true
     healthcheck:
@@ -593,10 +591,10 @@ services:
         ports:
           http: 8019
     proxy:
-      - host: adi.local
+      - host: adi.test
         path: /api/registry
         strip_prefix: true
-      - host: adi.local
+      - host: adi.test
         path: /registry
         strip_prefix: true
     healthcheck:
@@ -612,6 +610,3 @@ services:
     depends_on:
       - logging
     restart: on-failure
-
-
-
