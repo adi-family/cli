@@ -585,7 +585,7 @@
 
       <!-- Console Panel -->
       <div class="divider"></div>
-      <details id="consoleDetails" open>
+      <details id="consoleDetails">
         <summary>
           Console
           <div class="console-header-actions">
