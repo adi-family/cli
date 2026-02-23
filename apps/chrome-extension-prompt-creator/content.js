@@ -463,6 +463,51 @@
       .divider {
         height: 1px; background: ${T.border}; margin: 14px 0;
       }
+
+      /* ===== Console Panel ===== */
+      .console-log {
+        font-family: ${T.fontMono};
+        font-size: 11px;
+        max-height: 220px;
+        overflow-y: auto;
+        padding: 4px 6px;
+        background: ${T.surfaceAlt};
+        border-radius: ${T.radiusSm};
+        border: 1px solid ${T.border};
+      }
+      .console-log::-webkit-scrollbar { width: 4px; }
+      .console-log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+      .console-log-empty { color: ${T.textMuted}; font-style: italic; font-size: 11px; padding: 4px 0; }
+
+      .console-entry {
+        display: flex; gap: 6px; align-items: baseline;
+        padding: 2px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        line-height: 1.5;
+        color: ${T.text};
+      }
+      .console-entry.warn  { color: ${T.warning}; background: ${T.warningSoft}; }
+      .console-entry.error { color: ${T.error};   background: ${T.errorSoft};   }
+      .console-entry.debug { color: ${T.textMuted}; }
+      .console-entry.info  { color: ${T.text}; }
+
+      .console-type {
+        font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px;
+        opacity: 0.6; flex-shrink: 0; width: 36px;
+      }
+      .console-text { word-break: break-all; white-space: pre-wrap; flex: 1; }
+
+      .console-header-actions { display: flex; align-items: center; gap: 6px; }
+      .console-clear-btn {
+        font-size: 10px; color: ${T.textMuted}; background: none; border: none;
+        cursor: pointer; padding: 2px 4px; font-family: ${T.fontBody};
+      }
+      .console-clear-btn:hover { color: ${T.error}; }
+      .console-count {
+        font-size: 9px; color: ${T.textMuted}; background: ${T.surfaceAlt};
+        padding: 1px 5px; border-radius: 8px; border: 1px solid ${T.border};
+      }
     </style>
 
     <div class="sidebar">
@@ -537,6 +582,24 @@
           </details>
         </div>
       </div>
+
+      <!-- Console Panel -->
+      <div class="divider"></div>
+      <details id="consoleDetails" open>
+        <summary>
+          Console
+          <div class="console-header-actions">
+            <span id="consoleCount" class="console-count">0</span>
+            <button class="console-clear-btn" id="consoleClearBtn">clear</button>
+          </div>
+        </summary>
+        <div class="details-body" style="padding:8px 6px;">
+          <div id="consoleLog" class="console-log">
+            <div class="console-log-empty">No console output yet.</div>
+          </div>
+        </div>
+      </details>
+
     </div>
   `;
 
@@ -803,6 +866,58 @@ Generate a prompt for a coding agent to make this change.`;
     $("#snippet").textContent = data.snippet || "";
     copyData.snippet = data.snippet || "";
   }
+
+  // ========== Console Panel ==========
+  let consoleEntryCount = 0;
+
+  function appendConsoleEntry(entry) {
+    const logEl = $("#consoleLog");
+    if (!logEl) return;
+
+    const empty = logEl.querySelector(".console-log-empty");
+    if (empty) empty.remove();
+
+    const type = entry.type || "log";
+    const div = document.createElement("div");
+    div.className = `console-entry ${type}`;
+
+    const typeSpan = document.createElement("span");
+    typeSpan.className = "console-type";
+    typeSpan.textContent = type;
+
+    const textSpan = document.createElement("span");
+    textSpan.className = "console-text";
+    textSpan.textContent = entry.text || "";
+
+    div.appendChild(typeSpan);
+    div.appendChild(textSpan);
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+
+    consoleEntryCount++;
+    const countEl = $("#consoleCount");
+    if (countEl) countEl.textContent = consoleEntryCount;
+  }
+
+  chrome.runtime.sendMessage({ action: "getHistory" }, (response) => {
+    if (chrome.runtime.lastError || !response?.entries) return;
+    response.entries.forEach(appendConsoleEntry);
+  });
+
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.action === "consoleEntry") appendConsoleEntry(msg.entry);
+  });
+
+  const consoleClearBtn = $("#consoleClearBtn");
+  consoleClearBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const logEl = $("#consoleLog");
+    logEl.innerHTML = '<div class="console-log-empty">No console output yet.</div>';
+    consoleEntryCount = 0;
+    const countEl = $("#consoleCount");
+    if (countEl) countEl.textContent = 0;
+  });
 
   // ========== Mount ==========
   document.documentElement.appendChild(host);
