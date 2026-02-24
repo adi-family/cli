@@ -2457,6 +2457,7 @@ dependencies = [
  "glob",
  "hostname",
  "inquire",
+ "lib-console-output",
  "lib-daemon-core",
  "lib-env-parse",
  "lib-plugin-prelude",
