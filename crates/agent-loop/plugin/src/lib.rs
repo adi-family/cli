@@ -6,28 +6,10 @@ use agent_loop_core::{
     AgentLoop, ApprovalDecision, ApprovalHandler, LoopConfig, Message, MockLlmProvider,
     PermissionRule, ToolCall,
 };
-use async_trait::async_trait;
 use console::style;
 use dialoguer::{theme::ColorfulTheme, Select};
-use lib_plugin_abi_v3::{
-    cli::{CliCommand, CliCommands, CliContext, CliResult},
-    Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult, SERVICE_CLI_COMMANDS,
-};
-use once_cell::sync::OnceCell;
+use lib_plugin_prelude::*;
 use std::sync::Arc;
-use tokio::runtime::Runtime;
-
-/// Global tokio runtime for async operations
-static RUNTIME: OnceCell<Runtime> = OnceCell::new();
-
-fn get_runtime() -> &'static Runtime {
-    RUNTIME.get_or_init(|| {
-        tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .expect("Failed to create tokio runtime")
-    })
-}
 
 /// Agent Loop Plugin
 pub struct AgentLoopPlugin;
@@ -47,23 +29,13 @@ impl Default for AgentLoopPlugin {
 #[async_trait]
 impl Plugin for AgentLoopPlugin {
     fn metadata(&self) -> PluginMetadata {
-        PluginMetadata {
-            id: "adi.agent-loop".to_string(),
-            name: "ADI Agent Loop".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            plugin_type: PluginType::Core,
-            author: Some("ADI Team".to_string()),
-            description: Some("Autonomous LLM agent with tool execution".to_string()),
-            category: None,
-        }
+        PluginMetadata::new("adi.agent-loop", "ADI Agent Loop", env!("CARGO_PKG_VERSION"))
+            .with_type(PluginType::Core)
+            .with_author("ADI Team")
+            .with_description("Autonomous LLM agent with tool execution")
     }
 
-    async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
-        let _ = get_runtime();
-        Ok(())
-    }
-
-    async fn shutdown(&self) -> PluginResult<()> {
+    async fn init(&mut self, _ctx: &PluginContext) -> Result<()> {
         Ok(())
     }
 
@@ -79,31 +51,37 @@ impl CliCommands for AgentLoopPlugin {
             CliCommand {
                 name: "run".to_string(),
                 description: "Run agent with a task".to_string(),
-                usage: "run <task> [--max-iterations <n>] [--yes] [--file <path>] [--system-prompt <prompt>]".to_string(),
+                args: vec![
+                    CliArg::positional(0, "task", CliArgType::String, true),
+                    CliArg::optional("--max-iterations", CliArgType::Int),
+                    CliArg::optional("--yes", CliArgType::Bool),
+                    CliArg::optional("--file", CliArgType::String),
+                    CliArg::optional("--system-prompt", CliArgType::String),
+                ],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "config".to_string(),
                 description: "Manage configuration".to_string(),
-                usage: "config [show|set <key> <value>]".to_string(),
+                args: vec![],
                 has_subcommands: true,
             },
             CliCommand {
                 name: "tools".to_string(),
                 description: "List available tools".to_string(),
-                usage: "tools [list]".to_string(),
+                args: vec![],
                 has_subcommands: true,
             },
         ]
     }
 
-    async fn run_command(&self, ctx: &CliContext) -> PluginResult<CliResult> {
+    async fn run_command(&self, ctx: &CliContext) -> Result<CliResult> {
         let subcommand = ctx.subcommand.as_deref().unwrap_or("");
         let args: Vec<&str> = ctx.args.iter().map(|s| s.as_str()).collect();
         let options = ctx.options_as_json();
 
         let result = match subcommand {
-            "run" => cmd_run(&args, &options),
+            "run" => cmd_run(&args, &options).await,
             "config" => cmd_config(&args),
             "tools" => cmd_tools(&args),
             "" | "help" => Ok(get_help()),
@@ -143,7 +121,7 @@ Usage: adi agent-loop <command> [args]"#
         .to_string()
 }
 
-fn cmd_run(args: &[&str], options: &serde_json::Value) -> Result<String, String> {
+async fn cmd_run(args: &[&str], options: &serde_json::Value) -> CmdResult {
     if args.is_empty() {
         return Err("Missing task. Usage: run <task> [--max-iterations <n>] [--yes] [--file <path>] [--system-prompt <prompt>]".to_string());
     }
@@ -161,57 +139,40 @@ fn cmd_run(args: &[&str], options: &serde_json::Value) -> Result<String, String>
     let file_path = options.get("file").and_then(|v| v.as_str());
     let system_prompt = options.get("system-prompt").and_then(|v| v.as_str());
 
-    // Read task from file if specified, otherwise use provided task
     let task_content = if let Some(path) = file_path {
         std::fs::read_to_string(path).map_err(|e| format!("Failed to read file {}: {}", path, e))?
     } else {
         task.to_string()
     };
 
-    // Run the agent using tokio runtime
-    let runtime = get_runtime();
+    let config = LoopConfig {
+        max_iterations,
+        ..Default::default()
+    };
 
-    let result = runtime.block_on(async {
-        let config = LoopConfig {
-            max_iterations,
-            ..Default::default()
-        };
+    let provider = Arc::new(MockLlmProvider::with_responses(vec![Message::assistant(
+        "This is a demo response. Connect a real LLM provider for actual functionality.",
+    )]));
 
-        let provider = Arc::new(MockLlmProvider::with_responses(vec![Message::assistant(
-            "This is a demo response. Connect a real LLM provider for actual functionality.",
-        )]));
+    let mut agent = AgentLoop::new(provider).with_loop_config(config);
 
-        let mut agent = AgentLoop::new(provider).with_loop_config(config);
-
-        if let Some(prompt) = system_prompt {
-            agent = agent.with_system_prompt(prompt.to_string());
-        }
-
-        if auto_approve {
-            agent.run(&task_content).await
-        } else {
-            let approver = InteractiveApprover::new();
-            agent.run_with_approval(&approver, &task_content).await
-        }
-    });
-
-    match result {
-        Ok(response) => {
-            let mut output = String::new();
-            output.push_str(&format!("{}\n", response));
-            Ok(output)
-        }
-        Err(e) => Err(format!("Agent error: {}", e)),
+    if let Some(prompt) = system_prompt {
+        agent = agent.with_system_prompt(prompt.to_string());
     }
+
+    let result = if auto_approve {
+        agent.run(&task_content).await
+    } else {
+        let approver = InteractiveApprover;
+        agent.run_with_approval(&approver, &task_content).await
+    };
+
+    result
+        .map(|response| format!("{}\n", response))
+        .map_err(|e| format!("Agent error: {}", e))
 }
 
 struct InteractiveApprover;
-
-impl InteractiveApprover {
-    fn new() -> Self {
-        Self
-    }
-}
 
 #[async_trait]
 impl ApprovalHandler for InteractiveApprover {
@@ -221,7 +182,6 @@ impl ApprovalHandler for InteractiveApprover {
         rule: Option<&PermissionRule>,
     ) -> agent_loop_core::Result<ApprovalDecision> {
         eprintln!("\n{} Agent wants to run:", style("?").yellow().bold());
-
         eprintln!(
             "  {}: {}",
             style(&tool_call.name).cyan().bold(),
@@ -250,7 +210,7 @@ impl ApprovalHandler for InteractiveApprover {
     }
 }
 
-fn cmd_config(args: &[&str]) -> Result<String, String> {
+fn cmd_config(args: &[&str]) -> CmdResult {
     let subcommand = args.first().copied().unwrap_or("show");
 
     match subcommand {
@@ -277,7 +237,7 @@ fn cmd_config(args: &[&str]) -> Result<String, String> {
     }
 }
 
-fn cmd_tools(args: &[&str]) -> Result<String, String> {
+fn cmd_tools(args: &[&str]) -> CmdResult {
     let subcommand = args.first().copied().unwrap_or("list");
 
     match subcommand {

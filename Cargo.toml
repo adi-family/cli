@@ -58,7 +58,6 @@ members = [
 
     # Agent Loop components
     "crates/agent-loop/core",
-    "crates/agent-loop/http",
 
     # LLM Proxy components
     "crates/llm-proxy/core",

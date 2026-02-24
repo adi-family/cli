@@ -154,40 +154,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "agent-loop-http"
-version = "0.8.3"
-dependencies = [
- "agent-loop-core",
- "anyhow",
- "async-trait",
- "axum 0.7.9",
- "chrono",
- "lib-env-parse",
- "lib-http-common",
- "serde",
- "serde_json",
- "tokio",
- "tower 0.4.13",
- "tower-http 0.5.2",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
 name = "agent-loop-plugin"
 version = "0.8.8"
 dependencies = [
  "agent-loop-core",
  "anyhow",
- "async-trait",
  "console 0.15.11",
  "dialoguer 0.11.0",
- "lib-plugin-abi-v3",
- "once_cell",
+ "lib-plugin-prelude",
  "serde",
  "serde_json",
- "tokio",
 ]
 
 [[package]]
