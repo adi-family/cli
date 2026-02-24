@@ -20,7 +20,6 @@ mod middleware;
 use credentials_core::{Config, Database, SecretManager};
 use analytics_client::AnalyticsClient;
 use lib_http_common::version_header_layer;
-use lib_logging_core::trace_layer;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -120,7 +119,6 @@ async fn main() -> anyhow::Result<()> {
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),
         ))
-        .layer(trace_layer())
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state);

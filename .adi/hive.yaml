@@ -203,7 +203,6 @@ services:
       static:
         PORT: "8011"
         HIVE_SECRETS: ${env.HIVE_SECRETS:-}
-        LOGGING_URL: "http://localhost:8040"
     restart: on-failure
     # Expose signaling URL for other services
     expose:
@@ -211,39 +210,6 @@ services:
       vars:
         URL: "ws://localhost:8011/ws"
         PORT: "8011"
-
-  logging:
-    runner:
-      type: script
-      script:
-        run: adi run adi.logging start
-        working_dir: .
-    rollout:
-      type: recreate
-      recreate:
-        ports:
-          http: 8040
-    proxy:
-      - host: adi.test
-        path: /api/logging
-        strip_prefix: true
-    healthcheck:
-      type: http
-      http:
-        port: "{{runtime.port.http}}"
-        path: /health
-    environment:
-      static:
-        PORT: "8040"
-        DATABASE_URL: "postgres://adi:adi@localhost:8028/adi_logging"
-    depends_on:
-      - timescaledb
-    restart: on-failure
-    # Expose logging URL for other services
-    expose:
-      name: logging
-      vars:
-        URL: "http://localhost:8040"
 
   auth:
     runner:
@@ -279,10 +245,8 @@ services:
         SMTP_FROM_NAME: ${env.SMTP_FROM_NAME:-}
         SMTP_TLS: ${env.SMTP_TLS:-}
         UNSAFE_PRINT_EMAIL_CODE_IN_CONSOLE: ${env.UNSAFE_PRINT_EMAIL_CODE_IN_CONSOLE:-true}
-        LOGGING_URL: "http://localhost:8040"
     depends_on:
       - postgres
-      - logging
     restart: on-failure
 
   platform:
@@ -312,10 +276,8 @@ services:
         JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
         PUBLIC_BASE_URL: ${env.PUBLIC_BASE_URL:-http://adi.test}
         CORS_ORIGIN: "http://adi.test"
-        LOGGING_URL: "http://localhost:8040"
     depends_on:
       - postgres
-      - logging
     restart: on-failure
 
   # ---------------------------------------------------------------------------
@@ -398,10 +360,8 @@ services:
       static:
         PORT: "8022"
         DATABASE_URL: "postgres://adi:adi@localhost:8028/adi_analytics"
-        LOGGING_URL: "http://localhost:8040"
     depends_on:
       - timescaledb
-      - logging
     restart: on-failure
     # Expose analytics URL for other services
     expose:
@@ -433,10 +393,8 @@ services:
       static:
         PORT: "8023"
         DATABASE_URL: "postgres://adi:adi@localhost:8028/adi_analytics"
-        LOGGING_URL: "http://localhost:8040"
     depends_on:
       - timescaledb
-      - logging
     restart: on-failure
 
   llm-proxy:
@@ -467,11 +425,9 @@ services:
         ADMIN_JWT_SECRET: ${env.ADMIN_JWT_SECRET:-}
         ENCRYPTION_KEY: ${env.ENCRYPTION_KEY:-5a747f27420b903522ae3746c4ba79b5ecffea02f6bc333fd4da39fb2ef27de4}
         ANALYTICS_URL: "http://localhost:8022"
-        LOGGING_URL: "http://localhost:8040"
     depends_on:
       - postgres
       - analytics-ingestion
-      - logging
     restart: on-failure
 
   # ---------------------------------------------------------------------------
@@ -504,11 +460,9 @@ services:
         DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_balance"
         JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
         ANALYTICS_URL: "http://localhost:8022"
-        LOGGING_URL: "http://localhost:8040"
     depends_on:
       - postgres
       - analytics-ingestion
-      - logging
     restart: on-failure
 
   credentials:
@@ -538,11 +492,9 @@ services:
         JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
         ENCRYPTION_KEY: ${env.ENCRYPTION_KEY:-5a747f27420b903522ae3746c4ba79b5ecffea02f6bc333fd4da39fb2ef27de4}
         ANALYTICS_URL: "http://localhost:8022"
-        LOGGING_URL: "http://localhost:8040"
     depends_on:
       - postgres
       - analytics-ingestion
-      - logging
     restart: on-failure
 
   registry:

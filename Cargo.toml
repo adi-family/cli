@@ -260,7 +260,6 @@ platform-core = { path = "crates/platform/core" }
 tools-core = { path = "crates/tools/core" }
 balance-core = { path = "crates/balance/core" }
 credentials-core = { path = "crates/credentials/core" }
-logging-core = { path = "crates/logging/core" }
 executor-core = { path = "crates/executor/core" }
 plugin-registry-core = { path = "crates/registry/core" }
 signaling-core = { path = "crates/signaling/core" }
@@ -319,7 +318,6 @@ lib-migrations = { path = "crates/lib/lib-migrations" }
 lib-task-store = { path = "crates/lib/lib-task-store" }
 analytics-core = { path = "crates/analytics/core" }
 analytics-client = { path = "crates/analytics/client" }
-lib-logging-core = { path = "crates/lib/lib-logging-core" }
 # API clients
 lib-client-github = { path = "crates/lib/lib-client/github" }
 lib-client-anthropic = { path = "crates/lib/lib-client/anthropic" }

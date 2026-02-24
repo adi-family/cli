@@ -1,7 +1,6 @@
 use analytics_plugin::read_server;
 use axum::http::{Method, header};
 use lib_http_common::version_header_layer;
-use lib_logging_core::trace_layer;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -47,7 +46,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),
         ))
-        .layer(trace_layer())
         .layer(
             CorsLayer::new()
                 .allow_origin(tower_http::cors::Any)
