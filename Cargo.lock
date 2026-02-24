@@ -12532,14 +12532,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tool-generate-heartbit"
-version = "0.1.0"
-dependencies = [
- "clap",
- "hound",
-]
-
-[[package]]
 name = "tools-core"
 version = "0.1.0"
 dependencies = [
@@ -12565,11 +12557,9 @@ dependencies = [
 name = "tools-plugin"
 version = "0.1.0"
 dependencies = [
- "async-trait",
- "lib-plugin-abi-v3",
+ "lib-plugin-prelude",
  "serde",
  "serde_json",
- "tokio",
  "tools-core",
 ]
 
@@ -13916,27 +13906,6 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "webrtc-util",
-]
-
-[[package]]
-name = "webrtc-test-peer"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "clap",
- "futures",
- "lib-signaling-protocol",
- "rand 0.9.2",
- "serde",
- "serde_json",
- "tokio",
- "tokio-test",
- "tokio-tungstenite 0.24.0",
- "tracing",
- "tracing-subscriber",
- "url",
- "uuid",
- "webrtc",
 ]
 
 [[package]]

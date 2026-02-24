@@ -4,16 +4,9 @@
 //! LLM agents get a single meta-command to search tools by intent
 //! and pull full usage docs only when needed.
 
+use lib_plugin_prelude::*;
 use tools_core::{discover_all, discover_tool_from_path, fetch_help, Config, ToolSearch};
-use lib_plugin_abi_v3::{
-    async_trait,
-    cli::{CliCommand, CliCommands, CliContext, CliResult},
-    Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult,
-    SERVICE_CLI_COMMANDS,
-};
 use std::sync::{Arc, Mutex};
-
-type CmdResult = std::result::Result<String, String>;
 
 pub struct ToolsPlugin {
     search: Arc<Mutex<Option<ToolSearch>>>,
@@ -38,25 +31,16 @@ impl Default for ToolsPlugin {
 #[async_trait]
 impl Plugin for ToolsPlugin {
     fn metadata(&self) -> PluginMetadata {
-        PluginMetadata {
-            id: "adi.tools".to_string(),
-            name: "Tool Index".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            plugin_type: PluginType::Core,
-            author: Some("ADI Team".to_string()),
-            description: Some("Searchable index of CLI tools for LLM agents".to_string()),
-            category: None,
-        }
+        PluginMetadata::new("adi.tools", "Tool Index", env!("CARGO_PKG_VERSION"))
+            .with_type(PluginType::Core)
+            .with_author("ADI Team")
+            .with_description("Searchable index of CLI tools for LLM agents")
     }
 
-    async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
+    async fn init(&mut self, _ctx: &PluginContext) -> Result<()> {
         // Try to open existing index
         let search = ToolSearch::open(&self.config).ok();
         *self.search.lock().unwrap() = search;
-        Ok(())
-    }
-
-    async fn shutdown(&self) -> PluginResult<()> {
         Ok(())
     }
 
@@ -72,55 +56,61 @@ impl CliCommands for ToolsPlugin {
             CliCommand {
                 name: "find".to_string(),
                 description: "Search tools by intent".to_string(),
-                usage: "find <query> [--limit <n>]".to_string(),
+                args: vec![
+                    CliArg::positional(0, "query", CliArgType::String, true),
+                    CliArg::optional("--limit", CliArgType::Int),
+                ],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "help".to_string(),
                 description: "Show full usage for a tool".to_string(),
-                usage: "help <tool-id>".to_string(),
+                args: vec![CliArg::positional(0, "tool-id", CliArgType::String, true)],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "list".to_string(),
                 description: "List all indexed tools".to_string(),
-                usage: "list [--source <plugin|tooldir|system>] [--format <text|json>]".to_string(),
+                args: vec![
+                    CliArg::optional("--source", CliArgType::String),
+                    CliArg::optional("--format", CliArgType::String),
+                ],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "run".to_string(),
                 description: "Run a tool".to_string(),
-                usage: "run <tool-id> [args...]".to_string(),
+                args: vec![CliArg::positional(0, "tool-id", CliArgType::String, true)],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "index".to_string(),
                 description: "Re-index all tools".to_string(),
-                usage: "index".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "add".to_string(),
                 description: "Add a tool to index".to_string(),
-                usage: "add <path>".to_string(),
+                args: vec![CliArg::positional(0, "path", CliArgType::String, true)],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "remove".to_string(),
                 description: "Remove a tool from index".to_string(),
-                usage: "remove <tool-id>".to_string(),
+                args: vec![CliArg::positional(0, "tool-id", CliArgType::String, true)],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "stats".to_string(),
                 description: "Show index statistics".to_string(),
-                usage: "stats".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
         ]
     }
 
-    async fn run_command(&self, ctx: &CliContext) -> PluginResult<CliResult> {
+    async fn run_command(&self, ctx: &CliContext) -> Result<CliResult> {
         let subcommand = ctx.subcommand.as_deref().unwrap_or("");
 
         let result = match subcommand {

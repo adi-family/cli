@@ -10,12 +10,10 @@ authors = ["ADI Team"]
 crate-type = ["cdylib"]
 
 [dependencies]
-lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+lib-plugin-prelude = { path = "../../lib/lib-plugin-prelude" }
 tools-core = { path = "../core" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.0", features = ["sync", "process"] }
-async-trait = "0.1"
 
 [package.metadata.plugin]
 id = "adi.tools"
@@ -23,6 +21,7 @@ name = "Tool Index"
 type = "core"
 
 [package.metadata.plugin.compatibility]
+api_version = 3
 min_host_version = "0.8.0"
 
 [package.metadata.plugin.cli]
