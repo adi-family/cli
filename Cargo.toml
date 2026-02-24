@@ -187,7 +187,6 @@ members = [
     "crates/lib/lib-typespec-api/plugin",
     "crates/cocoon",
     "crates/registry/plugin",
-    "crates/webrtc-test-peer",
 
     # Browser Debug components
     "crates/browser-debug/core",
