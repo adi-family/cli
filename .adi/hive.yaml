@@ -216,8 +216,8 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin logging-http
-        working_dir: crates/logging
+        run: adi run adi.logging start
+        working_dir: .
     rollout:
       type: recreate
       recreate:

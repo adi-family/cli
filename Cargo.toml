@@ -121,7 +121,7 @@ members = [
     # Logging
     "crates/lib/lib-logging-core",
     "crates/logging/core",
-    "crates/logging/http",
+    "crates/logging/plugin",
 
     # Platform components
     "crates/platform/core",
