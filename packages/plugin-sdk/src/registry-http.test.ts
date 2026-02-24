@@ -1,0 +1,66 @@
+// src/registry-http.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { HttpPluginRegistry } from './registry-http.js';
+
+const BASE = 'https://registry.example.com';
+
+describe('HttpPluginRegistry', () => {
+  describe('bundleUrl', () => {
+    it('returns correct bundle URL', async () => {
+      const reg = new HttpPluginRegistry(BASE);
+      const url = await reg.bundleUrl('tasks', '1.2.0');
+      expect(url).toBe(`${BASE}/v1/plugins/tasks/1.2.0/web.js`);
+    });
+  });
+
+  describe('checkLatest', () => {
+    beforeEach(() => {
+      vi.stubGlobal('fetch', vi.fn());
+    });
+
+    it('returns null when version matches latest', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ version: '1.2.0' }),
+      } as Response);
+
+      const reg = new HttpPluginRegistry(BASE);
+      const result = await reg.checkLatest('tasks', '1.2.0');
+      expect(result).toBeNull();
+    });
+
+    it('returns new version when update available', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ version: '1.3.0' }),
+      } as Response);
+
+      const reg = new HttpPluginRegistry(BASE);
+      const result = await reg.checkLatest('tasks', '1.2.0');
+      expect(result).toEqual({ version: '1.3.0' });
+    });
+
+    it('calls correct latest endpoint with .json suffix', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ version: '1.2.0' }),
+      } as Response);
+
+      const reg = new HttpPluginRegistry(BASE);
+      await reg.checkLatest('tasks', '1.2.0');
+      expect(fetch).toHaveBeenCalledWith(`${BASE}/v1/plugins/tasks/latest`);
+    });
+
+    it('throws when registry returns non-2xx', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        json: async () => ({}),
+      } as Response);
+
+      const reg = new HttpPluginRegistry(BASE);
+      await expect(reg.checkLatest('tasks', '1.2.0')).rejects.toThrow('checkLatest failed: 404');
+    });
+  });
+});

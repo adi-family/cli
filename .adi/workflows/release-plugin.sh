@@ -420,32 +420,6 @@ build_plugin() {
     success "Created: $archive_name"
 }
 
-publish_web_ui() {
-    local plugin_id="$1"
-    local version="$2"
-    local web_js_path="$3"
-    local registry="$4"
-
-    info "Publishing web UI for $plugin_id v$version..."
-
-    local url="$registry/v1/publish/plugins/$plugin_id/$version/web"
-    local response
-    response=$(curl -s -w "\n%{http_code}" --max-time 120 -X POST "$url" \
-        -H "Content-Type: application/javascript" \
-        --data-binary "@$web_js_path")
-
-    local http_code
-    http_code=$(echo "$response" | tail -n 1)
-    local body
-    body=$(echo "$response" | sed '$d')
-
-    if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
-        success "Published web UI for $plugin_id v$version"
-    else
-        warn "Failed to publish web UI (HTTP $http_code): $body"
-    fi
-}
-
 publish_plugin() {
     local plugin_id="$1"
     local version="$2"
@@ -469,10 +443,12 @@ publish_plugin() {
     encoded_author=$(echo "$author" | sed 's/ /%20/g')
 
     local url="$registry/v1/publish/plugins/$plugin_id/$version/$platform"
-    url="$url?name=$encoded_name&description=$encoded_desc&plugin_type=$plugin_type&author=$encoded_author"
+    url="$url?name=$encoded_name&description=$encoded_desc&pluginType=$plugin_type&author=$encoded_author"
 
     local response
-    response=$(curl -s -w "\n%{http_code}" --max-time 300 -X POST "$url" -F "file=@$archive_path")
+    response=$(curl -s -w "\n%{http_code}" --max-time 300 -X POST "$url" \
+        -H "Content-Type: application/gzip" \
+        --data-binary "@$archive_path")
 
     local http_code
     http_code=$(echo "$response" | tail -n 1)
@@ -582,9 +558,6 @@ main() {
 
     if [ "$push" = true ]; then
         publish_plugin "$PLUGIN_ID" "$PLUGIN_VERSION" "$PLUGIN_PLATFORM" "$PLUGIN_ARCHIVE" "$PLUGIN_NAME" "$PLUGIN_DESC" "$PLUGIN_AUTHOR" "$PLUGIN_TYPE" "$registry"
-        if [[ -n "${PLUGIN_WEB_JS:-}" ]] && [[ -f "$PLUGIN_WEB_JS" ]]; then
-            publish_web_ui "$PLUGIN_ID" "$PLUGIN_VERSION" "$PLUGIN_WEB_JS" "$registry"
-        fi
         echo ""
         success "Install with: adi plugin install $PLUGIN_ID"
     else

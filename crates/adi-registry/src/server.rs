@@ -199,7 +199,7 @@ async fn plugin_version(
     State(st): State<AppState>,
     Path((id, version)): Path<(String, String)>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let version = version.trim_end_matches(".json");
+    let version = &version;
     let info = st
         .get_plugin_info(&id, version)
         .await
@@ -266,7 +266,7 @@ async fn package_version(
     State(st): State<AppState>,
     Path((id, version)): Path<(String, String)>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let version = version.trim_end_matches(".json");
+    let version = &version;
     let info = st
         .get_package_info(&id, version)
         .await
@@ -416,25 +416,25 @@ fn build_router(state: AppState) -> Router {
         // Health
         .route("/health", get(health))
         // Index & search
-        .route("/v1/index.json", get(get_index))
+        .route("/v1/index", get(get_index))
         .route("/v1/search", get(search))
         // Plugins
-        .route("/v1/plugins/:id/latest.json", get(plugin_latest))
-        .route("/v1/plugins/:id/{version}.json", get(plugin_version))
+        .route("/v1/plugins/:id/latest", get(plugin_latest))
+        .route("/v1/plugins/:id/:version", get(plugin_version))
         .route(
             "/v1/plugins/:id/:version/{platform}.tar.gz",
             get(plugin_download),
         )
-        .route("/v1/plugins/:id/versions.json", get(plugin_versions))
+        .route("/v1/plugins/:id/versions", get(plugin_versions))
         .route("/v1/plugins/:id/:version/web.js", get(plugin_web_ui))
         // Packages
-        .route("/v1/packages/:id/latest.json", get(package_latest))
-        .route("/v1/packages/:id/{version}.json", get(package_version))
+        .route("/v1/packages/:id/latest", get(package_latest))
+        .route("/v1/packages/:id/:version", get(package_version))
         .route(
             "/v1/packages/:id/:version/{platform}.tar.gz",
             get(package_download),
         )
-        .route("/v1/packages/:id/versions.json", get(package_versions))
+        .route("/v1/packages/:id/versions", get(package_versions))
         // Publish
         .route(
             "/v1/publish/plugins/:id/:version/:platform",
