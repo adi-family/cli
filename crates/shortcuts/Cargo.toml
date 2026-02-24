@@ -1,24 +1,34 @@
 [package]
-name = "shortcuts-http"
+name = "shortcuts-plugin"
 version = "0.1.0"
 edition = "2021"
 license = "BSL-1.1"
-description = "HTTP redirect service for ADI shortcut URLs"
+description = "ADI Shortcuts plugin - URL redirect service"
+authors = ["ADI Team"]
 
-[[bin]]
-name = "shortcuts-http"
-path = "src/main.rs"
+[lib]
+crate-type = ["cdylib"]
 
 [dependencies]
-axum = { version = "0.8", features = ["json"] }
-tokio = { version = "1", features = ["full"] }
-tower-http = { version = "0.6", features = ["cors", "trace"] }
+lib-plugin-prelude = { path = "../lib/lib-plugin-prelude" }
+axum = { version = "0.7", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yml = "0.0.12"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-lib-http-common = { path = "../lib/lib-http-common" }
-lib-logging-core = { path = "../lib/lib-logging-core", features = ["axum-08-compat"] }
-lib-env-parse = { path = "../lib/lib-env-parse" }
+[package.metadata.plugin]
+id = "adi.shortcuts"
+name = "Shortcuts"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+api_version = 3
+min_host_version = "0.8.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.shortcuts.http"
+version = "1.0.0"
+description = "HTTP routes for shortcut URL redirects"
+
+[package.metadata.plugin.tags]
+categories = ["shortcuts", "redirect", "http"]

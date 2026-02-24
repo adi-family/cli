@@ -1,0 +1,53 @@
+[package]
+name = "analytics-core"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Core analytics types, events, errors, and migrations for ADI platform"
+
+[[bin]]
+name = "analytics-migrate"
+path = "src/bin/migrate.rs"
+required-features = ["migrate"]
+
+[dependencies]
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1.19", features = ["serde", "v4"] }
+
+# Environment
+lib-env-parse = { path = "../../lib/lib-env-parse" }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+
+# Async runtime (only for migrate binary)
+tokio = { version = "1.49", features = ["full"], optional = true }
+
+# Migrations (for binary only)
+lib-migrations-core = { version = "0.1", optional = true }
+lib-migrations-sql = { version = "0.1", optional = true }
+
+# Environment (for binary only)
+dotenvy = { version = "0.15", optional = true }
+
+[features]
+default = []
+migrate = ["lib-migrations-core", "lib-migrations-sql", "dotenvy", "tracing-subscriber", "tokio"]
+
+[dev-dependencies]
+tokio-test = "0.4"

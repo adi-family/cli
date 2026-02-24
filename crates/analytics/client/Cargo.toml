@@ -1,0 +1,38 @@
+[package]
+name = "analytics-client"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Analytics client, models, queries, and event writer for ADI platform"
+
+[dependencies]
+# Core types
+analytics-core = { path = "../core" }
+
+# Async runtime
+tokio = { version = "1.49", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP client (use rustls for musl cross-compilation)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1.19", features = ["serde", "v4"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+
+# Logging
+tracing = "0.1"
+
+# Error handling
+thiserror = "2.0"
+
+[dev-dependencies]
+tokio-test = "0.4"

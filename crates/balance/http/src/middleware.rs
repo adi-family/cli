@@ -3,7 +3,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use lib_analytics_core::AnalyticsEvent;
+use analytics_client::AnalyticsEvent;
 use std::time::Instant;
 
 use crate::AppState;

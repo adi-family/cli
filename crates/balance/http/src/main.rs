@@ -18,7 +18,7 @@ mod handlers;
 mod middleware;
 
 use balance_core::{Config, Database};
-use lib_analytics_core::AnalyticsClient;
+use analytics_client::AnalyticsClient;
 use lib_http_common::version_header_layer;
 use lib_logging_core::trace_layer;
 

@@ -2,7 +2,7 @@ use axum::{
     Json,
     extract::{Path, Query, State},
 };
-use lib_analytics_core::AnalyticsEvent;
+use analytics_client::AnalyticsEvent;
 use uuid::Uuid;
 
 use balance_core::{

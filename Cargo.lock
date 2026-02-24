@@ -11063,20 +11063,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
-name = "shortcuts-http"
+name = "shortcuts-plugin"
 version = "0.1.0"
 dependencies = [
- "axum 0.8.8",
- "lib-env-parse",
- "lib-http-common",
- "lib-logging-core",
+ "axum 0.7.9",
+ "lib-plugin-prelude",
  "serde",
  "serde_json",
  "serde_yml",
- "tokio",
- "tower-http 0.6.8",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
