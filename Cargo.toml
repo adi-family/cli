@@ -114,7 +114,9 @@ members = [
     "crates/lib/lib-tarminal-sync",
 
     # Analytics
-    "crates/lib/lib-analytics-core",
+    "crates/analytics/core",
+    "crates/analytics/client",
+    "crates/analytics/plugin",
 
     # Logging
     "crates/lib/lib-logging-core",
@@ -216,7 +218,6 @@ members = [
 
     # Signaling server
     "crates/signaling-server/core",
-    "crates/signaling-server/http",
     "crates/signaling-server/plugin",
 
     # Executor
@@ -243,11 +244,6 @@ members = [
     "crates/lib/lib-flowmap-core",
     "crates/lib/lib-flowmap-parser",
 
-    # Analytics
-    "crates/analytics/core",
-    "crates/analytics/http",
-    "crates/analytics-ingestion/core",
-    "crates/analytics-ingestion/http",
 ]
 
 # FlowMap is standalone (not in workspace) - build with:
@@ -332,7 +328,8 @@ lib-shortcuts = { path = "crates/lib/lib-shortcuts" }
 lib-http-common = { path = "crates/lib/lib-http-common" }
 lib-migrations = { path = "crates/lib/lib-migrations" }
 lib-task-store = { path = "crates/lib/lib-task-store" }
-lib-analytics-core = { path = "crates/lib/lib-analytics-core" }
+analytics-core = { path = "crates/analytics/core" }
+analytics-client = { path = "crates/analytics/client" }
 lib-logging-core = { path = "crates/lib/lib-logging-core" }
 # API clients
 lib-client-github = { path = "crates/lib/lib-client/github" }

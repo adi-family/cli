@@ -11192,11 +11192,28 @@ dependencies = [
 name = "signaling-server-plugin"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "axum 0.8.8",
+ "chrono",
+ "dashmap",
+ "futures",
+ "hex",
+ "hmac",
+ "lib-env-parse",
+ "lib-http-common",
+ "lib-logging-core",
  "lib-plugin-prelude",
  "lib-signaling-protocol",
+ "regex",
  "serde",
  "serde_json",
+ "sha2",
+ "signaling-server-core",
  "tokio",
+ "tower-http 0.6.8",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
