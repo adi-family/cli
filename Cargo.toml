@@ -61,7 +61,7 @@ members = [
 
     # LLM Proxy components
     "crates/llm-proxy/core",
-    "crates/llm-proxy/http",
+    "crates/llm-proxy/plugin",
 
     # Hive components
     "crates/hive/core",
@@ -117,11 +117,6 @@ members = [
     "crates/analytics/core",
     "crates/analytics/client",
     "crates/analytics/plugin",
-
-    # Logging
-    "crates/lib/lib-logging-core",
-    "crates/logging/core",
-    "crates/logging/plugin",
 
     # Platform components
     "crates/platform/core",
@@ -179,7 +174,6 @@ members = [
     "crates/agent-loop/plugin",
     "crates/linter/plugin",
     "crates/workflow/plugin",
-    "crates/llm-proxy-plugin",
     "crates/hive/plugin",
     "crates/hive/integration-tests",
     "crates/llm-extract-plugin",
