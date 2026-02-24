@@ -52,9 +52,6 @@
 [submodule "crates/lib/lib-plugin-verify"]
 	path = crates/lib/lib-plugin-verify
 	url = https://github.com/adi-family/lib-plugin-verify.git
-[submodule "crates/tool-generate-heartbit"]
-	path = crates/tool-generate-heartbit
-	url = https://github.com/adi-family/tool-generate-heartbit.git
 [submodule "crates/signaling-server"]
 	path = crates/signaling-server
 	url = https://github.com/adi-family/tarminal-signaling-server.git
