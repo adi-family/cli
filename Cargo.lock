@@ -67,6 +67,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "adi-registry"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum 0.7.9",
+ "dirs 6.0.0",
+ "lib-plugin-abi-v3",
+ "plugin-registry-core",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "tower-http 0.5.2",
+ "tracing",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2439,8 +2457,9 @@ dependencies = [
  "glob",
  "hostname",
  "inquire",
+ "lib-daemon-core",
  "lib-env-parse",
- "lib-plugin-abi-v3",
+ "lib-plugin-prelude",
  "lib-signaling-protocol",
  "portable-pty",
  "rand 0.9.2",
@@ -7289,7 +7308,7 @@ version = "0.8.4"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
- "rand 0.9.2",
+ "rand_core 0.6.4",
  "sha2",
  "thiserror 2.0.18",
 ]
@@ -9274,13 +9293,15 @@ name = "plugin-registry-core"
 version = "0.8.4"
 dependencies = [
  "anyhow",
+ "flate2",
  "hex",
- "lib-plugin-manifest",
  "lib-plugin-registry",
+ "lib-plugin-verify",
  "semver",
  "serde",
  "serde_json",
  "sha2",
+ "tar",
  "tempfile",
  "tokio",
  "tracing",
@@ -9294,7 +9315,6 @@ dependencies = [
  "async-trait",
  "axum 0.7.9",
  "chrono",
- "flate2",
  "http-body-util",
  "hyper 1.8.1",
  "lib-env-parse",
@@ -9302,11 +9322,9 @@ dependencies = [
  "plugin-registry-core",
  "serde",
  "serde_json",
- "tar",
  "tempfile",
  "tokio",
  "tokio-util",
- "tower 0.4.13",
  "tower 0.5.3",
  "tower-http 0.5.2",
  "tracing",
