@@ -326,7 +326,7 @@ __turbopack_context__.s([
 const siteConfig = {
     name: "ADI",
     description: "Artificial Developer Intelligence — autonomous AI infrastructure for software engineering",
-    url: ("TURBOPACK compile-time value", "http://adi.local") || "https://adi.the-ihor.com",
+    url: ("TURBOPACK compile-time value", "http://adi.test") || "https://adi.the-ihor.com",
     github: "https://github.com/adi-family/adi-cli",
     twitter: "@mgorunuch",
     locale: "en_US",

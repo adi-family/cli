@@ -29,6 +29,7 @@ Registered via `@property` so `--l: calc(var(--l) * 0.5)` resolves inherited val
 - `.p-v-{025,05,075,1,15,2,3}` -- padding-block
 - `.p-h-{025,05,075,1,15,2,3}` -- padding-inline
 - `.g-{025,05,075,1,15,2,3}` -- gap
+- `.space-y-{0_25,0_5,0_75,1,1_5,2,3}` -- margin-block-start on `> * + *` (vertical stack spacing; `_` = decimal point)
 
 ### Text utilities (--t multiples, Major Third 1.25 scale)
 - `.text-xs` (0.75x), `.text-sm` (0.875x), `.text-base` (1x)
@@ -66,7 +67,7 @@ Inner radius = `max(0, outer_radius - padding)` for optically consistent nested 
 
 | File | Classes | Purpose |
 |------|---------|---------|
-| `ax.css` | `.l-*`, `.t-*`, `.r-*`, `.rounded*`, `.compact`, `.dense`, `.spacious`, `.p-*`, `.g-*`, `.text-*` | AX three-axis cascading variable system (--l spacing, --t text, --r radius with associated inner radii) |
+| `ax.css` | `.l-*`, `.t-*`, `.r-*`, `.rounded*`, `.compact`, `.dense`, `.spacious`, `.p-*`, `.g-*`, `.space-y-{0_25…3}`, `.text-*` | AX three-axis cascading variable system (--l spacing, --t text, --r radius with associated inner radii) |
 | `tokens.css` | (custom properties) | Standalone ADID design tokens (colors, borders, radii, fonts) |
 | `base.css` | (element styles) | HTML/body resets, grain overlay, scrollbar |
 | `tailwind.css` | (theme block) | Tailwind v4 `@theme inline` mapping of ADI tokens |

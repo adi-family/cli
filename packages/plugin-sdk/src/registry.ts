@@ -36,7 +36,13 @@ export async function loadPlugins(
 
   // Phase 1: Fetch + import all plugin modules concurrently.
   // Each module calls registerPlugin() as a side effect.
-  await Promise.allSettled(pluginDescriptors.map((d) => fetchAndImport(d)));
+  const importResults = await Promise.allSettled(pluginDescriptors.map((d) => fetchAndImport(d)));
+  for (let i = 0; i < importResults.length; i++) {
+    const r = importResults[i];
+    if (r.status === 'rejected') {
+      console.error(`[plugin] failed to load '${pluginDescriptors[i].id}':`, r.reason);
+    }
+  }
 
   // Phase 2: Resolve dependency graph.
   const plugins = [...registry.values()];
@@ -49,15 +55,23 @@ export async function loadPlugins(
   // Mark descriptors that failed to import (never called registerPlugin).
   const registeredIds = new Set(plugins.map((p) => p.id));
   for (const d of pluginDescriptors) {
-    if (!registeredIds.has(d.id)) failed.push(d.id);
+    if (!registeredIds.has(d.id)) {
+      console.error(`[plugin] '${d.id}' bundle loaded but did not register — export your plugin class as PluginShell: export { MyPlugin as PluginShell }`);
+      failed.push(d.id);
+    }
   }
 
   // Phase 3: Initialize in topological order.
   for (const plugin of order) {
     const result = await initWithTimeout(plugin, bus, timeout);
     if (result === 'ok') loaded.push(plugin.id);
-    else if (result === 'timeout') timedOut.push(plugin.id);
-    else failed.push(plugin.id);
+    else if (result === 'timeout') {
+      console.error(`[plugin] '${plugin.id}' timed out during onRegister (>${timeout}ms)`);
+      timedOut.push(plugin.id);
+    } else {
+      console.error(`[plugin] '${plugin.id}' threw during onRegister:`, result.error);
+      failed.push(plugin.id);
+    }
   }
 
   // Phase 4: Background update checks (non-blocking).
@@ -70,6 +84,12 @@ export async function loadPlugins(
 export interface UpgradePluginOptions {
   /** Timeout for the new plugin's onRegister in ms. Default: 5000. */
   timeout?: number;
+}
+
+/** Initialize a plugin that lives inside the app shell — no bundle fetch needed. */
+export async function initInternalPlugin(bus: EventBus, plugin: AdiPlugin): Promise<void> {
+  registerPlugin(plugin);
+  await plugin._init(bus);
 }
 
 export async function upgradePlugin(
@@ -138,7 +158,7 @@ export async function registerPluginSW(
 
     for (const [id, descriptor] of descriptors) {
       descriptor.registry
-        .fetchBundle(id, descriptor.installedVersion)
+        .bundleUrl(id, descriptor.installedVersion)
         .then((bundleUrl) => {
           if (bundleUrl !== data.url) return;
           descriptor.registry
@@ -169,7 +189,7 @@ async function checkForUpdates(
     pluginDescriptors.map(async ({ id, registry: reg, installedVersion }) => {
       const result = await reg.checkLatest(id, installedVersion).catch(() => null);
       if (!result) return;
-      const newUrl = await reg.fetchBundle(id, result.version).catch(() => null);
+      const newUrl = await reg.bundleUrl(id, result.version).catch(() => null);
       if (!newUrl) return;
       bus.emit('plugin:update-available', {
         pluginId: id,
@@ -198,7 +218,7 @@ async function initWithTimeout(
 }
 
 async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
-  const url = await descriptor.registry.fetchBundle(
+  const url = await descriptor.registry.bundleUrl(
     descriptor.id,
     descriptor.installedVersion
   );
@@ -209,7 +229,23 @@ async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
   const blob = await res.blob();
   const blobUrl = URL.createObjectURL(blob);
   try {
-    await import(/* @vite-ignore */ blobUrl);
+    const mod = await import(/* @vite-ignore */ blobUrl);
+    // Convention: export { MyPlugin as PluginShell } — SDK auto-registers it.
+    if ('PluginShell' in mod) {
+      if (typeof mod.PluginShell !== 'function') {
+        throw new Error(`PluginShell export must be a class, got ${typeof mod.PluginShell}`);
+      }
+      const instance = new (mod.PluginShell as new () => unknown)();
+      if (
+        typeof instance !== 'object' || instance === null ||
+        typeof (instance as Record<string, unknown>)['id'] !== 'string' ||
+        typeof (instance as Record<string, unknown>)['_init'] !== 'function' ||
+        typeof (instance as Record<string, unknown>)['_destroy'] !== 'function'
+      ) {
+        throw new Error(`PluginShell must extend AdiPlugin`);
+      }
+      registerPlugin(instance as AdiPlugin);
+    }
   } finally {
     URL.revokeObjectURL(blobUrl);
   }

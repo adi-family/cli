@@ -59,12 +59,11 @@ impl CliCommands for RegistryPlugin {
             "start" => {
                 let port: u16 = ctx
                     .option::<u16>("port")
-                    .or_else(|| {
-                        ctx.args.first().and_then(|s| s.parse().ok())
-                    })
+                    .or_else(|| ctx.option::<String>("port").and_then(|s| s.parse().ok()))
+                    .or_else(|| ctx.args.first().and_then(|s| s.parse().ok()))
                     .unwrap_or(8019);
 
-                if let Err(e) = server::run_server(port).await {
+                if let Err(e) = server::run_server(port) {
                     return Ok(CliResult::error(format!("Registry server failed: {e}")));
                 }
                 Ok(CliResult::success("Registry server stopped"))

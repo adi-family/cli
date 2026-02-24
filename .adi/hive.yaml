@@ -218,11 +218,6 @@ services:
       script:
         run: cargo run --bin logging-http
         working_dir: crates/logging
-    hooks:
-      pre-up:
-        - run: cargo run --bin logging-migrate --features migrate all
-          working_dir: crates/lib/lib-logging-core
-          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -256,11 +251,6 @@ services:
       script:
         run: cargo run -p auth-http
         working_dir: crates/auth
-    hooks:
-      pre-up:
-        - run: cargo run --bin auth-migrate -- run
-          working_dir: crates/auth/cli
-          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -301,11 +291,6 @@ services:
       script:
         run: cargo run --bin platform-http
         working_dir: crates/platform
-    hooks:
-      pre-up:
-        - run: cargo run -p platform-cli --bin platform -- migrate all
-          working_dir: crates/platform
-          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -382,6 +367,7 @@ services:
     environment:
       static:
         PORT: "8035"
+        VITE_REGISTRY_URL: ${env.VITE_REGISTRY_URL:-http://adi.test/registry}
     restart: on-failure
 
   # ---------------------------------------------------------------------------
@@ -394,11 +380,6 @@ services:
       script:
         run: cargo run --bin analytics-ingestion
         working_dir: crates/analytics-ingestion
-    hooks:
-      pre-up:
-        - run: cargo run --bin analytics-migrate --features migrate all
-          working_dir: crates/lib/lib-analytics-core
-          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -464,11 +445,6 @@ services:
       script:
         run: cargo run --bin llm-proxy
         working_dir: crates/llm-proxy/http
-    hooks:
-      pre-up:
-        - run: cargo run --bin llm-proxy-migrate
-          working_dir: crates/llm-proxy/http
-          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -508,11 +484,6 @@ services:
       script:
         run: cargo run --bin balance-http
         working_dir: crates/balance
-    hooks:
-      pre-up:
-        - run: cargo run --bin balance-migrate all
-          working_dir: crates/balance
-          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -546,11 +517,6 @@ services:
       script:
         run: cargo run --bin credentials-http
         working_dir: crates/credentials
-    hooks:
-      pre-up:
-        - run: cargo run --bin credentials-migrate all
-          working_dir: crates/credentials
-          timeout: "120s"
     rollout:
       type: recreate
       recreate:
@@ -583,8 +549,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin plugin-registry
-        working_dir: crates/plugin-registry
+        run: adi run adi.registry start --port 8019
     rollout:
       type: recreate
       recreate:
@@ -602,11 +567,4 @@ services:
       http:
         port: "{{runtime.port.http}}"
         path: /health
-    environment:
-      static:
-        PORT: "8019"
-        REGISTRY_DATA_DIR: ${env.REGISTRY_DATA_DIR:-.adi/dev/registry-data}
-        LOGGING_URL: "http://localhost:8040"
-    depends_on:
-      - logging
     restart: on-failure

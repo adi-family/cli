@@ -60,6 +60,12 @@ declare module './types.js' {
     /** Register a command palette entry. */
     'command:register': { id: string; label: string; shortcut?: string };
 
+    /** Execute a registered command by id. */
+    'command:execute': { id: string };
+
+    /** Programmatically open the command palette, optionally pre-filling a query. */
+    'command-palette:open': { query?: string };
+
     // --- App lifecycle ---
 
     /** Host emits after mounting, ready to receive plugin events. */

@@ -23,7 +23,7 @@ const depList = (label: string, tasks: Task[], onNavigate: (task: Task) => void)
   return html`
     <div class="mt-4">
       <h4 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">${label}</h4>
-      <div class="space-y-1">
+      <div class="space-y-0_25">
         ${tasks.map(
           (t) => html`
             <button
@@ -47,7 +47,7 @@ export function renderTaskDetail(props: TaskDetailProps): TemplateResult {
   const { task, depends_on, dependents } = data;
 
   return html`
-    <div class="space-y-4">
+    <div class="space-y-1">
       <button class="text-sm text-gray-400 hover:text-gray-200 transition-colors" @click=${onBack}>
         &larr; Back to list
       </button>

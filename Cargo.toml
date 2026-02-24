@@ -234,7 +234,6 @@ members = [
 
     # Plugin Registry
     "crates/plugin-registry/core",
-    "crates/plugin-registry/http",
 
     # Balance
     "crates/balance/core",

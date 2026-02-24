@@ -9,8 +9,10 @@ description = "Build and release service images (cross-compile + Docker)"
 name = "services"
 type = "multi-select"
 prompt = "Select services to release (empty for all)"
-# Dynamic options: discover services from release/ directory
-options_source = { type = "release-services" }
+# Dynamic options: discover services from release.sh ALL_SERVICES
+options_cmd = '''
+grep '^ALL_SERVICES=' "$WORKFLOWS_DIR/release.sh" 2>/dev/null | sed 's/^ALL_SERVICES="//;s/"$//' | tr ' ' '\n'
+'''
 
 [[inputs]]
 name = "push"

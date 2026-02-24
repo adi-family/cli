@@ -54,7 +54,6 @@ get_service_config() {
         analytics) echo "crates/analytics:analytics-http" ;;
         analytics-ingestion) echo "crates/analytics-ingestion:analytics-ingestion" ;;
         signaling-server) echo "crates/signaling-server:signaling-server" ;;
-        plugin-registry) echo "crates/plugin-registry:plugin-registry" ;;
         flowmap-api) echo "apps/flowmap-api:flowmap-api" ;;
         hive) echo "crates/hive/http:hive" ;;
         cocoon) echo "crates/cocoon:cocoon:standalone" ;;
@@ -64,7 +63,7 @@ get_service_config() {
 }
 
 # All available services
-ALL_SERVICES="auth platform analytics analytics-ingestion signaling-server plugin-registry flowmap-api hive cocoon llm-proxy"
+ALL_SERVICES="auth platform analytics analytics-ingestion signaling-server flowmap-api hive cocoon llm-proxy"
 
 build_service() {
     local service=$1

@@ -30,7 +30,6 @@ get_service_config() {
         analytics) echo "crates/analytics:analytics-http:analytics" ;;
         analytics-ingestion) echo "crates/analytics-ingestion:analytics-ingestion:analytics-ingestion" ;;
         signaling-server) echo "crates/signaling-server:signaling-server:signaling-server" ;;
-        plugin-registry) echo "crates/plugin-registry:plugin-registry:plugin-registry" ;;
         flowmap-api) echo "apps/flowmap-api:flowmap-api:flowmap-api" ;;
         hive) echo "crates/hive/http:hive:hive" ;;
         cocoon) echo "crates/cocoon:cocoon:cocoon" ;;
@@ -49,7 +48,7 @@ get_image_name() {
 }
 
 # All available services
-ALL_SERVICES="auth platform analytics analytics-ingestion signaling-server plugin-registry flowmap-api hive cocoon llm-proxy"
+ALL_SERVICES="auth platform analytics analytics-ingestion signaling-server flowmap-api hive cocoon llm-proxy"
 
 usage() {
     cat <<EOF
@@ -69,7 +68,6 @@ SERVICES:
     analytics-api               Analytics API
     analytics-ingestion         Analytics ingestion
     signaling-server            Signaling server
-    plugin-registry             Plugin registry
     flowmap-api                 FlowMap API
     hive                        Hive (cocoon orchestration)
     cocoon                      Cocoon worker (Docker image)

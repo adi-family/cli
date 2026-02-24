@@ -46,6 +46,7 @@ async function attachDebugger(tabId) {
   }).catch(() => {});
   await sendDebugCommand({ tabId }, "Runtime.enable").catch(() => {});
   await sendDebugCommand({ tabId }, "Log.enable").catch(() => {});
+  await sendDebugCommand({ tabId }, "Network.enable").catch(() => {});
 }
 
 // ========== Format CDP RemoteObject ==========
@@ -74,6 +75,38 @@ function bufferEntry(tabId, entry) {
   if (buf.length > MAX_BUFFER) buf.shift();
 }
 
+// ========== Per-tab network buffer ==========
+
+const MAX_NET_BUFFER = 300;
+const tabNetLogs = new Map(); // tabId -> entry[]
+const pendingNetRequests = new Map(); // "tabId:requestId" -> partial entry
+
+const SKIP_NET_HOSTS = ["api.anthropic.com"];
+
+function shouldCaptureNetRequest(url) {
+  try {
+    const u = new URL(url);
+    if (["data:", "blob:", "chrome-extension:"].includes(u.protocol)) return false;
+    return !SKIP_NET_HOSTS.some((h) => u.host === h);
+  } catch {
+    return true;
+  }
+}
+
+function bufferNetEntry(tabId, entry) {
+  if (!tabNetLogs.has(tabId)) tabNetLogs.set(tabId, []);
+  const buf = tabNetLogs.get(tabId);
+  buf.push(entry);
+  if (buf.length > MAX_NET_BUFFER) buf.shift();
+}
+
+function clearPendingForTab(tabId) {
+  const prefix = `${tabId}:`;
+  for (const key of [...pendingNetRequests.keys()]) {
+    if (key.startsWith(prefix)) pendingNetRequests.delete(key);
+  }
+}
+
 // ========== CDP Event Listener ==========
 
 chrome.debugger.onEvent.addListener((source, method, params) => {
@@ -83,14 +116,74 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
     // Top-level page navigation = fresh history
     if (params.targetInfo?.type === "page" && source.tabId) {
       tabLogs.delete(source.tabId);
+      tabNetLogs.delete(source.tabId);
+      clearPendingForTab(source.tabId);
     }
     sendDebugCommand(session, "Runtime.enable").catch(() => {});
     sendDebugCommand(session, "Log.enable").catch(() => {});
+    sendDebugCommand(session, "Network.enable").catch(() => {});
     return;
   }
 
   const tabId = source.tabId;
   if (!tabId) return;
+
+  // Network events
+  if (method === "Network.requestWillBeSent") {
+    const { requestId, request, type, timestamp } = params;
+    if (!shouldCaptureNetRequest(request.url)) return;
+    const key = `${tabId}:${requestId}`;
+    pendingNetRequests.set(key, {
+      method: request.method,
+      url: request.url,
+      type: type || "Other",
+      startTime: timestamp,
+      postData: request.postData || null,
+    });
+    return;
+  }
+  if (method === "Network.responseReceived") {
+    const { requestId, response, type, timestamp } = params;
+    const key = `${tabId}:${requestId}`;
+    const pending = pendingNetRequests.get(key);
+    if (!pending) return;
+    pendingNetRequests.delete(key);
+    const entry = {
+      method: pending.method,
+      url: pending.url,
+      type: type || pending.type,
+      status: response.status,
+      statusText: response.statusText,
+      mimeType: response.mimeType || "",
+      duration: pending.startTime ? Math.round((timestamp - pending.startTime) * 1000) : null,
+      postData: pending.postData,
+      error: null,
+    };
+    bufferNetEntry(tabId, entry);
+    chrome.tabs.sendMessage(tabId, { action: "networkEntry", entry }).catch(() => {});
+    return;
+  }
+  if (method === "Network.loadingFailed") {
+    const { requestId, errorText, type, timestamp } = params;
+    const key = `${tabId}:${requestId}`;
+    const pending = pendingNetRequests.get(key);
+    if (!pending) return;
+    pendingNetRequests.delete(key);
+    const entry = {
+      method: pending.method,
+      url: pending.url,
+      type: type || pending.type,
+      status: 0,
+      statusText: "Failed",
+      mimeType: "",
+      duration: pending.startTime ? Math.round((timestamp - pending.startTime) * 1000) : null,
+      postData: pending.postData,
+      error: errorText || "Loading failed",
+    };
+    bufferNetEntry(tabId, entry);
+    chrome.tabs.sendMessage(tabId, { action: "networkEntry", entry }).catch(() => {});
+    return;
+  }
 
   let entry = null;
   if (method === "Runtime.consoleAPICalled") {
@@ -117,6 +210,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   if (msg.action === "clearHistory" && sender.tab?.id) {
     tabLogs.delete(sender.tab.id);
+  }
+  if (msg.action === "getNetworkHistory" && sender.tab?.id) {
+    sendResponse({ entries: tabNetLogs.get(sender.tab.id) || [] });
+  }
+  if (msg.action === "clearNetworkHistory" && sender.tab?.id) {
+    tabNetLogs.delete(sender.tab.id);
   }
 });
 
@@ -148,6 +247,8 @@ chrome.debugger.onDetach.addListener((source, reason) => {
 // Clean up on tab close
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabLogs.delete(tabId);
+  tabNetLogs.delete(tabId);
+  clearPendingForTab(tabId);
   chrome.debugger.detach({ tabId }).catch(() => {});
 });
 

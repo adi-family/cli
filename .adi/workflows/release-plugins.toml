@@ -22,12 +22,12 @@ name = "specific_plugin"
 type = "select"
 prompt = "Release specific plugin? (or all)"
 # First option is "all", then dynamically discovered plugins from Cargo.toml metadata
-options_cmd = """
+options_cmd = '''
 echo 'all'
 grep -rl 'package.metadata.plugin' crates/*/Cargo.toml crates/*/*/Cargo.toml crates/*/*/*/Cargo.toml 2>/dev/null | while read f; do
     sed -n 's/^id = "\(.*\)"/\1/p' "$f" | head -1
 done | sort -u
-"""
+'''
 default = "all"
 
 [[steps]]

@@ -37,6 +37,16 @@ export interface SendHandle<T> {
   handle(cb: (reply: T) => void): () => void;
 }
 
+/**
+ * Middleware hook pair registered via `bus.use()`.
+ * `before` fires before handlers are called; `after` fires after all handlers finish.
+ * Both are optional — register only the side you need.
+ */
+export interface BusMiddleware {
+  before?(event: string, payload: unknown): void;
+  after?(event: string, payload: unknown): void;
+}
+
 /** The strictly-typed event bus. */
 export interface EventBus {
   /** Broadcast to all subscribers. Queued FIFO if no subscribers yet. */
@@ -62,15 +72,22 @@ export interface EventBus {
     event: K,
     payload: EventRegistry[K]
   ): SendHandle<EventRegistry[`${K}:ok`]>;
+
+  /**
+   * Register pre/post-emit middleware.
+   * `before` runs before handlers; `after` runs after all handlers finish.
+   * Returns an unsubscribe function that removes the middleware.
+   */
+  use(middleware: BusMiddleware): () => void;
 }
 
 /**
  * Abstracts where plugins come from. Any backend implements this.
- * SDK ships CocoonPluginRegistry as the built-in implementation.
+ * SDK ships HttpPluginRegistry as the built-in implementation.
  */
 export interface PluginRegistry {
   /** Returns the URL to fetch the JS bundle for a specific installed version. */
-  fetchBundle(id: string, version: string): Promise<string>;
+  bundleUrl(id: string, version: string): Promise<string>;
 
   /**
    * Checks if a newer version is available.
@@ -87,4 +104,8 @@ export interface PluginDescriptor {
   id: string;
   registry: PluginRegistry;
   installedVersion: string;
+  /** Latest available version in the registry (set by listPlugins). */
+  latestVersion?: string;
+  /** Plugin kinds reported by the registry (e.g. ["web"], ["http","web"], ["core"]). */
+  pluginTypes?: string[];
 }

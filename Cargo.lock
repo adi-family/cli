@@ -1344,7 +1344,6 @@ dependencies = [
  "matchit 0.7.3",
  "memchr",
  "mime",
- "multer",
  "percent-encoding",
  "pin-project-lite",
  "rustversion",
@@ -3978,27 +3977,6 @@ checksum = "843fba2746e448b37e26a819579957415c8cef339bf08564fe8b7ddbd959573c"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
-]
-
-[[package]]
-name = "flowmap-api"
-version = "0.1.0"
-dependencies = [
- "axum 0.8.8",
- "lib-env-parse",
- "lib-flowmap-core",
- "lib-flowmap-parser",
- "lib-http-common",
- "lib-logging-core",
- "openssl",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tower-http 0.6.8",
- "tracing",
- "tracing-subscriber",
- "walkdir",
 ]
 
 [[package]]
@@ -7982,23 +7960,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "multer"
-version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83e87776546dc87511aa5ee218730c92b666d7264ab6ed41f9d215af9cd5224b"
-dependencies = [
- "bytes",
- "encoding_rs",
- "futures-util",
- "http 1.4.0",
- "httparse",
- "memchr",
- "mime",
- "spin",
- "version_check",
-]
-
-[[package]]
 name = "munge"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9306,31 +9267,6 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "plugin-registry-http"
-version = "0.8.4"
-dependencies = [
- "anyhow",
- "async-trait",
- "axum 0.7.9",
- "chrono",
- "http-body-util",
- "hyper 1.8.1",
- "lib-env-parse",
- "lib-http-common",
- "plugin-registry-core",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tokio-util",
- "tower 0.5.3",
- "tower-http 0.5.2",
- "tracing",
- "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]

@@ -47,7 +47,12 @@ export class TasksPlugin extends AdiPlugin {
     }
 
     this.bus.emit('route:register', { path: '/tasks', element: 'adi-tasks' });
-    this.bus.send('nav:add', { id: 'tasks', label: 'Tasks', path: '/tasks', icon: '✓' }).handle(() => {});
+    this.bus.send('nav:add', { id: 'tasks', label: 'Tasks', path: '/tasks' }).handle(() => {});
+
+    this.bus.emit('command:register', { id: 'tasks:open', label: 'Go to Tasks page' });
+    this.bus.on('command:execute', ({ id }) => {
+      if (id === 'tasks:open') this.bus.emit('router:navigate', { path: '/tasks' });
+    });
 
     this.bus.on('tasks:list', async (p) => {
       const { _cid, status } = p as WithCid<typeof p>;

@@ -282,7 +282,8 @@ pub struct DaemonClient {
 }
 
 struct ClientInner {
-    stream: Option<UnixStream>,
+    reader: Option<BufReader<tokio::net::unix::OwnedReadHalf>>,
+    writer: Option<tokio::net::unix::OwnedWriteHalf>,
 }
 
 impl DaemonClient {
@@ -290,7 +291,10 @@ impl DaemonClient {
     pub fn new(socket_path: impl Into<PathBuf>) -> Self {
         Self {
             socket_path: socket_path.into(),
-            inner: Arc::new(Mutex::new(ClientInner { stream: None })),
+            inner: Arc::new(Mutex::new(ClientInner {
+                reader: None,
+                writer: None,
+            })),
         }
     }
 
@@ -312,7 +316,7 @@ impl DaemonClient {
     async fn ensure_connected(&self) -> Result<()> {
         let mut inner = self.inner.lock().await;
 
-        if inner.stream.is_none() {
+        if inner.writer.is_none() {
             debug!("Connecting to daemon at {:?}", self.socket_path);
 
             let stream = UnixStream::connect(&self.socket_path)
@@ -324,7 +328,9 @@ impl DaemonClient {
                     )
                 })?;
 
-            inner.stream = Some(stream);
+            let (r, w) = stream.into_split();
+            inner.reader = Some(BufReader::new(r));
+            inner.writer = Some(w);
             debug!("Connected to daemon");
         }
 
@@ -341,20 +347,17 @@ impl DaemonClient {
         self.ensure_connected().await?;
 
         let mut inner = self.inner.lock().await;
-        let stream = inner
-            .stream
-            .as_mut()
-            .ok_or_else(|| anyhow!("Not connected to daemon"))?;
+        let ClientInner { reader, writer } = &mut *inner;
+        let writer = writer.as_mut().ok_or_else(|| anyhow!("Not connected to daemon"))?;
+        let reader = reader.as_mut().ok_or_else(|| anyhow!("Not connected to daemon"))?;
 
         let json = serde_json::to_string(&req).with_context(|| "Failed to serialize request")?;
 
         debug!("Sending request: {}", json);
 
-        stream.write_all(json.as_bytes()).await?;
-        stream.write_all(b"\n").await?;
-        stream.flush().await?;
+        writer.write_all(json.as_bytes()).await?;
+        writer.write_all(b"\n").await?;
 
-        let mut reader = BufReader::new(stream);
         let mut response_line = String::new();
         reader
             .read_line(&mut response_line)
@@ -687,8 +690,9 @@ impl DaemonClient {
     /// Disconnect from daemon
     pub async fn disconnect(&self) {
         let mut inner = self.inner.lock().await;
-        if let Some(stream) = inner.stream.take() {
-            drop(stream);
+        if inner.writer.is_some() {
+            inner.reader.take();
+            inner.writer.take();
             debug!("Disconnected from daemon");
         }
     }

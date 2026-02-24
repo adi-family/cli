@@ -4,6 +4,7 @@ import './events.js';
 export type {
   EventRegistry,
   EventBus,
+  BusMiddleware,
   ReplyableEvent,
   EventHandler,
   WithCid,
@@ -13,9 +14,11 @@ export type {
 
 export { createEventBus } from './bus.js';
 export { AdiPlugin } from './plugin.js';
-export { CocoonPluginRegistry } from './registry-cocoon.js';
+export { HttpPluginRegistry } from './registry-http.js';
+export type { RegistryHealth } from './registry-http.js';
 export {
   registerPlugin,
+  initInternalPlugin,
   loadPlugins,
   upgradePlugin,
   registerPluginSW,

@@ -508,6 +508,55 @@
         font-size: 9px; color: ${T.textMuted}; background: ${T.surfaceAlt};
         padding: 1px 5px; border-radius: 8px; border: 1px solid ${T.border};
       }
+
+      /* ===== Network Panel ===== */
+      .network-log {
+        font-family: ${T.fontMono};
+        font-size: 11px;
+        max-height: 220px;
+        overflow-y: auto;
+        padding: 4px 6px;
+        background: ${T.surfaceAlt};
+        border-radius: ${T.radiusSm};
+        border: 1px solid ${T.border};
+      }
+      .network-log::-webkit-scrollbar { width: 4px; }
+      .network-log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+      .network-log-empty { color: ${T.textMuted}; font-style: italic; font-size: 11px; padding: 4px 0; }
+
+      .network-entry {
+        display: flex; gap: 6px; align-items: baseline;
+        padding: 2px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        line-height: 1.5;
+        color: ${T.text};
+      }
+      .network-entry.success { color: ${T.text}; }
+      .network-entry.redirect { color: ${T.warning}; }
+      .network-entry.client-error { color: ${T.warning}; background: ${T.warningSoft}; }
+      .network-entry.server-error { color: ${T.error}; background: ${T.errorSoft}; }
+      .network-entry.failed { color: ${T.error}; background: ${T.errorSoft}; }
+
+      .network-status {
+        font-size: 10px; font-weight: 600;
+        flex-shrink: 0; width: 28px; text-align: right;
+      }
+      .network-method {
+        font-size: 10px; flex-shrink: 0; width: 32px;
+        color: ${T.textMuted};
+      }
+      .network-url {
+        flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .network-type {
+        font-size: 9px; flex-shrink: 0; color: ${T.textMuted};
+        text-transform: uppercase; width: 40px; text-align: right;
+      }
+      .network-duration {
+        font-size: 9px; flex-shrink: 0; color: ${T.textMuted};
+        width: 40px; text-align: right;
+      }
     </style>
 
     <div class="sidebar">
@@ -596,6 +645,23 @@
         <div class="details-body" style="padding:8px 6px;">
           <div id="consoleLog" class="console-log">
             <div class="console-log-empty">No console output yet.</div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Network Panel -->
+      <div class="divider"></div>
+      <details id="networkDetails">
+        <summary>
+          Network
+          <div class="console-header-actions">
+            <span id="networkCount" class="console-count">0</span>
+            <button class="console-clear-btn" id="networkClearBtn">clear</button>
+          </div>
+        </summary>
+        <div class="details-body" style="padding:8px 6px;">
+          <div id="networkLog" class="network-log">
+            <div class="network-log-empty">No network requests yet.</div>
           </div>
         </div>
       </details>
@@ -707,6 +773,7 @@ Rules:
 - Be specific: use exact component names, file paths, prop names, CSS classes
 - Group related details together rather than listing them flat
 - If console errors are relevant to the intent, include them under a **Console** section
+- If network requests are relevant (failed requests, API calls), include them under a **Network** section
 - Omit sections that have no meaningful content
 
 Output ONLY the structured context block.`;
@@ -715,6 +782,39 @@ Output ONLY the structured context block.`;
         const recent = consoleEntries.slice(-50);
         const lines = recent.map((e) => `[${e.type}] ${e.text}`).join("\n");
         contextParts.push(`Browser console (last ${recent.length} entries):\n${lines}`);
+      }
+
+      if (networkEntries.length > 0) {
+        const STATIC_TYPES = new Set(["Script", "Stylesheet", "Image", "Font", "Media"]);
+        const apiRequests = networkEntries.filter((e) => !STATIC_TYPES.has(e.type));
+        const failedStatic = networkEntries.filter((e) => STATIC_TYPES.has(e.type) && (e.error || e.status >= 400));
+        const staticCounts = {};
+        networkEntries
+          .filter((e) => STATIC_TYPES.has(e.type) && !e.error && e.status < 400)
+          .forEach((e) => { staticCounts[e.type] = (staticCounts[e.type] || 0) + 1; });
+
+        const lines = [];
+        [...apiRequests.slice(-30), ...failedStatic].forEach((e) => {
+          let line = `[${e.type}] ${e.method} ${e.url} → `;
+          if (e.error) {
+            line += `FAILED (${e.error})`;
+          } else {
+            line += `${e.status}`;
+            if (e.duration != null) line += ` (${e.duration}ms)`;
+          }
+          lines.push(line);
+        });
+
+        const staticSummary = Object.entries(staticCounts);
+        if (staticSummary.length > 0) {
+          const total = staticSummary.reduce((sum, [, count]) => sum + count, 0);
+          const parts = staticSummary.map(([type, count]) => `${count} ${type.toLowerCase()}${count > 1 ? "s" : ""}`);
+          lines.push(`Static assets: ${total} loaded (${parts.join(", ")})`);
+        }
+
+        if (lines.length > 0) {
+          contextParts.push(`Network requests:\n${lines.join("\n")}`);
+        }
       }
 
       const userMessage = `User intent: "${taskInput.value.trim()}"
@@ -919,6 +1019,7 @@ ${contextParts.join("\n\n")}`;
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.action === "consoleEntry") appendConsoleEntry(msg.entry);
+    if (msg.action === "networkEntry") appendNetworkEntry(msg.entry);
   });
 
   const consoleClearBtn = $("#consoleClearBtn");
@@ -932,6 +1033,90 @@ ${contextParts.join("\n\n")}`;
     const countEl = $("#consoleCount");
     if (countEl) countEl.textContent = 0;
     chrome.runtime.sendMessage({ action: "clearHistory" });
+  });
+
+  // ========== Network Panel ==========
+  let networkEntryCount = 0;
+  const networkEntries = [];
+
+  function shortenUrl(url) {
+    try {
+      const u = new URL(url);
+      return u.pathname + u.search;
+    } catch {
+      return url;
+    }
+  }
+
+  function getStatusClass(status, error) {
+    if (error || status === 0) return "failed";
+    if (status >= 500) return "server-error";
+    if (status >= 400) return "client-error";
+    if (status >= 300) return "redirect";
+    return "success";
+  }
+
+  function appendNetworkEntry(entry) {
+    networkEntries.push(entry);
+    const logEl = $("#networkLog");
+    if (!logEl) return;
+
+    const empty = logEl.querySelector(".network-log-empty");
+    if (empty) empty.remove();
+
+    const div = document.createElement("div");
+    div.className = `network-entry ${getStatusClass(entry.status, entry.error)}`;
+
+    const statusSpan = document.createElement("span");
+    statusSpan.className = "network-status";
+    statusSpan.textContent = entry.error ? "ERR" : (entry.status || "---");
+
+    const methodSpan = document.createElement("span");
+    methodSpan.className = "network-method";
+    methodSpan.textContent = entry.method;
+
+    const urlSpan = document.createElement("span");
+    urlSpan.className = "network-url";
+    urlSpan.textContent = shortenUrl(entry.url);
+    urlSpan.title = entry.url;
+
+    const typeSpan = document.createElement("span");
+    typeSpan.className = "network-type";
+    typeSpan.textContent = (entry.type || "").substring(0, 6);
+
+    const durationSpan = document.createElement("span");
+    durationSpan.className = "network-duration";
+    durationSpan.textContent = entry.duration != null ? `${entry.duration}ms` : "";
+
+    div.appendChild(statusSpan);
+    div.appendChild(methodSpan);
+    div.appendChild(urlSpan);
+    div.appendChild(typeSpan);
+    div.appendChild(durationSpan);
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+
+    networkEntryCount++;
+    const countEl = $("#networkCount");
+    if (countEl) countEl.textContent = networkEntryCount;
+  }
+
+  chrome.runtime.sendMessage({ action: "getNetworkHistory" }, (response) => {
+    if (chrome.runtime.lastError || !response?.entries) return;
+    response.entries.forEach(appendNetworkEntry);
+  });
+
+  const networkClearBtn = $("#networkClearBtn");
+  networkClearBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const logEl = $("#networkLog");
+    logEl.innerHTML = '<div class="network-log-empty">No network requests yet.</div>';
+    networkEntryCount = 0;
+    networkEntries.length = 0;
+    const countEl = $("#networkCount");
+    if (countEl) countEl.textContent = 0;
+    chrome.runtime.sendMessage({ action: "clearNetworkHistory" });
   });
 
   // ========== Mount ==========

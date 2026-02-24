@@ -10,11 +10,11 @@ name = "plugin"
 type = "select"
 prompt = "Select plugin to build"
 # Dynamically discovers all plugins from Cargo.toml [package.metadata.plugin] sections
-options_cmd = """
+options_cmd = '''
 grep -rl 'package.metadata.plugin' crates/*/Cargo.toml crates/*/*/Cargo.toml crates/*/*/*/Cargo.toml 2>/dev/null | while read f; do
     sed -n 's/^id = "\(.*\)"/\1/p' "$f" | head -1
 done | sort -u
-"""
+'''
 autocomplete = true
 autocomplete_count = 10
 

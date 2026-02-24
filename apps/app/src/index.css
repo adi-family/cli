@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../../../packages/theme/generated/adi-theme.css";
+@import "../../../packages/css/ax.css";
 
 @theme {
   --color-bg: var(--adi-bg);

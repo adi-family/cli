@@ -17,8 +17,8 @@ class bt {
     await this.onUnregister?.();
   }
 }
-const x = "tasks", yt = (i, t) => i.request(x, "list", t ?? {}), _t = (i, t) => i.request(x, "create", t), vt = (i, t) => i.request(x, "get", { task_id: t }), kt = (i, t) => i.request(x, "update", t), xt = (i, t) => i.request(x, "delete", { task_id: t }), wt = (i, t, e) => i.request(x, "search", { query: t, limit: e }), G = (i) => i.request(x, "stats", {});
-function q() {
+const x = "tasks", _t = (i, t) => i.request(x, "list", t ?? {}), yt = (i, t) => i.request(x, "create", t), vt = (i, t) => i.request(x, "get", { task_id: t }), kt = (i, t) => i.request(x, "update", t), xt = (i, t) => i.request(x, "delete", { task_id: t }), wt = (i, t, e) => i.request(x, "search", { query: t, limit: e }), X = (i) => i.request(x, "stats", {});
+function z() {
   return [...window.sdk.getConnections().values()].filter((i) => i.services.includes("tasks"));
 }
 function R(i) {
@@ -26,7 +26,7 @@ function R(i) {
   if (!t) throw new Error(`Connection '${i}' not found`);
   return t;
 }
-function X() {
+function H() {
   return {
     total_tasks: 0,
     todo_count: 0,
@@ -56,43 +56,45 @@ class ae extends bt {
   }
   async onRegister() {
     const { AdiTasksElement: t } = await Promise.resolve().then(() => ne);
-    customElements.get("adi-tasks") || customElements.define("adi-tasks", t), this.bus.emit("route:register", { path: "/tasks", element: "adi-tasks" }), this.bus.send("nav:add", { id: "tasks", label: "Tasks", path: "/tasks", icon: "✓" }).handle(() => {
+    customElements.get("adi-tasks") || customElements.define("adi-tasks", t), this.bus.emit("route:register", { path: "/tasks", element: "adi-tasks" }), this.bus.send("nav:add", { id: "tasks", label: "Tasks", path: "/tasks" }).handle(() => {
+    }), this.bus.emit("command:register", { id: "tasks:open", label: "Go to Tasks page" }), this.bus.on("command:execute", ({ id: e }) => {
+      e === "tasks:open" && this.bus.emit("router:navigate", { path: "/tasks" });
     }), this.bus.on("tasks:list", async (e) => {
       const { _cid: s, status: r } = e;
       try {
-        const o = q(), [n, l] = await Promise.all([
-          Promise.allSettled(o.map((h) => yt(h, { status: r }))),
-          Promise.allSettled(o.map((h) => G(h)))
+        const o = z(), [n, l] = await Promise.all([
+          Promise.allSettled(o.map((h) => _t(h, { status: r }))),
+          Promise.allSettled(o.map((h) => X(h)))
         ]), a = n.flatMap(
-          (h, c) => h.status === "fulfilled" ? h.value.map((g) => ({ ...g, cocoonId: o[c].id })) : []
-        ), d = l.reduce(
-          (h, c) => c.status === "fulfilled" ? Y(h, c.value) : h,
-          X()
+          (h, d) => h.status === "fulfilled" ? h.value.map((g) => ({ ...g, cocoonId: o[d].id })) : []
+        ), c = l.reduce(
+          (h, d) => d.status === "fulfilled" ? Y(h, d.value) : h,
+          H()
         );
-        this.bus.emit("tasks:list:ok", { tasks: a, stats: d, _cid: s });
+        this.bus.emit("tasks:list:ok", { tasks: a, stats: c, _cid: s });
       } catch (o) {
-        console.error("[TasksPlugin] tasks:list error:", o);
+        console.error("[TasksPlugin] tasks:list error:", o), this.bus.emit("tasks:list:ok", { tasks: [], stats: H(), _cid: s });
       }
     }), this.bus.on("tasks:search", async (e) => {
       const { _cid: s, query: r, limit: o } = e;
       try {
-        const n = q(), a = (await Promise.allSettled(n.map((d) => wt(d, r, o)))).flatMap(
-          (d, h) => d.status === "fulfilled" ? d.value.map((c) => ({ ...c, cocoonId: n[h].id })) : []
+        const n = z(), a = (await Promise.allSettled(n.map((c) => wt(c, r, o)))).flatMap(
+          (c, h) => c.status === "fulfilled" ? c.value.map((d) => ({ ...d, cocoonId: n[h].id })) : []
         );
         this.bus.emit("tasks:search:ok", { tasks: a, _cid: s });
       } catch (n) {
-        console.error("[TasksPlugin] tasks:search error:", n);
+        console.error("[TasksPlugin] tasks:search error:", n), this.bus.emit("tasks:search:ok", { tasks: [], _cid: s });
       }
     }), this.bus.on("tasks:stats", async (e) => {
       const { _cid: s } = e;
       try {
-        const r = q(), n = (await Promise.allSettled(r.map((l) => G(l)))).reduce(
+        const r = z(), n = (await Promise.allSettled(r.map((l) => X(l)))).reduce(
           (l, a) => a.status === "fulfilled" ? Y(l, a.value) : l,
-          X()
+          H()
         );
         this.bus.emit("tasks:stats:ok", { stats: n, _cid: s });
       } catch (r) {
-        console.error("[TasksPlugin] tasks:stats error:", r);
+        console.error("[TasksPlugin] tasks:stats error:", r), this.bus.emit("tasks:stats:ok", { stats: H(), _cid: s });
       }
     }), this.bus.on("tasks:get", async (e) => {
       const { _cid: s, task_id: r, cocoonId: o } = e;
@@ -110,7 +112,7 @@ class ae extends bt {
     }), this.bus.on("tasks:create", async (e) => {
       const { _cid: s, cocoonId: r, title: o, description: n, depends_on: l } = e;
       try {
-        const a = await _t(R(r), { title: o, description: n, depends_on: l });
+        const a = await yt(R(r), { title: o, description: n, depends_on: l });
         this.bus.emit("tasks:create:ok", { task: { ...a, cocoonId: r }, _cid: s });
       } catch (a) {
         console.error("[TasksPlugin] tasks:create error:", a);
@@ -118,10 +120,10 @@ class ae extends bt {
     }), this.bus.on("tasks:update", async (e) => {
       const { _cid: s, cocoonId: r, task_id: o, title: n, description: l, status: a } = e;
       try {
-        const d = await kt(R(r), { task_id: o, title: n, description: l, status: a });
-        this.bus.emit("tasks:update:ok", { task: { ...d, cocoonId: r }, _cid: s });
-      } catch (d) {
-        console.error("[TasksPlugin] tasks:update error:", d);
+        const c = await kt(R(r), { task_id: o, title: n, description: l, status: a });
+        this.bus.emit("tasks:update:ok", { task: { ...c, cocoonId: r }, _cid: s });
+      } catch (c) {
+        console.error("[TasksPlugin] tasks:update error:", c);
       }
     }), this.bus.on("tasks:delete", async (e) => {
       const { _cid: s, cocoonId: r, task_id: o } = e;
@@ -138,7 +140,7 @@ class ae extends bt {
  * Copyright 2019 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const H = globalThis, F = H.ShadowRoot && (H.ShadyCSS === void 0 || H.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, pt = Symbol(), tt = /* @__PURE__ */ new WeakMap();
+const I = globalThis, W = I.ShadowRoot && (I.ShadyCSS === void 0 || I.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, pt = Symbol(), tt = /* @__PURE__ */ new WeakMap();
 let At = class {
   constructor(t, e, s) {
     if (this._$cssResult$ = !0, s !== pt) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
@@ -147,7 +149,7 @@ let At = class {
   get styleSheet() {
     let t = this.o;
     const e = this.t;
-    if (F && t === void 0) {
+    if (W && t === void 0) {
       const s = e !== void 0 && e.length === 1;
       s && (t = tt.get(e)), t === void 0 && ((this.o = t = new CSSStyleSheet()).replaceSync(this.cssText), s && tt.set(e, t));
     }
@@ -158,12 +160,12 @@ let At = class {
   }
 };
 const St = (i) => new At(typeof i == "string" ? i : i + "", void 0, pt), Et = (i, t) => {
-  if (F) i.adoptedStyleSheets = t.map((e) => e instanceof CSSStyleSheet ? e : e.styleSheet);
+  if (W) i.adoptedStyleSheets = t.map((e) => e instanceof CSSStyleSheet ? e : e.styleSheet);
   else for (const e of t) {
-    const s = document.createElement("style"), r = H.litNonce;
+    const s = document.createElement("style"), r = I.litNonce;
     r !== void 0 && s.setAttribute("nonce", r), s.textContent = e.cssText, i.appendChild(s);
   }
-}, et = F ? (i) => i : (i) => i instanceof CSSStyleSheet ? ((t) => {
+}, et = W ? (i) => i : (i) => i instanceof CSSStyleSheet ? ((t) => {
   let e = "";
   for (const s of t.cssRules) e += s.cssText;
   return St(e);
@@ -173,7 +175,7 @@ const St = (i) => new At(typeof i == "string" ? i : i + "", void 0, pt), Et = (i
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const { is: Tt, defineProperty: Ct, getOwnPropertyDescriptor: Pt, getOwnPropertyNames: Dt, getOwnPropertySymbols: Ot, getPrototypeOf: Ut } = Object, L = globalThis, st = L.trustedTypes, Mt = st ? st.emptyScript : "", Nt = L.reactiveElementPolyfillSupport, C = (i, t) => i, I = { toAttribute(i, t) {
+const { is: Tt, defineProperty: Ct, getOwnPropertyDescriptor: Pt, getOwnPropertyNames: Dt, getOwnPropertySymbols: Ot, getPrototypeOf: Ut } = Object, j = globalThis, st = j.trustedTypes, Mt = st ? st.emptyScript : "", Nt = j.reactiveElementPolyfillSupport, C = (i, t) => i, B = { toAttribute(i, t) {
   switch (t) {
     case Boolean:
       i = i ? Mt : null;
@@ -201,8 +203,8 @@ const { is: Tt, defineProperty: Ct, getOwnPropertyDescriptor: Pt, getOwnProperty
       }
   }
   return e;
-} }, W = (i, t) => !Tt(i, t), it = { attribute: !0, type: String, converter: I, reflect: !1, useDefault: !1, hasChanged: W };
-Symbol.metadata ??= Symbol("metadata"), L.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
+} }, Q = (i, t) => !Tt(i, t), it = { attribute: !0, type: String, converter: B, reflect: !1, useDefault: !1, hasChanged: Q };
+Symbol.metadata ??= Symbol("metadata"), j.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
 let A = class extends HTMLElement {
   static addInitializer(t) {
     this._$Ei(), (this.l ??= []).push(t);
@@ -300,14 +302,14 @@ let A = class extends HTMLElement {
   _$ET(t, e) {
     const s = this.constructor.elementProperties.get(t), r = this.constructor._$Eu(t, s);
     if (r !== void 0 && s.reflect === !0) {
-      const o = (s.converter?.toAttribute !== void 0 ? s.converter : I).toAttribute(e, s.type);
+      const o = (s.converter?.toAttribute !== void 0 ? s.converter : B).toAttribute(e, s.type);
       this._$Em = t, o == null ? this.removeAttribute(r) : this.setAttribute(r, o), this._$Em = null;
     }
   }
   _$AK(t, e) {
     const s = this.constructor, r = s._$Eh.get(t);
     if (r !== void 0 && this._$Em !== r) {
-      const o = s.getPropertyOptions(r), n = typeof o.converter == "function" ? { fromAttribute: o.converter } : o.converter?.fromAttribute !== void 0 ? o.converter : I;
+      const o = s.getPropertyOptions(r), n = typeof o.converter == "function" ? { fromAttribute: o.converter } : o.converter?.fromAttribute !== void 0 ? o.converter : B;
       this._$Em = r;
       const l = n.fromAttribute(e, o.type);
       this[r] = l ?? this._$Ej?.get(r) ?? l, this._$Em = null;
@@ -316,7 +318,7 @@ let A = class extends HTMLElement {
   requestUpdate(t, e, s, r = !1, o) {
     if (t !== void 0) {
       const n = this.constructor;
-      if (r === !1 && (o = this[t]), s ??= n.getPropertyOptions(t), !((s.hasChanged ?? W)(o, e) || s.useDefault && s.reflect && o === this._$Ej?.get(t) && !this.hasAttribute(n._$Eu(t, s)))) return;
+      if (r === !1 && (o = this[t]), s ??= n.getPropertyOptions(t), !((s.hasChanged ?? Q)(o, e) || s.useDefault && s.reflect && o === this._$Ej?.get(t) && !this.hasAttribute(n._$Eu(t, s)))) return;
       this.C(t, e, s);
     }
     this.isUpdatePending === !1 && (this._$ES = this._$EP());
@@ -384,17 +386,17 @@ let A = class extends HTMLElement {
   firstUpdated(t) {
   }
 };
-A.elementStyles = [], A.shadowRootOptions = { mode: "open" }, A[C("elementProperties")] = /* @__PURE__ */ new Map(), A[C("finalized")] = /* @__PURE__ */ new Map(), Nt?.({ ReactiveElement: A }), (L.reactiveElementVersions ??= []).push("2.1.2");
+A.elementStyles = [], A.shadowRootOptions = { mode: "open" }, A[C("elementProperties")] = /* @__PURE__ */ new Map(), A[C("finalized")] = /* @__PURE__ */ new Map(), Nt?.({ ReactiveElement: A }), (j.reactiveElementVersions ??= []).push("2.1.2");
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const Q = globalThis, rt = (i) => i, B = Q.trustedTypes, ot = B ? B.createPolicy("lit-html", { createHTML: (i) => i }) : void 0, gt = "$lit$", y = `lit$${Math.random().toFixed(9).slice(2)}$`, ft = "?" + y, Rt = `<${ft}>`, k = document, D = () => k.createComment(""), O = (i) => i === null || typeof i != "object" && typeof i != "function", V = Array.isArray, Ht = (i) => V(i) || typeof i?.[Symbol.iterator] == "function", z = `[ 	
-\f\r]`, T = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, nt = /-->/g, at = />/g, _ = RegExp(`>|${z}(?:([^\\s"'>=/]+)(${z}*=${z}*(?:[^ 	
+const V = globalThis, rt = (i) => i, L = V.trustedTypes, ot = L ? L.createPolicy("lit-html", { createHTML: (i) => i }) : void 0, gt = "$lit$", _ = `lit$${Math.random().toFixed(9).slice(2)}$`, ft = "?" + _, Rt = `<${ft}>`, k = document, D = () => k.createComment(""), O = (i) => i === null || typeof i != "object" && typeof i != "function", Z = Array.isArray, Ht = (i) => Z(i) || typeof i?.[Symbol.iterator] == "function", F = `[ 	
+\f\r]`, T = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, nt = /-->/g, at = />/g, y = RegExp(`>|${F}(?:([^\\s"'>=/]+)(${F}*=${F}*(?:[^ 	
 \f\r"'\`<>=]|("|')|))|$)`, "g"), lt = /'/g, ct = /"/g, $t = /^(?:script|style|textarea|title)$/i, It = (i) => (t, ...e) => ({ _$litType$: i, strings: t, values: e }), p = It(1), S = Symbol.for("lit-noChange"), u = Symbol.for("lit-nothing"), dt = /* @__PURE__ */ new WeakMap(), v = k.createTreeWalker(k, 129);
 function mt(i, t) {
-  if (!V(i) || !i.hasOwnProperty("raw")) throw Error("invalid template strings array");
+  if (!Z(i) || !i.hasOwnProperty("raw")) throw Error("invalid template strings array");
   return ot !== void 0 ? ot.createHTML(t) : t;
 }
 const Bt = (i, t) => {
@@ -402,10 +404,10 @@ const Bt = (i, t) => {
   let r, o = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", n = T;
   for (let l = 0; l < e; l++) {
     const a = i[l];
-    let d, h, c = -1, g = 0;
-    for (; g < a.length && (n.lastIndex = g, h = n.exec(a), h !== null); ) g = n.lastIndex, n === T ? h[1] === "!--" ? n = nt : h[1] !== void 0 ? n = at : h[2] !== void 0 ? ($t.test(h[2]) && (r = RegExp("</" + h[2], "g")), n = _) : h[3] !== void 0 && (n = _) : n === _ ? h[0] === ">" ? (n = r ?? T, c = -1) : h[1] === void 0 ? c = -2 : (c = n.lastIndex - h[2].length, d = h[1], n = h[3] === void 0 ? _ : h[3] === '"' ? ct : lt) : n === ct || n === lt ? n = _ : n === nt || n === at ? n = T : (n = _, r = void 0);
-    const b = n === _ && i[l + 1].startsWith("/>") ? " " : "";
-    o += n === T ? a + Rt : c >= 0 ? (s.push(d), a.slice(0, c) + gt + a.slice(c) + y + b) : a + y + (c === -2 ? l : b);
+    let c, h, d = -1, g = 0;
+    for (; g < a.length && (n.lastIndex = g, h = n.exec(a), h !== null); ) g = n.lastIndex, n === T ? h[1] === "!--" ? n = nt : h[1] !== void 0 ? n = at : h[2] !== void 0 ? ($t.test(h[2]) && (r = RegExp("</" + h[2], "g")), n = y) : h[3] !== void 0 && (n = y) : n === y ? h[0] === ">" ? (n = r ?? T, d = -1) : h[1] === void 0 ? d = -2 : (d = n.lastIndex - h[2].length, c = h[1], n = h[3] === void 0 ? y : h[3] === '"' ? ct : lt) : n === ct || n === lt ? n = y : n === nt || n === at ? n = T : (n = y, r = void 0);
+    const b = n === y && i[l + 1].startsWith("/>") ? " " : "";
+    o += n === T ? a + Rt : d >= 0 ? (s.push(c), a.slice(0, d) + gt + a.slice(d) + _ + b) : a + _ + (d === -2 ? l : b);
   }
   return [mt(i, o + (i[e] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), s];
 };
@@ -414,29 +416,29 @@ class U {
     let r;
     this.parts = [];
     let o = 0, n = 0;
-    const l = t.length - 1, a = this.parts, [d, h] = Bt(t, e);
-    if (this.el = U.createElement(d, s), v.currentNode = this.el.content, e === 2 || e === 3) {
-      const c = this.el.content.firstChild;
-      c.replaceWith(...c.childNodes);
+    const l = t.length - 1, a = this.parts, [c, h] = Bt(t, e);
+    if (this.el = U.createElement(c, s), v.currentNode = this.el.content, e === 2 || e === 3) {
+      const d = this.el.content.firstChild;
+      d.replaceWith(...d.childNodes);
     }
     for (; (r = v.nextNode()) !== null && a.length < l; ) {
       if (r.nodeType === 1) {
-        if (r.hasAttributes()) for (const c of r.getAttributeNames()) if (c.endsWith(gt)) {
-          const g = h[n++], b = r.getAttribute(c).split(y), N = /([.?@])?(.*)/.exec(g);
-          a.push({ type: 1, index: o, name: N[2], strings: b, ctor: N[1] === "." ? jt : N[1] === "?" ? qt : N[1] === "@" ? zt : j }), r.removeAttribute(c);
-        } else c.startsWith(y) && (a.push({ type: 6, index: o }), r.removeAttribute(c));
+        if (r.hasAttributes()) for (const d of r.getAttributeNames()) if (d.endsWith(gt)) {
+          const g = h[n++], b = r.getAttribute(d).split(_), N = /([.?@])?(.*)/.exec(g);
+          a.push({ type: 1, index: o, name: N[2], strings: b, ctor: N[1] === "." ? jt : N[1] === "?" ? qt : N[1] === "@" ? zt : q }), r.removeAttribute(d);
+        } else d.startsWith(_) && (a.push({ type: 6, index: o }), r.removeAttribute(d));
         if ($t.test(r.tagName)) {
-          const c = r.textContent.split(y), g = c.length - 1;
+          const d = r.textContent.split(_), g = d.length - 1;
           if (g > 0) {
-            r.textContent = B ? B.emptyScript : "";
-            for (let b = 0; b < g; b++) r.append(c[b], D()), v.nextNode(), a.push({ type: 2, index: ++o });
-            r.append(c[g], D());
+            r.textContent = L ? L.emptyScript : "";
+            for (let b = 0; b < g; b++) r.append(d[b], D()), v.nextNode(), a.push({ type: 2, index: ++o });
+            r.append(d[g], D());
           }
         }
       } else if (r.nodeType === 8) if (r.data === ft) a.push({ type: 2, index: o });
       else {
-        let c = -1;
-        for (; (c = r.data.indexOf(y, c + 1)) !== -1; ) a.push({ type: 7, index: o }), c += y.length - 1;
+        let d = -1;
+        for (; (d = r.data.indexOf(_, d + 1)) !== -1; ) a.push({ type: 7, index: o }), d += _.length - 1;
       }
       o++;
     }
@@ -468,8 +470,8 @@ class Lt {
     let o = v.nextNode(), n = 0, l = 0, a = s[0];
     for (; a !== void 0; ) {
       if (n === a.index) {
-        let d;
-        a.type === 2 ? d = new M(o, o.nextSibling, this, t) : a.type === 1 ? d = new a.ctor(o, a.name, a.strings, this, t) : a.type === 6 && (d = new Ft(o, this, t)), this._$AV.push(d), a = s[++l];
+        let c;
+        a.type === 2 ? c = new M(o, o.nextSibling, this, t) : a.type === 1 ? c = new a.ctor(o, a.name, a.strings, this, t) : a.type === 6 && (c = new Ft(o, this, t)), this._$AV.push(c), a = s[++l];
       }
       n !== a?.index && (o = v.nextNode(), n++);
     }
@@ -523,7 +525,7 @@ class M {
     return e === void 0 && dt.set(t.strings, e = new U(t)), e;
   }
   k(t) {
-    V(this._$AH) || (this._$AH = [], this._$AR());
+    Z(this._$AH) || (this._$AH = [], this._$AR());
     const e = this._$AH;
     let s, r = 0;
     for (const o of t) r === e.length ? e.push(s = new M(this.O(D()), this.O(D()), this, this.options)) : s = e[r], s._$AI(o), r++;
@@ -539,7 +541,7 @@ class M {
     this._$AM === void 0 && (this._$Cv = t, this._$AP?.(t));
   }
 }
-class j {
+class q {
   get tagName() {
     return this.element.tagName;
   }
@@ -555,8 +557,8 @@ class j {
     if (o === void 0) t = E(this, t, e, 0), n = !O(t) || t !== this._$AH && t !== S, n && (this._$AH = t);
     else {
       const l = t;
-      let a, d;
-      for (t = o[0], a = 0; a < o.length - 1; a++) d = E(this, l[s + a], e, a), d === S && (d = this._$AH[a]), n ||= !O(d) || d !== this._$AH[a], d === u ? t = u : t !== u && (t += (d ?? "") + o[a + 1]), this._$AH[a] = d;
+      let a, c;
+      for (t = o[0], a = 0; a < o.length - 1; a++) c = E(this, l[s + a], e, a), c === S && (c = this._$AH[a]), n ||= !O(c) || c !== this._$AH[a], c === u ? t = u : t !== u && (t += (c ?? "") + o[a + 1]), this._$AH[a] = c;
     }
     n && !r && this.j(t);
   }
@@ -564,7 +566,7 @@ class j {
     t === u ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, t ?? "");
   }
 }
-class jt extends j {
+class jt extends q {
   constructor() {
     super(...arguments), this.type = 3;
   }
@@ -572,7 +574,7 @@ class jt extends j {
     this.element[this.name] = t === u ? void 0 : t;
   }
 }
-class qt extends j {
+class qt extends q {
   constructor() {
     super(...arguments), this.type = 4;
   }
@@ -580,7 +582,7 @@ class qt extends j {
     this.element.toggleAttribute(this.name, !!t && t !== u);
   }
 }
-class zt extends j {
+class zt extends q {
   constructor(t, e, s, r, o) {
     super(t, e, s, r, o), this.type = 5;
   }
@@ -604,8 +606,8 @@ class Ft {
     E(this, t);
   }
 }
-const Wt = Q.litHtmlPolyfillSupport;
-Wt?.(U, M), (Q.litHtmlVersions ??= []).push("3.3.2");
+const Wt = V.litHtmlPolyfillSupport;
+Wt?.(U, M), (V.litHtmlVersions ??= []).push("3.3.2");
 const Qt = (i, t, e) => {
   const s = e?.renderBefore ?? t;
   let r = s._$litPart$;
@@ -620,7 +622,7 @@ const Qt = (i, t, e) => {
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const Z = globalThis;
+const J = globalThis;
 class P extends A {
   constructor() {
     super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
@@ -643,16 +645,16 @@ class P extends A {
     return S;
   }
 }
-P._$litElement$ = !0, P.finalized = !0, Z.litElementHydrateSupport?.({ LitElement: P });
-const Vt = Z.litElementPolyfillSupport;
+P._$litElement$ = !0, P.finalized = !0, J.litElementHydrateSupport?.({ LitElement: P });
+const Vt = J.litElementPolyfillSupport;
 Vt?.({ LitElement: P });
-(Z.litElementVersions ??= []).push("4.2.2");
+(J.litElementVersions ??= []).push("4.2.2");
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const Zt = { attribute: !0, type: String, converter: I, reflect: !1, hasChanged: W }, Jt = (i = Zt, t, e) => {
+const Zt = { attribute: !0, type: String, converter: B, reflect: !1, hasChanged: Q }, Jt = (i = Zt, t, e) => {
   const { kind: s, metadata: r } = e;
   let o = globalThis.litPropertyMetadata.get(r);
   if (o === void 0 && globalThis.litPropertyMetadata.set(r, o = /* @__PURE__ */ new Map()), s === "setter" && ((i = Object.create(i)).wrapped = !0), o.set(e.name, i), s === "accessor") {
@@ -687,13 +689,13 @@ function Kt(i) {
 function $(i) {
   return Kt({ ...i, state: !0, attribute: !1 });
 }
-const J = {
+const K = {
   todo: "bg-gray-500/20 text-gray-300",
   in_progress: "bg-blue-500/20 text-blue-300",
   done: "bg-green-500/20 text-green-300",
   blocked: "bg-red-500/20 text-red-300",
   cancelled: "bg-gray-600/20 text-gray-400"
-}, K = {
+}, G = {
   todo: "Todo",
   in_progress: "In Progress",
   done: "Done",
@@ -747,8 +749,8 @@ const w = (i, t, e) => p`
     class="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-start gap-3 group"
     @click=${() => t(i)}
   >
-    <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium shrink-0 mt-0.5 ${J[i.status]}">
-      ${K[i.status]}
+    <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium shrink-0 mt-0.5 ${K[i.status]}">
+      ${G[i.status]}
     </span>
     <div class="flex-1 min-w-0">
       <div class="text-sm text-gray-200 group-hover:text-white truncate">${i.title}</div>
@@ -759,7 +761,7 @@ const w = (i, t, e) => p`
 `;
 function ee(i) {
   return p`
-    <div class="space-y-3">
+    <div class="space-y-0_75">
       <div class="flex items-center justify-between mb-2">
         <h2 class="text-lg font-semibold text-gray-200">Tasks</h2>
         <button
@@ -784,7 +786,7 @@ function ee(i) {
       </div>
 
       ${i.error ? p`<div class="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-300">${i.error}</div>` : i.loading ? p`<div class="text-center py-8 text-gray-500 text-sm">Loading...</div>` : i.tasks.length === 0 ? p`<div class="text-center py-8 text-gray-500 text-sm">No tasks found</div>` : p`
-                <div class="space-y-1.5">
+                <div class="space-y-0_5">
                   ${i.tasks.map((t) => te(t, i.onSelectTask))}
                 </div>
               `}
@@ -794,15 +796,15 @@ function ee(i) {
 const se = ["todo", "in_progress", "done", "blocked", "cancelled"], ht = (i) => new Date(i * 1e3).toLocaleString(), ut = (i, t, e) => t.length === 0 ? u : p`
     <div class="mt-4">
       <h4 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">${i}</h4>
-      <div class="space-y-1">
+      <div class="space-y-0_25">
         ${t.map(
   (s) => p`
             <button
               class="w-full text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-2 text-sm"
               @click=${() => e(s)}
             >
-              <span class="inline-flex px-1.5 py-0.5 rounded text-xs ${J[s.status]}">
-                ${K[s.status]}
+              <span class="inline-flex px-1.5 py-0.5 rounded text-xs ${K[s.status]}">
+                ${G[s.status]}
               </span>
               <span class="text-gray-300 truncate">${s.title}</span>
             </button>
@@ -812,31 +814,31 @@ const se = ["todo", "in_progress", "done", "blocked", "cancelled"], ht = (i) => 
     </div>
   `;
 function ie(i) {
-  const { task: t, submitting: e, confirmingDelete: s, onBack: r, onStatusChange: o, onDelete: n, onNavigate: l } = i, { task: a, depends_on: d, dependents: h } = t;
+  const { task: t, submitting: e, confirmingDelete: s, onBack: r, onCancelDelete: o, onStatusChange: n, onDelete: l, onNavigate: a } = i, { task: c, depends_on: h, dependents: d } = t;
   return p`
-    <div class="space-y-4">
+    <div class="space-y-1">
       <button class="text-sm text-gray-400 hover:text-gray-200 transition-colors" @click=${r}>
         &larr; Back to list
       </button>
 
       <div class="bg-white/5 rounded-xl p-4 space-y-4">
-        <h2 class="text-lg font-semibold text-gray-100">${a.title}</h2>
+        <h2 class="text-lg font-semibold text-gray-100">${c.title}</h2>
 
-        ${a.description ? p`<p class="text-sm text-gray-400 whitespace-pre-wrap">${a.description}</p>` : u}
+        ${c.description ? p`<p class="text-sm text-gray-400 whitespace-pre-wrap">${c.description}</p>` : u}
 
         <div class="flex items-center gap-3 flex-wrap">
           <label class="text-xs text-gray-500 uppercase tracking-wider">Status</label>
           <div class="flex gap-1 flex-wrap">
             ${se.map(
-    (c) => p`
+    (g) => p`
                 <button
-                  class="px-2.5 py-1 rounded text-xs transition-colors ${a.status === c ? J[c] + " font-medium ring-1 ring-white/20" : "bg-white/5 text-gray-500 hover:bg-white/10 hover:text-gray-300"}"
+                  class="px-2.5 py-1 rounded text-xs transition-colors ${c.status === g ? K[g] + " font-medium ring-1 ring-white/20" : "bg-white/5 text-gray-500 hover:bg-white/10 hover:text-gray-300"}"
                   ?disabled=${e}
                   @click=${() => {
-      a.status !== c && o(c);
+      c.status !== g && n(g);
     }}
                 >
-                  ${K[c]}
+                  ${G[g]}
                 </button>
               `
   )}
@@ -844,12 +846,12 @@ function ie(i) {
         </div>
 
         <div class="flex gap-4 text-xs text-gray-500">
-          <span>Created: ${ht(a.created_at)}</span>
-          <span>Updated: ${ht(a.updated_at)}</span>
+          <span>Created: ${ht(c.created_at)}</span>
+          <span>Updated: ${ht(c.updated_at)}</span>
         </div>
 
-        ${ut("Depends on", d, l)}
-        ${ut("Blocked by this", h, l)}
+        ${ut("Depends on", h, a)}
+        ${ut("Blocked by this", d, a)}
 
         <div class="pt-3 border-t border-white/10">
           ${s ? p`
@@ -858,13 +860,13 @@ function ie(i) {
                   <button
                     class="px-3 py-1 rounded text-sm bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors"
                     ?disabled=${e}
-                    @click=${n}
+                    @click=${l}
                   >
                     Confirm
                   </button>
                   <button
                     class="px-3 py-1 rounded text-sm bg-white/5 text-gray-400 hover:bg-white/10 transition-colors"
-                    @click=${r}
+                    @click=${o}
                   >
                     Cancel
                   </button>
@@ -873,7 +875,7 @@ function ie(i) {
                 <button
                   class="px-3 py-1 rounded text-sm bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                   ?disabled=${e}
-                  @click=${n}
+                  @click=${l}
                 >
                   Delete Task
                 </button>
@@ -886,7 +888,7 @@ function ie(i) {
 function re(i) {
   const { connections: t, submitting: e, onBack: s, onCreate: r } = i;
   return p`
-    <div class="space-y-3">
+    <div class="space-y-0_75">
       <button class="text-sm text-gray-400 hover:text-gray-200 transition-colors" @click=${s}>
         &larr; Back to list
       </button>
@@ -896,9 +898,9 @@ function re(i) {
 
         <form @submit=${(n) => {
     n.preventDefault();
-    const l = n.target, a = new FormData(l), d = (a.get("title") ?? "").trim(), h = (a.get("description") ?? "").trim(), c = a.get("cocoonId");
-    d && c && r({ title: d, description: h || void 0, cocoonId: c });
-  }} class="space-y-4">
+    const l = n.target, a = new FormData(l), c = (a.get("title") ?? "").trim(), h = (a.get("description") ?? "").trim(), d = a.get("cocoonId");
+    c && d && r({ title: c, description: h || void 0, cocoonId: d });
+  }} class="space-y-1">
           <div>
             <label class="block text-xs text-gray-400 uppercase tracking-wider mb-1">Connection</label>
             <select
@@ -1052,6 +1054,9 @@ class f extends P {
       onBack: () => {
         this.view = "list", this.selectedTask = null, this.confirmingDelete = !1;
       },
+      onCancelDelete: () => {
+        this.confirmingDelete = !1;
+      },
       onStatusChange: (e) => this.handleStatusChange(this.selectedTask.task, e),
       onDelete: () => this.handleDelete(this.selectedTask.task),
       onNavigate: (e) => this.loadDetail(e)
@@ -1114,5 +1119,6 @@ const ne = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
 }, Symbol.toStringTag, { value: "Module" }));
 export {
   f as AdiTasksElement,
+  ae as PluginShell,
   ae as TasksPlugin
 };

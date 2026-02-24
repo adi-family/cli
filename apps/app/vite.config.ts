@@ -6,5 +6,6 @@ export default defineConfig({
   server: {
     port: parseInt(process.env.PORT || "5174"),
     host: true,
+    allowedHosts: ['app.adi.test'],
   },
 });

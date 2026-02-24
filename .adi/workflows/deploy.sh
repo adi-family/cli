@@ -11,7 +11,7 @@
 #   list                List all deployments
 #   watch <service>     Watch deployment progress live
 #
-# Services: auth, platform, signaling, web, analytics-ingestion, analytics, registry
+# Services: auth, platform, signaling, web, analytics-ingestion, analytics
 #
 # Environment:
 #   COOLIFY_URL         Coolify instance URL (default: http://in.the-ihor.com)
@@ -69,7 +69,7 @@ fi
 COOLIFY_URL="${COOLIFY_URL:-http://in.the-ihor.com}"
 API_BASE="$COOLIFY_URL/api/v1"
 
-ALL_SERVICES="auth platform signaling web analytics-ingestion analytics registry"
+ALL_SERVICES="auth platform signaling web analytics-ingestion analytics"
 
 # -----------------------------------------------------------------------------
 # Service Configuration
@@ -83,7 +83,6 @@ service_uuid() {
         web)                 echo "tkg84kg0o0ok8gkcs8wcggck" ;;
         analytics-ingestion) echo "TODO_COOLIFY_UUID" ;;
         analytics)           echo "TODO_COOLIFY_UUID" ;;
-        registry)            echo "TODO_COOLIFY_UUID" ;;
         *)                   echo "" ;;
     esac
 }
@@ -96,7 +95,6 @@ service_name() {
         web)                 echo "Web UI" ;;
         analytics-ingestion) echo "Analytics Ingestion" ;;
         analytics)           echo "Analytics API" ;;
-        registry)            echo "Plugin Registry" ;;
         *)                   echo "$1" ;;
     esac
 }
@@ -463,7 +461,6 @@ SERVICES:
     web                 Web UI (infra-service-web)
     analytics-ingestion Analytics Ingestion (analytics-ingestion)
     analytics           Analytics API (analytics)
-    registry            Plugin Registry (plugin-registry)
 
 ENVIRONMENT:
     COOLIFY_URL         Coolify instance URL (default: http://in.the-ihor.com)

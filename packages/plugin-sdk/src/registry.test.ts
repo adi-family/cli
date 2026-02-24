@@ -25,7 +25,7 @@ function _makeDescriptor(
   registry?: PluginRegistry
 ): PluginDescriptor {
   const reg: PluginRegistry = registry ?? {
-    fetchBundle: async () => 'blob:unused',
+    bundleUrl: async () => 'blob:unused',
     checkLatest: async () => null,
   };
   return { id: plugin.id, registry: reg, installedVersion: plugin.version };

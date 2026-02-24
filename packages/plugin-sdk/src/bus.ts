@@ -3,10 +3,12 @@ import type {
   EventRegistry,
   EventBus,
   EventHandler,
+  BusMiddleware,
   ReplyableEvent,
   SendHandle,
   WithCid,
 } from './types.js';
+import { generateCid } from './cid.js';
 
 interface ChannelState {
   handlers: Set<EventHandler<never>>;
@@ -16,6 +18,7 @@ interface ChannelState {
 export function createEventBus(options: { sendTimeout?: number } = {}): EventBus {
   const sendTimeoutMs = options.sendTimeout ?? 30_000;
   const channels = new Map<string, ChannelState>();
+  const middlewares = new Set<BusMiddleware>();
 
   function getChannel(event: string): ChannelState {
     if (!channels.has(event)) {
@@ -28,7 +31,9 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
     event: K,
     payload: EventRegistry[K]
   ): void {
-    const ch = getChannel(event as string);
+    const name = event as string;
+    for (const mw of middlewares) mw.before?.(name, payload);
+    const ch = getChannel(name);
     if (ch.handlers.size === 0) {
       ch.queue.push(payload);
     } else {
@@ -36,6 +41,7 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
         (h as EventHandler<K>)(payload);
       }
     }
+    for (const mw of middlewares) mw.after?.(name, payload);
   }
 
   function on<K extends keyof EventRegistry>(
@@ -81,7 +87,7 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
     event: K,
     payload: EventRegistry[K]
   ): SendHandle<EventRegistry[`${K}:ok`]> {
-    const cid = crypto.randomUUID();
+    const cid = generateCid();
     const payloadWithCid = { ...(payload as object), _cid: cid } as unknown as EventRegistry[K];
     const replyEvent = `${event as string}:ok` as `${K}:ok`;
 
@@ -130,5 +136,10 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
     };
   }
 
-  return { emit, on, once, send };
+  function use(middleware: BusMiddleware): () => void {
+    middlewares.add(middleware);
+    return () => { middlewares.delete(middleware); };
+  }
+
+  return { emit, on, once, send, use };
 }

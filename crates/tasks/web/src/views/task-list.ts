@@ -86,7 +86,7 @@ const taskRow = (task: Task, onSelect: (task: Task) => void) => html`
 
 export function renderTaskList(props: TaskListProps): TemplateResult {
   return html`
-    <div class="space-y-3">
+    <div class="space-y-0_75">
       <div class="flex items-center justify-between mb-2">
         <h2 class="text-lg font-semibold text-gray-200">Tasks</h2>
         <button
@@ -117,7 +117,7 @@ export function renderTaskList(props: TaskListProps): TemplateResult {
           : props.tasks.length === 0
             ? html`<div class="text-center py-8 text-gray-500 text-sm">No tasks found</div>`
             : html`
-                <div class="space-y-1.5">
+                <div class="space-y-0_5">
                   ${props.tasks.map((t) => taskRow(t, props.onSelectTask))}
                 </div>
               `}

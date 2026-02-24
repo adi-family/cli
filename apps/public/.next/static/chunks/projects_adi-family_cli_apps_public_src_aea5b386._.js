@@ -69,7 +69,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$projects$2f$adi$2d$family$2f
 const siteConfig = {
     name: "ADI",
     description: "Artificial Developer Intelligence — autonomous AI infrastructure for software engineering",
-    url: ("TURBOPACK compile-time value", "http://adi.local") || "https://adi.the-ihor.com",
+    url: ("TURBOPACK compile-time value", "http://adi.test") || "https://adi.the-ihor.com",
     github: "https://github.com/adi-family/adi-cli",
     twitter: "@mgorunuch",
     locale: "en_US",
@@ -104,7 +104,7 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
-const APP_BASE_URL = "https://app.adi.local";
+const APP_BASE_URL = "http://app.adi.test";
 const navItems = [
     {
         key: "home",

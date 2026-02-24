@@ -10,7 +10,7 @@ name = "crate"
 type = "select"
 prompt = "Select crate to document"
 # Dynamically discovers all crates with Cargo.toml (libraries only)
-options_cmd = """
+options_cmd = '''
 find crates -name 'Cargo.toml' -type f 2>/dev/null | while read f; do
     dir=$(dirname "$f")
     # Check if it's a library (has [lib] or no [[bin]])
@@ -22,7 +22,7 @@ find crates -name 'Cargo.toml' -type f 2>/dev/null | while read f; do
         fi
     fi
 done | sort -u
-"""
+'''
 autocomplete = true
 autocomplete_count = 10
 
