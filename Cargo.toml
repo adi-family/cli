@@ -190,7 +190,7 @@ members = [
     "crates/llm-extract-plugin",
     "crates/lib/lib-typespec-api/plugin",
     "crates/cocoon",
-    "crates/adi-registry",
+    "crates/registry/plugin",
     "crates/webrtc-test-peer",
 
     # Browser Debug components
@@ -234,7 +234,7 @@ members = [
     "crates/executor/http",
 
     # Plugin Registry
-    "crates/plugin-registry/core",
+    "crates/registry/core",
 
     # Balance
     "crates/balance/core",
@@ -287,7 +287,7 @@ balance-core = { path = "crates/balance/core" }
 credentials-core = { path = "crates/credentials/core" }
 logging-core = { path = "crates/logging/core" }
 executor-core = { path = "crates/executor/core" }
-plugin-registry-core = { path = "crates/plugin-registry/core" }
+plugin-registry-core = { path = "crates/registry/core" }
 signaling-server-core = { path = "crates/signaling-server/core" }
 
 # Hive plugin system

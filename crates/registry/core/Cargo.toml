@@ -1,0 +1,25 @@
+[package]
+name = "plugin-registry-core"
+version = "0.8.4"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "Core library for ADI plugin registry - storage and business logic"
+
+[dependencies]
+lib-plugin-registry = { path = "../../lib/lib-plugin-registry" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+semver = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+flate2 = { workspace = true }
+tar = { workspace = true }
+lib-plugin-verify = { path = "../../lib/lib-plugin-verify", features = ["signing", "keygen"] }
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["rt", "macros"] }
+tempfile = "3"
