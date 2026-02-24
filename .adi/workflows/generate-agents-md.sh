@@ -1,8 +1,6 @@
 #!/bin/bash
-# Generate AGENTS.md with crate structure documentation
+# Generate AGENTS.md and CLAUDE.md with crate structure documentation
 set -e
-
-OUTPUT="${1:-AGENTS.md}"
 
 # Find crates with plugin/ = user-facing
 USER_FACING=$(find crates/*/plugin -name Cargo.toml 2>/dev/null | cut -d/ -f2 | sort -u)
@@ -176,6 +174,6 @@ if $has_non_inline; then
 fi
 
 echo ""
-} > "$OUTPUT"
+} | tee AGENTS.md > CLAUDE.md
 
-echo "Generated $OUTPUT"
+echo "Generated AGENTS.md and CLAUDE.md"
