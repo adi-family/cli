@@ -72,7 +72,7 @@ pub struct AutofixEngine<'a> {
     runner: &'a Runner,
     config: AutofixConfig,
     /// Callback for interactive mode.
-    prompt_callback: Option<Box<dyn Fn(&Diagnostic, &Fix) -> bool + 'a>>,
+    prompt_callback: Option<Box<dyn Fn(&Diagnostic, &Fix) -> bool + Send + Sync + 'a>>,
 }
 
 impl<'a> AutofixEngine<'a> {
@@ -88,7 +88,7 @@ impl<'a> AutofixEngine<'a> {
     /// Set the prompt callback for interactive mode.
     pub fn with_prompt<F>(mut self, callback: F) -> Self
     where
-        F: Fn(&Diagnostic, &Fix) -> bool + 'a,
+        F: Fn(&Diagnostic, &Fix) -> bool + Send + Sync + 'a,
     {
         self.prompt_callback = Some(Box::new(callback));
         self

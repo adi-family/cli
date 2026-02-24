@@ -7501,13 +7501,10 @@ dependencies = [
 name = "linter-plugin"
 version = "3.0.0"
 dependencies = [
- "async-trait",
- "lib-plugin-abi-v3",
+ "lib-plugin-prelude",
  "linter-core",
- "once_cell",
  "serde",
  "serde_json",
- "tokio",
 ]
 
 [[package]]
@@ -11246,6 +11243,17 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "signaling-server-plugin"
+version = "0.1.0"
+dependencies = [
+ "lib-plugin-prelude",
+ "lib-signaling-protocol",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

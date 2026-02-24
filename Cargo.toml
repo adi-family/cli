@@ -184,7 +184,7 @@ members = [
     "crates/agent-loop/plugin",
     "crates/linter/plugin",
     "crates/workflow/plugin",
-    "crates/llm-proxy/plugin",
+    "crates/llm-proxy-plugin",
     "crates/hive/plugin",
     "crates/hive/integration-tests",
     "crates/llm-extract-plugin",
@@ -227,6 +227,7 @@ members = [
     # Signaling server
     "crates/signaling-server/core",
     "crates/signaling-server/http",
+    "crates/signaling-server/plugin",
 
     # Executor
     "crates/executor/core",
@@ -251,7 +252,6 @@ members = [
     # FlowMap
     "crates/lib/lib-flowmap-core",
     "crates/lib/lib-flowmap-parser",
-    "apps/flowmap-api",
 
     # Analytics
     "crates/analytics/core",

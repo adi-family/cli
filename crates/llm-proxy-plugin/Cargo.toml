@@ -1,9 +1,9 @@
 [package]
 name = "llm-proxy-plugin"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-authors.workspace = true
+version = "0.8.4"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
 description = "ADI LLM Proxy CLI plugin for managing proxy tokens and keys"
 
 [lib]
@@ -11,10 +11,10 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # Plugin ABI
-lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+lib-plugin-abi-v3 = { path = "../lib/lib-plugin-abi-v3" }
 
 # Environment
-lib-env-parse = { path = "../../lib/lib-env-parse" }
+lib-env-parse = { path = "../lib/lib-env-parse" }
 
 # Serialization
 serde.workspace = true

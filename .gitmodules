@@ -160,3 +160,6 @@
 [submodule "crates/adi-llm-extract-plugin"]
 	path = crates/llm-extract-plugin
 	url = https://github.com/adi-family/adi-llm-extract-plugin.git
+[submodule "crates/llm-proxy"]
+	path = crates/llm-proxy
+	url = https://github.com/adi-family/adi-llm-proxy.git

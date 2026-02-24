@@ -3,7 +3,8 @@ mod server;
 use lib_plugin_abi_v3::{
     async_trait,
     cli::{CliCommand, CliCommands, CliContext, CliResult},
-    Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult, SERVICE_CLI_COMMANDS,
+    Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult,
+    SERVICE_CLI_COMMANDS,
 };
 
 pub struct RegistryPlugin;
