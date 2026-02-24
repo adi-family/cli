@@ -11,13 +11,10 @@ name = "knowledgebase-http"
 path = "src/main.rs"
 
 [features]
-default = ["mcp"]
-mcp = ["lib-mcp-core/sse-server"]
 fastembed = ["knowledgebase-core/fastembed"]
 
 [dependencies]
 knowledgebase-core = { path = "../core", features = ["fastembed"] }
-lib-mcp-core = { path = "../../lib/lib-mcp-core", optional = true }
 axum.workspace = true
 async-trait.workspace = true
 chrono.workspace = true

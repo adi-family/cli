@@ -1,8 +1,5 @@
 mod generated;
 
-#[cfg(feature = "mcp")]
-mod mcp;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::{routing::get, Json, Router};
@@ -222,9 +219,6 @@ async fn main() -> Result<()> {
     info!("Starting ADI Knowledgebase HTTP server");
     info!("Data directory: {}", data_dir.display());
 
-    #[cfg(feature = "mcp")]
-    info!("MCP support enabled at /mcp/sse (SSE) and /mcp/message (POST)");
-
     #[allow(deprecated)] // standalone HTTP binary uses fastembed, not plugin manager
     let kb = match Knowledgebase::open(&data_dir).await {
         Ok(kb) => Some(kb),
@@ -242,31 +236,11 @@ async fn main() -> Result<()> {
         data_dir,
     });
 
-    // Build REST API router
-    let rest_router = Router::new()
+    let app = Router::new()
         .route("/", get(health))
         .route("/health", get(health))
         .merge(generated::server::create_router::<AppState>())
-        .with_state(state);
-
-    // Build MCP router if feature is enabled
-    #[cfg(feature = "mcp")]
-    let mcp_router = mcp::create_mcp_router(kb_arc);
-
-    // Combine routers
-    #[cfg(feature = "mcp")]
-    let app = Router::new()
-        .merge(rest_router)
-        .nest("/mcp", mcp_router)
-        .layer(version_header_layer(
-            env!("CARGO_PKG_NAME"),
-            env!("CARGO_PKG_VERSION"),
-        ))
-        .layer(CorsLayer::permissive())
-        .layer(TraceLayer::new_for_http());
-
-    #[cfg(not(feature = "mcp"))]
-    let app = rest_router
+        .with_state(state)
         .layer(version_header_layer(
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),

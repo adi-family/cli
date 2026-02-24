@@ -3,7 +3,7 @@ name = "indexer-plugin"
 version = "0.8.10"
 edition = "2021"
 license = "BSL-1.0"
-description = "ADI Indexer plugin providing MCP tools for code search and analysis"
+description = "ADI Indexer plugin providing tools for code search and analysis"
 authors = ["ADI Team"]
 
 [lib]
@@ -27,14 +27,6 @@ type = "core"
 [package.metadata.plugin.compatibility]
 depends_on = ["adi.embed"]
 min_host_version = "0.8.0"
-
-[[package.metadata.plugin.provides]]
-id = "adi.mcp.tools"
-version = "1.0.0"
-
-[[package.metadata.plugin.provides]]
-id = "adi.mcp.resources"
-version = "1.0.0"
 
 [[package.metadata.plugin.requires]]
 id = "adi.embed"

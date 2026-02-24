@@ -23,7 +23,6 @@ members = [
     "crates/lib/lib-typespec-api",
     "crates/lib/lib-task-store",
     "crates/lib/lib-i18n-core",
-    "crates/lib/lib-mcp-core",
     # Removed: lib-plugin-abi-orchestration (migrated to lib-plugin-abi-v3)
     "crates/lib/lib-webrtc-manager",
 
@@ -39,9 +38,6 @@ members = [
     # Tools components (CLI tool index for LLM agents)
     "crates/tools/core",
     "crates/tools/plugin",
-
-    # Workflow components
-    "crates/workflow/mcp",
 
     # Flags components
     "crates/flags/core",
@@ -196,8 +192,6 @@ members = [
     # Browser Debug components
     "crates/browser-debug/core",
     "crates/browser-debug/plugin",
-    "crates/browser-debug/mcp",
-
     # Audio components
     "crates/audio/core",
     "crates/audio/plugin",
@@ -344,8 +338,6 @@ lib-migrations = { path = "crates/lib/lib-migrations" }
 lib-task-store = { path = "crates/lib/lib-task-store" }
 lib-analytics-core = { path = "crates/lib/lib-analytics-core" }
 lib-logging-core = { path = "crates/lib/lib-logging-core" }
-lib-mcp-core = { path = "crates/lib/lib-mcp-core" }
-
 # API clients
 lib-client-github = { path = "crates/lib/lib-client/github" }
 lib-client-anthropic = { path = "crates/lib/lib-client/anthropic" }

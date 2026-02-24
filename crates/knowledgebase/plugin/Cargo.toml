@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-description = "ADI Knowledgebase plugin providing MCP tools for knowledge graph and embeddings"
+description = "ADI Knowledgebase plugin providing tools for knowledge graph and embeddings"
 
 [lib]
 crate-type = ["cdylib"]
@@ -26,14 +26,6 @@ type = "core"
 
 [package.metadata.plugin.compatibility]
 min_host_version = "0.8.0"
-
-[[package.metadata.plugin.provides]]
-id = "adi.mcp.tools"
-version = "1.0.0"
-
-[[package.metadata.plugin.provides]]
-id = "adi.mcp.resources"
-version = "1.0.0"
 
 [package.metadata.plugin.tags]
 categories = ["knowledgebase", "embeddings", "graph", "rag"]
