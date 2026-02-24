@@ -159,17 +159,17 @@ members = [
 
     # Indexer language plugins
     "crates/lib/lib-indexer-lang-abi",
-    "crates/lang/rust/plugin",
-    "crates/lang/python/plugin",
-    "crates/lang/typescript/plugin",
-    "crates/lang/cpp/plugin",
-    "crates/lang/go/plugin",
-    "crates/lang/java/plugin",
-    "crates/lang/csharp/plugin",
-    "crates/lang/ruby/plugin",
-    "crates/lang/php/plugin",
-    "crates/lang/swift/plugin",
-    "crates/lang/lua/plugin",
+    "crates/indexer/lang/rust/plugin",
+    "crates/indexer/lang/python/plugin",
+    "crates/indexer/lang/typescript/plugin",
+    "crates/indexer/lang/cpp/plugin",
+    "crates/indexer/lang/go/plugin",
+    "crates/indexer/lang/java/plugin",
+    "crates/indexer/lang/csharp/plugin",
+    "crates/indexer/lang/ruby/plugin",
+    "crates/indexer/lang/php/plugin",
+    "crates/indexer/lang/swift/plugin",
+    "crates/indexer/lang/lua/plugin",
 
     # Core plugins
     "crates/embed-plugin",
@@ -190,10 +190,6 @@ members = [
     # Browser Debug components
     "crates/browser-debug/core",
     "crates/browser-debug/plugin",
-    # Audio components
-    "crates/audio/core",
-    "crates/audio/plugin",
-
     # Workflow translation plugins
     "crates/workflow/langs/en",
     "crates/workflow/langs/uk",
@@ -266,7 +262,6 @@ flags-core = { path = "crates/flags/core" }
 linter-core = { path = "crates/linter/core" }
 llm-proxy-core = { path = "crates/llm-proxy/core" }
 hive-core = { path = "crates/hive/core" }
-audio-core = { path = "crates/audio/core" }
 platform-core = { path = "crates/platform/core" }
 tools-core = { path = "crates/tools/core" }
 balance-core = { path = "crates/balance/core" }

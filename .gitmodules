@@ -68,7 +68,7 @@
 	path = crates/lib/lib-indexer-lang-abi
 	url = https://github.com/adi-family/lib-indexer-lang-abi.git
 [submodule "crates/adi-lang"]
-	path = crates/lang
+	path = crates/indexer/lang
 	url = https://github.com/adi-family/adi-lang.git
 [submodule "crates/adi-indexer"]
 	path = crates/indexer
@@ -115,9 +115,6 @@
 [submodule "crates/adi-api-proxy"]
 	path = crates/llm-proxy
 	url = https://github.com/adi-family/adi-api-proxy.git
-[submodule "crates/adi-audio"]
-	path = crates/audio
-	url = https://github.com/adi-family/adi-audio.git
 [submodule "crates/adi-tools"]
 	path = crates/tools
 	url = https://github.com/adi-family/adi-tools.git
