@@ -241,70 +241,63 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
-name = "analytics-core"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "serde",
- "sqlx",
- "thiserror 2.0.18",
- "tracing",
-]
-
-[[package]]
-name = "analytics-http"
+name = "analytics-client"
 version = "0.1.0"
 dependencies = [
  "analytics-core",
- "axum 0.8.8",
- "dotenvy",
- "lib-env-parse",
- "lib-http-common",
- "lib-logging-core",
+ "chrono",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sqlx",
+ "thiserror 2.0.18",
  "tokio",
- "tower 0.5.3",
- "tower-http 0.6.8",
+ "tokio-test",
  "tracing",
- "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
-name = "analytics-ingestion-core"
+name = "analytics-core"
 version = "0.1.0"
 dependencies = [
- "lib-analytics-core",
- "serde",
- "serde_json",
- "sqlx",
- "tracing",
-]
-
-[[package]]
-name = "analytics-ingestion-http"
-version = "0.1.0"
-dependencies = [
- "analytics-ingestion-core",
  "anyhow",
- "async-trait",
- "axum 0.8.8",
  "chrono",
  "dotenvy",
- "lib-analytics-core",
  "lib-env-parse",
- "lib-http-common",
- "lib-logging-core",
+ "lib-migrations-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lib-migrations-sql 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
  "sqlx",
+ "thiserror 2.0.18",
  "tokio",
- "tower 0.5.3",
- "tower-http 0.6.8",
+ "tokio-test",
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "analytics-plugin"
+version = "0.1.0"
+dependencies = [
+ "analytics-client",
+ "analytics-core",
+ "anyhow",
+ "axum 0.8.8",
+ "dotenvy",
+ "lib-env-parse",
+ "lib-http-common",
+ "lib-logging-core",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower 0.5.3",
+ "tower-http 0.6.8",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1506,6 +1499,7 @@ dependencies = [
 name = "balance-http"
 version = "0.1.0"
 dependencies = [
+ "analytics-client",
  "anyhow",
  "async-trait",
  "axum 0.8.8",
@@ -1513,7 +1507,6 @@ dependencies = [
  "chrono",
  "dotenvy",
  "jsonwebtoken",
- "lib-analytics-core",
  "lib-env-parse",
  "lib-http-common",
  "lib-logging-core",
@@ -2792,6 +2785,7 @@ dependencies = [
 name = "credentials-http"
 version = "0.1.0"
 dependencies = [
+ "analytics-client",
  "anyhow",
  "async-trait",
  "axum 0.8.8",
@@ -2799,7 +2793,6 @@ dependencies = [
  "credentials-core",
  "dotenvy",
  "jsonwebtoken",
- "lib-analytics-core",
  "lib-env-parse",
  "lib-http-common",
  "lib-logging-core",
@@ -6638,28 +6631,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lib-analytics-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "dotenvy",
- "lib-env-parse",
- "lib-migrations-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lib-migrations-sql 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror 2.0.18",
- "tokio",
- "tokio-test",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
 name = "lib-animation"
 version = "0.8.3"
 
@@ -7505,6 +7476,7 @@ dependencies = [
 name = "llm-proxy-http"
 version = "0.8.4"
 dependencies = [
+ "analytics-client",
  "anyhow",
  "async-stream",
  "async-trait",
@@ -7515,7 +7487,6 @@ dependencies = [
  "futures",
  "http 1.4.0",
  "jsonwebtoken",
- "lib-analytics-core",
  "lib-http-common",
  "lib-logging-core",
  "llm-proxy-core",
@@ -9096,12 +9067,12 @@ dependencies = [
 name = "platform-core"
 version = "0.2.0"
 dependencies = [
+ "analytics-client",
  "anyhow",
  "axum 0.8.8",
  "chrono",
  "hex",
  "jsonwebtoken",
- "lib-analytics-core",
  "lib-env-parse",
  "lib-logging-core",
  "lib-migrations-core 0.1.0 (git+https://github.com/adi-family/lib-migrations-core.git)",
@@ -9121,13 +9092,13 @@ dependencies = [
 name = "platform-http"
 version = "0.2.0"
 dependencies = [
+ "analytics-client",
  "anyhow",
  "axum 0.8.8",
  "chrono",
  "dotenvy",
  "futures",
  "jsonwebtoken",
- "lib-analytics-core",
  "lib-env-parse",
  "lib-http-common",
  "lib-logging-core",
@@ -11140,7 +11111,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "signaling-server-core"
+name = "signaling-core"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
@@ -11161,35 +11132,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "signaling-server-http"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "axum 0.8.8",
- "chrono",
- "dashmap",
- "futures",
- "hex",
- "hmac",
- "lib-env-parse",
- "lib-http-common",
- "lib-logging-core",
- "lib-signaling-protocol",
- "regex",
- "serde",
- "serde_json",
- "sha2",
- "signaling-server-core",
- "tokio",
- "tower 0.5.3",
- "tower-http 0.6.8",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "signaling-server-plugin"
+name = "signaling-plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -11208,7 +11151,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "signaling-server-core",
+ "signaling-core",
  "tokio",
  "tower-http 0.6.8",
  "tracing",

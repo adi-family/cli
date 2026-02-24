@@ -52,8 +52,8 @@
 [submodule "crates/lib/lib-plugin-verify"]
 	path = crates/lib/lib-plugin-verify
 	url = https://github.com/adi-family/lib-plugin-verify.git
-[submodule "crates/signaling-server"]
-	path = crates/signaling-server
+[submodule "crates/signaling"]
+	path = crates/signaling
 	url = https://github.com/adi-family/tarminal-signaling-server.git
 [submodule "crates/adi-executor"]
 	path = crates/executor
