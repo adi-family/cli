@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use lib_plugin_registry::{
+use registry_client::{
     PackageEntry, PackageInfo, PlatformBuild, PluginEntry, PluginInfo, PublisherCertificate,
     RegistryIndex, WebUiMeta,
 };

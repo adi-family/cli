@@ -7,7 +7,7 @@ authors = ["ADI Team"]
 description = "Core library for ADI plugin registry - storage and business logic"
 
 [dependencies]
-lib-plugin-registry = { path = "../../lib/lib-plugin-registry" }
+registry-client = { path = "../client" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

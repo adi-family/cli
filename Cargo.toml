@@ -159,7 +159,7 @@ members = [
     "crates/lib/lib-plugin-prelude",
     "crates/lib/lib-plugin-manifest",
     "crates/lib/lib-plugin-verify",
-    "crates/lib/lib-plugin-registry",
+    "crates/registry/client",
     "crates/lib/lib-plugin-host",
 
     # Indexer language plugins
@@ -368,7 +368,7 @@ lib-client-trello = { path = "crates/lib/lib-client/trello" }
 # Plugin system
 lib-plugin-manifest = { path = "crates/lib/lib-plugin-manifest" }
 lib-plugin-verify = { path = "crates/lib/lib-plugin-verify" }
-lib-plugin-registry = { path = "crates/lib/lib-plugin-registry" }
+registry-client = { path = "crates/registry/client" }
 lib-plugin-host = { path = "crates/lib/lib-plugin-host" }
 
 # Indexer language plugins

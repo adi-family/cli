@@ -2309,8 +2309,8 @@ dependencies = [
  "lib-plugin-abi-v3",
  "lib-plugin-host",
  "lib-plugin-manifest",
- "lib-plugin-registry",
  "libc",
+ "registry-client",
  "reqwest 0.13.2",
  "rkyv 0.8.15",
  "serde",
@@ -7219,9 +7219,9 @@ dependencies = [
  "flate2",
  "lib-plugin-abi-v3",
  "lib-plugin-manifest",
- "lib-plugin-registry",
  "lib-plugin-verify",
  "libloading 0.8.9",
+ "registry-client",
  "serde_json",
  "tar",
  "tempfile",
@@ -7251,21 +7251,6 @@ dependencies = [
  "lib-plugin-sdk",
  "serde_json",
  "tokio",
-]
-
-[[package]]
-name = "lib-plugin-registry"
-version = "0.8.4"
-dependencies = [
- "futures",
- "lib-plugin-manifest",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "urlencoding",
 ]
 
 [[package]]
@@ -9254,8 +9239,8 @@ dependencies = [
  "anyhow",
  "flate2",
  "hex",
- "lib-plugin-registry",
  "lib-plugin-verify",
+ "registry-client",
  "semver",
  "serde",
  "serde_json",
@@ -10072,6 +10057,21 @@ name = "regex-syntax"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a96887878f22d7bad8a3b6dc5b7440e0ada9a245242924394987b21cf2210a4c"
+
+[[package]]
+name = "registry-client"
+version = "0.8.4"
+dependencies = [
+ "futures",
+ "lib-plugin-manifest",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "urlencoding",
+]
 
 [[package]]
 name = "rend"
