@@ -274,7 +274,7 @@ credentials-core = { path = "crates/credentials/core" }
 logging-core = { path = "crates/logging/core" }
 executor-core = { path = "crates/executor/core" }
 plugin-registry-core = { path = "crates/registry/core" }
-signaling-server-core = { path = "crates/signaling-server/core" }
+signaling-core = { path = "crates/signaling-server/core" }
 
 # Hive plugin system
 hive-plugin-abi = { path = "crates/hive/plugins/abi" }
