@@ -183,8 +183,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin signaling-server
-        working_dir: crates/signaling-server
+        run: adi run adi.signaling start --port 8011
     rollout:
       type: recreate
       recreate:
@@ -215,8 +214,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run -p auth-http
-        working_dir: crates/auth
+        run: adi run adi.auth start --port 8012
     rollout:
       type: recreate
       recreate:
@@ -253,8 +251,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin platform-http
-        working_dir: crates/platform
+        run: adi run adi.platform start --port 8015
     rollout:
       type: recreate
       recreate:
@@ -340,8 +337,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin analytics-ingestion
-        working_dir: crates/analytics-ingestion
+        run: adi run adi.analytics start-ingestion --port 8022
     rollout:
       type: recreate
       recreate:
@@ -373,8 +369,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin analytics-http
-        working_dir: crates/analytics
+        run: adi run adi.analytics start-api --port 8023
     rollout:
       type: recreate
       recreate:
@@ -397,39 +392,6 @@ services:
       - timescaledb
     restart: on-failure
 
-  llm-proxy:
-    runner:
-      type: script
-      script:
-        run: cargo run --bin llm-proxy
-        working_dir: crates/llm-proxy/http
-    rollout:
-      type: recreate
-      recreate:
-        ports:
-          http: 8029
-    proxy:
-      - host: adi.test
-        path: /api/llm-proxy
-        strip_prefix: true
-    healthcheck:
-      type: http
-      http:
-        port: "{{runtime.port.http}}"
-        path: /health
-    environment:
-      static:
-        PORT: "8029"
-        DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_llm_proxy"
-        JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
-        ADMIN_JWT_SECRET: ${env.ADMIN_JWT_SECRET:-}
-        ENCRYPTION_KEY: ${env.ENCRYPTION_KEY:-5a747f27420b903522ae3746c4ba79b5ecffea02f6bc333fd4da39fb2ef27de4}
-        ANALYTICS_URL: "http://localhost:8022"
-    depends_on:
-      - postgres
-      - analytics-ingestion
-    restart: on-failure
-
   # ---------------------------------------------------------------------------
   # Optional Services
   # ---------------------------------------------------------------------------
@@ -438,8 +400,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin balance-http
-        working_dir: crates/balance
+        run: adi run adi.balance start --port 8030
     rollout:
       type: recreate
       recreate:
@@ -469,8 +430,7 @@ services:
     runner:
       type: script
       script:
-        run: cargo run --bin credentials-http
-        working_dir: crates/credentials
+        run: adi run adi.credentials start --port 8033
     rollout:
       type: recreate
       recreate:

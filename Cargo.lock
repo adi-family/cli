@@ -285,10 +285,12 @@ dependencies = [
  "analytics-client",
  "analytics-core",
  "anyhow",
+ "async-trait",
  "axum 0.8.8",
  "dotenvy",
  "lib-env-parse",
  "lib-http-common",
+ "lib-plugin-abi-v3",
  "serde",
  "serde_json",
  "sqlx",
@@ -787,10 +789,12 @@ dependencies = [
 name = "auth-http"
 version = "0.8.4"
 dependencies = [
+ "anyhow",
  "async-trait",
  "auth-core",
  "axum 0.7.9",
  "chrono",
+ "dotenvy",
  "lib-env-parse",
  "lib-http-common",
  "serde",
@@ -801,6 +805,16 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "auth-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "auth-http",
+ "lib-plugin-abi-v3",
 ]
 
 [[package]]
@@ -1495,6 +1509,16 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "balance-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "balance-http",
+ "lib-plugin-abi-v3",
 ]
 
 [[package]]
@@ -2780,6 +2804,16 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "credentials-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "credentials-http",
+ "lib-plugin-abi-v3",
 ]
 
 [[package]]
@@ -8987,6 +9021,16 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "platform-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "lib-plugin-abi-v3",
+ "platform-http",
 ]
 
 [[package]]

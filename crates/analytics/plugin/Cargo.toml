@@ -3,7 +3,10 @@ name = "analytics-plugin"
 version = "0.1.0"
 edition = "2021"
 license = "BSL-1.0"
-description = "HTTP servers for ADI Analytics read API and ingestion API"
+description = "ADI plugin: Analytics HTTP servers (read API + ingestion)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "analytics-http"
@@ -17,6 +20,10 @@ path = "src/bin/analytics_ingestion.rs"
 # Analytics crates
 analytics-core = { path = "../core" }
 analytics-client = { path = "../client" }
+
+# Plugin ABI
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+async-trait = "0.1"
 
 # Web framework
 axum = "0.8"
@@ -48,3 +55,19 @@ lib-env-parse = { path = "../../lib/lib-env-parse" }
 
 # Error handling
 anyhow = "1.0"
+
+[package.metadata.plugin]
+id = "adi.analytics"
+name = "Analytics"
+type = "extension"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.analytics.cli"
+version = "1.0.0"
+description = "CLI commands for analytics HTTP servers"
+
+[package.metadata.plugin.tags]
+categories = ["analytics", "server", "http"]

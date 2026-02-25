@@ -148,3 +148,9 @@
 [submodule "crates/llm-proxy"]
 	path = crates/llm-proxy
 	url = https://github.com/adi-family/adi-llm-proxy.git
+[submodule "crates/lib/lib-migrations-core"]
+	path = crates/lib/lib-migrations-core
+	url = https://github.com/adi-family/lib-migrations-core.git
+[submodule "crates/lib/lib-migrations-sql"]
+	path = crates/lib/lib-migrations-sql
+	url = https://github.com/adi-family/lib-migrations-sql.git

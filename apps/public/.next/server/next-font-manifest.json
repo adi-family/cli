@@ -1,14 +1,6 @@
 {
-  "app": {
-    "[project]/projects/adi-family/cli/apps/public/src/app/[locale]/page": [
-      "static/media/9c72aa0f40e4eef8-s.p.18a48cbc.woff2",
-      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
-      "static/media/cc545e633e20c56d-s.p.f6f1950f.woff2",
-      "static/media/70bc3e132a0a741e-s.p.15008bfb.woff2",
-      "static/media/0c89a48fa5027cee-s.p.4564287c.woff2"
-    ]
-  },
-  "appUsingSizeAdjust": true,
+  "app": {},
+  "appUsingSizeAdjust": false,
   "pages": {},
   "pagesUsingSizeAdjust": false
 }

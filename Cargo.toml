@@ -50,6 +50,7 @@ members = [
     "crates/auth/core",
     "crates/auth/http",
     "crates/auth/cli",
+    "crates/auth/plugin",
 
     # Knowledgebase components
     "crates/knowledgebase/core",
@@ -122,6 +123,7 @@ members = [
     "crates/platform/core",
     "crates/platform/http",
     "crates/platform/cli",
+    "crates/platform/plugin",
 
     # Tools
     # API clients
@@ -221,11 +223,13 @@ members = [
     "crates/balance/core",
     "crates/balance/http",
     "crates/balance/cli",
+    "crates/balance/plugin",
 
     # Credentials
     "crates/credentials/core",
     "crates/credentials/http",
     "crates/credentials/cli",
+    "crates/credentials/plugin",
 
     # Shortcuts
     "crates/shortcuts",
