@@ -172,6 +172,7 @@ members = [
     "crates/embed-plugin",
     "crates/indexer/plugin",
     "crates/tasks/plugin",
+    "crates/monaco-editor/plugin",
     "crates/knowledgebase/plugin",
     "crates/agent-loop/plugin",
     "crates/linter/plugin",

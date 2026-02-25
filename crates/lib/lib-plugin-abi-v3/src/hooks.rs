@@ -874,7 +874,8 @@ impl HookExecutor {
             interpolated.lines().next().unwrap_or(&interpolated)
         );
 
-        // Execute via shell (use configured shell from RuntimeContext, fall back to $SHELL or sh)
+        // Execute via login shell so the user's PATH setup (nvm, fnm, etc.) is available.
+        // Login shell sources ~/.zprofile and ~/.zlogin in addition to ~/.zshenv.
         let (shell_cmd, shell_flag) = if cfg!(target_os = "windows") {
             ("cmd".to_string(), "/C")
         } else {
@@ -883,7 +884,7 @@ impl HookExecutor {
                 .clone()
                 .or_else(|| std::env::var("SHELL").ok())
                 .unwrap_or_else(|| "sh".to_string());
-            (cmd, "-c")
+            (cmd, "-lc")
         };
 
         let mut child = tokio::process::Command::new(&shell_cmd)

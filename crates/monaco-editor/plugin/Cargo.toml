@@ -1,0 +1,33 @@
+[package]
+name = "monaco-editor-plugin"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "ADI Monaco Editor plugin - web-only code editor"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lib-plugin-prelude = { path = "../../lib/lib-plugin-prelude" }
+
+[package.metadata.plugin]
+id = "adi.monaco-editor"
+name = "ADI Monaco Editor"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "2.0.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.monaco-editor.web"
+version = "1.0.0"
+description = "Web-based code editor powered by Monaco"
+
+[package.metadata.plugin.web_ui]
+entry = "web.js"
+sandbox = false
+
+[package.metadata.plugin.tags]
+categories = ["editor", "code", "web"]

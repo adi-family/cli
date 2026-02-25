@@ -10,10 +10,11 @@ import {
   initInternalPlugin,
   loadPlugins,
   registerPluginSW,
-  HttpPluginRegistry,
   upgradePlugin,
   type EventBus,
 } from '@adi-family/sdk-plugin';
+import { initSignalingHub } from './services/signaling/index.ts';
+import { initRegistryHub } from './services/registry/index.ts';
 
 interface Connection {
   id: string;
@@ -33,25 +34,21 @@ declare global {
   }
 }
 
-/** Returns all configured registry URLs. Supports VITE_REGISTRY_URLS (comma-separated) or VITE_REGISTRY_URL. */
-const registryUrls = (): string[] => {
-  const multi = import.meta.env.VITE_REGISTRY_URLS as string | undefined;
-  if (multi) return multi.split(',').map(s => s.trim()).filter(Boolean);
-  const single = import.meta.env.VITE_REGISTRY_URL as string | undefined;
-  return [single ?? 'http://adi.test/registry'];
-};
-
 const bus = createEventBus();
 
 const connections = new Map<string, Connection>();
-const debugInfo = { loaded: [] as string[], failed: [] as string[], timedOut: [] as string[], registries: [] as HttpPluginRegistry[] };
+const signalingHub = initSignalingHub(connections, bus);
+const registryHub = initRegistryHub();
+const debugInfo = { loaded: [] as string[], failed: [] as string[], timedOut: [] as string[] };
 
 (window as unknown as { sdk: object }).sdk = {
   getConnections: () => connections,
   bus,
 };
-// Expose debug info outside the typed interface to avoid declaration conflicts
+// Expose debug info and signaling outside the typed interface to avoid declaration conflicts
 (window as unknown as Record<string, unknown>)['__adiDebug'] = debugInfo;
+(window as unknown as Record<string, unknown>)['__adiSignaling'] = signalingHub;
+(window as unknown as Record<string, unknown>)['__adiRegistryHub'] = registryHub;
 
 // Initialize built-in internal plugins.
 await initInternalPlugin(bus, new PluginsPlugin());
@@ -63,8 +60,7 @@ await registerPluginSW(new URL('./plugin-sw.js', import.meta.url), bus);
 (globalThis as Record<string, unknown>)['__adiBus'] = bus;
 
 // Discover plugins from all configured registries; failures are isolated per registry.
-const registries = registryUrls().map(url => new HttpPluginRegistry(url));
-debugInfo.registries = registries;
+const registries = [...registryHub.registries.values()];
 const results = await Promise.allSettled(registries.map(r => r.listPlugins()));
 const pluginDescriptors = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
 
