@@ -7,6 +7,11 @@
 dist/
 .adi/hive/pids/
 .adi/hive/logs/
+.adi/hive/*.db
+.adi/hive/*.db-shm
+.adi/hive/*.db-wal
 .DS_Store
 *.bak
 docs/
+apps/public/.next/
+.dev/registry-data/
