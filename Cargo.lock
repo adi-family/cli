@@ -7087,7 +7087,7 @@ version = "3.0.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "axum 0.7.9",
+ "axum 0.8.8",
  "bytes",
  "chrono",
  "regex",
@@ -11044,6 +11044,7 @@ name = "signaling-plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum 0.8.8",
  "chrono",
  "dashmap",

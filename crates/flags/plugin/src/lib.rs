@@ -38,37 +38,37 @@ impl CliCommands for FlagsPlugin {
             CliCommand {
                 name: "set".to_string(),
                 description: "Flag files as clean for a state".to_string(),
-                usage: "flags set <state> <files...>".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "status".to_string(),
                 description: "Show dirty files".to_string(),
-                usage: "flags status [state]".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "list".to_string(),
                 description: "List all tracked files".to_string(),
-                usage: "flags list [state]".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "clear".to_string(),
                 description: "Remove flags".to_string(),
-                usage: "flags clear <state> [files...]".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "states".to_string(),
                 description: "List configured states".to_string(),
-                usage: "flags states".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "init".to_string(),
                 description: "Create default .adi/flags.toml".to_string(),
-                usage: "flags init".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
         ]

@@ -122,6 +122,9 @@ pub struct RuntimeContext {
 
     /// Working directory
     pub working_dir: PathBuf,
+
+    /// Shell to use for script execution (e.g. "zsh", "bash")
+    pub shell: Option<String>,
 }
 
 impl RuntimeContext {
@@ -132,6 +135,7 @@ impl RuntimeContext {
             ports: HashMap::new(),
             env: HashMap::new(),
             working_dir,
+            shell: None,
         }
     }
 
@@ -144,6 +148,12 @@ impl RuntimeContext {
     /// Add an environment variable
     pub fn with_env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.env.insert(key.into(), value.into());
+        self
+    }
+
+    /// Set the shell for script execution
+    pub fn with_shell(mut self, shell: impl Into<String>) -> Self {
+        self.shell = Some(shell.into());
         self
     }
 

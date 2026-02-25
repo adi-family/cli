@@ -39,7 +39,7 @@ impl CliCommands for BrowserDebugPlugin {
             CliCommand {
                 name: "connect".to_string(),
                 description: "Connect to browser debugging session".to_string(),
-                usage: "browser-debug connect".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
         ]

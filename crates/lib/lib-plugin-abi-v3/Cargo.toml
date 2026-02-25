@@ -20,7 +20,7 @@ anyhow = "1.0"
 thiserror = "2.0"
 
 # HTTP types (for HttpRoutes, ProxyMiddleware)
-axum = { version = "0.7", default-features = false }
+axum = { version = "0.8", default-features = false }
 bytes = "1.0"
 
 # Time

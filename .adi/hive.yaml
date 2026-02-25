@@ -1,6 +1,10 @@
 version: "1"
 
 defaults:
+  # Script runner uses the user's shell
+  hive.runner.script:
+    shell: zsh
+
   # File-based logging with rotation (defaults to ~/.adi/hive/logs/)
   hive.obs.file:
     rotate: true
@@ -180,6 +184,10 @@ services:
   # ---------------------------------------------------------------------------
 
   signaling:
+    hooks:
+      pre-up:
+        - type: script
+          run: .adi/workflows/patch.sh plugin adi.signaling
     runner:
       type: script
       script:
@@ -211,6 +219,10 @@ services:
         PORT: "8011"
 
   auth:
+    hooks:
+      pre-up:
+        - type: script
+          run: .adi/workflows/patch.sh plugin adi.auth
     runner:
       type: script
       script:
@@ -248,6 +260,10 @@ services:
     restart: on-failure
 
   platform:
+    hooks:
+      pre-up:
+        - type: script
+          run: .adi/workflows/patch.sh plugin adi.platform
     runner:
       type: script
       script:
@@ -334,6 +350,10 @@ services:
   # ---------------------------------------------------------------------------
 
   analytics-ingestion:
+    hooks:
+      pre-up:
+        - type: script
+          run: .adi/workflows/patch.sh plugin adi.analytics
     runner:
       type: script
       script:
@@ -366,6 +386,10 @@ services:
         URL: "http://localhost:8022"
 
   analytics:
+    hooks:
+      pre-up:
+        - type: script
+          run: .adi/workflows/patch.sh plugin adi.analytics
     runner:
       type: script
       script:
@@ -397,6 +421,10 @@ services:
   # ---------------------------------------------------------------------------
 
   balance:
+    hooks:
+      pre-up:
+        - type: script
+          run: .adi/workflows/patch.sh plugin adi.balance
     runner:
       type: script
       script:
@@ -427,6 +455,10 @@ services:
     restart: on-failure
 
   credentials:
+    hooks:
+      pre-up:
+        - type: script
+          run: .adi/workflows/patch.sh plugin adi.credentials
     runner:
       type: script
       script:
@@ -458,6 +490,10 @@ services:
     restart: on-failure
 
   registry:
+    hooks:
+      pre-up:
+        - type: script
+          run: .adi/workflows/patch.sh plugin adi.registry
     runner:
       type: script
       script:

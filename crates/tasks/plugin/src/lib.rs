@@ -118,6 +118,10 @@ impl Plugin for TasksPlugin {
     }
 
     async fn init(&mut self, _ctx: &PluginContext) -> Result<()> {
+        lib_plugin_prelude::init_plugin_i18n(
+            "en-US",
+            include_str!("../locales/en-US/messages.ftl"),
+        );
         Ok(())
     }
 
@@ -505,5 +509,10 @@ impl TasksPlugin {
 
 #[no_mangle]
 pub fn plugin_create() -> Box<dyn Plugin> {
+    Box::new(TasksPlugin::new())
+}
+
+#[no_mangle]
+pub fn plugin_create_cli() -> Box<dyn CliCommands> {
     Box::new(TasksPlugin::new())
 }

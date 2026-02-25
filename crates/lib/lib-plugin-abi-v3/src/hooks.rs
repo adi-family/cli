@@ -95,8 +95,15 @@ pub struct HookRunnerConfig {
 /// A single step in a hook event.
 ///
 /// Steps are mutually exclusive: exactly one of `run`, `runner`, or `parallel`.
+/// The `type` field declares the runner type at the step level for consistency
+/// with `RunnerConfig`. When `type` is set, plugin-specific config can live at
+/// the step level via `extra_config` (serde flatten).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HookStep {
+    /// Runner type declared at the step level (e.g., "script", "docker")
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub hook_type: Option<String>,
+
     /// Script command (shorthand for script runner)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub run: Option<String>,
@@ -132,12 +139,17 @@ pub struct HookStep {
     /// Additional environment variables for this hook
     #[serde(skip_serializing_if = "Option::is_none")]
     pub environment: Option<HashMap<String, String>>,
+
+    /// Plugin-specific configuration captured at the step level (flat style)
+    #[serde(flatten)]
+    pub extra_config: HashMap<String, serde_json::Value>,
 }
 
 impl HookStep {
     /// Create a script step
     pub fn script(command: &str) -> Self {
         Self {
+            hook_type: Some("script".to_string()),
             run: Some(command.to_string()),
             runner: None,
             parallel: None,
@@ -147,12 +159,14 @@ impl HookStep {
             retries: None,
             retry_delay: None,
             environment: None,
+            extra_config: HashMap::new(),
         }
     }
 
     /// Create an explicit runner step
     pub fn with_runner(runner_type: &str, config: serde_json::Value) -> Self {
         Self {
+            hook_type: Some(runner_type.to_string()),
             run: None,
             runner: Some(HookRunnerConfig {
                 runner_type: runner_type.to_string(),
@@ -165,12 +179,14 @@ impl HookStep {
             retries: None,
             retry_delay: None,
             environment: None,
+            extra_config: HashMap::new(),
         }
     }
 
     /// Create a parallel group step
     pub fn parallel(steps: Vec<HookStep>) -> Self {
         Self {
+            hook_type: None,
             run: None,
             runner: None,
             parallel: Some(steps),
@@ -180,6 +196,7 @@ impl HookStep {
             retries: None,
             retry_delay: None,
             environment: None,
+            extra_config: HashMap::new(),
         }
     }
 
@@ -191,12 +208,17 @@ impl HookStep {
             StepType::Runner
         } else if self.parallel.is_some() {
             StepType::Parallel
+        } else if let Some(ref t) = self.hook_type {
+            match t.as_str() {
+                "script" => StepType::Script,
+                _ => StepType::Runner,
+            }
         } else {
             StepType::Script // fallback
         }
     }
 
-    /// Validate that exactly one of run/runner/parallel is set
+    /// Validate that exactly one of run/runner/parallel is set, or `type` provides the step kind
     pub fn validate(&self) -> Result<()> {
         let count = [
             self.run.is_some(),
@@ -207,9 +229,9 @@ impl HookStep {
         .filter(|&&b| b)
         .count();
 
-        if count == 0 {
+        if count == 0 && self.hook_type.is_none() {
             return Err(crate::PluginError::Other(anyhow::anyhow!(
-                "Hook step must have exactly one of: run, runner, or parallel"
+                "Hook step must have exactly one of: run, runner, parallel, or type"
             )));
         }
         if count > 1 {
@@ -217,6 +239,24 @@ impl HookStep {
                 "Hook step must have exactly one of: run, runner, or parallel (found {})",
                 count
             )));
+        }
+
+        // Validate type-only steps (no run/runner/parallel)
+        if count == 0 {
+            if let Some(ref t) = self.hook_type {
+                if t == "script" && self.run.is_none() {
+                    return Err(crate::PluginError::Other(anyhow::anyhow!(
+                        "Hook step with type 'script' must have a 'run' field"
+                    )));
+                }
+                if t != "script" && !self.extra_config.contains_key(t.as_str()) {
+                    return Err(crate::PluginError::Other(anyhow::anyhow!(
+                        "Hook step with type '{}' must have a '{}' config section",
+                        t,
+                        t
+                    )));
+                }
+            }
         }
 
         // Validate parallel children recursively
@@ -494,8 +534,19 @@ pub fn parse_duration(s: &str) -> Option<Duration> {
 
 use crate::runner::{Runner, RuntimeContext};
 use std::sync::Arc;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
+
+/// Stream source for hook output lines
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HookOutputStream {
+    Stdout,
+    Stderr,
+}
+
+/// Callback invoked for each line of hook output
+pub type HookOutputFn = Arc<dyn Fn(&str, HookOutputStream) + Send + Sync>;
 
 /// Executes lifecycle hook steps.
 ///
@@ -504,6 +555,8 @@ use tracing::{debug, error, info, warn};
 pub struct HookExecutor {
     /// Available runner plugins by type name (e.g., "docker" -> DockerRunnerPlugin)
     runners: Arc<RwLock<HashMap<String, Arc<dyn Runner>>>>,
+    /// Optional callback for each line of hook output (for log streaming)
+    on_output: Option<HookOutputFn>,
 }
 
 impl HookExecutor {
@@ -511,7 +564,14 @@ impl HookExecutor {
     pub fn new(runners: HashMap<String, Arc<dyn Runner>>) -> Self {
         Self {
             runners: Arc::new(RwLock::new(runners)),
+            on_output: None,
         }
+    }
+
+    /// Set an output handler that receives each line of hook stdout/stderr
+    pub fn with_output_handler(mut self, handler: HookOutputFn) -> Self {
+        self.on_output = Some(handler);
+        self
     }
 
     /// Execute all steps for a hook event
@@ -723,13 +783,65 @@ impl HookExecutor {
         Box::pin(async move {
             match step.step_type() {
                 StepType::Script => self.execute_script(step, env, runtime_ctx).await,
-                StepType::Runner => self.execute_runner(step, env, runtime_ctx).await,
+                StepType::Runner => {
+                    if step.runner.is_some() {
+                        self.execute_runner(step, env, runtime_ctx).await
+                    } else {
+                        self.execute_typed_runner(step, env, runtime_ctx).await
+                    }
+                }
                 StepType::Parallel => self.execute_parallel(step, env, runtime_ctx).await,
             }
         })
     }
 
-    /// Execute a script step (built-in)
+    /// Execute a runner step using the flat `type` + `extra_config` style
+    async fn execute_typed_runner(
+        &self,
+        step: &HookStep,
+        env: &HashMap<String, String>,
+        runtime_ctx: &RuntimeContext,
+    ) -> crate::Result<HookExitStatus> {
+        let runner_type = step
+            .hook_type
+            .as_ref()
+            .ok_or_else(|| crate::PluginError::Other(anyhow::anyhow!(
+                "Typed runner step missing 'type' field"
+            )))?;
+
+        let config = step
+            .extra_config
+            .get(runner_type.as_str())
+            .cloned()
+            .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+
+        let runners = self.runners.read().await;
+        let runner = runners
+            .get(runner_type.as_str())
+            .ok_or_else(|| {
+                crate::PluginError::Other(anyhow::anyhow!(
+                    "Runner plugin '{}' not found. Available runners: {:?}",
+                    runner_type,
+                    runners.keys().collect::<Vec<_>>()
+                ))
+            })?
+            .clone();
+
+        if !runner.supports_hooks() {
+            return Err(crate::PluginError::Other(anyhow::anyhow!(
+                "Runner plugin '{}' does not support hook execution",
+                runner_type
+            )));
+        }
+
+        debug!("Executing hook via typed runner plugin: {}", runner_type);
+
+        runner
+            .run_hook(&config, env.clone(), runtime_ctx)
+            .await
+    }
+
+    /// Execute a script step (built-in), streaming output line-by-line
     async fn execute_script(
         &self,
         step: &HookStep,
@@ -762,40 +874,96 @@ impl HookExecutor {
             interpolated.lines().next().unwrap_or(&interpolated)
         );
 
-        // Execute via shell
-        let shell = if cfg!(target_os = "windows") {
-            ("cmd", "/C")
+        // Execute via shell (use configured shell from RuntimeContext, fall back to $SHELL or sh)
+        let (shell_cmd, shell_flag) = if cfg!(target_os = "windows") {
+            ("cmd".to_string(), "/C")
         } else {
-            ("sh", "-c")
+            let cmd = runtime_ctx
+                .shell
+                .clone()
+                .or_else(|| std::env::var("SHELL").ok())
+                .unwrap_or_else(|| "sh".to_string());
+            (cmd, "-c")
         };
 
-        let output = tokio::process::Command::new(shell.0)
-            .arg(shell.1)
+        let mut child = tokio::process::Command::new(&shell_cmd)
+            .arg(shell_flag)
             .arg(&interpolated)
             .current_dir(&working_dir)
             .envs(env)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
-            .output()
-            .await
+            .spawn()
             .map_err(|e| crate::PluginError::Other(anyhow::anyhow!("Failed to execute hook script: {}", e)))?;
 
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        // Stream stdout and stderr line-by-line
+        let mut stdout_lines = Vec::new();
+        let mut stderr_lines = Vec::new();
 
-        // Log output
-        if !stdout.is_empty() {
-            for line in stdout.lines() {
-                info!("[hook] {}", line);
+        let stdout_pipe = child.stdout.take();
+        let stderr_pipe = child.stderr.take();
+        let on_output = self.on_output.clone();
+
+        let stdout_task = tokio::spawn({
+            let on_output = on_output.clone();
+            async move {
+                let mut lines = Vec::new();
+                if let Some(pipe) = stdout_pipe {
+                    let mut reader = BufReader::new(pipe);
+                    let mut line = String::new();
+                    while reader.read_line(&mut line).await.unwrap_or(0) > 0 {
+                        let trimmed = line.trim_end().to_string();
+                        if !trimmed.is_empty() {
+                            info!("[hook] {}", trimmed);
+                            if let Some(ref cb) = on_output {
+                                cb(&trimmed, HookOutputStream::Stdout);
+                            }
+                            lines.push(trimmed);
+                        }
+                        line.clear();
+                    }
+                }
+                lines
             }
+        });
+
+        let stderr_task = tokio::spawn(async move {
+            let mut lines = Vec::new();
+            if let Some(pipe) = stderr_pipe {
+                let mut reader = BufReader::new(pipe);
+                let mut line = String::new();
+                while reader.read_line(&mut line).await.unwrap_or(0) > 0 {
+                    let trimmed = line.trim_end().to_string();
+                    if !trimmed.is_empty() {
+                        warn!("[hook stderr] {}", trimmed);
+                        if let Some(ref cb) = on_output {
+                            cb(&trimmed, HookOutputStream::Stderr);
+                        }
+                        lines.push(trimmed);
+                    }
+                    line.clear();
+                }
+            }
+            lines
+        });
+
+        // Wait for output capture tasks
+        if let Ok(lines) = stdout_task.await {
+            stdout_lines = lines;
         }
-        if !stderr.is_empty() {
-            for line in stderr.lines() {
-                warn!("[hook stderr] {}", line);
-            }
+        if let Ok(lines) = stderr_task.await {
+            stderr_lines = lines;
         }
 
-        let code = output.status.code().unwrap_or(-1);
+        // Wait for process exit
+        let status = child
+            .wait()
+            .await
+            .map_err(|e| crate::PluginError::Other(anyhow::anyhow!("Failed to wait for hook script: {}", e)))?;
+
+        let code = status.code().unwrap_or(-1);
+        let stdout = stdout_lines.join("\n");
+        let stderr = stderr_lines.join("\n");
         Ok(HookExitStatus { code, output: Some(stdout), stderr: Some(stderr) })
     }
 
@@ -865,11 +1033,12 @@ impl HookExecutor {
             let env_clone = env.clone();
             let ctx_clone = runtime_ctx.clone();
             let executor_runners = self.runners.clone();
+            let on_output = self.on_output.clone();
 
             let handle = tokio::spawn(async move {
-                // Create a temporary executor sharing the same runners
                 let temp_executor = HookExecutor {
                     runners: executor_runners,
+                    on_output,
                 };
                 let result = temp_executor
                     .execute_step_inner(&step_clone, &env_clone, &ctx_clone)

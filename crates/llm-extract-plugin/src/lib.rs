@@ -67,13 +67,13 @@ impl CliCommands for LlmExtractPlugin {
             CliCommand {
                 name: "extract".to_string(),
                 description: "Extract LLM documentation from a plugin".to_string(),
-                usage: "extract <plugin-id> [--format <json|md>]".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "all".to_string(),
                 description: "Extract docs from all installed plugins".to_string(),
-                usage: "all [--format <json|md>]".to_string(),
+                args: vec![],
                 has_subcommands: false,
             },
         ]
