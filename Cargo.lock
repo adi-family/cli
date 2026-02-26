@@ -4681,6 +4681,7 @@ dependencies = [
  "serde_json",
  "serde_yml",
  "sha2",
+ "simple-dns",
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
@@ -11110,6 +11111,15 @@ name = "similar"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
+
+[[package]]
+name = "simple-dns"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c80e565e7dcc4f1ef247e2f395550d4cf7d777746d5988e7e4e3156b71077fc"
+dependencies = [
+ "bitflags 2.10.0",
+]
 
 [[package]]
 name = "simple_asn1"
