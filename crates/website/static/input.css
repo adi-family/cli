@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* ADID Design System */
+@import "../../../packages/theme/generated/adi-theme.css";
+@import "../../../packages/css/tailwind.css";
+@import "../../../packages/css/index.css";
+
+@source "../templates/**/*.html";

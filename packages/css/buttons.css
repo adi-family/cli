@@ -46,3 +46,9 @@
   padding: 0.75rem 2rem;
   font-size: 1rem;
 }
+
+.btn-ghost {
+  background: none;
+  border: none;
+  cursor: pointer;
+}

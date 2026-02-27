@@ -43,10 +43,10 @@ export class AdiTasksElement extends LitElement {
     try {
       if (this.searchQuery.trim()) {
         this.stats = null;
-        const result = await this.bus.send('tasks:search', { query: this.searchQuery }).wait();
+        const result = await this.bus.send('tasks:search', { query: this.searchQuery }, 'tasks-ui').wait();
         this.tasks = result.tasks;
       } else {
-        const result = await this.bus.send('tasks:list', { status: this.filter }).wait();
+        const result = await this.bus.send('tasks:list', { status: this.filter }, 'tasks-ui').wait();
         this.tasks = result.tasks;
         this.stats = result.stats;
       }
@@ -60,7 +60,7 @@ export class AdiTasksElement extends LitElement {
   private async loadDetail(task: Task): Promise<void> {
     this.loading = true;
     try {
-      const result = await this.bus.send('tasks:get', { task_id: task.id, cocoonId: task.cocoonId }).wait();
+      const result = await this.bus.send('tasks:get', { task_id: task.id, cocoonId: task.cocoonId }, 'tasks-ui').wait();
       this.selectedTask = result.task;
       this.view = 'detail';
     } catch (err) {
@@ -72,7 +72,7 @@ export class AdiTasksElement extends LitElement {
 
   private async handleStatusChange(task: Task, status: TaskStatus): Promise<void> {
     try {
-      const result = await this.bus.send('tasks:update', { task_id: task.id, cocoonId: task.cocoonId, status }).wait();
+      const result = await this.bus.send('tasks:update', { task_id: task.id, cocoonId: task.cocoonId, status }, 'tasks-ui').wait();
       this.tasks = this.tasks.map(t =>
         t.id === task.id && t.cocoonId === task.cocoonId ? result.task : t
       );
@@ -88,7 +88,7 @@ export class AdiTasksElement extends LitElement {
     if (!this.confirmingDelete) { this.confirmingDelete = true; return; }
     this.submitting = true;
     try {
-      await this.bus.send('tasks:delete', { task_id: task.id, cocoonId: task.cocoonId }).wait();
+      await this.bus.send('tasks:delete', { task_id: task.id, cocoonId: task.cocoonId }, 'tasks-ui').wait();
       this.tasks = this.tasks.filter(t => !(t.id === task.id && t.cocoonId === task.cocoonId));
       this.view = 'list';
       this.confirmingDelete = false;
@@ -103,7 +103,7 @@ export class AdiTasksElement extends LitElement {
   private async handleCreate(data: { title: string; description?: string; cocoonId: string }): Promise<void> {
     this.submitting = true;
     try {
-      const result = await this.bus.send('tasks:create', data).wait();
+      const result = await this.bus.send('tasks:create', data, 'tasks-ui').wait();
       this.tasks = [...this.tasks, result.task];
       this.view = 'list';
     } catch (err) {

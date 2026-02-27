@@ -37,31 +37,43 @@ export interface SendHandle<T> {
   handle(cb: (reply: T) => void): () => void;
 }
 
+/** Metadata passed to middleware callbacks. */
+export interface EventMeta {
+  /** Identifier of the component that emitted the event. */
+  producer: string;
+  /** Identifiers of all currently-registered consumers for this event. */
+  consumers: string[];
+}
+
 /**
  * Middleware hook pair registered via `bus.use()`.
- * `before` fires before handlers are called; `after` fires after all handlers finish.
- * Both are optional — register only the side you need.
+ * `before` fires before handlers; `after` fires after all handlers finish;
+ * `ignored` fires instead of `after` when no handlers exist.
+ * All are optional — register only the sides you need.
  */
 export interface BusMiddleware {
-  before?(event: string, payload: unknown): void;
-  after?(event: string, payload: unknown): void;
+  before?(event: string, payload: unknown, meta: EventMeta): void;
+  after?(event: string, payload: unknown, meta: EventMeta): void;
+  ignored?(event: string, payload: unknown, meta: EventMeta): void;
 }
 
 /** The strictly-typed event bus. */
 export interface EventBus {
   /** Broadcast to all subscribers. Queued FIFO if no subscribers yet. */
-  emit<K extends keyof EventRegistry>(event: K, payload: EventRegistry[K]): void;
+  emit<K extends keyof EventRegistry>(event: K, payload: EventRegistry[K], producer: string): void;
 
   /** Subscribe. Returns unsubscribe fn. Flushes FIFO queue on first subscribe. */
   on<K extends keyof EventRegistry>(
     event: K,
-    handler: EventHandler<K>
+    handler: EventHandler<K>,
+    consumer: string,
   ): () => void;
 
   /** Subscribe once — auto-removed after first delivery. */
   once<K extends keyof EventRegistry>(
     event: K,
-    handler: EventHandler<K>
+    handler: EventHandler<K>,
+    consumer: string,
   ): () => void;
 
   /**
@@ -70,12 +82,14 @@ export interface EventBus {
    */
   send<K extends ReplyableEvent>(
     event: K,
-    payload: EventRegistry[K]
+    payload: EventRegistry[K],
+    producer: string,
   ): SendHandle<EventRegistry[`${K}:ok`]>;
 
   /**
    * Register pre/post-emit middleware.
-   * `before` runs before handlers; `after` runs after all handlers finish.
+   * `before` runs before handlers; `after` runs after all handlers finish;
+   * `ignored` runs instead of `after` when no handlers exist.
    * Returns an unsubscribe function that removes the middleware.
    */
   use(middleware: BusMiddleware): () => void;

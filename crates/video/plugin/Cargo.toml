@@ -1,0 +1,43 @@
+[package]
+name = "video-plugin"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "ADI Video plugin providing CLI commands for video rendering"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lib-plugin-prelude = { path = "../../lib/lib-plugin-prelude" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["sync"] }
+reqwest = { version = "0.12", features = ["json"] }
+uuid = { version = "1", features = ["v4"] }
+
+[package.metadata.plugin]
+id = "adi.video"
+name = "ADI Video"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "2.0.0"
+
+[package.metadata.plugin.cli]
+command = "video"
+description = "Programmatic video rendering with FFmpeg"
+aliases = ["vid"]
+
+[[package.metadata.plugin.provides]]
+id = "adi.video.cli"
+version = "1.0.0"
+description = "CLI commands for video rendering"
+
+[package.metadata.plugin.web_ui]
+entry = "web.js"
+sandbox = false
+
+[package.metadata.plugin.tags]
+categories = ["video", "rendering", "media"]

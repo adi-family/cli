@@ -31,7 +31,7 @@ export class AppPluginsPage extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.#load();
-    this.unsub = window.sdk.bus.on('loading-finished', () => this.#load());
+    this.unsub = window.sdk.bus.on('loading-finished', () => this.#load(), 'plugins-page');
   }
 
   override disconnectedCallback(): void {
@@ -156,12 +156,12 @@ export class PluginsPlugin extends AdiPlugin {
       customElements.define('app-plugins-page', AppPluginsPage);
     }
 
-    this.bus.emit('route:register', { path: '/plugins', element: 'app-plugins-page', label: 'Plugins' });
-    this.bus.send('nav:add', { id: 'app.plugins', label: 'Plugins', path: '/plugins' }).handle(() => {});
+    this.bus.emit('route:register', { path: '/plugins', element: 'app-plugins-page', label: 'Plugins' }, 'plugins-page');
+    this.bus.send('nav:add', { id: 'app.plugins', label: 'Plugins', path: '/plugins' }, 'plugins-page').handle(() => {});
 
-    this.bus.emit('command:register', { id: 'app:plugins', label: 'Open Plugins page', shortcut: '⌘⇧P' });
+    this.bus.emit('command:register', { id: 'app:plugins', label: 'Open Plugins page', shortcut: '⌘⇧P' }, 'plugins-page');
     this.bus.on('command:execute', ({ id }) => {
-      if (id === 'app:plugins') this.bus.emit('router:navigate', { path: '/plugins' });
-    });
+      if (id === 'app:plugins') this.bus.emit('router:navigate', { path: '/plugins' }, 'plugins-page');
+    }, 'plugins-page');
   }
 }

@@ -78,7 +78,7 @@ export async function loadPlugins(
   void checkForUpdates(bus, pluginDescriptors);
 
   // Phase 5: Signal completion.
-  bus.emit('loading-finished', { loaded, failed, timedOut });
+  bus.emit('loading-finished', { loaded, failed, timedOut }, 'plugin-registry');
 }
 
 export interface UpgradePluginOptions {
@@ -102,7 +102,7 @@ export async function upgradePlugin(
   const existing = registry.get(id);
   const fromVersion = existing?.version ?? 'unknown';
 
-  bus.emit('plugin:upgrading', { pluginId: id, fromVersion, toVersion: installedVersion });
+  bus.emit('plugin:upgrading', { pluginId: id, fromVersion, toVersion: installedVersion }, 'plugin-registry');
 
   try {
     // Tear down old plugin.
@@ -128,12 +128,12 @@ export async function upgradePlugin(
     }
 
     descriptors.set(id, descriptor);
-    bus.emit('plugin:upgraded', { pluginId: id, fromVersion, toVersion: installedVersion });
+    bus.emit('plugin:upgraded', { pluginId: id, fromVersion, toVersion: installedVersion }, 'plugin-registry');
   } catch (err) {
     bus.emit('plugin:upgrade-failed', {
       pluginId: id,
       reason: err instanceof Error ? err.message : String(err),
-    });
+    }, 'plugin-registry');
   }
 }
 
@@ -170,7 +170,7 @@ export async function registerPluginSW(
                 currentVersion: descriptor.installedVersion,
                 newVersion: latest.version,
                 newUrl: data.url,
-              });
+              }, 'plugin-sw');
             })
             .catch(() => null);
         })
@@ -196,7 +196,7 @@ async function checkForUpdates(
         currentVersion: installedVersion,
         newVersion: result.version,
         newUrl,
-      });
+      }, 'plugin-registry');
     })
   );
 }

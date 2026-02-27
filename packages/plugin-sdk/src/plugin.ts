@@ -37,7 +37,7 @@ export abstract class AdiPlugin {
   async _init(bus: EventBus): Promise<void> {
     this.#bus = bus;
     await this.onRegister?.();
-    bus.emit('register-finished', { pluginId: this.id });
+    bus.emit('register-finished', { pluginId: this.id }, `plugin:${this.id}`);
   }
 
   /** @internal SDK use only. */

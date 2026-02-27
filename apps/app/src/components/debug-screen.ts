@@ -48,7 +48,7 @@ export class AppDebugScreen extends LitElement {
   @state() private allPlugins: Array<{ id: string; installedVersion: string; pluginTypes?: string[] }> = [];
   @state() private enabledWebIds: Set<string> = getEnabledWebPluginIds() ?? new Set();
   @state() private pluginsDirty = false;
-  @state() private serverStates: Map<string, { wsState: WsState; cocoons: CocoonInfo[] }> = new Map();
+  @state() private serverStates: Map<string, { wsState: WsState; cocoons: CocoonInfo[]; authError: { reason: string; kind?: string; domain?: string } | null }> = new Map();
   @state() private rtcSessions: Map<string, SessionInfo> = new Map();
   @state() private newServerUrlInput = '';
   @state() private newRegistryUrlInput = '';
@@ -75,13 +75,13 @@ export class AppDebugScreen extends LitElement {
     if ((window as { sdk?: unknown }).sdk) {
       this.#subscribeEventLog();
       this.#subscribeSignaling();
-      this.loadingUnsub = window.sdk.bus.on('loading-finished', () => this.#loadDebugData());
+      this.loadingUnsub = window.sdk.bus.on('loading-finished', () => this.#loadDebugData(), 'debug-screen');
     } else {
       window.addEventListener('sdk-ready', () => {
         this.#loadDebugData();
         this.#subscribeEventLog();
         this.#subscribeSignaling();
-        this.loadingUnsub = window.sdk.bus.on('loading-finished', () => this.#loadDebugData());
+        this.loadingUnsub = window.sdk.bus.on('loading-finished', () => this.#loadDebugData(), 'debug-screen');
       }, { once: true });
     }
   }
@@ -138,8 +138,9 @@ export class AppDebugScreen extends LitElement {
   #subscribeEventLog(): void {
     const bus = window.sdk.bus as EventBus;
     this.eventUnsub = bus.use({
-      before: (event, payload) => this.#pushEvent('before', event, payload),
-      after:  (event, payload) => this.#pushEvent('after',  event, payload),
+      before:  (event, payload) => this.#pushEvent('before', event, payload),
+      after:   (event, payload) => this.#pushEvent('after', event, payload),
+      ignored: (event, payload) => this.#pushEvent('after', event, payload),
     });
   }
 
@@ -159,7 +160,7 @@ export class AppDebugScreen extends LitElement {
     if (hub) {
       const next = new Map(this.serverStates);
       for (const url of hub.managers.keys()) {
-        if (!next.has(url)) next.set(url, { wsState: 'disconnected', cocoons: [] });
+        if (!next.has(url)) next.set(url, { wsState: 'disconnected', cocoons: [], authError: null });
       }
       this.serverStates = next;
     }
@@ -167,16 +168,30 @@ export class AppDebugScreen extends LitElement {
     this.signalingUnsubs.push(
       bus.on('signaling:state', ({ url, state }) => {
         const next = new Map(this.serverStates);
-        const entry = next.get(url) ?? { wsState: 'disconnected', cocoons: [] };
+        const entry = next.get(url) ?? { wsState: 'disconnected', cocoons: [], authError: null };
         next.set(url, { ...entry, wsState: state });
         this.serverStates = next;
-      }),
+      }, 'debug-screen'),
       bus.on('signaling:cocoons', ({ url, cocoons }) => {
         const next = new Map(this.serverStates);
-        const entry = next.get(url) ?? { wsState: 'disconnected', cocoons: [] };
+        const entry = next.get(url) ?? { wsState: 'disconnected', cocoons: [], authError: null };
         next.set(url, { ...entry, cocoons });
         this.serverStates = next;
-      }),
+      }, 'debug-screen'),
+      bus.on('signaling:auth-error', ({ url, reason, authKind, authDomain }) => {
+        const next = new Map(this.serverStates);
+        const entry = next.get(url) ?? { wsState: 'disconnected', cocoons: [], authError: null };
+        next.set(url, { ...entry, authError: { reason, kind: authKind, domain: authDomain } });
+        this.serverStates = next;
+      }, 'debug-screen'),
+      bus.on('signaling:auth-ok', ({ url }) => {
+        const next = new Map(this.serverStates);
+        const entry = next.get(url);
+        if (entry?.authError) {
+          next.set(url, { ...entry, authError: null });
+          this.serverStates = next;
+        }
+      }, 'debug-screen'),
       bus.on('signaling:session-state', ({ deviceId, state, sessionId }) => {
         const next = new Map(this.rtcSessions);
         if (state === 'idle') {
@@ -185,12 +200,12 @@ export class AppDebugScreen extends LitElement {
           next.set(deviceId, { deviceId, state, sessionId });
         }
         this.rtcSessions = next;
-      }),
+      }, 'debug-screen'),
       bus.on('signaling:spawn-result', ({ success, error }) => {
         this.spawnStatus = { spawning: false, error: success ? null : (error ?? 'Unknown error') };
-      }),
-      bus.on('connection:added', () => this.requestUpdate()),
-      bus.on('connection:removed', () => this.requestUpdate()),
+      }, 'debug-screen'),
+      bus.on('connection:added', () => this.requestUpdate(), 'debug-screen'),
+      bus.on('connection:removed', () => this.requestUpdate(), 'debug-screen'),
     );
   }
 
@@ -470,7 +485,7 @@ export class AppDebugScreen extends LitElement {
     hub.addServer(url);
     // Initialize local state for new server
     const next = new Map(this.serverStates);
-    if (!next.has(url)) next.set(url, { wsState: 'connecting', cocoons: [] });
+    if (!next.has(url)) next.set(url, { wsState: 'connecting', cocoons: [], authError: null });
     this.serverStates = next;
     this.newServerUrlInput = '';
   }
@@ -561,6 +576,24 @@ export class AppDebugScreen extends LitElement {
             @click=${() => this.#spawnCocoon()}
           >${this.spawnStatus.spawning ? 'Spawning…' : 'Add Cocoon'}</button>
         </div>
+
+        <!-- Auth error banners -->
+        ${[...this.serverStates.entries()]
+          .filter(([, s]) => s.authError)
+          .map(([url, s]) => html`
+            <div class="px-3 py-2 bg-red-400/10 border border-red-400/30 rounded text-red-400 text-xs space-y-1">
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v.01M12 9v3m0 8a9 9 0 100-18 9 9 0 000 18z"/></svg>
+                <span class="flex-1">Authentication required for <code class="font-mono">${url}</code>: ${s.authError!.reason}</span>
+              </div>
+              ${s.authError!.kind || s.authError!.domain ? html`
+                <div class="flex items-center gap-3 ml-6 text-text-muted">
+                  ${s.authError!.kind ? html`<span>Auth: <code class="text-text font-mono">${s.authError!.kind}</code></span>` : nothing}
+                  ${s.authError!.domain ? html`<span>Domain: <a href="${s.authError!.domain}" target="_blank" rel="noopener" class="text-accent hover:underline font-mono">${s.authError!.domain}</a></span>` : nothing}
+                </div>
+              ` : nothing}
+            </div>
+          `)}
 
         <!-- Spawn error banner -->
         ${this.spawnStatus.error ? html`
@@ -694,6 +727,22 @@ export class AppDebugScreen extends LitElement {
                     </div>
                   ` : nothing}
                 </div>
+
+                <!-- Auth error banner -->
+                ${serverState.authError ? html`
+                  <div class="px-3 py-2 bg-red-400/10 border border-red-400/30 rounded text-red-400 text-xs space-y-1">
+                    <div class="flex items-center gap-2">
+                      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v.01M12 9v3m0 8a9 9 0 100-18 9 9 0 000 18z"/></svg>
+                      <span>Authentication required: ${serverState.authError.reason}</span>
+                    </div>
+                    ${serverState.authError.kind || serverState.authError.domain ? html`
+                      <div class="flex items-center gap-3 ml-6 text-text-muted">
+                        ${serverState.authError.kind ? html`<span>Auth: <code class="text-text font-mono">${serverState.authError.kind}</code></span>` : nothing}
+                        ${serverState.authError.domain ? html`<span>Domain: <a href="${serverState.authError.domain}" target="_blank" rel="noopener" class="text-accent hover:underline font-mono">${serverState.authError.domain}</a></span>` : nothing}
+                      </div>
+                    ` : nothing}
+                  </div>
+                ` : nothing}
 
                 <!-- Cocoons for this server -->
                 ${serverState.cocoons.length > 0 ? html`

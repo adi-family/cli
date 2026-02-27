@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "../../crates/tasks/web/src"]
+  "include": ["src", "../../crates/tasks/web/src", "../../crates/video/web/src"]
 }

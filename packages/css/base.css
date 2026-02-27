@@ -16,6 +16,14 @@ code, pre {
   font-family: var(--adi-font-mono-body);
 }
 
+/* ─── Typography utilities ─── */
+/* Replacements for Tailwind font-weight/tracking utilities */
+/* that generate @property warnings in browsers. */
+
+.fw-medium { font-weight: 500; }
+.fw-bold   { font-weight: 700; }
+.tk-tight  { letter-spacing: -0.025em; }
+
 /* ─── Grain overlay (ADID spec) ─── */
 
 body::after {

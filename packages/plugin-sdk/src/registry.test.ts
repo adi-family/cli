@@ -43,7 +43,7 @@ describe('registerPlugin', () => {
     registerPlugin(plugin);
     const bus = createEventBus();
     const handler = vi.fn();
-    bus.on('loading-finished', handler);
+    bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 1000 });
     expect(handler).toHaveBeenCalledWith(
       expect.objectContaining({ loaded: ['tasks'] })
@@ -73,7 +73,7 @@ describe('loadPlugins — ordering', () => {
     registerPlugin(makePlugin('b'));
     const bus = createEventBus();
     const handler = vi.fn();
-    bus.on('loading-finished', handler);
+    bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 1000 });
     expect(handler).toHaveBeenCalledWith(
       expect.objectContaining({ loaded: expect.arrayContaining(['a', 'b']) })
@@ -86,7 +86,7 @@ describe('loadPlugins — timeout', () => {
     registerPlugin(makePlugin('hang', '1.0.0', [], () => new Promise(() => {})));
     const bus = createEventBus();
     const handler = vi.fn();
-    bus.on('loading-finished', handler);
+    bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 50 });
     expect(handler).toHaveBeenCalledWith(
       expect.objectContaining({ timedOut: ['hang'], loaded: [] })
@@ -100,7 +100,7 @@ describe('loadPlugins — cycle detection', () => {
     registerPlugin(makePlugin('b', '1.0.0', ['a']));
     const bus = createEventBus();
     const handler = vi.fn();
-    bus.on('loading-finished', handler);
+    bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 1000 });
     const { failed } = handler.mock.calls[0][0] as { failed: string[] };
     expect(failed).toEqual(expect.arrayContaining(['a', 'b']));

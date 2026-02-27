@@ -14,7 +14,7 @@ use tracing::{debug, info, trace};
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Maximum time to wait for daemon to start
-const DAEMON_START_TIMEOUT: Duration = Duration::from_secs(5);
+const DAEMON_START_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// Interval for checking daemon startup
 const DAEMON_START_CHECK_INTERVAL: Duration = Duration::from_millis(100);

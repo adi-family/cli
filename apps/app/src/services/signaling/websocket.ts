@@ -70,7 +70,6 @@ export const createWebSocket = (url: string, handlers: WsHandlers): WsControl =>
         console.debug('[signaling] connected');
         setState('connected');
         connectedAt = Date.now();
-        attempts = 0;
       };
 
       ws.onmessage = (event) => {

@@ -1,12 +1,19 @@
 /* ─── Modal / overlay ─── */
 
 .overlay-backdrop {
+  display: none;
   position: fixed;
   inset: 0;
   z-index: 100;
+  align-items: center;
+  justify-content: center;
   background: color-mix(in srgb, var(--adi-bg) 60%, transparent);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+}
+
+.overlay-backdrop.is-open {
+  display: flex;
 }
 
 .overlay-panel {

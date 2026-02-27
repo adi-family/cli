@@ -1,0 +1,19 @@
+{
+  "name": "@adi/video-web-plugin",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "dev": "vite build --watch"
+  },
+  "dependencies": {
+    "@adi-family/sdk-plugin": "^0.2.0",
+    "@adi-family/video-sdk": "file:../../../packages/video-sdk",
+    "lit": "^3.3.1"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^6.1.0"
+  }
+}

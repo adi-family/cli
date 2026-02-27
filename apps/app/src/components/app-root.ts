@@ -39,56 +39,58 @@ export class AppRoot extends LitElement {
     const bus = window.sdk.bus as EventBus;
 
     bus.use({
-      before: (event, payload) =>
-        console.debug(`%c[event:before] ${event}`, 'color: #7c9ef8; font-weight: bold', payload),
-      after: (event, payload) =>
-        console.debug(`%c[event:after]  ${event}`, 'color: #a78bfa; font-weight: bold', payload),
+      before: (event, payload, meta) =>
+        console.debug(`%c[event:before] ${event}`, 'color: #7c9ef8; font-weight: bold', payload, meta),
+      after: (event, payload, meta) =>
+        console.debug(`%c[event:after]  ${event}`, 'color: #a78bfa; font-weight: bold', payload, meta),
+      ignored: (event, payload, meta) =>
+        console.debug(`%c[event:ignored] ${event}`, 'color: #f87171; font-weight: bold', payload, meta),
     });
 
     bus.on('nav:add', ({ id, label, path, icon }) => {
       if (!this.navItems.find(n => n.id === id)) {
         this.navItems = [...this.navItems, { id, label, path, icon }];
       }
-    });
+    }, 'app-root');
 
     bus.on('route:register', ({ path, element, label }) => {
       if (!this.routes.find(r => r.path === path)) {
         this.routes = [...this.routes, { path, element, label }];
         this.requestUpdate();
       }
-    });
+    }, 'app-root');
 
     bus.on('router:navigate', ({ path, replace }) => {
       if (replace) history.replaceState(null, '', path);
       else history.pushState(null, '', path);
       this.currentPath = path;
-      bus.emit('router:changed', { path, params: {} });
-    });
+      bus.emit('router:changed', { path, params: {} }, 'app-root');
+    }, 'app-root');
 
     bus.on('command:register', ({ id, label, shortcut }) => {
       if (!this.commands.find(c => c.id === id)) {
         this.commands = [...this.commands, { id, label, shortcut }];
       }
-    });
+    }, 'app-root');
 
     // Defer built-in command registration by one microtask so the command-palette
     // (rendered in app-root's first render, which is also a microtask) has time
     // to connect and subscribe to command:register before we emit.
     queueMicrotask(() => {
-      bus.emit('command:register', { id: 'app:debug', label: 'Open Debug Screen', shortcut: '⌘⇧D' });
-      bus.emit('command:register', { id: 'app:ops-log', label: 'Toggle Operations Log', shortcut: '⌘⇧O' });
+      bus.emit('command:register', { id: 'app:debug', label: 'Open Debug Screen', shortcut: '⌘⇧D' }, 'app-root');
+      bus.emit('command:register', { id: 'app:ops-log', label: 'Toggle Operations Log', shortcut: '⌘⇧O' }, 'app-root');
     });
 
     bus.on('command:execute', ({ id }) => {
       if (id === 'app:debug') this.#navigate(DEBUG_ROUTE);
-    });
+    }, 'app-root');
   }
 
   #navigate(path: string): void {
     history.pushState(null, '', path);
     this.currentPath = path;
     if ((window as { sdk?: unknown }).sdk) {
-      window.sdk.bus.emit('router:changed', { path, params: {} });
+      window.sdk.bus.emit('router:changed', { path, params: {} }, 'app-root');
     }
   }
 

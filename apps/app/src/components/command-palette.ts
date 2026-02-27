@@ -48,13 +48,13 @@ export class AppCommandPalette extends LitElement {
       if (!this.commands.find(c => c.id === id)) {
         this.commands = [...this.commands, { id, label, shortcut }];
       }
-    });
+    }, 'command-palette');
 
     bus.on('command-palette:open', ({ query }) => {
       this.open = true;
       this.query = query ?? '';
       this.selectedIndex = 0;
-    });
+    }, 'command-palette');
   }
 
   readonly #onGlobalKeyDown = (e: KeyboardEvent): void => {
@@ -103,7 +103,7 @@ export class AppCommandPalette extends LitElement {
   #execute(cmd: Command): void {
     this.open = false;
     if ((window as { sdk?: unknown }).sdk) {
-      window.sdk.bus.emit('command:execute', { id: cmd.id });
+      window.sdk.bus.emit('command:execute', { id: cmd.id }, 'command-palette');
     }
   }
 

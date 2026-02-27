@@ -3,6 +3,7 @@ import type {
   EventRegistry,
   EventBus,
   EventHandler,
+  EventMeta,
   BusMiddleware,
   ReplyableEvent,
   SendHandle,
@@ -11,7 +12,7 @@ import type {
 import { generateCid } from './cid.js';
 
 interface ChannelState {
-  handlers: Set<EventHandler<never>>;
+  handlers: Map<EventHandler<never>, string>; // handler → consumer name
   queue: unknown[];
 }
 
@@ -22,34 +23,41 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
 
   function getChannel(event: string): ChannelState {
     if (!channels.has(event)) {
-      channels.set(event, { handlers: new Set(), queue: [] });
+      channels.set(event, { handlers: new Map(), queue: [] });
     }
     return channels.get(event)!;
   }
 
   function emit<K extends keyof EventRegistry>(
     event: K,
-    payload: EventRegistry[K]
+    payload: EventRegistry[K],
+    producer: string,
   ): void {
     const name = event as string;
-    for (const mw of middlewares) mw.before?.(name, payload);
     const ch = getChannel(name);
+    const consumers = [...ch.handlers.values()];
+    const meta: EventMeta = { producer, consumers };
+
+    for (const mw of middlewares) mw.before?.(name, payload, meta);
+
     if (ch.handlers.size === 0) {
       ch.queue.push(payload);
+      for (const mw of middlewares) mw.ignored?.(name, payload, meta);
     } else {
-      for (const h of ch.handlers) {
+      for (const [h] of ch.handlers) {
         (h as EventHandler<K>)(payload);
       }
+      for (const mw of middlewares) mw.after?.(name, payload, meta);
     }
-    for (const mw of middlewares) mw.after?.(name, payload);
   }
 
   function on<K extends keyof EventRegistry>(
     event: K,
-    handler: EventHandler<K>
+    handler: EventHandler<K>,
+    consumer: string,
   ): () => void {
     const ch = getChannel(event as string);
-    ch.handlers.add(handler as EventHandler<never>);
+    ch.handlers.set(handler as EventHandler<never>, consumer);
     if (ch.queue.length > 0) {
       const flushed = ch.queue.splice(0);
       for (const payload of flushed) {
@@ -63,7 +71,8 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
 
   function once<K extends keyof EventRegistry>(
     event: K,
-    handler: EventHandler<K>
+    handler: EventHandler<K>,
+    consumer: string,
   ): () => void {
     let fired = false;
     let unsub: (() => void) | undefined;
@@ -73,7 +82,7 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
       handler(payload);
       unsub?.();
     };
-    unsub = on(event, wrapper);
+    unsub = on(event, wrapper, consumer);
     // If the queue was flushed synchronously, wrapper already fired but
     // couldn't unsub (unsub was undefined at that moment). Clean up now.
     if (fired) {
@@ -85,7 +94,8 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
 
   function send<K extends ReplyableEvent>(
     event: K,
-    payload: EventRegistry[K]
+    payload: EventRegistry[K],
+    producer: string,
   ): SendHandle<EventRegistry[`${K}:ok`]> {
     const cid = generateCid();
     const payloadWithCid = { ...(payload as object), _cid: cid } as unknown as EventRegistry[K];
@@ -93,7 +103,7 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
 
     // Emit immediately — handler starts working before .wait()/.handle() is called.
     // FIFO queue buffers any :ok reply that arrives before the caller subscribes.
-    emit(event, payloadWithCid);
+    emit(event, payloadWithCid, producer);
 
     return {
       wait(): Promise<EventRegistry[`${K}:ok`]> {
@@ -113,7 +123,7 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
               unsubRef.fn?.();
               resolve(typed);
             }
-          });
+          }, `${producer}:reply`);
           unsubRef.fn = unsub;
         });
       },
@@ -128,7 +138,7 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
             unsubRef.fn?.();
             cb(typed);
           }
-        });
+        }, `${producer}:reply`);
         unsubRef.fn = unsub;
         if (fired) { unsub(); return () => {}; }
         return unsub;

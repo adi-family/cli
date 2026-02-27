@@ -1,6 +1,49 @@
 {
   "version": 1,
-  "updatedAt": 0,
+  "updatedAt": 1772164357,
   "packages": [],
-  "plugins": []
+  "plugins": [
+    {
+      "id": "adi.auth",
+      "name": "Auth",
+      "description": "ADI plugin: Auth HTTP server",
+      "pluginTypes": [
+        "extension",
+        "web"
+      ],
+      "packageId": null,
+      "latestVersion": "0.1.0",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    },
+    {
+      "id": "adi.knowledgebase",
+      "name": "ADI Knowledgebase",
+      "description": "ADI Knowledgebase plugin providing tools for knowledge graph and embeddings",
+      "pluginTypes": [
+        "extension",
+        "web"
+      ],
+      "packageId": null,
+      "latestVersion": "0.8.4",
+      "downloads": 0,
+      "author": "",
+      "tags": []
+    },
+    {
+      "id": "adi.video",
+      "name": "ADI Video",
+      "description": "ADI Video plugin providing CLI commands for video rendering",
+      "pluginTypes": [
+        "extension",
+        "web"
+      ],
+      "packageId": null,
+      "latestVersion": "0.1.0",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    }
+  ]
 }

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ t(key="page-title") }} — {{ t(key="site-name") }}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@100..800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/lucide@latest" defer></script>
+</head>
+<body class="min-h-screen flex flex-col bg-bg text-text font-body">
+
+  <nav class="flex items-center g-15 p-v-1 p-h-2 border-b border-border bg-surface">
+    <a href="/" class="font-heading fw-bold text-lg tk-tight text-accent">
+      {{ t(key="site-name") }}
+    </a>
+
+    <div class="ml-auto">
+      <button onclick="openLangModal()" class="btn-ghost flex items-center g-025 text-text-muted text-sm p-v-025 p-h-05">
+        <i data-lucide="globe" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </nav>
+
+  <main class="flex-1">
+    {% block content %}{% endblock content %}
+  </main>
+
+  <footer class="border-t border-border text-center p-v-2 p-h-2"></footer>
+
+  <!-- Language selector modal -->
+  <div id="lang-modal" class="overlay-backdrop" onclick="if(event.target===this)closeLangModal()">
+    <div class="overlay-panel p-v-15 p-h-15 w-full max-w-[420px]">
+      <div class="flex items-center justify-between mb-4">
+        <span class="font-heading fw-bold text-lg">Language</span>
+        <button onclick="closeLangModal()" class="btn-ghost text-text-muted p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="grid grid-cols-2 g-025">
+        {% for l in supported_langs %}
+        <a href="{% if l.code == 'en' %}/{% else %}/{{ l.code }}/{% endif %}"
+           class="dropdown-item rounded-lg no-underline{% if l.is_active %} active bg-surface-alt text-text{% endif %}">
+          <span class="flex flex-col gap-0.5">
+            <span class="fw-medium{% if l.is_active %} text-accent{% endif %}">{{ l.native_name }}</span>
+            {% if l.native_name != l.english_name %}
+            <span class="text-sm text-text-muted">{{ l.english_name }}</span>
+            {% endif %}
+          </span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/main.js"></script>
+</body>
+</html>

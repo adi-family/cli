@@ -54,7 +54,7 @@ const saveUrls = (urls: string[]): void => {
 export const createSignalingHub = (
   connections: Map<string, Connection>,
   bus: EventBus,
-  getToken: (authDomain: string) => Promise<string | null>,
+  getToken: (authDomain: string, sourceUrl?: string) => Promise<string | null>,
 ): SignalingHub => {
   const managers = new Map<string, SignalingManager>();
 
@@ -96,13 +96,43 @@ export const createSignalingHub = (
 export const initSignalingHub = (
   connections: Map<string, Connection>,
   bus: EventBus,
-  getToken: (authDomain: string) => Promise<string | null>,
+  getToken: (authDomain: string, sourceUrl?: string) => Promise<string | null>,
 ): SignalingHub => {
   const existing = (globalThis as Record<string, unknown>)[GLOBAL_KEY] as SignalingHub | undefined;
   if (existing) return existing;
 
   const hub = createSignalingHub(connections, bus, getToken);
   (globalThis as Record<string, unknown>)[GLOBAL_KEY] = hub;
+
+  // Register renderer for auth-required actions with anonymous option
+  (globalThis as Record<string, unknown>)['__adiAuthAnonymous'] = (signalingUrl: string, authDomain: string) => {
+    bus.emit('signaling:auth-anonymous', { signalingUrl, authDomain }, 'signaling');
+  };
+
+  bus.emit('actions:register-renderer', {
+    plugin: 'adi.auth',
+    kind: 'auth-required',
+    render: (data: Record<string, unknown>) => {
+      const options = data.authOptions as string[] | undefined;
+      const signalingUrl = data.url as string;
+      const authDomain = data.authDomain as string;
+      const escaped = (s: string) => s.replace(/'/g, "\\'");
+
+      const anonBtn = options?.includes('anonymous')
+        ? `<button
+             type="button"
+             class="mt-2 px-3 py-1.5 text-xs font-medium rounded bg-brand text-white hover:bg-brand/80 transition-colors"
+             onclick="globalThis.__adiAuthAnonymous('${escaped(signalingUrl)}', '${escaped(authDomain)}')"
+           >Continue as Guest</button>`
+        : '';
+
+      return `<div class="text-xs">
+        <div class="font-medium text-text">Authentication Required</div>
+        <div class="text-text-muted mt-1">${escaped(signalingUrl)}</div>
+        ${anonBtn}
+      </div>`;
+    },
+  }, 'signaling');
 
   return hub;
 };

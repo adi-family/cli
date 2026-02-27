@@ -93,7 +93,7 @@ services:
     healthcheck:
       type: cmd
       cmd:
-        command: pg_isready -U adi
+        command: pg_isready -U adi -h localhost -p 8027
         interval: 5s
         timeout: 5s
         retries: 5
@@ -129,7 +129,7 @@ services:
     healthcheck:
       type: cmd
       cmd:
-        command: pg_isready -U adi
+        command: pg_isready -U adi -h localhost -p 8028
         interval: 5s
         timeout: 5s
         retries: 5
@@ -210,6 +210,7 @@ services:
       static:
         PORT: "8011"
         HIVE_SECRETS: ${env.HIVE_SECRETS:-}
+        AUTH_DOMAIN: ${env.AUTH_DOMAIN:-http://adi.test/api/auth}
     restart: on-failure
     # Expose signaling URL for other services
     expose:
@@ -223,6 +224,8 @@ services:
       pre-up:
         - type: script
           run: .adi/workflows/patch.sh plugin adi.auth
+        - type: script
+          run: cargo run -p auth-cli --release -- run
     runner:
       type: script
       script:
@@ -301,8 +304,7 @@ services:
     runner:
       type: script
       script:
-        run: npm run dev
-        working_dir: apps/public
+        run: cargo run -p website -- dev
     rollout:
       type: recreate
       recreate:
@@ -312,13 +314,13 @@ services:
       - host: adi.test
         path: /
     healthcheck:
-      type: tcp
-      tcp:
+      type: http
+      http:
         port: "{{runtime.port.http}}"
+        path: /
     environment:
       static:
         PORT: "8048"
-        NEXT_PUBLIC_SITE_URL: "http://adi.test"
     restart: on-failure
 
   app:

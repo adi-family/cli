@@ -27,6 +27,24 @@ pub use serde;
 pub use serde_json;
 pub use uuid;
 
+/// Whether the server requires authentication before allowing operations.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AuthRequirement {
+    Required,
+    Optional,
+}
+
+/// Authentication methods the server accepts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AuthOption {
+    /// Full identity verification via `auth_domain` token exchange.
+    Verified,
+    /// No credentials needed; server assigns a guest identity.
+    Anonymous,
+}
+
 /// Signaling server messages for device pairing and relay
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -36,6 +54,8 @@ pub enum SignalingMessage {
     Hello {
         auth_kind: String,
         auth_domain: String,
+        auth_requirement: AuthRequirement,
+        auth_options: Vec<AuthOption>,
     },
 
     /// Client → server. Presents access token obtained from `auth_domain`.

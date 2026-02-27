@@ -4,6 +4,7 @@ import './events.js';
 export type {
   EventRegistry,
   EventBus,
+  EventMeta,
   BusMiddleware,
   ReplyableEvent,
   EventHandler,

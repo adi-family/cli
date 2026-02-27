@@ -55,7 +55,6 @@ members = [
     # Knowledgebase components
     "crates/knowledgebase/core",
     "crates/knowledgebase/cli",
-    "crates/knowledgebase/http",
 
     # Agent Loop components
     "crates/agent-loop/core",
@@ -217,6 +216,11 @@ members = [
     "crates/executor/core",
     "crates/executor/http",
 
+    # Video
+    "crates/video/core",
+    "crates/video/http",
+    "crates/video/plugin",
+
     # Plugin Registry
     "crates/registry/core",
 
@@ -239,6 +243,8 @@ members = [
     "crates/lib/lib-flowmap-core",
     "crates/lib/lib-flowmap-parser",
 
+    # Website
+    "crates/website",
 ]
 
 # FlowMap is standalone (not in workspace) - build with:
@@ -266,6 +272,7 @@ tools-core = { path = "crates/tools/core" }
 balance-core = { path = "crates/balance/core" }
 credentials-core = { path = "crates/credentials/core" }
 executor-core = { path = "crates/executor/core" }
+video-core = { path = "crates/video/core" }
 plugin-registry-core = { path = "crates/registry/core" }
 signaling-core = { path = "crates/signaling/core" }
 

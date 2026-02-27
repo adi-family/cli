@@ -13,7 +13,7 @@ Components with plugin for `adi` CLI integration.
 | `flags` | core,plugin | Core library for ADI file flag tracking |
 | `hive` | core,http,plugin | Hive core library - cocoon container orchestration business logic |
 | `indexer` | cli,core,http,plugin | Core indexer library for ADI - parsing, storage, search |
-| `knowledgebase` | cli,core,http,plugin | Core knowledgebase library for ADI - graph DB, embedding storage, semantic search |
+| `knowledgebase` | cli,core,plugin,web | Core knowledgebase library for ADI - graph DB, embedding storage, semantic search |
 | `linter` | core,plugin | Core library for ADI Linter - language-agnostic linting with external/plugin/command rules |
 | `llm-proxy` | core,http,plugin | ADI LLM Proxy - Core library for LLM API proxying with BYOK/Platform modes |
 | `tasks` | core,plugin | Core library for ADI Tasks - task management with dependency graphs |

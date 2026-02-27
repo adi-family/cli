@@ -1,0 +1,27 @@
+[package]
+name = "website"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "ADI website — Axum + Tera + Fluent i18n"
+
+[[bin]]
+name = "website"
+path = "src/main.rs"
+
+[dependencies]
+lib-i18n-core = { path = "../lib/lib-i18n-core" }
+lib-env-parse = { path = "../lib/lib-env-parse" }
+
+axum = { workspace = true, features = ["macros"] }
+tokio = { workspace = true }
+tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
+
+tera = "1"
+
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

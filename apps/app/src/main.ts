@@ -40,9 +40,8 @@ declare global {
 const bus = createEventBus();
 
 const connections = new Map<string, Connection>();
-const getToken = (authDomain: string): Promise<string | null> =>
-  bus.send('auth:get-token', { authDomain }).wait().then((r: { token: string | null }) => r.token);
-const signalingHub = initSignalingHub(connections, bus, getToken);
+const getToken = (authDomain: string, sourceUrl?: string): Promise<string | null> =>
+  bus.send('auth:get-token', { authDomain, sourceUrl }, 'app').wait().then((r: { token: string | null }) => r.token);
 const registryHub = initRegistryHub();
 const debugInfo = { loaded: [] as string[], failed: [] as string[], timedOut: [] as string[] };
 
@@ -50,9 +49,8 @@ const debugInfo = { loaded: [] as string[], failed: [] as string[], timedOut: []
   getConnections: () => connections,
   bus,
 };
-// Expose debug info and signaling outside the typed interface to avoid declaration conflicts
+// Expose debug info outside the typed interface to avoid declaration conflicts
 (window as unknown as Record<string, unknown>)['__adiDebug'] = debugInfo;
-(window as unknown as Record<string, unknown>)['__adiSignaling'] = signalingHub;
 (window as unknown as Record<string, unknown>)['__adiRegistryHub'] = registryHub;
 
 // Initialize built-in internal plugins.
@@ -88,7 +86,7 @@ bus.on('plugin:update-available', ({ pluginId, newVersion }) => {
   const registry = pluginRegistryMap.get(pluginId);
   if (!registry) return;
   void upgradePlugin(bus, { id: pluginId, registry, installedVersion: newVersion });
-});
+}, 'app');
 
 // Subscribe before loadPlugins so we don't miss the event via FIFO queue.
 bus.on('loading-finished', ({ loaded, failed, timedOut }) => {
@@ -100,8 +98,12 @@ bus.on('loading-finished', ({ loaded, failed, timedOut }) => {
   console.info('[plugins] loaded:', loaded);
   if (failed.length) console.warn('[plugins] failed:', failed);
   if (timedOut.length) console.warn('[plugins] timed out:', timedOut);
-});
+}, 'app');
 
 await loadPlugins(bus, enabledWebPlugins, { timeout: 5000 });
+
+// Initialize signaling AFTER plugins are loaded so auth:get-token has a handler.
+const signalingHub = initSignalingHub(connections, bus, getToken);
+(window as unknown as Record<string, unknown>)['__adiSignaling'] = signalingHub;
 
 window.dispatchEvent(new Event('sdk-ready'));

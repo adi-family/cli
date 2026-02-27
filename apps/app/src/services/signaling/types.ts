@@ -54,7 +54,7 @@ export interface HiveInfo {
 
 export type SignalingMessage =
   // Authentication handshake
-  | { type: 'hello'; auth_kind: string; auth_domain: string }
+  | { type: 'hello'; auth_kind: string; auth_domain: string; auth_requirement: 'required' | 'optional'; auth_options: Array<'verified' | 'anonymous'> }
   | { type: 'authenticate'; access_token: string }
   | { type: 'authenticated'; user_id: string }
   // Cocoon management
@@ -207,9 +207,11 @@ declare module '@adi-family/sdk-plugin' {
   interface EventRegistry {
     'signaling:state': { url: string; state: WsState };
     'signaling:cocoons': { url: string; cocoons: CocoonInfo[] };
+    'signaling:hives': { url: string; hives: HiveInfo[] };
     'signaling:session-state': { url: string; deviceId: string; state: RtcState; sessionId: string };
     'signaling:spawn-result': { url: string; requestId: string; success: boolean; deviceId?: string; error?: string };
     'signaling:auth-error': { url: string; reason: string; authKind?: string; authDomain?: string };
+    'signaling:auth-anonymous': { signalingUrl: string; authDomain: string };
     'connection:added': { id: string; services: string[] };
     'connection:removed': { id: string };
   }

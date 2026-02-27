@@ -18,7 +18,7 @@ class HooksPlugin extends AdiPlugin {
 
   async onRegister() {
     this.registerCalls.push('called');
-    this.bus.emit('route:register', { path: '/hooks', element: 'hooks-view' });
+    this.bus.emit('route:register', { path: '/hooks', element: 'hooks-view' }, 'plugin:hooks');
   }
 
   async onUnregister() {
@@ -41,7 +41,7 @@ describe('AdiPlugin', () => {
     const plugin = new HooksPlugin();
     await plugin._init(bus);
     // onRegister emits 'route:register' via this.bus — verify it went through
-    expect(emitSpy).toHaveBeenCalledWith('route:register', { path: '/hooks', element: 'hooks-view' });
+    expect(emitSpy).toHaveBeenCalledWith('route:register', { path: '/hooks', element: 'hooks-view' }, 'plugin:hooks');
   });
 
   it('_init() calls onRegister()', async () => {
@@ -54,7 +54,7 @@ describe('AdiPlugin', () => {
   it('_init() emits register-finished after onRegister resolves', async () => {
     const bus = createEventBus();
     const handler = vi.fn();
-    bus.on('register-finished', handler);
+    bus.on('register-finished', handler, 'test');
     await new HooksPlugin()._init(bus);
     expect(handler).toHaveBeenCalledWith({ pluginId: 'hooks' });
   });
@@ -62,7 +62,7 @@ describe('AdiPlugin', () => {
   it('_init() emits register-finished even without onRegister defined', async () => {
     const bus = createEventBus();
     const handler = vi.fn();
-    bus.on('register-finished', handler);
+    bus.on('register-finished', handler, 'test');
     await new MinimalPlugin()._init(bus);
     expect(handler).toHaveBeenCalledWith({ pluginId: 'minimal' });
   });

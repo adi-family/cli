@@ -81,6 +81,30 @@ declare module './types.js' {
 
     /** Host emits after every route change. */
     'router:changed': { path: string; params: Record<string, string> };
+
+    // --- Actions loop ---
+
+    /** Push an action card into the floating overlay. Same id replaces existing. */
+    'actions:push': {
+      id: string;
+      plugin: string;
+      kind: string;
+      data: Record<string, unknown>;
+      priority?: 'low' | 'normal' | 'urgent';
+    };
+
+    /** Dismiss an action card by id. */
+    'actions:dismiss': { id: string };
+
+    /** Register a renderer for a (plugin, kind) pair. */
+    'actions:register-renderer': {
+      plugin: string;
+      kind: string;
+      render: (data: Record<string, unknown>, actionId: string) => string;
+    };
+
+    /** Emitted after a card is dismissed — plugins can react to user acknowledgement. */
+    'actions:dismissed': { id: string; plugin: string; kind: string };
   }
 }
 

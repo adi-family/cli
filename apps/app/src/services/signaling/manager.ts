@@ -25,6 +25,7 @@ export interface SignalingManager {
   connect(): void;
   disconnect(): void;
   listCocoons(): void;
+  listHives(): void;
   spawnCocoon(name?: string): void;
   startSession(deviceId: string): string;
   closeSession(deviceId: string): void;
@@ -39,17 +40,18 @@ export const createSignalingManager = (
   url: string,
   connections: Map<string, Connection>,
   bus: EventBus,
-  getToken: (authDomain: string) => Promise<string | null>,
+  getToken: (authDomain: string, sourceUrl?: string) => Promise<string | null>,
 ): SignalingManager => {
   const sessions = new Map<string, SessionEntry>();
   const deviceToSession = new Map<string, string>();
   let authenticatedUserId: string | null = null;
+  let lastAuthOptions: string[] = [];
 
   // -- WebSocket layer -------------------------------------------------------
 
   const ws: WsControl = createWebSocket(url, {
     onStateChange: (state) => {
-      bus.emit('signaling:state', { url, state });
+      bus.emit('signaling:state', { url, state }, 'signaling');
       if (state === 'disconnected') {
         authenticatedUserId = null;
       }
@@ -61,16 +63,24 @@ export const createSignalingManager = (
   async function handleWsMessage(msg: SignalingMessage): Promise<void> {
     switch (msg.type) {
       case 'hello':
-        await handleHello(msg.auth_domain);
+        await handleHello(msg.auth_kind, msg.auth_domain, msg.auth_requirement, msg.auth_options);
         break;
 
       case 'authenticated':
         authenticatedUserId = msg.user_id;
+        bus.emit('signaling:auth-ok', { url }, 'signaling');
+        bus.emit('actions:dismiss', { id: `auth-required:${url}` }, 'signaling');
+        bus.emit('actions:dismiss', { id: `auth-error:${url}` }, 'signaling');
         listCocoons();
+        listHives();
         break;
 
       case 'my_cocoons':
-        bus.emit('signaling:cocoons', { url, cocoons: msg.cocoons });
+        bus.emit('signaling:cocoons', { url, cocoons: msg.cocoons }, 'signaling');
+        break;
+
+      case 'hives_list':
+        bus.emit('signaling:hives', { url, hives: msg.hives }, 'signaling');
         break;
 
       case 'web_rtc_session_started':
@@ -102,7 +112,7 @@ export const createSignalingManager = (
             deviceId: entry.deviceId,
             state: 'failed',
             sessionId: msg.session_id,
-          });
+          }, 'signaling');
         }
         break;
       }
@@ -122,7 +132,7 @@ export const createSignalingManager = (
           success: msg.success,
           deviceId: msg.device_id,
           error: msg.error,
-        });
+        }, 'signaling');
         if (msg.success) listCocoons();
         break;
 
@@ -132,7 +142,7 @@ export const createSignalingManager = (
           reason: msg.reason,
           authKind: msg.auth_kind,
           authDomain: msg.auth_domain,
-        });
+        }, 'signaling');
         // If we thought we were authenticated, reset
         if (authenticatedUserId) {
           authenticatedUserId = null;
@@ -141,9 +151,9 @@ export const createSignalingManager = (
           id: `auth-error:${url}`,
           plugin: msg.auth_kind ?? 'unknown',
           kind: 'auth-required',
-          data: { url, reason: msg.reason, authKind: msg.auth_kind, authDomain: msg.auth_domain },
+          data: { url, reason: msg.reason, authKind: msg.auth_kind, authDomain: msg.auth_domain, authOptions: lastAuthOptions },
           priority: 'urgent',
-        });
+        }, 'signaling');
         break;
 
       case 'error':
@@ -155,20 +165,56 @@ export const createSignalingManager = (
     }
   }
 
-  async function handleHello(authDomain: string): Promise<void> {
-    const token = await getToken(authDomain);
+  async function handleHello(
+    authKind: string,
+    authDomain: string,
+    authRequirement: string,
+    authOptions: string[],
+  ): Promise<void> {
+    lastAuthOptions = authOptions;
+
+    const token = await getToken(authDomain, url);
     if (token) {
       ws.send({ type: 'authenticate', access_token: token });
-    } else {
-      bus.emit('actions:push', {
-        id: `auth-error:${url}`,
-        plugin: 'adi.auth',
-        kind: 'auth-required',
-        data: { url, reason: 'Authentication required', authKind: 'adi.auth', authDomain },
-        priority: 'urgent',
-      });
+      return;
     }
+
+    bus.emit('actions:push', {
+      id: `auth-required:${url}`,
+      plugin: authKind,
+      kind: 'auth-required',
+      data: { url, authKind, authDomain, authRequirement, authOptions },
+      priority: 'urgent',
+    }, 'signaling');
   }
+
+  bus.on('signaling:auth-anonymous', async ({ signalingUrl, authDomain }) => {
+    if (signalingUrl !== url) return;
+    try {
+      const res = await fetch(`${authDomain}/anonymous`, { method: 'POST' });
+      if (!res.ok) return;
+      const data = await res.json() as {
+        accessToken?: string;
+        access_token?: string;
+        expiresIn?: number;
+        expires_in?: number;
+      };
+      const token = data.accessToken ?? data.access_token;
+      if (!token) return;
+
+      const expiresIn = data.expiresIn ?? data.expires_in ?? 7 * 24 * 3600;
+      bus.emit('auth:session-save', {
+        accessToken: token,
+        email: '',
+        expiresAt: Date.now() + expiresIn * 1000,
+        authUrl: authDomain,
+      }, 'signaling');
+
+      ws.send({ type: 'authenticate', access_token: token });
+    } catch (err) {
+      console.debug('[signaling:manager] anonymous auth failed:', err);
+    }
+  }, 'signaling');
 
   // -- Session lifecycle -----------------------------------------------------
 
@@ -207,7 +253,7 @@ export const createSignalingManager = (
 
     if (connections.has(entry.deviceId)) {
       connections.delete(entry.deviceId);
-      bus.emit('connection:removed', { id: entry.deviceId });
+      bus.emit('connection:removed', { id: entry.deviceId }, 'signaling');
     }
 
     bus.emit('signaling:session-state', {
@@ -215,7 +261,7 @@ export const createSignalingManager = (
       deviceId: entry.deviceId,
       state: 'idle',
       sessionId,
-    });
+    }, 'signaling');
   }
 
   // -- ADI channel wiring ---------------------------------------------------
@@ -231,7 +277,7 @@ export const createSignalingManager = (
       const serviceNames = services.map((s) => s.id);
       const conn = createConnection(entry.deviceId, serviceNames, adi);
       connections.set(entry.deviceId, conn);
-      bus.emit('connection:added', { id: entry.deviceId, services: serviceNames });
+      bus.emit('connection:added', { id: entry.deviceId, services: serviceNames }, 'signaling');
     }).catch((err) => {
       console.debug('[signaling:manager] service discovery failed:', err);
     });
@@ -265,6 +311,10 @@ export const createSignalingManager = (
     ws.send({ type: 'list_my_cocoons' });
   };
 
+  const listHives = (): void => {
+    ws.send({ type: 'list_hives' });
+  };
+
   const spawnCocoon = (name?: string): void => {
     const requestId = `spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     ws.send({
@@ -291,7 +341,7 @@ export const createSignalingManager = (
 
     const rtc = createRtcSession(deviceId, sessionId, {
       onStateChange: (state) => {
-        bus.emit('signaling:session-state', { url, deviceId, state, sessionId });
+        bus.emit('signaling:session-state', { url, deviceId, state, sessionId }, 'signaling');
       },
       onIceCandidate: (candidate) => {
         ws.send({
@@ -322,7 +372,7 @@ export const createSignalingManager = (
     sessions.set(sessionId, entry);
     deviceToSession.set(deviceId, sessionId);
 
-    bus.emit('signaling:session-state', { url, deviceId, state: 'signaling', sessionId });
+    bus.emit('signaling:session-state', { url, deviceId, state: 'signaling', sessionId }, 'signaling');
 
     ws.send({
       type: 'web_rtc_start_session',
@@ -370,7 +420,7 @@ export const createSignalingManager = (
       ws.disconnect();
       ws.connect();
     }
-  });
+  }, 'signaling');
 
-  return { url, connect, disconnect, listCocoons, spawnCocoon, startSession, closeSession, sendOnChannel };
+  return { url, connect, disconnect, listCocoons, listHives, spawnCocoon, startSession, closeSession, sendOnChannel };
 };
