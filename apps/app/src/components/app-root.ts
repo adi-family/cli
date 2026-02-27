@@ -76,6 +76,7 @@ export class AppRoot extends LitElement {
     // to connect and subscribe to command:register before we emit.
     queueMicrotask(() => {
       bus.emit('command:register', { id: 'app:debug', label: 'Open Debug Screen', shortcut: '⌘⇧D' });
+      bus.emit('command:register', { id: 'app:ops-log', label: 'Toggle Operations Log', shortcut: '⌘⇧O' });
     });
 
     bus.on('command:execute', ({ id }) => {
@@ -136,6 +137,7 @@ export class AppRoot extends LitElement {
 
       <!-- Command palette always mounted, hidden until triggered -->
       <app-command-palette></app-command-palette>
+      <app-ops-log></app-ops-log>
     `;
   }
 }

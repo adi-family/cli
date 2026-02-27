@@ -4,6 +4,7 @@ import './components/app-root.ts';
 import './components/command-palette.ts';
 import './components/debug-screen.ts';
 import './components/actions-loop.ts';
+import './components/ops-log.ts';
 import { getEnabledWebPluginIds } from './plugin-prefs.ts';
 import { PluginsPlugin } from './plugins/plugins-page.ts';
 import { ActionsPlugin } from './components/actions-loop.ts';
