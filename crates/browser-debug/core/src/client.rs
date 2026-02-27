@@ -78,12 +78,17 @@ impl BrowserDebugClient {
             }
         });
 
-        Ok(Self {
+        let client = Self {
             signaling_url: signaling_url.to_string(),
             access_token: access_token.to_string(),
             sender: tx,
             pending_requests,
-        })
+        };
+
+        // Authenticate the session (server sends Hello, we respond with Authenticate)
+        client.authenticate().await?;
+
+        Ok(client)
     }
 
     async fn handle_message(
@@ -92,6 +97,8 @@ impl BrowserDebugClient {
     ) {
         // Extract request_id from response messages
         let request_id = match &msg {
+            // Hello/Authenticated are handled by the connection setup, not request tracking
+            SignalingMessage::Hello { .. } | SignalingMessage::Authenticated { .. } => None,
             SignalingMessage::BrowserDebugTabs { .. } => Some("list_tabs".to_string()),
             SignalingMessage::BrowserDebugNetworkData { request_id, .. } => {
                 Some(request_id.clone())
@@ -147,17 +154,23 @@ impl BrowserDebugClient {
             .map_err(|_| Error::Connection("Response channel closed".to_string()))
     }
 
-    /// List all browser debug tabs available to the current user
-    pub async fn list_tabs(&self) -> Result<Vec<BrowserDebugTab>> {
-        self.send_message(&SignalingMessage::BrowserDebugListTabs {
+    /// Authenticate this connection with the signaling server
+    pub async fn authenticate(&self) -> Result<()> {
+        self.send_message(&SignalingMessage::Authenticate {
             access_token: self.access_token.clone(),
         })?;
+        Ok(())
+    }
+
+    /// List all browser debug tabs available to the current user
+    pub async fn list_tabs(&self) -> Result<Vec<BrowserDebugTab>> {
+        self.send_message(&SignalingMessage::BrowserDebugListTabs)?;
 
         let response = self.wait_for_response("list_tabs").await?;
 
         match response {
             SignalingMessage::BrowserDebugTabs { tabs } => Ok(tabs),
-            SignalingMessage::AccessDenied { reason } => Err(Error::AccessDenied(reason)),
+            SignalingMessage::AccessDenied { reason, .. } => Err(Error::AccessDenied(reason)),
             SignalingMessage::Error { message } => Err(Error::Connection(message)),
             _ => Err(Error::Connection("Unexpected response".to_string())),
         }
@@ -181,7 +194,7 @@ impl BrowserDebugClient {
 
         match response {
             SignalingMessage::BrowserDebugNetworkData { requests, .. } => Ok(requests),
-            SignalingMessage::AccessDenied { reason } => Err(Error::AccessDenied(reason)),
+            SignalingMessage::AccessDenied { reason, .. } => Err(Error::AccessDenied(reason)),
             SignalingMessage::Error { message } => Err(Error::Connection(message)),
             _ => Err(Error::Connection("Unexpected response".to_string())),
         }
@@ -205,7 +218,7 @@ impl BrowserDebugClient {
 
         match response {
             SignalingMessage::BrowserDebugConsoleData { entries, .. } => Ok(entries),
-            SignalingMessage::AccessDenied { reason } => Err(Error::AccessDenied(reason)),
+            SignalingMessage::AccessDenied { reason, .. } => Err(Error::AccessDenied(reason)),
             SignalingMessage::Error { message } => Err(Error::Connection(message)),
             _ => Err(Error::Connection("Unexpected response".to_string())),
         }

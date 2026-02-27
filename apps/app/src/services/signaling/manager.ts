@@ -39,20 +39,36 @@ export const createSignalingManager = (
   url: string,
   connections: Map<string, Connection>,
   bus: EventBus,
+  getToken: (authDomain: string) => Promise<string | null>,
 ): SignalingManager => {
   const sessions = new Map<string, SessionEntry>();
   const deviceToSession = new Map<string, string>();
+  let authenticatedUserId: string | null = null;
 
   // -- WebSocket layer -------------------------------------------------------
 
   const ws: WsControl = createWebSocket(url, {
-    onStateChange: (state) => bus.emit('signaling:state', { url, state }),
-    onMessage: handleWsMessage,
+    onStateChange: (state) => {
+      bus.emit('signaling:state', { url, state });
+      if (state === 'disconnected') {
+        authenticatedUserId = null;
+      }
+    },
+    onMessage: (msg) => void handleWsMessage(msg),
     onError: (msg) => console.debug('[signaling:manager] ws error:', msg),
   });
 
-  function handleWsMessage(msg: SignalingMessage): void {
+  async function handleWsMessage(msg: SignalingMessage): Promise<void> {
     switch (msg.type) {
+      case 'hello':
+        await handleHello(msg.auth_domain);
+        break;
+
+      case 'authenticated':
+        authenticatedUserId = msg.user_id;
+        listCocoons();
+        break;
+
       case 'my_cocoons':
         bus.emit('signaling:cocoons', { url, cocoons: msg.cocoons });
         break;
@@ -110,8 +126,47 @@ export const createSignalingManager = (
         if (msg.success) listCocoons();
         break;
 
+      case 'access_denied':
+        bus.emit('signaling:auth-error', {
+          url,
+          reason: msg.reason,
+          authKind: msg.auth_kind,
+          authDomain: msg.auth_domain,
+        });
+        // If we thought we were authenticated, reset
+        if (authenticatedUserId) {
+          authenticatedUserId = null;
+        }
+        bus.emit('actions:push', {
+          id: `auth-error:${url}`,
+          plugin: msg.auth_kind ?? 'unknown',
+          kind: 'auth-required',
+          data: { url, reason: msg.reason, authKind: msg.auth_kind, authDomain: msg.auth_domain },
+          priority: 'urgent',
+        });
+        break;
+
+      case 'error':
+        console.debug('[signaling:manager] server error:', msg.message);
+        break;
+
       default:
         break;
+    }
+  }
+
+  async function handleHello(authDomain: string): Promise<void> {
+    const token = await getToken(authDomain);
+    if (token) {
+      ws.send({ type: 'authenticate', access_token: token });
+    } else {
+      bus.emit('actions:push', {
+        id: `auth-error:${url}`,
+        plugin: 'adi.auth',
+        kind: 'auth-required',
+        data: { url, reason: 'Authentication required', authKind: 'adi.auth', authDomain },
+        priority: 'urgent',
+      });
     }
   }
 
@@ -192,8 +247,6 @@ export const createSignalingManager = (
         console.debug('[signaling:manager] failed to parse adi message');
       }
     }
-    // Other channels (silk, pty, file, terminal) can be routed via bus events
-    // if needed in the future.
   }
 
   // -- Public API ------------------------------------------------------------
@@ -209,7 +262,7 @@ export const createSignalingManager = (
   };
 
   const listCocoons = (): void => {
-    ws.send({ type: 'list_my_cocoons', access_token: '' });
+    ws.send({ type: 'list_my_cocoons' });
   };
 
   const spawnCocoon = (name?: string): void => {
@@ -275,7 +328,6 @@ export const createSignalingManager = (
       type: 'web_rtc_start_session',
       session_id: sessionId,
       device_id: deviceId,
-      access_token: '',
     });
 
     return sessionId;
@@ -309,6 +361,16 @@ export const createSignalingManager = (
     });
     return true;
   };
+
+  // -- Listen for auth state changes to re-authenticate ---------------------
+
+  bus.on('auth:state-changed', ({ user }) => {
+    if (user && !authenticatedUserId) {
+      // User just logged in and we're unauthenticated — reconnect to trigger Hello flow
+      ws.disconnect();
+      ws.connect();
+    }
+  });
 
   return { url, connect, disconnect, listCocoons, spawnCocoon, startSession, closeSession, sendOnChannel };
 };

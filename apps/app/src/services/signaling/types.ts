@@ -53,24 +53,29 @@ export interface HiveInfo {
 // ---------------------------------------------------------------------------
 
 export type SignalingMessage =
-  | { type: 'list_my_cocoons'; access_token: string }
+  // Authentication handshake
+  | { type: 'hello'; auth_kind: string; auth_domain: string }
+  | { type: 'authenticate'; access_token: string }
+  | { type: 'authenticated'; user_id: string }
+  // Cocoon management
+  | { type: 'list_my_cocoons' }
   | { type: 'my_cocoons'; cocoons: CocoonInfo[] }
-  | { type: 'remove_cocoon'; device_id: string; access_token: string }
+  | { type: 'remove_cocoon'; device_id: string }
   | { type: 'cocoon_removed'; device_id: string }
-  | { type: 'connect_to_cocoon'; device_id: string; access_token: string }
+  | { type: 'connect_to_cocoon'; device_id: string }
   | { type: 'connected'; device_id: string }
-  | { type: 'access_denied'; reason: string }
+  | { type: 'access_denied'; reason: string; auth_kind?: string; auth_domain?: string; plugin?: string }
   | { type: 'error'; message: string }
   | { type: 'sync_data'; payload: unknown }
   | { type: 'peer_connected'; peer_id: string }
   | { type: 'peer_disconnected'; peer_id: string }
   // Hive orchestration
-  | { type: 'list_hives'; access_token: string }
+  | { type: 'list_hives' }
   | { type: 'hives_list'; hives: HiveInfo[] }
   | { type: 'spawn_cocoon'; request_id: string; setup_token: string; name?: string; kind: string }
   | { type: 'spawn_cocoon_result'; request_id: string; success: boolean; device_id?: string; container_id?: string; error?: string }
   // WebRTC signaling
-  | { type: 'web_rtc_start_session'; session_id: string; device_id: string; access_token: string }
+  | { type: 'web_rtc_start_session'; session_id: string; device_id: string }
   | { type: 'web_rtc_session_started'; session_id: string; device_id: string }
   | { type: 'web_rtc_offer'; session_id: string; sdp: string }
   | { type: 'web_rtc_answer'; session_id: string; sdp: string }
@@ -204,6 +209,7 @@ declare module '@adi-family/sdk-plugin' {
     'signaling:cocoons': { url: string; cocoons: CocoonInfo[] };
     'signaling:session-state': { url: string; deviceId: string; state: RtcState; sessionId: string };
     'signaling:spawn-result': { url: string; requestId: string; success: boolean; deviceId?: string; error?: string };
+    'signaling:auth-error': { url: string; reason: string; authKind?: string; authDomain?: string };
     'connection:added': { id: string; services: string[] };
     'connection:removed': { id: string };
   }

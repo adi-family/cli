@@ -54,6 +54,7 @@ const saveUrls = (urls: string[]): void => {
 export const createSignalingHub = (
   connections: Map<string, Connection>,
   bus: EventBus,
+  getToken: (authDomain: string) => Promise<string | null>,
 ): SignalingHub => {
   const managers = new Map<string, SignalingManager>();
 
@@ -61,7 +62,7 @@ export const createSignalingHub = (
     const existing = managers.get(url);
     if (existing) return existing;
 
-    const manager = createSignalingManager(url, connections, bus);
+    const manager = createSignalingManager(url, connections, bus, getToken);
     managers.set(url, manager);
     saveUrls([...managers.keys()]);
 
@@ -95,11 +96,12 @@ export const createSignalingHub = (
 export const initSignalingHub = (
   connections: Map<string, Connection>,
   bus: EventBus,
+  getToken: (authDomain: string) => Promise<string | null>,
 ): SignalingHub => {
   const existing = (globalThis as Record<string, unknown>)[GLOBAL_KEY] as SignalingHub | undefined;
   if (existing) return existing;
 
-  const hub = createSignalingHub(connections, bus);
+  const hub = createSignalingHub(connections, bus, getToken);
   (globalThis as Record<string, unknown>)[GLOBAL_KEY] = hub;
 
   return hub;

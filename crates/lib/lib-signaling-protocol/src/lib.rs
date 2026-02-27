@@ -31,6 +31,19 @@ pub use uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum SignalingMessage {
+    // ========== Connection Authentication Handshake ==========
+    /// Server → client on WebSocket connect. Declares auth requirements.
+    Hello {
+        auth_kind: String,
+        auth_domain: String,
+    },
+
+    /// Client → server. Presents access token obtained from `auth_domain`.
+    Authenticate { access_token: String },
+
+    /// Server → client on successful authentication.
+    Authenticated { user_id: String },
+
     /// Register device with server using client secret
     /// Server derives deterministic device_id from secret using HMAC
     /// On reconnect, device_id must match derived ID (prevents secret theft attacks)
@@ -105,42 +118,45 @@ pub enum SignalingMessage {
     // ========== Token-Based Ownership ==========
     /// Claim ownership of a cocoon by proving secret knowledge
     /// Multiple users can claim the same cocoon as co-owners
+    /// Requires session-level authentication (via Authenticate handshake)
     ClaimCocoon {
         device_id: String,
         secret: String,
-        access_token: String, // JWT or API token from auth system
     },
 
     /// Claim successful - user is now an owner
     ClaimSuccessful { device_id: String },
 
-    /// Connect to cocoon using access token
-    /// Only owners (users who claimed with secret) can connect
-    ConnectToCocoon {
-        device_id: String,
-        access_token: String,
-    },
+    /// Connect to cocoon. Only owners (users who claimed with secret) can connect.
+    /// Requires session-level authentication (via Authenticate handshake)
+    ConnectToCocoon { device_id: String },
 
     /// Connection successful - paired with cocoon
     Connected { device_id: String },
 
-    /// List all cocoons owned by this token
-    ListMyCocoons { access_token: String },
+    /// List all cocoons owned by the authenticated user
+    ListMyCocoons,
 
     /// List of owned cocoons
     MyCocoons { cocoons: Vec<CocoonInfo> },
 
     /// Remove cocoon ownership (user wants to delete/unlink this cocoon)
-    RemoveCocoon {
-        device_id: String,
-        access_token: String,
-    },
+    /// Requires session-level authentication (via Authenticate handshake)
+    RemoveCocoon { device_id: String },
 
     /// Cocoon removed successfully
     CocoonRemoved { device_id: String },
 
     /// Access denied (not an owner)
-    AccessDenied { reason: String },
+    AccessDenied {
+        reason: String,
+        /// Auth kind (e.g. "adi-auth") so clients know which auth flow to use
+        #[serde(skip_serializing_if = "Option::is_none")]
+        auth_kind: Option<String>,
+        /// Auth service domain where the user can obtain a token
+        #[serde(skip_serializing_if = "Option::is_none")]
+        auth_domain: Option<String>,
+    },
 
     // ========== Service Registration ==========
     /// Register local services (HTTP endpoints) with signaling server
@@ -280,7 +296,8 @@ pub enum SignalingMessage {
     },
 
     /// List all connected Hive orchestrators
-    ListHives { access_token: String },
+    /// Requires session-level authentication (via Authenticate handshake)
+    ListHives,
 
     /// List of connected hives
     HivesList { hives: Vec<HiveInfo> },
@@ -372,9 +389,9 @@ pub enum SignalingMessage {
     /// Console event streamed from browser extension
     BrowserDebugConsoleEvent { token: String, entry: ConsoleEntry },
 
-    /// List all debug tabs available to this user
+    /// List all debug tabs available to the authenticated user
     /// Sent by: MCP plugin
-    BrowserDebugListTabs { access_token: String },
+    BrowserDebugListTabs,
 
     /// Response with list of debug tabs
     BrowserDebugTabs { tabs: Vec<BrowserDebugTab> },
@@ -412,13 +429,12 @@ pub enum SignalingMessage {
     // ========== WebRTC Session Management ==========
     /// Request to start a WebRTC session with a cocoon
     /// Sent by: Browser/Client to initiate WebRTC connection
+    /// Requires session-level authentication (via Authenticate handshake)
     WebRtcStartSession {
         /// Unique session ID for this WebRTC connection
         session_id: String,
         /// Target cocoon device_id
         device_id: String,
-        /// JWT access token for authorization
-        access_token: String,
     },
 
     /// WebRTC session started confirmation

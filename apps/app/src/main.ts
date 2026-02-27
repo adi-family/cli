@@ -3,8 +3,10 @@ import './index.css';
 import './components/app-root.ts';
 import './components/command-palette.ts';
 import './components/debug-screen.ts';
+import './components/actions-loop.ts';
 import { getEnabledWebPluginIds } from './plugin-prefs.ts';
 import { PluginsPlugin } from './plugins/plugins-page.ts';
+import { ActionsPlugin } from './components/actions-loop.ts';
 import {
   createEventBus,
   initInternalPlugin,
@@ -37,7 +39,9 @@ declare global {
 const bus = createEventBus();
 
 const connections = new Map<string, Connection>();
-const signalingHub = initSignalingHub(connections, bus);
+const getToken = (authDomain: string): Promise<string | null> =>
+  bus.send('auth:get-token', { authDomain }).wait().then((r: { token: string | null }) => r.token);
+const signalingHub = initSignalingHub(connections, bus, getToken);
 const registryHub = initRegistryHub();
 const debugInfo = { loaded: [] as string[], failed: [] as string[], timedOut: [] as string[] };
 
@@ -52,6 +56,7 @@ const debugInfo = { loaded: [] as string[], failed: [] as string[], timedOut: []
 
 // Initialize built-in internal plugins.
 await initInternalPlugin(bus, new PluginsPlugin());
+await initInternalPlugin(bus, new ActionsPlugin());
 
 // Register service worker for plugin bundle caching.
 await registerPluginSW(new URL('./plugin-sw.js', import.meta.url), bus);
