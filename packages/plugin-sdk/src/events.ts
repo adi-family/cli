@@ -1,3 +1,4 @@
+import type { RegistryHealth } from './registry-http.js';
 import type {} from './types.js';
 
 declare module './types.js' {
@@ -91,6 +92,12 @@ declare module './types.js' {
     };
 
     'actions:dismissed': { id: string; plugin: string; kind: string };
+
+    // --- Registry ---
+
+    'registry:health': { url: string; health: RegistryHealth };
+    'registry:added': { url: string };
+    'registry:removed': { url: string };
 
     // --- Database ---
 
