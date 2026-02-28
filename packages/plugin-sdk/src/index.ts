@@ -1,4 +1,3 @@
-// src/index.ts
 import './events.js';
 
 export type {

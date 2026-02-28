@@ -7,7 +7,6 @@ declare module './types.js' {
     /** Auto-emitted by AdiPlugin after onRegister() resolves. */
     'register-finished': { pluginId: string };
 
-    /** Emitted by loadPlugins() when all plugins are done (success/fail/timeout). */
     'loading-finished': {
       loaded: string[];
       failed: string[];
@@ -24,21 +23,18 @@ declare module './types.js' {
       newUrl: string;
     };
 
-    /** Hot-swap started — old plugin torn down, new version loading. */
     'plugin:upgrading': {
       pluginId: string;
       fromVersion: string;
       toVersion: string;
     };
 
-    /** Hot-swap completed successfully. */
     'plugin:upgraded': {
       pluginId: string;
       fromVersion: string;
       toVersion: string;
     };
 
-    /** Hot-swap failed. */
     'plugin:upgrade-failed': { pluginId: string; reason: string };
 
     // --- UI registration ---
@@ -46,7 +42,6 @@ declare module './types.js' {
     /** Register a client-side route. element = custom element tag to render. */
     'route:register': { path: string; element: string; label?: string };
 
-    /** Add a nav item. */
     'nav:add': {
       id: string;
       label: string;
@@ -57,13 +52,8 @@ declare module './types.js' {
     /** Reply to nav:add. Host emits after adding the nav item. */
     'nav:add:ok': { id: string; _cid: string };
 
-    /** Register a command palette entry. */
     'command:register': { id: string; label: string; shortcut?: string };
-
-    /** Execute a registered command by id. */
     'command:execute': { id: string };
-
-    /** Programmatically open the command palette, optionally pre-filling a query. */
     'command-palette:open': { query?: string };
 
     // --- App lifecycle ---
@@ -71,7 +61,6 @@ declare module './types.js' {
     /** Host emits after mounting, ready to receive plugin events. */
     'app:ready': void;
 
-    /** Emitted when active theme or color mode changes. */
     'app:theme-changed': { theme: string; mode: 'dark' | 'light' };
 
     // --- Router ---
@@ -93,18 +82,22 @@ declare module './types.js' {
       priority?: 'low' | 'normal' | 'urgent';
     };
 
-    /** Dismiss an action card by id. */
     'actions:dismiss': { id: string };
 
-    /** Register a renderer for a (plugin, kind) pair. */
     'actions:register-renderer': {
       plugin: string;
       kind: string;
       render: (data: Record<string, unknown>, actionId: string) => string;
     };
 
-    /** Emitted after a card is dismissed — plugins can react to user acknowledgement. */
     'actions:dismissed': { id: string; plugin: string; kind: string };
+
+    // --- Database ---
+
+    'db:connected': Record<string, never>;
+    'db:disconnected': { reason: 'closed' | 'version-change' };
+    'db:reconnecting': { store: string; mode: string };
+    'db:error': { error: string; store?: string; mode?: string };
   }
 }
 

@@ -1,4 +1,3 @@
-// src/bus.ts
 import type {
   EventRegistry,
   EventBus,
@@ -86,8 +85,8 @@ export function createEventBus(options: { sendTimeout?: number } = {}): EventBus
     // If the queue was flushed synchronously, wrapper already fired but
     // couldn't unsub (unsub was undefined at that moment). Clean up now.
     if (fired) {
-      unsub(); // cleanup if queue was flushed synchronously
-      return () => {}; // already fired, return no-op
+      unsub();
+      return () => {};
     }
     return unsub;
   }

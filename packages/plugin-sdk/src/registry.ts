@@ -1,4 +1,3 @@
-// src/registry.ts
 import type { EventBus, PluginDescriptor } from './types.js';
 import { AdiPlugin } from './plugin.js';
 
@@ -18,7 +17,6 @@ export function _resetRegistry(): void {
 }
 
 export interface LoadPluginsOptions {
-  /** Per-plugin initialization timeout in ms. Default: 5000. */
   timeout?: number;
 }
 
@@ -29,13 +27,10 @@ export async function loadPlugins(
 ): Promise<void> {
   const timeout = options.timeout ?? 5000;
 
-  // Store descriptors for upgrade use
   for (const d of pluginDescriptors) {
     descriptors.set(d.id, d);
   }
 
-  // Phase 1: Fetch + import all plugin modules concurrently.
-  // Each module calls registerPlugin() as a side effect.
   const importResults = await Promise.allSettled(pluginDescriptors.map((d) => fetchAndImport(d)));
   for (let i = 0; i < importResults.length; i++) {
     const r = importResults[i];
@@ -44,7 +39,6 @@ export async function loadPlugins(
     }
   }
 
-  // Phase 2: Resolve dependency graph.
   const plugins = [...registry.values()];
   const { order, cycled } = topoSort(plugins);
 
@@ -52,7 +46,6 @@ export async function loadPlugins(
   const failed: string[] = [...cycled];
   const timedOut: string[] = [];
 
-  // Mark descriptors that failed to import (never called registerPlugin).
   const registeredIds = new Set(plugins.map((p) => p.id));
   for (const d of pluginDescriptors) {
     if (!registeredIds.has(d.id)) {
@@ -61,7 +54,6 @@ export async function loadPlugins(
     }
   }
 
-  // Phase 3: Initialize in topological order.
   for (const plugin of order) {
     const result = await initWithTimeout(plugin, bus, timeout);
     if (result === 'ok') loaded.push(plugin.id);
@@ -82,11 +74,9 @@ export async function loadPlugins(
 }
 
 export interface UpgradePluginOptions {
-  /** Timeout for the new plugin's onRegister in ms. Default: 5000. */
   timeout?: number;
 }
 
-/** Initialize a plugin that lives inside the app shell — no bundle fetch needed. */
 export async function initInternalPlugin(bus: EventBus, plugin: AdiPlugin): Promise<void> {
   registerPlugin(plugin);
   await plugin._init(bus);
@@ -105,7 +95,6 @@ export async function upgradePlugin(
   bus.emit('plugin:upgrading', { pluginId: id, fromVersion, toVersion: installedVersion }, 'plugin-registry');
 
   try {
-    // Tear down old plugin.
     if (existing) {
       await existing._destroy();
       registry.delete(id);
@@ -114,7 +103,6 @@ export async function upgradePlugin(
     // Load new version — module calls registerPlugin() as side effect.
     await fetchAndImport(descriptor);
 
-    // Initialize new plugin.
     const newPlugin = registry.get(id);
     if (!newPlugin) throw new Error(`Plugin ${id} did not call registerPlugin()`);
 
@@ -145,13 +133,11 @@ export async function registerPluginSW(
 ): Promise<void> {
   if (!('serviceWorker' in navigator)) return;
 
-  // Remove previous listener if re-registering.
   swMessageController?.abort();
   swMessageController = new AbortController();
 
   const reg = await navigator.serviceWorker.register(swUrl, { type: 'module' });
 
-  // Bridge SW postMessages onto the event bus.
   navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
     const data = event.data as { type: string; url: string } | undefined;
     if (data?.type !== 'plugin:bundle-updated') return;

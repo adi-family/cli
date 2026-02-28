@@ -1,4 +1,3 @@
-// src/registry-http.ts
 import type { PluginDescriptor, PluginRegistry } from './types.js';
 
 interface RegistryIndexEntry {
