@@ -1,8 +1,5 @@
 use lib_plugin_abi_v3::*;
 
-#[allow(dead_code)]
-const MESSAGES_FTL: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/messages.ftl"));
-
 struct TranslationPlugin;
 
 #[async_trait]

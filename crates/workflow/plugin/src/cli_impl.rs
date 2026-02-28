@@ -434,15 +434,6 @@ fn cmd_completions(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {
     Ok(String::new())
 }
 
-#[allow(dead_code)]
-pub fn list_commands() -> serde_json::Value {
-    json!([
-        {"name": "list", "description": t!("workflow-help-list"), "usage": "list"},
-        {"name": "show", "description": t!("workflow-help-show"), "usage": "show <name>"},
-        {"name": "<name>", "description": t!("workflow-help-run"), "usage": "<name>"}
-    ])
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
