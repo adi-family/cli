@@ -62,6 +62,23 @@ pub fn env_or(key: &str, default: &str) -> String {
     std::env::var(key).unwrap_or_else(|_| default.to_string())
 }
 
+/// Error returned when a required environment variable is not set.
+#[derive(Debug)]
+pub struct MissingEnvVar(pub String);
+
+impl std::fmt::Display for MissingEnvVar {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "required environment variable `{}` is not set", self.0)
+    }
+}
+
+impl std::error::Error for MissingEnvVar {}
+
+/// Read a required environment variable, returning an error if not set.
+pub fn env_require(key: &str) -> Result<String, MissingEnvVar> {
+    std::env::var(key).map_err(|_| MissingEnvVar(key.to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
