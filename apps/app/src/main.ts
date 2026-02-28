@@ -5,6 +5,7 @@ import './components/command-palette.ts';
 import './components/debug-screen.ts';
 import './components/actions-loop.ts';
 import './components/ops-log.ts';
+import './components/cocoon-manual-setup.ts';
 import { getEnabledWebPluginIds } from './plugin-prefs.ts';
 import { PluginsPlugin } from './plugins/plugins-page.ts';
 import { ActionsPlugin } from './components/actions-loop.ts';
@@ -58,7 +59,7 @@ await initInternalPlugin(bus, new PluginsPlugin());
 await initInternalPlugin(bus, new ActionsPlugin());
 
 // Register service worker for plugin bundle caching.
-await registerPluginSW(new URL('./plugin-sw.js', import.meta.url), bus);
+await registerPluginSW('/sw.js', bus);
 
 // Expose bus globally so app components can access it.
 (globalThis as Record<string, unknown>)['__adiBus'] = bus;

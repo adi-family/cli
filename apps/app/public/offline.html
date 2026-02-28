@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ADI — Offline</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #0a0a0a;
+        color: #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100dvh;
+        text-align: center;
+        padding: 2rem;
+      }
+      .container { max-width: 400px; }
+      .icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 1.5rem;
+        border-radius: 16px;
+        background: #875fd7;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        font-weight: 700;
+        color: #fff;
+      }
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: #fff;
+      }
+      p {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        color: #888;
+      }
+      button {
+        margin-top: 1.5rem;
+        padding: 0.625rem 1.5rem;
+        background: #875fd7;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      button:hover { background: #7a50c7; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon">A</div>
+      <h1>You're offline</h1>
+      <p>Check your internet connection and try again.</p>
+      <button onclick="location.reload()">Retry</button>
+    </div>
+  </body>
+</html>
