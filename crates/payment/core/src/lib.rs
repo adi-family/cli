@@ -95,6 +95,7 @@ pub fn run_server(port: u16) -> anyhow::Result<()> {
             .route("/health", get(health_check))
             .route("/checkout", post(handlers::checkout::create_checkout))
             .route("/balance", get(handlers::balance::get_balance))
+            .route("/balance/debit", post(handlers::balance::debit_balance))
             .route(
                 "/balance/transactions",
                 get(handlers::balance::list_transactions),

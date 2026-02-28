@@ -25,6 +25,9 @@ pub enum ApiError {
     #[error("Not supported: {0}")]
     NotSupported(String),
 
+    #[error("Insufficient balance")]
+    InsufficientBalance,
+
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
@@ -43,6 +46,7 @@ impl IntoResponse for ApiError {
             ApiError::Provider(msg) => (StatusCode::BAD_GATEWAY, msg.clone()),
             ApiError::ProviderNotConfigured(msg) => (StatusCode::SERVICE_UNAVAILABLE, msg.clone()),
             ApiError::NotSupported(msg) => (StatusCode::NOT_IMPLEMENTED, msg.clone()),
+            ApiError::InsufficientBalance => (StatusCode::PAYMENT_REQUIRED, self.to_string()),
             ApiError::Database(e) => {
                 tracing::error!("Database error: {:?}", e);
                 (

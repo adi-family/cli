@@ -6,7 +6,7 @@ use axum::{
 };
 use uuid::Uuid;
 
-use crate::balance_client;
+use crate::balance_client::{self, CreditPool};
 use crate::error::{ApiError, ApiResult};
 use crate::models::{ParsedWebhookEvent, Payment};
 use crate::types::ProviderType;
@@ -197,16 +197,23 @@ async fn handle_completed_payment(
         );
     }
 
-    // Deposit credits to local balance using the payment's conversion rate
+    // Route to correct credit pool based on payment type
+    let credit_pool = if payment.subscription_id.is_some() {
+        CreditPool::Subscription
+    } else {
+        CreditPool::Extra
+    };
+
     let description = format!(
-        "Payment {} — {} cents {} @ {:.4} credits/cent",
-        payment.id, payment.amount_cents, payment.currency, payment.conversion_rate
+        "Payment {} — {} cents {} @ {:.4} credits/cent → {}",
+        payment.id, payment.amount_cents, payment.currency, payment.conversion_rate, credit_pool
     );
 
     let txn = balance_client::deposit(
         state.db.pool(),
         payment.user_id,
         payment.id,
+        credit_pool,
         payment.amount_cents,
         payment.conversion_rate,
         &description,
