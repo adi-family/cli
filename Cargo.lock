@@ -2482,6 +2482,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "cocoon-spawner-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bollard",
+ "chrono",
+ "futures",
+ "hex",
+ "hmac",
+ "lib-env-parse",
+ "lib-signaling-protocol",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-tungstenite 0.24.0",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "cocoon-spawner-plugin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cocoon-spawner-core",
+ "lib-console-output",
+ "lib-plugin-abi-v3",
+ "lib-plugin-prelude",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -103,6 +103,7 @@ export class AppDebugScreen extends LitElement {
   @state() private registryDirty = false;
   @state() private spawnCocoonName = "";
   @state() private spawnCocoonServer = "";
+  @state() private spawnCocoonKind = "";
   @state() private spawnStatus: { spawning: boolean; error: string | null } = {
     spawning: false,
     error: null,
@@ -740,18 +741,6 @@ export class AppDebugScreen extends LitElement {
     `;
   }
 
-  #wsStateDot(s: WsState) {
-    const color: Record<WsState, string> = {
-      connected: "bg-green-400",
-      connecting: "bg-yellow-400 animate-pulse",
-      disconnected: "bg-border",
-      error: "bg-red-400",
-    };
-    return html`<span
-      class="w-2.5 h-2.5 rounded-full shrink-0 ${color[s]}"
-    ></span>`;
-  }
-
   #rtcStateBadge(s: RtcState) {
     const styles: Record<RtcState, string> = {
       idle: "text-text-muted bg-surface-alt",
@@ -823,7 +812,10 @@ export class AppDebugScreen extends LitElement {
     const manager = hub?.getManager(serverUrl);
     if (!manager) return;
     this.spawnStatus = { spawning: true, error: null };
-    manager.spawnCocoon(this.spawnCocoonName.trim() || undefined);
+    manager.spawnCocoon(
+      this.spawnCocoonName.trim() || undefined,
+      this.spawnCocoonKind || undefined,
+    );
     this.spawnCocoonName = "";
   }
 
@@ -835,6 +827,24 @@ export class AppDebugScreen extends LitElement {
     // Auto-select first server if none selected
     if (!this.spawnCocoonServer && serverUrls.length > 0) {
       this.spawnCocoonServer = serverUrls[0];
+    }
+
+    // Collect available cocoon kinds from connected hives for the selected server
+    const selectedState = this.spawnCocoonServer
+      ? this.serverStates.get(this.spawnCocoonServer)
+      : undefined;
+    const availableKinds: string[] = [];
+    if (selectedState?.connectionInfo) {
+      for (const hive of selectedState.connectionInfo.hives) {
+        for (const k of hive.cocoon_kinds) {
+          if (!availableKinds.includes(k)) availableKinds.push(k);
+        }
+      }
+    }
+
+    // Auto-select first kind if current selection is invalid
+    if (availableKinds.length > 0 && !availableKinds.includes(this.spawnCocoonKind)) {
+      this.spawnCocoonKind = availableKinds[0];
     }
 
     // Flat list of all cocoons with their server URL
@@ -881,10 +891,21 @@ export class AppDebugScreen extends LitElement {
               ? html`<option value="" disabled>No servers</option>`
               : serverUrls.map((u) => html`<option value=${u}>${u}</option>`)}
           </select>
+          <select
+            class="bg-surface border border-border rounded px-3 py-1.5 text-xs font-mono text-text outline-none focus:border-accent transition-colors"
+            .value=${this.spawnCocoonKind}
+            @change=${(e: Event) => {
+              this.spawnCocoonKind = (e.target as HTMLSelectElement).value;
+            }}
+          >
+            ${availableKinds.length === 0
+              ? html`<option value="" disabled>No kinds</option>`
+              : availableKinds.map((k) => html`<option value=${k}>${k}</option>`)}
+          </select>
           <button
             type="button"
             class="text-xs px-3 py-1.5 rounded border border-accent/30 text-accent hover:bg-accent/10 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            ?disabled=${this.spawnStatus.spawning || serverUrls.length === 0}
+            ?disabled=${this.spawnStatus.spawning || serverUrls.length === 0 || availableKinds.length === 0}
             @click=${() => this.#spawnCocoon()}
           >
             ${this.spawnStatus.spawning ? "Spawning…" : "Add Cocoon"}
@@ -1160,14 +1181,11 @@ export class AppDebugScreen extends LitElement {
                 >
                   <!-- Header: status + URL + actions -->
                   <div class="flex items-center gap-3">
-                    ${this.#wsStateDot(serverState.wsState)}
                     <div class="flex-1 min-w-0">
                       <code class="text-xs font-mono text-text truncate block"
                         >${url}</code
                       >
-                      <p class="text-[10px] text-text-muted">
-                        ${serverState.wsState}
-                      </p>
+                      <signaling-status url=${url}></signaling-status>
                     </div>
                     ${manager
                       ? html`

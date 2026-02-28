@@ -98,7 +98,9 @@ impl BrowserDebugClient {
         // Extract request_id from response messages
         let request_id = match &msg {
             // Hello/Authenticated are handled by the connection setup, not request tracking
-            SignalingMessage::Hello { .. } | SignalingMessage::Authenticated { .. } => None,
+            SignalingMessage::Hello { .. }
+            | SignalingMessage::Authenticated { .. }
+            | SignalingMessage::HelloAuthed { .. } => None,
             SignalingMessage::BrowserDebugTabs { .. } => Some("list_tabs".to_string()),
             SignalingMessage::BrowserDebugNetworkData { request_id, .. } => {
                 Some(request_id.clone())

@@ -1,0 +1,64 @@
+[package]
+name = "cocoon-spawner-plugin"
+version = "0.1.0"
+edition = "2021"
+description = "ADI Cocoon Spawner plugin - Docker-based cocoon lifecycle via signaling server"
+license = "LicenseRef-Proprietary"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Core library
+cocoon-spawner-core = { path = "../core" }
+
+# Plugin SDK
+lib-plugin-prelude = { path = "../../lib/lib-plugin-prelude" }
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+
+# Console output
+lib-console-output = { path = "../../lib/lib-console-output" }
+
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+async-trait = "0.1"
+
+# Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1"
+
+[package.metadata.plugin]
+id = "adi.cocoon-spawner"
+name = "Cocoon Spawner"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "2.0.0"
+
+[package.metadata.plugin.cli]
+command = "cocoon-spawner"
+description = "Cocoon container spawner"
+aliases = ["cs"]
+
+[[package.metadata.plugin.provides]]
+id = "adi.cocoon-spawner.cli"
+version = "1.0.0"
+description = "CLI commands for cocoon spawner"
+
+[[package.metadata.plugin.provides]]
+id = "adi.cocoon-spawner.service"
+version = "1.0.0"
+description = "Daemon service for cocoon spawner"
+
+[package.metadata.plugin.daemon]
+auto_start = false
+restart_on_failure = true
+max_restarts = 10
+restart_exponential_backoff = true
+
+[package.metadata.plugin.tags]
+categories = ["services", "orchestration", "docker", "cocoon"]

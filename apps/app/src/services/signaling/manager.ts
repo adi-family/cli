@@ -26,7 +26,7 @@ export interface SignalingManager {
   disconnect(): void;
   listCocoons(): void;
   listHives(): void;
-  spawnCocoon(name?: string): void;
+  spawnCocoon(name?: string, kind?: string): void;
   requestSetupToken(): Promise<string>;
   startSession(deviceId: string): string;
   closeSession(deviceId: string): void;
@@ -65,7 +65,6 @@ export const createSignalingManager = (
   async function handleWsMessage(msg: SignalingMessage): Promise<void> {
     switch (msg.type) {
       case 'hello':
-        bus.emit('signaling:connection-info', { url, connectionInfo: msg.connection_info }, 'signaling');
         await handleHello(msg.auth_kind, msg.auth_domain, msg.auth_requirement, msg.auth_options);
         break;
 
@@ -74,6 +73,10 @@ export const createSignalingManager = (
         bus.emit('signaling:auth-ok', { url }, 'signaling');
         bus.emit('actions:dismiss', { id: `auth-required:${url}` }, 'signaling');
         bus.emit('actions:dismiss', { id: `auth-error:${url}` }, 'signaling');
+        break;
+
+      case 'hello_authed':
+        bus.emit('signaling:connection-info', { url, connectionInfo: msg.connection_info }, 'signaling');
         listCocoons();
         listHives();
         break;
@@ -341,15 +344,28 @@ export const createSignalingManager = (
       }, 10_000);
     });
 
-  const spawnCocoon = (name?: string): void => {
+  const spawnCocoon = (name?: string, kind?: string): void => {
     const requestId = `spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    ws.send({
-      type: 'spawn_cocoon',
-      request_id: requestId,
-      setup_token: '',
-      kind: 'default',
-      ...(name ? { name } : {}),
-    });
+
+    // Request a setup token first, then spawn with it
+    requestSetupToken()
+      .then((token) => {
+        ws.send({
+          type: 'spawn_cocoon',
+          request_id: requestId,
+          setup_token: token,
+          kind: kind ?? 'ubuntu',
+          ...(name ? { name } : {}),
+        });
+      })
+      .catch((err) => {
+        bus.emit('signaling:spawn-result', {
+          url,
+          requestId,
+          success: false,
+          error: `Failed to get setup token: ${err instanceof Error ? err.message : String(err)}`,
+        }, 'signaling');
+      });
   };
 
   const startSession = (deviceId: string): string => {

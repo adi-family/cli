@@ -1,0 +1,44 @@
+[package]
+name = "cocoon-spawner-core"
+version = "0.1.0"
+edition = "2021"
+description = "Core library for ADI Cocoon Spawner - Docker-based cocoon lifecycle management via signaling"
+license = "LicenseRef-Proprietary"
+authors = ["ADI Team"]
+
+[dependencies]
+# Signaling protocol
+lib-signaling-protocol = { path = "../../lib/lib-signaling-protocol" }
+
+# Environment parsing
+lib-env-parse = { path = "../../lib/lib-env-parse" }
+
+# Docker
+bollard = "0.17"
+
+# WebSocket
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-native-roots"] }
+futures = "0.3"
+
+# HMAC signing
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "signal"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+
+# IDs and time
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }

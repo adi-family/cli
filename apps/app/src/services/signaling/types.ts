@@ -64,9 +64,10 @@ export interface ConnectionInfo {
 
 export type SignalingMessage =
   // Authentication handshake
-  | { type: 'hello'; auth_kind: string; auth_domain: string; auth_requirement: 'required' | 'optional'; auth_options: Array<'verified' | 'anonymous'>; connection_info: ConnectionInfo }
+  | { type: 'hello'; auth_kind: string; auth_domain: string; auth_requirement: 'required' | 'optional'; auth_options: Array<'verified' | 'anonymous'> }
   | { type: 'authenticate'; access_token: string }
   | { type: 'authenticated'; user_id: string }
+  | { type: 'hello_authed'; user_id: string; connection_info: ConnectionInfo }
   // Cocoon management
   | { type: 'list_my_cocoons' }
   | { type: 'my_cocoons'; cocoons: CocoonInfo[] }

@@ -6,6 +6,7 @@ import './components/debug-screen.ts';
 import './components/actions-loop.ts';
 import './components/ops-log.ts';
 import './components/cocoon-manual-setup.ts';
+import './components/signaling-status.ts';
 import { getEnabledWebPluginIds } from './plugin-prefs.ts';
 import { PluginsPlugin } from './plugins/plugins-page.ts';
 import { ActionsPlugin } from './components/actions-loop.ts';
@@ -42,7 +43,11 @@ const bus = createEventBus();
 
 const connections = new Map<string, Connection>();
 const getToken = (authDomain: string, sourceUrl?: string): Promise<string | null> =>
-  bus.send('auth:get-token', { authDomain, sourceUrl }, 'app').wait().then((r: { token: string | null }) => r.token);
+  Promise.race([
+    bus.send('auth:get-token', { authDomain, sourceUrl }, 'app').wait()
+      .then((r: { token: string | null }) => r.token),
+    new Promise<null>((r) => setTimeout(() => r(null), 2_000)),
+  ]).catch(() => null);
 const registryHub = initRegistryHub();
 const debugInfo = { loaded: [] as string[], failed: [] as string[], timedOut: [] as string[] };
 

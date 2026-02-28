@@ -74,8 +74,6 @@ pub enum SignalingMessage {
         auth_domain: String,
         auth_requirement: AuthRequirement,
         auth_options: Vec<AuthOption>,
-        /// Available connection methods (hives, manual registration).
-        connection_info: ConnectionInfo,
     },
 
     /// Client → server. Presents access token obtained from `auth_domain`.
@@ -83,6 +81,12 @@ pub enum SignalingMessage {
 
     /// Server → client on successful authentication.
     Authenticated { user_id: String },
+
+    /// Server → client after authentication. Provides connection capabilities.
+    HelloAuthed {
+        user_id: String,
+        connection_info: ConnectionInfo,
+    },
 
     /// Register device with server using client secret
     /// Server derives deterministic device_id from secret using HMAC

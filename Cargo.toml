@@ -204,6 +204,10 @@ members = [
     "crates/cli/plugins/ko-KR",
     "crates/cli/plugins/ru-RU",
 
+    # Cocoon Spawner
+    "crates/cocoon-spawner/core",
+    "crates/cocoon-spawner/plugin",
+
     # Signaling server
     "crates/signaling/core",
     "crates/signaling/plugin",
@@ -276,6 +280,7 @@ credentials-core = { path = "crates/credentials/core" }
 executor-core = { path = "crates/executor/core" }
 video-core = { path = "crates/video/core" }
 plugin-registry-core = { path = "crates/registry/core" }
+cocoon-spawner-core = { path = "crates/cocoon-spawner/core" }
 signaling-core = { path = "crates/signaling/core" }
 
 # Hive plugin system

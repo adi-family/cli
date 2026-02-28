@@ -494,6 +494,26 @@ services:
       - analytics-ingestion
     restart: on-failure
 
+  cocoon-spawner:
+    hooks:
+      pre-up:
+        - type: script
+          run: .adi/workflows/patch.sh plugin adi.cocoon-spawner
+    runner:
+      type: script
+      script:
+        run: adi run adi.cocoon-spawner run
+    environment:
+      static:
+        SIGNALING_SERVER_URL: "ws://adi.test/api/signaling/ws"
+        COCOON_SPAWNER_ID: ${env.COCOON_SPAWNER_ID:-local-spawner}
+        COCOON_SPAWNER_SECRET: ${env.COCOON_SPAWNER_SECRET:-}
+        COCOON_SPAWNER_KINDS: ${env.COCOON_SPAWNER_KINDS:-ubuntu}
+        COCOON_SPAWNER_MAX_CONCURRENT: ${env.COCOON_SPAWNER_MAX_CONCURRENT:-10}
+    depends_on:
+      - signaling
+    restart: on-failure
+
   registry:
     hooks:
       pre-up:
