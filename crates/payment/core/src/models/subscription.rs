@@ -28,6 +28,7 @@ pub struct CreateSubscriptionRequest {
     pub plan_id: String,
     pub amount_cents: Option<i64>,
     pub currency: Option<String>,
+    pub conversion_rate: Option<f64>,
     pub billing_interval: Option<BillingInterval>,
     pub success_url: Option<String>,
     pub cancel_url: Option<String>,

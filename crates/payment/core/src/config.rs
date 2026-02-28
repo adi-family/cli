@@ -8,12 +8,12 @@ env_vars! {
     DatabaseMaxConnections => "DATABASE_MAX_CONNECTIONS",
     JwtSecret              => "JWT_SECRET",
     CorsOrigin             => "CORS_ORIGIN",
+    DefaultConversionRate  => "DEFAULT_CONVERSION_RATE",
     CoinbaseApiKey         => "COINBASE_API_KEY",
     CoinbaseWebhookSecret  => "COINBASE_WEBHOOK_SECRET",
     PaddleApiKey           => "PADDLE_API_KEY",
     PaddleWebhookSecret    => "PADDLE_WEBHOOK_SECRET",
     PaddleEnvironment      => "PADDLE_ENVIRONMENT",
-    BalanceApiUrl          => "BALANCE_API_URL",
 }
 
 #[derive(Clone)]
@@ -24,7 +24,8 @@ pub struct Config {
     pub database_max_connections: u32,
     pub jwt_secret: String,
     pub cors_origin: String,
-    pub balance_api_url: Option<String>,
+    /// Credits per cent. Default 1.0 means $1 = 100 credits.
+    pub default_conversion_rate: f64,
     pub coinbase: Option<CoinbaseConfig>,
     pub paddle: Option<PaddleConfig>,
 }
@@ -83,7 +84,9 @@ impl Config {
             jwt_secret: env_opt(EnvVar::JwtSecret.as_str())
                 .context("JWT_SECRET is required")?,
             cors_origin: env_or(EnvVar::CorsOrigin.as_str(), "http://localhost:8013"),
-            balance_api_url: env_opt(EnvVar::BalanceApiUrl.as_str()),
+            default_conversion_rate: env_or(EnvVar::DefaultConversionRate.as_str(), "1.0")
+                .parse()
+                .context("Invalid DEFAULT_CONVERSION_RATE")?,
             coinbase,
             paddle,
         })

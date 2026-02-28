@@ -101,6 +101,8 @@ impl PaymentProvider for PaddleProvider {
             provider: ProviderType::Paddle.to_string(),
             provider_payment_id: txn_id.to_string(),
             checkout_url,
+            conversion_rate: 0.0,
+            expected_credits: 0,
             status: "pending".to_string(),
         })
     }

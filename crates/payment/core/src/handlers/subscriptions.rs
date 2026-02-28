@@ -56,9 +56,13 @@ pub async fn create_subscription(
             .map(|s| s.to_string());
 
         if let Some(ref charge_id) = provider_payment_id {
+            let conversion_rate = req
+                .conversion_rate
+                .unwrap_or(state.config.default_conversion_rate);
+
             sqlx::query(
-                "INSERT INTO payments (id, provider, provider_payment_id, user_id, subscription_id, amount_cents, currency, status, checkout_url)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+                "INSERT INTO payments (id, provider, provider_payment_id, user_id, subscription_id, amount_cents, currency, conversion_rate, status, checkout_url)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
             )
             .bind(Uuid::new_v4())
             .bind(ProviderType::Coinbase.to_string())
@@ -67,6 +71,7 @@ pub async fn create_subscription(
             .bind(sub.id)
             .bind(sub.amount_cents.unwrap_or(0))
             .bind(sub.currency.as_deref().unwrap_or("USD"))
+            .bind(conversion_rate)
             .bind("pending")
             .bind(checkout_url.as_deref())
             .execute(state.db.pool())

@@ -118,6 +118,8 @@ impl PaymentProvider for CoinbaseProvider {
             provider: ProviderType::Coinbase.to_string(),
             provider_payment_id: charge_id.to_string(),
             checkout_url: hosted_url.to_string(),
+            conversion_rate: 0.0,
+            expected_credits: 0,
             status: "pending".to_string(),
         })
     }

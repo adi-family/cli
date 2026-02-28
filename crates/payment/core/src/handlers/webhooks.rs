@@ -6,7 +6,7 @@ use axum::{
 };
 use uuid::Uuid;
 
-use crate::balance_client::{self, DepositRequest};
+use crate::balance_client;
 use crate::error::{ApiError, ApiResult};
 use crate::models::{ParsedWebhookEvent, Payment};
 use crate::types::ProviderType;
@@ -69,10 +69,8 @@ pub async fn handle_webhook(
     .execute(state.db.pool())
     .await?;
 
-    // Process event
     process_event(&state, &event).await?;
 
-    // Mark as processed
     sqlx::query("UPDATE webhook_events SET processed = true WHERE id = $1")
         .bind(event_id)
         .execute(state.db.pool())
@@ -124,7 +122,6 @@ async fn process_event(state: &AppState, event: &ParsedWebhookEvent) -> ApiResul
             .execute(state.db.pool())
             .await?;
 
-            // Deposit to balance and activate subscription if linked
             handle_completed_payment(state, provider_payment_id).await?;
         }
         ParsedWebhookEvent::PaymentFailed {
@@ -200,56 +197,28 @@ async fn handle_completed_payment(
         );
     }
 
-    // Deposit to internal balance
-    deposit_to_balance(state, &payment).await
-}
-
-async fn deposit_to_balance(state: &AppState, payment: &Payment) -> ApiResult<()> {
-    let balance_url = match state.config.balance_api_url.as_deref() {
-        Some(url) => url,
-        None => {
-            tracing::debug!("BALANCE_API_URL not configured, skipping balance deposit");
-            return Ok(());
-        }
-    };
-
-    // Convert cents to microtokens (1 cent = 10,000 microtokens, since 1 dollar = 1,000,000)
-    let microtokens = payment.amount_cents * 10_000;
-
-    let reference_type = if payment.subscription_id.is_some() {
-        "coinbase_subscription"
-    } else {
-        "coinbase_checkout"
-    };
-
-    let deposit_req = DepositRequest {
-        user_id: payment.user_id,
-        amount: microtokens,
-        description: Some(format!(
-            "Crypto payment: {} {}",
-            payment.amount_cents as f64 / 100.0,
-            payment.currency
-        )),
-        reference_type: Some(reference_type.to_string()),
-        reference_id: Some(payment.id.to_string()),
-        idempotency_key: Some(format!("payment:{}", payment.id)),
-    };
-
-    if let Err(e) = balance_client::deposit(&state.http_client, balance_url, &deposit_req).await {
-        tracing::error!(
-            payment_id = %payment.id,
-            error = %e,
-            "Failed to deposit to balance after payment"
-        );
-        return Err(ApiError::Internal(format!("Balance deposit failed: {e}")));
-    }
-
-    tracing::info!(
-        user_id = %payment.user_id,
-        microtokens = microtokens,
-        reference_type = reference_type,
-        "Deposited to internal balance"
+    // Deposit credits to local balance using the payment's conversion rate
+    let description = format!(
+        "Payment {} — {} cents {} @ {:.4} credits/cent",
+        payment.id, payment.amount_cents, payment.currency, payment.conversion_rate
     );
+
+    let txn = balance_client::deposit(
+        state.db.pool(),
+        payment.user_id,
+        payment.id,
+        payment.amount_cents,
+        payment.conversion_rate,
+        &description,
+    )
+    .await?;
+
+    // Store credited amount back on the payment
+    sqlx::query("UPDATE payments SET credited_amount = $1, updated_at = NOW() WHERE id = $2")
+        .bind(txn.amount)
+        .bind(payment.id)
+        .execute(state.db.pool())
+        .await?;
 
     Ok(())
 }

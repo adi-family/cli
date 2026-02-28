@@ -33,7 +33,6 @@ pub struct AppState {
     pub db: Database,
     pub config: Arc<Config>,
     pub providers: Arc<HashMap<ProviderType, Box<dyn PaymentProvider>>>,
-    pub http_client: reqwest::Client,
 }
 
 pub fn run_server(port: u16) -> anyhow::Result<()> {
@@ -69,7 +68,6 @@ pub fn run_server(port: u16) -> anyhow::Result<()> {
             db,
             config: Arc::new(config.clone()),
             providers: Arc::new(providers),
-            http_client: reqwest::Client::new(),
         };
 
         let cors = CorsLayer::new()
@@ -96,6 +94,11 @@ pub fn run_server(port: u16) -> anyhow::Result<()> {
         let app = Router::new()
             .route("/health", get(health_check))
             .route("/checkout", post(handlers::checkout::create_checkout))
+            .route("/balance", get(handlers::balance::get_balance))
+            .route(
+                "/balance/transactions",
+                get(handlers::balance::list_transactions),
+            )
             .route(
                 "/subscriptions",
                 post(handlers::subscriptions::create_subscription),
