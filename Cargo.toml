@@ -98,8 +98,6 @@ members = [
     "crates/hive/plugins/proxy-rewrite",
     "crates/hive/plugins/proxy-auth-api-key",
     "crates/hive/plugins/proxy-auth-oidc",
-    "crates/hive/plugins/orchestrator",
-    "crates/hive/plugins/signaling-control",
 
     # Tarminal components (flat submodules)
     "crates/lib/lib-misc-color",
@@ -313,7 +311,6 @@ hive-proxy-cache = { path = "crates/hive/plugins/proxy-cache" }
 hive-proxy-rewrite = { path = "crates/hive/plugins/proxy-rewrite" }
 hive-proxy-auth-api-key = { path = "crates/hive/plugins/proxy-auth-api-key" }
 hive-proxy-auth-oidc = { path = "crates/hive/plugins/proxy-auth-oidc" }
-hive-signaling-control = { path = "crates/hive/plugins/signaling-control" }
 
 # Libraries (flat submodules)
 lib-misc-color = { path = "crates/lib/lib-misc-color" }

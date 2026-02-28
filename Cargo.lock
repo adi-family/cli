@@ -4690,7 +4690,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum 0.7.9",
- "base64 0.22.1",
  "bollard",
  "chrono",
  "dashmap",
@@ -4715,8 +4714,6 @@ dependencies = [
  "lib-env-parse",
  "lib-hive-daemon-client",
  "lib-plugin-abi-v3",
- "lib-signaling-protocol",
- "lib-webrtc-manager",
  "libc",
  "prost",
  "rand 0.9.2",
@@ -4942,21 +4939,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
-]
-
-[[package]]
-name = "hive-orchestrator"
-version = "0.8.4"
-dependencies = [
- "anyhow",
- "dotenvy",
- "hive-core",
- "hive-proxy-ssl",
- "lib-signaling-protocol",
- "rustls 0.23.37",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -5238,25 +5220,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "tracing",
-]
-
-[[package]]
-name = "hive-signaling-control"
-version = "0.8.4"
-dependencies = [
- "anyhow",
- "async-trait",
- "dirs 6.0.0",
- "futures",
- "hex",
- "hive-core",
- "lib-hive-daemon-client",
- "lib-signaling-protocol",
- "rand 0.9.2",
- "serde_json",
- "tokio",
- "tokio-tungstenite 0.21.0",
  "tracing",
 ]
 
