@@ -228,5 +228,8 @@ declare module '@adi-family/sdk-plugin' {
     'signaling:auth-anonymous': { signalingUrl: string; authDomain: string };
     'connection:added': { id: string; services: string[] };
     'connection:removed': { id: string };
+
+    'auth:get-token': { authDomain: string; sourceUrl?: string };
+    'auth:get-token:ok': { token: string | null };
   }
 }

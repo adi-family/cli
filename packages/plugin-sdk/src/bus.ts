@@ -8,6 +8,7 @@ import type {
   WithCid,
 } from './types.js';
 import { generateCid } from './cid.js';
+import { Logger } from './logger.js';
 
 interface ChannelState {
   handlers: Map<EventHandler<never>, string>; // handler → consumer name
@@ -19,6 +20,7 @@ export interface EventBusOptions {
 }
 
 export class EventBus {
+  private readonly log: Logger = new Logger(`event-bus`);
   private readonly sendTimeoutMs: number;
   private readonly channels = new Map<string, ChannelState>();
   private readonly middlewares = new Set<BusMiddleware>();
@@ -52,8 +54,10 @@ export class EventBus {
 
     if (ch.handlers.size === 0) {
       ch.queue.push(payload);
+      this.log.debug({ event: name, producer, msg: 'queued (no handlers)' });
       for (const mw of this.middlewares) mw.ignored?.(name, payload, meta);
     } else {
+      this.log.trace({ event: name, producer, consumers });
       for (const [h] of ch.handlers) {
         (h as EventHandler<K>)(payload);
       }
@@ -68,8 +72,10 @@ export class EventBus {
   ): () => void {
     const ch = this.getChannel(event as string);
     ch.handlers.set(handler as EventHandler<never>, consumer);
+    this.log.debug({ event, consumer, msg: 'subscribed' });
     if (ch.queue.length > 0) {
       const flushed = ch.queue.splice(0);
+      this.log.debug({ event, consumer, count: flushed.length, msg: 'flushing queue' });
       for (const payload of flushed) {
         handler(payload as EventRegistry[K]);
       }
@@ -114,6 +120,7 @@ export class EventBus {
     } as unknown as EventRegistry[K];
     const replyEvent = `${event as string}:ok` as `${K}:ok`;
 
+    this.log.debug({ event, cid, producer, msg: 'send' });
     this.emit(event, payloadWithCid, producer);
 
     return {
@@ -122,6 +129,7 @@ export class EventBus {
           const unsubRef: { fn?: () => void } = {};
           const timer = setTimeout(() => {
             unsubRef.fn?.();
+            this.log.warn({ event, cid, producer, msg: 'send timed out' });
             reject(
               new Error(
                 `send('${event as string}') timed out after ${this.sendTimeoutMs}ms`,

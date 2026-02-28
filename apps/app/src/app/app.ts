@@ -1,36 +1,23 @@
 import { EventBus } from '@adi-family/sdk-plugin';
-import { Database, PreferencesStore } from './database';
-import { RegistryHub } from './registry';
-import { SignalingServerHub } from './signaling';
 import { DbConnection } from './db-connection';
+import { RegistryHub } from './registry-hub';
+import { SignalingHub } from './signaling-hub';
 
 export interface Context {
-  db: Database;
-  prefs: PreferencesStore;
-  registryHub: RegistryHub;
-  signalingHub: SignalingServerHub;
+  db: DbConnection;
   bus: EventBus;
 }
 
 export class App {
-  ctx: Context;
-  constructor(ctx: Context) {
-    this.ctx = ctx;
-  }
-
   static async init(): Promise<App> {
     const bus = EventBus.init();
-    const connection = DbConnection.init(`RootStore`);
-    const prefs = new PreferencesStore(db);
-    const sharedConnections = new Map<string, DbConnection>();
+    const db = DbConnection.init();
+    db.registerStore('prefs');
 
-    const ctx = { bus, prefs };
+    const ctx: Context = { db, bus };
+    await RegistryHub.init(ctx);
+    await SignalingHub.init(ctx);
 
-    const [registryHub, signalingHub] = await Promise.all([
-      RegistryHub.init(ctx),
-      SignalingServerHub.init(ctx, sharedConnections),
-    ]);
-
-    return new App({ db, prefs, registryHub, signalingHub, bus });
+    return new App();
   }
 }

@@ -1,20 +1,26 @@
-import { type EventBus, Logger } from '@adi-family/sdk-plugin';
+import { Logger } from '@adi-family/sdk-plugin';
 
 export class DbConnection {
   private log: Logger = new Logger('db-connection');
   private dbPromise: Promise<IDBDatabase> | null = null;
-  private seenStores: string[] = [];
+  private seenStores: Set<string> = new Set();
 
-  constructor(private name: string) {}
-  public static init(name: string) {
-    return new DbConnection(name);
+  constructor() {}
+
+  public static init() {
+    return new DbConnection();
   }
 
   private reset(): void {
     this.dbPromise = null;
   }
 
-  open(bus: EventBus, dbName: string, version: number): Promise<IDBDatabase> {
+  registerStore(storeName: string): void {
+    this.seenStores.add(storeName);
+    this.log.trace({ msg: `Store is seen`, storeName });
+  }
+
+  open(dbName: string, version: number): Promise<IDBDatabase> {
     if (this.dbPromise) return this.dbPromise;
 
     this.dbPromise = new Promise((resolve, reject) => {
@@ -23,7 +29,7 @@ export class DbConnection {
       req.onupgradeneeded = () => {
         const db = req.result;
 
-        for (const name of this.seenStores) {
+        for (const name of Array.from(this.seenStores)) {
           if (!db.objectStoreNames.contains(name)) {
             db.createObjectStore(name);
           }
@@ -32,29 +38,29 @@ export class DbConnection {
 
       req.onsuccess = () => {
         const db = req.result;
-        this.log.trace(bus, { msg: 'connected', dbName, version });
+        this.log.trace({ msg: 'connected', dbName, version });
 
         db.onclose = () => {
-          this.log.warn(bus, { msg: 'closed', dbName });
+          this.log.warn({ msg: 'closed', dbName });
           this.reset();
-          bus.emit('db:disconnected', { reason: 'closed' }, this.name);
         };
 
         db.onversionchange = () => {
-          this.log.warn(bus, { msg: 'version-change', dbName });
+          this.log.warn({ msg: 'version-change', dbName });
           db.close();
           this.reset();
-          bus.emit('db:disconnected', { reason: 'version-change' }, this.name);
         };
 
-        bus.emit('db:connected', {}, this.name);
         resolve(db);
       };
 
       req.onerror = () => {
-        this.log.error(bus, { msg: 'open failed', dbName, error: String(req.error) });
+        this.log.error({
+          msg: 'open failed',
+          dbName,
+          error: String(req.error),
+        });
         this.reset();
-        bus.emit('db:error', { error: String(req.error) }, this.name);
         reject(req.error);
       };
     });

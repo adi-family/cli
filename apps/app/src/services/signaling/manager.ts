@@ -10,95 +10,313 @@ import { createRtcSession, type RtcSession } from './webrtc.ts';
 import { createAdiChannel, type AdiChannel } from './adi-channel.ts';
 import { createConnection, type Connection } from './connection.ts';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 interface SessionEntry {
   rtc: RtcSession;
   adi: AdiChannel | null;
   deviceId: string;
 }
 
-export interface SignalingManager {
+const SOURCE = 'signaling';
+
+export class SignalingManager {
   readonly url: string;
-  connect(): void;
-  disconnect(): void;
-  listCocoons(): void;
-  listHives(): void;
-  spawnCocoon(name?: string, kind?: string): void;
-  requestSetupToken(): Promise<string>;
-  startSession(deviceId: string): string;
-  closeSession(deviceId: string): void;
-  sendOnChannel(deviceId: string, channel: DataChannelName, payload: unknown): boolean;
-}
 
-// ---------------------------------------------------------------------------
-// Factory
-// ---------------------------------------------------------------------------
+  private readonly log = new Logger('signaling-manager');
+  private readonly bus: EventBus;
+  private readonly connections: Map<string, Connection>;
+  private readonly ws: WsControl;
+  private readonly sessions = new Map<string, SessionEntry>();
+  private readonly deviceToSession = new Map<string, string>();
+  private authenticatedUserId: string | null = null;
+  private lastAuthOptions: string[] = [];
+  private pendingSetupToken: {
+    resolve: (token: string) => void;
+    reject: (err: Error) => void;
+  } | null = null;
 
-export const createSignalingManager = (
-  url: string,
-  connections: Map<string, Connection>,
-  bus: EventBus,
-): SignalingManager => {
-  const log = new Logger('signaling-manager');
-  const sessions = new Map<string, SessionEntry>();
-  const deviceToSession = new Map<string, string>();
-  let authenticatedUserId: string | null = null;
-  let lastAuthOptions: string[] = [];
-  let pendingSetupToken: { resolve: (token: string) => void; reject: (err: Error) => void } | null = null;
+  constructor(
+    url: string,
+    connections: Map<string, Connection>,
+    bus: EventBus,
+  ) {
+    this.url = url;
+    this.connections = connections;
+    this.bus = bus;
 
-  // -- WebSocket layer -------------------------------------------------------
+    this.ws = createWebSocket(url, {
+      onStateChange: (state) => {
+        bus.emit('signaling:state', { url, state }, SOURCE);
+        if (state === 'disconnected') {
+          this.authenticatedUserId = null;
+        }
+      },
+      onMessage: (msg) => void this.handleWsMessage(msg),
+      onError: (msg) => this.log.error({ msg: 'ws error', error: msg }),
+    });
 
-  const ws: WsControl = createWebSocket(url, {
-    onStateChange: (state) => {
-      bus.emit('signaling:state', { url, state }, 'signaling');
-      if (state === 'disconnected') {
-        authenticatedUserId = null;
+    bus.on(
+      'signaling:auth-anonymous',
+      ({ signalingUrl, authDomain }) => {
+        if (signalingUrl !== url) return;
+        void this.handleAnonymousAuth(authDomain);
+      },
+      SOURCE,
+    );
+
+    bus.on(
+      'auth:state-changed',
+      ({ user }) => {
+        if (user && !this.authenticatedUserId) {
+          this.ws.disconnect();
+          this.ws.connect();
+        }
+      },
+      SOURCE,
+    );
+  }
+
+  connect(): void {
+    this.ws.connect();
+  }
+
+  disconnect(): void {
+    for (const [sessionId, entry] of this.sessions) {
+      this.ws.send({
+        type: 'web_rtc_session_ended',
+        session_id: sessionId,
+        reason: 'disconnect',
+      });
+      this.teardownSession(sessionId, entry);
+    }
+    this.ws.disconnect();
+  }
+
+  listCocoons(): void {
+    this.ws.send({ type: 'list_my_cocoons' });
+  }
+
+  listHives(): void {
+    this.ws.send({ type: 'list_hives' });
+  }
+
+  requestSetupToken(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      this.pendingSetupToken = { resolve, reject };
+      this.ws.send({ type: 'request_setup_token' });
+      setTimeout(() => {
+        if (this.pendingSetupToken) {
+          this.pendingSetupToken.reject(
+            new Error('Setup token request timed out'),
+          );
+          this.pendingSetupToken = null;
+        }
+      }, 10_000);
+    });
+  }
+
+  spawnCocoon(name?: string, kind?: string): void {
+    const requestId = `spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    this.requestSetupToken()
+      .then((token) => {
+        this.ws.send({
+          type: 'spawn_cocoon',
+          request_id: requestId,
+          setup_token: token,
+          kind: kind ?? 'ubuntu',
+          ...(name ? { name } : {}),
+        });
+      })
+      .catch((err) => {
+        this.bus.emit(
+          'signaling:spawn-result',
+          {
+            url: this.url,
+            requestId,
+            success: false,
+            error: `Failed to get setup token: ${err instanceof Error ? err.message : String(err)}`,
+          },
+          SOURCE,
+        );
+      });
+  }
+
+  startSession(deviceId: string): string {
+    const existingId = this.deviceToSession.get(deviceId);
+    if (existingId) {
+      const existing = this.sessions.get(existingId);
+      if (existing) {
+        this.ws.send({
+          type: 'web_rtc_session_ended',
+          session_id: existingId,
+          reason: 'replaced',
+        });
+        this.teardownSession(existingId, existing);
       }
-    },
-    onMessage: (msg) => void handleWsMessage(msg),
-    onError: (msg) => log.error(bus, { msg: 'ws error', error: msg }),
-  });
+    }
 
-  async function handleWsMessage(msg: SignalingMessage): Promise<void> {
+    const sessionId = `webrtc-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const rtc = createRtcSession(deviceId, sessionId, {
+      onStateChange: (state) => {
+        this.bus.emit(
+          'signaling:session-state',
+          { url: this.url, deviceId, state, sessionId },
+          SOURCE,
+        );
+      },
+      onIceCandidate: (candidate) => {
+        this.ws.send({
+          type: 'web_rtc_ice_candidate',
+          session_id: sessionId,
+          candidate: candidate.candidate,
+          sdp_mid: candidate.sdpMid ?? undefined,
+          sdp_mline_index: candidate.sdpMLineIndex ?? undefined,
+        });
+      },
+      onChannelOpen: (channelName) => {
+        this.log.trace({
+          msg: 'channel open',
+          channel: channelName,
+          deviceId: deviceId.slice(0, 8),
+        });
+        const entry = this.sessions.get(sessionId);
+        if (channelName === 'adi' && entry && !entry.adi) {
+          this.onAdiChannelOpen(entry);
+        }
+      },
+      onChannelClose: (channelName) => {
+        this.log.trace({
+          msg: 'channel closed',
+          channel: channelName,
+          deviceId: deviceId.slice(0, 8),
+        });
+      },
+      onChannelMessage: (channelName, data) => {
+        const entry = this.sessions.get(sessionId);
+        if (entry) this.routeChannelData(entry, channelName, data);
+      },
+    });
+
+    const entry: SessionEntry = { rtc, adi: null, deviceId };
+    this.sessions.set(sessionId, entry);
+    this.deviceToSession.set(deviceId, sessionId);
+
+    this.bus.emit(
+      'signaling:session-state',
+      { url: this.url, deviceId, state: 'signaling', sessionId },
+      SOURCE,
+    );
+
+    this.ws.send({
+      type: 'web_rtc_start_session',
+      session_id: sessionId,
+      device_id: deviceId,
+    });
+
+    return sessionId;
+  }
+
+  closeSession(deviceId: string): void {
+    const sessionId = this.deviceToSession.get(deviceId);
+    if (!sessionId) return;
+    const entry = this.sessions.get(sessionId);
+    if (!entry) return;
+
+    this.ws.send({
+      type: 'web_rtc_session_ended',
+      session_id: sessionId,
+      reason: 'user_closed',
+    });
+    this.teardownSession(sessionId, entry);
+  }
+
+  sendOnChannel(
+    deviceId: string,
+    channel: DataChannelName,
+    payload: unknown,
+  ): boolean {
+    const sessionId = this.deviceToSession.get(deviceId);
+    if (!sessionId) return false;
+    const entry = this.sessions.get(sessionId);
+    if (!entry) return false;
+
+    if (entry.rtc.sendOnChannel(channel, payload)) return true;
+
+    this.ws.send({
+      type: 'web_rtc_data',
+      session_id: sessionId,
+      channel,
+      data: JSON.stringify(payload),
+      binary: false,
+    });
+    return true;
+  }
+
+  // -- WebSocket message handling ---------------------------------------------
+
+  private async handleWsMessage(msg: SignalingMessage): Promise<void> {
     switch (msg.type) {
       case 'hello':
-        await handleHello(msg.auth_kind, msg.auth_domain, msg.auth_requirement, msg.auth_options);
+        await this.handleHello(
+          msg.auth_kind,
+          msg.auth_domain,
+          msg.auth_requirement,
+          msg.auth_options,
+        );
         break;
 
       case 'authenticated':
-        authenticatedUserId = msg.user_id;
-        bus.emit('signaling:auth-ok', { url }, 'signaling');
-        bus.emit('actions:dismiss', { id: `auth-required:${url}` }, 'signaling');
-        bus.emit('actions:dismiss', { id: `auth-error:${url}` }, 'signaling');
+        this.authenticatedUserId = msg.user_id;
+        this.bus.emit('signaling:auth-ok', { url: this.url }, SOURCE);
+        this.bus.emit(
+          'actions:dismiss',
+          { id: `auth-required:${this.url}` },
+          SOURCE,
+        );
+        this.bus.emit(
+          'actions:dismiss',
+          { id: `auth-error:${this.url}` },
+          SOURCE,
+        );
         break;
 
       case 'hello_authed':
-        bus.emit('signaling:connection-info', { url, connectionInfo: msg.connection_info }, 'signaling');
-        listCocoons();
-        listHives();
+        this.bus.emit(
+          'signaling:connection-info',
+          { url: this.url, connectionInfo: msg.connection_info },
+          SOURCE,
+        );
+        this.listCocoons();
+        this.listHives();
         break;
 
       case 'my_cocoons':
-        bus.emit('signaling:cocoons', { url, cocoons: msg.cocoons }, 'signaling');
+        this.bus.emit(
+          'signaling:cocoons',
+          { url: this.url, cocoons: msg.cocoons },
+          SOURCE,
+        );
         break;
 
       case 'hives_list':
-        bus.emit('signaling:hives', { url, hives: msg.hives }, 'signaling');
+        this.bus.emit(
+          'signaling:hives',
+          { url: this.url, hives: msg.hives },
+          SOURCE,
+        );
         break;
 
       case 'web_rtc_session_started':
-        onSessionStarted(msg.session_id, msg.device_id);
+        this.onSessionStarted(msg.session_id);
         break;
 
       case 'web_rtc_answer':
-        onAnswer(msg.session_id, msg.sdp);
+        this.onAnswer(msg.session_id, msg.sdp);
         break;
 
       case 'web_rtc_ice_candidate':
-        onIceCandidate(msg.session_id, {
+        this.onIceCandidate(msg.session_id, {
           candidate: msg.candidate,
           sdpMid: msg.sdp_mid,
           sdpMLineIndex: msg.sdp_mline_index,
@@ -106,74 +324,103 @@ export const createSignalingManager = (
         break;
 
       case 'web_rtc_session_ended':
-        onSessionEnded(msg.session_id);
+        this.onSessionEnded(msg.session_id);
         break;
 
       case 'web_rtc_error': {
-        const entry = sessions.get(msg.session_id);
+        const entry = this.sessions.get(msg.session_id);
         if (entry) {
-          log.error(bus, { msg: 'session error', sessionId: msg.session_id, error: msg.message });
-          bus.emit('signaling:session-state', {
-            url,
-            deviceId: entry.deviceId,
-            state: 'failed',
+          this.log.error({
+            msg: 'session error',
             sessionId: msg.session_id,
-          }, 'signaling');
+            error: msg.message,
+          });
+          this.bus.emit(
+            'signaling:session-state',
+            {
+              url: this.url,
+              deviceId: entry.deviceId,
+              state: 'failed',
+              sessionId: msg.session_id,
+            },
+            SOURCE,
+          );
         }
         break;
       }
 
       case 'web_rtc_data': {
-        const entry = sessions.get(msg.session_id);
+        const entry = this.sessions.get(msg.session_id);
         if (entry) {
-          routeChannelData(entry, msg.channel as DataChannelName, msg.data);
+          this.routeChannelData(
+            entry,
+            msg.channel as DataChannelName,
+            msg.data,
+          );
         }
         break;
       }
 
       case 'spawn_cocoon_result':
-        bus.emit('signaling:spawn-result', {
-          url,
-          requestId: msg.request_id,
-          success: msg.success,
-          deviceId: msg.device_id,
-          error: msg.error,
-        }, 'signaling');
-        if (msg.success) listCocoons();
+        this.bus.emit(
+          'signaling:spawn-result',
+          {
+            url: this.url,
+            requestId: msg.request_id,
+            success: msg.success,
+            deviceId: msg.device_id,
+            error: msg.error,
+          },
+          SOURCE,
+        );
+        if (msg.success) this.listCocoons();
         break;
 
       case 'access_denied':
-        bus.emit('signaling:auth-error', {
-          url,
-          reason: msg.reason,
-          authKind: msg.auth_kind,
-          authDomain: msg.auth_domain,
-        }, 'signaling');
-        // If we thought we were authenticated, reset
-        if (authenticatedUserId) {
-          authenticatedUserId = null;
+        this.bus.emit(
+          'signaling:auth-error',
+          {
+            url: this.url,
+            reason: msg.reason,
+            authKind: msg.auth_kind,
+            authDomain: msg.auth_domain,
+          },
+          SOURCE,
+        );
+        if (this.authenticatedUserId) {
+          this.authenticatedUserId = null;
         }
-        bus.emit('actions:push', {
-          id: `auth-error:${url}`,
-          plugin: msg.auth_kind ?? 'unknown',
-          kind: 'auth-required',
-          data: { url, reason: msg.reason, authKind: msg.auth_kind, authDomain: msg.auth_domain, authOptions: lastAuthOptions },
-          priority: 'urgent',
-        }, 'signaling');
+        this.bus.emit(
+          'actions:push',
+          {
+            id: `auth-error:${this.url}`,
+            plugin: msg.auth_kind ?? 'unknown',
+            kind: 'auth-required',
+            data: {
+              url: this.url,
+              reason: msg.reason,
+              authKind: msg.auth_kind,
+              authDomain: msg.auth_domain,
+              authOptions: this.lastAuthOptions,
+            },
+            priority: 'urgent',
+          },
+          SOURCE,
+        );
         break;
 
       case 'setup_token':
-        if (pendingSetupToken) {
-          pendingSetupToken.resolve(msg.token);
-          pendingSetupToken = null;
+        if (this.pendingSetupToken) {
+          this.pendingSetupToken.resolve(msg.token);
+          this.pendingSetupToken = null;
         }
         break;
 
       case 'error':
-        log.error(bus, { msg: 'server error', error: msg.message });
-        if (pendingSetupToken) {
-          pendingSetupToken.reject(new Error(msg.message));
-          pendingSetupToken = null;
+        this.log.error({ msg: 'server error', error: msg.message });
+        if (this.pendingSetupToken) {
+          this.pendingSetupToken.reject(new Error(msg.message));
+          this.pendingSetupToken = null;
         }
         break;
 
@@ -182,35 +429,51 @@ export const createSignalingManager = (
     }
   }
 
-  async function handleHello(
+  private async handleHello(
     authKind: string,
     authDomain: string,
     authRequirement: string,
     authOptions: string[],
   ): Promise<void> {
-    lastAuthOptions = authOptions;
+    this.lastAuthOptions = authOptions;
 
-    const { token } = await bus.send('auth:get-token', { authDomain, sourceUrl: url }, 'signaling').wait();
+    const { token } = await this.bus
+      .send(
+        'auth:get-token',
+        { authDomain, sourceUrl: this.url },
+        SOURCE,
+      )
+      .wait();
+
     if (token) {
-      ws.send({ type: 'authenticate', access_token: token });
+      this.ws.send({ type: 'authenticate', access_token: token });
       return;
     }
 
-    bus.emit('actions:push', {
-      id: `auth-required:${url}`,
-      plugin: authKind,
-      kind: 'auth-required',
-      data: { url, authKind, authDomain, authRequirement, authOptions },
-      priority: 'urgent',
-    }, 'signaling');
+    this.bus.emit(
+      'actions:push',
+      {
+        id: `auth-required:${this.url}`,
+        plugin: authKind,
+        kind: 'auth-required',
+        data: {
+          url: this.url,
+          authKind,
+          authDomain,
+          authRequirement,
+          authOptions,
+        },
+        priority: 'urgent',
+      },
+      SOURCE,
+    );
   }
 
-  bus.on('signaling:auth-anonymous', async ({ signalingUrl, authDomain }) => {
-    if (signalingUrl !== url) return;
+  private async handleAnonymousAuth(authDomain: string): Promise<void> {
     try {
       const res = await fetch(`${authDomain}/anonymous`, { method: 'POST' });
       if (!res.ok) return;
-      const data = await res.json() as {
+      const data = (await res.json()) as {
         accessToken?: string;
         access_token?: string;
         expiresIn?: number;
@@ -220,249 +483,149 @@ export const createSignalingManager = (
       if (!token) return;
 
       const expiresIn = data.expiresIn ?? data.expires_in ?? 7 * 24 * 3600;
-      bus.emit('auth:session-save', {
-        accessToken: token,
-        email: '',
-        expiresAt: Date.now() + expiresIn * 1000,
-        authUrl: authDomain,
-      }, 'signaling');
+      this.bus.emit(
+        'auth:session-save',
+        {
+          accessToken: token,
+          email: '',
+          expiresAt: Date.now() + expiresIn * 1000,
+          authUrl: authDomain,
+        },
+        SOURCE,
+      );
 
-      ws.send({ type: 'authenticate', access_token: token });
+      this.ws.send({ type: 'authenticate', access_token: token });
     } catch (err) {
-      log.warn(bus, { msg: 'anonymous auth failed', error: err instanceof Error ? err.message : String(err) });
+      this.log.warn({
+        msg: 'anonymous auth failed',
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
-  }, 'signaling');
+  }
 
-  // -- Session lifecycle -----------------------------------------------------
+  // -- Session lifecycle ------------------------------------------------------
 
-  function onSessionStarted(sessionId: string, _deviceId: string): void {
-    const entry = sessions.get(sessionId);
+  private onSessionStarted(sessionId: string): void {
+    const entry = this.sessions.get(sessionId);
     if (!entry) return;
 
     void entry.rtc.createOffer().then((sdp) => {
       if (sdp) {
-        ws.send({ type: 'web_rtc_offer', session_id: sessionId, sdp });
+        this.ws.send({ type: 'web_rtc_offer', session_id: sessionId, sdp });
       }
     });
   }
 
-  function onAnswer(sessionId: string, sdp: string): void {
-    const entry = sessions.get(sessionId);
+  private onAnswer(sessionId: string, sdp: string): void {
+    const entry = this.sessions.get(sessionId);
     if (entry) void entry.rtc.applyAnswer(sdp);
   }
 
-  function onIceCandidate(sessionId: string, candidate: RTCIceCandidateInit): void {
-    const entry = sessions.get(sessionId);
+  private onIceCandidate(
+    sessionId: string,
+    candidate: RTCIceCandidateInit,
+  ): void {
+    const entry = this.sessions.get(sessionId);
     if (entry) void entry.rtc.addIceCandidate(candidate);
   }
 
-  function onSessionEnded(sessionId: string): void {
-    const entry = sessions.get(sessionId);
+  private onSessionEnded(sessionId: string): void {
+    const entry = this.sessions.get(sessionId);
     if (!entry) return;
-    teardownSession(sessionId, entry);
+    this.teardownSession(sessionId, entry);
   }
 
-  function teardownSession(sessionId: string, entry: SessionEntry): void {
+  private teardownSession(sessionId: string, entry: SessionEntry): void {
     entry.adi?.cancelAll();
     entry.rtc.close();
-    sessions.delete(sessionId);
-    deviceToSession.delete(entry.deviceId);
+    this.sessions.delete(sessionId);
+    this.deviceToSession.delete(entry.deviceId);
 
-    if (connections.has(entry.deviceId)) {
-      connections.delete(entry.deviceId);
-      bus.emit('connection:removed', { id: entry.deviceId }, 'signaling');
+    if (this.connections.has(entry.deviceId)) {
+      this.connections.delete(entry.deviceId);
+      this.bus.emit(
+        'connection:removed',
+        { id: entry.deviceId },
+        SOURCE,
+      );
     }
 
-    bus.emit('signaling:session-state', {
-      url,
-      deviceId: entry.deviceId,
-      state: 'idle',
-      sessionId,
-    }, 'signaling');
+    this.bus.emit(
+      'signaling:session-state',
+      {
+        url: this.url,
+        deviceId: entry.deviceId,
+        state: 'idle',
+        sessionId,
+      },
+      SOURCE,
+    );
   }
 
-  // -- ADI channel wiring ---------------------------------------------------
+  // -- ADI channel wiring ----------------------------------------------------
 
-  function onAdiChannelOpen(_sessionId: string, entry: SessionEntry): void {
-    const adi = createAdiChannel(
-      (payload) => entry.rtc.sendOnChannel('adi', payload),
+  private onAdiChannelOpen(entry: SessionEntry): void {
+    const adi = createAdiChannel((payload) =>
+      entry.rtc.sendOnChannel('adi', payload),
     );
     entry.adi = adi;
 
-    // Discover services and register connection
-    void adi.listServices().then((services) => {
-      const serviceNames = services.map((s) => s.id);
-      const conn = createConnection(entry.deviceId, serviceNames, adi);
-      connections.set(entry.deviceId, conn);
-      bus.emit('connection:added', { id: entry.deviceId, services: serviceNames }, 'signaling');
-    }).catch((err) => {
-      log.warn(bus, { msg: 'service discovery failed', error: err instanceof Error ? err.message : String(err) });
-    });
-  }
-
-  // -- Data channel routing --------------------------------------------------
-
-  function routeChannelData(entry: SessionEntry, channel: DataChannelName, raw: string): void {
-    if (channel === 'adi' && entry.adi) {
-      try {
-        entry.adi.handleResponse(JSON.parse(raw) as AdiResponse | AdiDiscovery);
-      } catch {
-        log.warn(bus, { msg: 'failed to parse adi message' });
-      }
-    }
-  }
-
-  // -- Public API ------------------------------------------------------------
-
-  const connect = (): void => ws.connect();
-
-  const disconnect = (): void => {
-    for (const [sessionId, entry] of sessions) {
-      ws.send({ type: 'web_rtc_session_ended', session_id: sessionId, reason: 'disconnect' });
-      teardownSession(sessionId, entry);
-    }
-    ws.disconnect();
-  };
-
-  const listCocoons = (): void => {
-    ws.send({ type: 'list_my_cocoons' });
-  };
-
-  const listHives = (): void => {
-    ws.send({ type: 'list_hives' });
-  };
-
-  const requestSetupToken = (): Promise<string> =>
-    new Promise((resolve, reject) => {
-      pendingSetupToken = { resolve, reject };
-      ws.send({ type: 'request_setup_token' });
-      setTimeout(() => {
-        if (pendingSetupToken) {
-          pendingSetupToken.reject(new Error('Setup token request timed out'));
-          pendingSetupToken = null;
-        }
-      }, 10_000);
-    });
-
-  const spawnCocoon = (name?: string, kind?: string): void => {
-    const requestId = `spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-    // Request a setup token first, then spawn with it
-    requestSetupToken()
-      .then((token) => {
-        ws.send({
-          type: 'spawn_cocoon',
-          request_id: requestId,
-          setup_token: token,
-          kind: kind ?? 'ubuntu',
-          ...(name ? { name } : {}),
-        });
+    void adi
+      .listServices()
+      .then((services) => {
+        const serviceNames = services.map((s) => s.id);
+        const conn = createConnection(entry.deviceId, serviceNames, adi);
+        this.connections.set(entry.deviceId, conn);
+        this.bus.emit(
+          'connection:added',
+          { id: entry.deviceId, services: serviceNames },
+          SOURCE,
+        );
       })
       .catch((err) => {
-        bus.emit('signaling:spawn-result', {
-          url,
-          requestId,
-          success: false,
-          error: `Failed to get setup token: ${err instanceof Error ? err.message : String(err)}`,
-        }, 'signaling');
+        this.log.warn({
+          msg: 'service discovery failed',
+          error: err instanceof Error ? err.message : String(err),
+        });
       });
-  };
+  }
 
-  const startSession = (deviceId: string): string => {
-    // Close existing session for this device
-    const existingId = deviceToSession.get(deviceId);
-    if (existingId) {
-      const existing = sessions.get(existingId);
-      if (existing) {
-        ws.send({ type: 'web_rtc_session_ended', session_id: existingId, reason: 'replaced' });
-        teardownSession(existingId, existing);
+  // -- Data channel routing ---------------------------------------------------
+
+  private routeChannelData(
+    entry: SessionEntry,
+    channel: DataChannelName,
+    raw: string,
+  ): void {
+    if (channel === 'adi' && entry.adi) {
+      try {
+        entry.adi.handleResponse(
+          JSON.parse(raw) as AdiResponse | AdiDiscovery,
+        );
+      } catch {
+        this.log.warn({ msg: 'failed to parse adi message' });
       }
     }
+  }
+}
 
-    const sessionId = `webrtc-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-    const rtc = createRtcSession(deviceId, sessionId, {
-      onStateChange: (state) => {
-        bus.emit('signaling:session-state', { url, deviceId, state, sessionId }, 'signaling');
-      },
-      onIceCandidate: (candidate) => {
-        ws.send({
-          type: 'web_rtc_ice_candidate',
-          session_id: sessionId,
-          candidate: candidate.candidate,
-          sdp_mid: candidate.sdpMid ?? undefined,
-          sdp_mline_index: candidate.sdpMLineIndex ?? undefined,
-        });
-      },
-      onChannelOpen: (name) => {
-        log.trace(bus, { msg: 'channel open', channel: name, deviceId: deviceId.slice(0, 8) });
-        const entry = sessions.get(sessionId);
-        if (name === 'adi' && entry && !entry.adi) {
-          onAdiChannelOpen(sessionId, entry);
-        }
-      },
-      onChannelClose: (name) => {
-        log.trace(bus, { msg: 'channel closed', channel: name, deviceId: deviceId.slice(0, 8) });
-      },
-      onChannelMessage: (name, data) => {
-        const entry = sessions.get(sessionId);
-        if (entry) routeChannelData(entry, name, data);
-      },
-    });
-
-    const entry: SessionEntry = { rtc, adi: null, deviceId };
-    sessions.set(sessionId, entry);
-    deviceToSession.set(deviceId, sessionId);
-
-    bus.emit('signaling:session-state', { url, deviceId, state: 'signaling', sessionId }, 'signaling');
-
-    ws.send({
-      type: 'web_rtc_start_session',
-      session_id: sessionId,
-      device_id: deviceId,
-    });
-
-    return sessionId;
-  };
-
-  const closeSession = (deviceId: string): void => {
-    const sessionId = deviceToSession.get(deviceId);
-    if (!sessionId) return;
-    const entry = sessions.get(sessionId);
-    if (!entry) return;
-
-    ws.send({ type: 'web_rtc_session_ended', session_id: sessionId, reason: 'user_closed' });
-    teardownSession(sessionId, entry);
-  };
-
-  const sendOnChannel = (deviceId: string, channel: DataChannelName, payload: unknown): boolean => {
-    const sessionId = deviceToSession.get(deviceId);
-    if (!sessionId) return false;
-    const entry = sessions.get(sessionId);
-    if (!entry) return false;
-
-    if (entry.rtc.sendOnChannel(channel, payload)) return true;
-
-    // Fallback to signaling relay
-    ws.send({
-      type: 'web_rtc_data',
-      session_id: sessionId,
-      channel,
-      data: JSON.stringify(payload),
-      binary: false,
-    });
-    return true;
-  };
-
-  // -- Listen for auth state changes to re-authenticate ---------------------
-
-  bus.on('auth:state-changed', ({ user }) => {
-    if (user && !authenticatedUserId) {
-      // User just logged in and we're unauthenticated — reconnect to trigger Hello flow
-      ws.disconnect();
-      ws.connect();
-    }
-  }, 'signaling');
-
-  return { url, connect, disconnect, listCocoons, listHives, spawnCocoon, requestSetupToken, startSession, closeSession, sendOnChannel };
-};
+declare module '@adi-family/sdk-plugin' {
+  interface EventRegistry {
+    'signaling:auth-ok': { url: string };
+    'auth:session-save': {
+      accessToken: string;
+      email: string;
+      expiresAt: number;
+      authUrl: string;
+    };
+    'auth:state-changed': { user: unknown };
+    'actions:push': {
+      id: string;
+      plugin: string;
+      kind: string;
+      data: Record<string, unknown>;
+      priority?: 'low' | 'normal' | 'urgent';
+    };
+    'actions:dismiss': { id: string };
+  }
+}

@@ -1,5 +1,3 @@
-import type { EventBus } from './bus.js';
-
 type LogData = Record<string, unknown>;
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'trace';
@@ -23,35 +21,30 @@ const prefixes: Record<LogLevel, string> = {
 export class Logger {
   constructor(private producer: string) {}
 
-  error(bus: EventBus, data: LogData) {
-    this.log('error', bus, data);
+  error(data: LogData) {
+    this.log('error', data);
   }
 
-  warn(bus: EventBus, data: LogData) {
-    this.log('warn', bus, data);
+  warn(data: LogData) {
+    this.log('warn', data);
   }
 
-  info(bus: EventBus, data: LogData) {
-    this.log('info', bus, data);
+  info(data: LogData) {
+    this.log('info', data);
   }
 
-  debug(bus: EventBus, data: LogData) {
-    this.log('debug', bus, data);
+  debug(data: LogData) {
+    this.log('debug', data);
   }
 
-  trace(bus: EventBus, data: LogData) {
-    this.log('trace', bus, data);
+  trace(data: LogData) {
+    this.log('trace', data);
   }
 
-  private log(level: LogLevel, bus: EventBus, data: LogData) {
+  private log(level: LogLevel, data: LogData) {
     consoleMethods[level](prefixes[level], this.producer, data);
-    bus.emit(`logging:${level}` as keyof LoggingEvents, data, this.producer);
   }
 }
-
-type LoggingEvents = {
-  [K in `logging:${LogLevel}`]: LogData;
-};
 
 declare module './types.js' {
   interface EventRegistry {

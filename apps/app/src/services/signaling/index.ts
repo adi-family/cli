@@ -24,11 +24,11 @@ export {
   AdiServiceNotFoundError,
 } from "./adi-channel.ts";
 export type { Connection } from "./connection.ts";
-export { createSignalingManager, type SignalingManager } from "./manager.ts";
+export { SignalingManager } from "./manager.ts";
 
 import type { EventBus } from "@adi-family/sdk-plugin";
 import type { Connection } from "./connection.ts";
-import { createSignalingManager, type SignalingManager } from "./manager.ts";
+import { SignalingManager } from "./manager.ts";
 import { getGlobal, setGlobal } from "../../global.ts";
 const STORAGE_KEY = "adi:signaling-urls";
 
@@ -63,7 +63,6 @@ const saveUrls = (urls: string[]): void => {
 export const createSignalingHub = (
   connections: Map<string, Connection>,
   bus: EventBus,
-  getToken: (authDomain: string, sourceUrl?: string) => Promise<string | null>,
 ): SignalingHub => {
   const managers = new Map<string, SignalingManager>();
 
@@ -71,7 +70,7 @@ export const createSignalingHub = (
     const existing = managers.get(url);
     if (existing) return existing;
 
-    const manager = createSignalingManager(url, connections, bus, getToken);
+    const manager = new SignalingManager(url, connections, bus);
     managers.set(url, manager);
     saveUrls([...managers.keys()]);
 
@@ -106,12 +105,11 @@ export const createSignalingHub = (
 export const initSignalingHub = (
   connections: Map<string, Connection>,
   bus: EventBus,
-  getToken: (authDomain: string, sourceUrl?: string) => Promise<string | null>,
 ): SignalingHub => {
   const existing = getGlobal('signalingHub');
   if (existing) return existing;
 
-  const hub = createSignalingHub(connections, bus, getToken);
+  const hub = createSignalingHub(connections, bus);
   setGlobal({
     signalingHub: hub,
     authAnonymous: (signalingUrl, authDomain) => {
