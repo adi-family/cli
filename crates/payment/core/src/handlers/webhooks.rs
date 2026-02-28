@@ -6,8 +6,9 @@ use axum::{
 };
 use uuid::Uuid;
 
+use crate::balance_client::{self, DepositRequest};
 use crate::error::{ApiError, ApiResult};
-use crate::models::ParsedWebhookEvent;
+use crate::models::{ParsedWebhookEvent, Payment};
 use crate::types::ProviderType;
 use crate::AppState;
 
@@ -122,6 +123,9 @@ async fn process_event(state: &AppState, event: &ParsedWebhookEvent) -> ApiResul
             .bind(provider_payment_id)
             .execute(state.db.pool())
             .await?;
+
+            // If this payment is linked to a subscription, activate it and deposit to balance
+            handle_subscription_payment(state, provider_payment_id).await?;
         }
         ParsedWebhookEvent::PaymentFailed {
             provider_payment_id,
@@ -161,5 +165,84 @@ async fn process_event(state: &AppState, event: &ParsedWebhookEvent) -> ApiResul
             tracing::debug!("Unhandled webhook event type: {event_type}");
         }
     }
+    Ok(())
+}
+
+async fn handle_subscription_payment(
+    state: &AppState,
+    provider_payment_id: &str,
+) -> ApiResult<()> {
+    let payment: Option<Payment> = sqlx::query_as(
+        "SELECT * FROM payments WHERE provider_payment_id = $1 AND subscription_id IS NOT NULL",
+    )
+    .bind(provider_payment_id)
+    .fetch_optional(state.db.pool())
+    .await?;
+
+    let payment = match payment {
+        Some(p) => p,
+        None => return Ok(()),
+    };
+
+    let subscription_id = match payment.subscription_id {
+        Some(id) => id,
+        None => return Ok(()),
+    };
+
+    // Activate the subscription
+    sqlx::query(
+        "UPDATE subscriptions SET status = 'active', current_period_start = NOW(), updated_at = NOW() WHERE id = $1",
+    )
+    .bind(subscription_id)
+    .execute(state.db.pool())
+    .await?;
+
+    tracing::info!(
+        subscription_id = %subscription_id,
+        payment_id = %payment.id,
+        amount_cents = payment.amount_cents,
+        "Subscription activated via crypto payment"
+    );
+
+    // Deposit to internal balance if configured
+    let balance_url = match state.config.balance_api_url.as_deref() {
+        Some(url) => url,
+        None => {
+            tracing::debug!("BALANCE_API_URL not configured, skipping balance deposit");
+            return Ok(());
+        }
+    };
+
+    // Convert cents to microtokens (1 cent = 10,000 microtokens, since 1 dollar = 1,000,000)
+    let microtokens = payment.amount_cents * 10_000;
+
+    let deposit_req = DepositRequest {
+        user_id: payment.user_id,
+        amount: microtokens,
+        description: Some(format!(
+            "Crypto subscription payment: {} {}",
+            payment.amount_cents as f64 / 100.0,
+            payment.currency
+        )),
+        reference_type: Some("coinbase_subscription".to_string()),
+        reference_id: Some(payment.id.to_string()),
+        idempotency_key: Some(format!("payment:{}", payment.id)),
+    };
+
+    if let Err(e) = balance_client::deposit(&state.http_client, balance_url, &deposit_req).await {
+        tracing::error!(
+            payment_id = %payment.id,
+            error = %e,
+            "Failed to deposit to balance after subscription payment"
+        );
+        return Err(ApiError::Internal(format!("Balance deposit failed: {e}")));
+    }
+
+    tracing::info!(
+        user_id = %payment.user_id,
+        microtokens = microtokens,
+        "Deposited to internal balance from subscription payment"
+    );
+
     Ok(())
 }

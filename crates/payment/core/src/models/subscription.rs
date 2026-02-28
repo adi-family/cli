@@ -26,8 +26,11 @@ pub struct Subscription {
 pub struct CreateSubscriptionRequest {
     pub provider: ProviderType,
     pub plan_id: String,
+    pub amount_cents: Option<i64>,
+    pub currency: Option<String>,
     pub billing_interval: Option<BillingInterval>,
     pub success_url: Option<String>,
+    pub cancel_url: Option<String>,
     pub metadata: Option<serde_json::Value>,
 }
 
@@ -43,11 +46,12 @@ pub struct SubscriptionResponse {
     pub currency: Option<String>,
     pub current_period_start: Option<DateTime<Utc>>,
     pub current_period_end: Option<DateTime<Utc>>,
+    pub checkout_url: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
-impl From<Subscription> for SubscriptionResponse {
-    fn from(s: Subscription) -> Self {
+impl SubscriptionResponse {
+    pub fn from_subscription(s: Subscription, checkout_url: Option<String>) -> Self {
         Self {
             id: s.id,
             provider: s.provider,
@@ -59,7 +63,14 @@ impl From<Subscription> for SubscriptionResponse {
             currency: s.currency,
             current_period_start: s.current_period_start,
             current_period_end: s.current_period_end,
+            checkout_url,
             created_at: s.created_at,
         }
+    }
+}
+
+impl From<Subscription> for SubscriptionResponse {
+    fn from(s: Subscription) -> Self {
+        Self::from_subscription(s, None)
     }
 }

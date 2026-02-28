@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod balance_client;
 pub mod config;
 pub mod db;
 pub mod error;
@@ -32,6 +33,7 @@ pub struct AppState {
     pub db: Database,
     pub config: Arc<Config>,
     pub providers: Arc<HashMap<ProviderType, Box<dyn PaymentProvider>>>,
+    pub http_client: reqwest::Client,
 }
 
 pub fn run_server(port: u16) -> anyhow::Result<()> {
@@ -67,6 +69,7 @@ pub fn run_server(port: u16) -> anyhow::Result<()> {
             db,
             config: Arc::new(config.clone()),
             providers: Arc::new(providers),
+            http_client: reqwest::Client::new(),
         };
 
         let cors = CorsLayer::new()

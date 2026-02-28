@@ -6,6 +6,7 @@ use crate::error::{ApiError, ApiResult};
 use crate::models::{
     CreateSubscriptionRequest, Subscription, SubscriptionResponse,
 };
+use crate::types::ProviderType;
 use crate::AppState;
 
 pub async fn create_subscription(
@@ -38,7 +39,46 @@ pub async fn create_subscription(
     .execute(state.db.pool())
     .await?;
 
-    Ok(Json(sub.into()))
+    // For Coinbase: also create a linked payment record for the charge
+    let checkout_url = if req.provider == ProviderType::Coinbase {
+        let checkout_url = sub
+            .metadata
+            .as_ref()
+            .and_then(|m| m.get("checkout_url"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let provider_payment_id = sub
+            .metadata
+            .as_ref()
+            .and_then(|m| m.get("provider_payment_id"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        if let Some(ref charge_id) = provider_payment_id {
+            sqlx::query(
+                "INSERT INTO payments (id, provider, provider_payment_id, user_id, subscription_id, amount_cents, currency, status, checkout_url)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+            )
+            .bind(Uuid::new_v4())
+            .bind(ProviderType::Coinbase.to_string())
+            .bind(charge_id)
+            .bind(auth.id)
+            .bind(sub.id)
+            .bind(sub.amount_cents.unwrap_or(0))
+            .bind(sub.currency.as_deref().unwrap_or("USD"))
+            .bind("pending")
+            .bind(checkout_url.as_deref())
+            .execute(state.db.pool())
+            .await?;
+        }
+
+        checkout_url
+    } else {
+        None
+    };
+
+    Ok(Json(SubscriptionResponse::from_subscription(sub, checkout_url)))
 }
 
 pub async fn get_subscription(
@@ -72,7 +112,7 @@ pub async fn cancel_subscription(
     .await?
     .ok_or(ApiError::NotFound)?;
 
-    let provider_type = crate::types::ProviderType::from_str_opt(&sub.provider)
+    let provider_type = ProviderType::from_str_opt(&sub.provider)
         .ok_or_else(|| ApiError::Internal(format!("Unknown provider: {}", sub.provider)))?;
 
     let provider = state
@@ -80,12 +120,10 @@ pub async fn cancel_subscription(
         .get(&provider_type)
         .ok_or_else(|| ApiError::ProviderNotConfigured(sub.provider.clone()))?;
 
-    let provider_sub_id = sub
-        .provider_subscription_id
-        .as_deref()
-        .ok_or_else(|| ApiError::BadRequest("No provider subscription ID".to_string()))?;
-
-    provider.cancel_subscription(provider_sub_id).await?;
+    // For Coinbase, cancel is local-only; for Paddle, calls external API
+    if let Some(provider_sub_id) = sub.provider_subscription_id.as_deref() {
+        let _ = provider.cancel_subscription(provider_sub_id).await;
+    }
 
     sqlx::query("UPDATE subscriptions SET status = 'cancelled', updated_at = NOW() WHERE id = $1")
         .bind(id)

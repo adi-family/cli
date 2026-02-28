@@ -10,6 +10,7 @@ pub struct Payment {
     pub provider: String,
     pub provider_payment_id: Option<String>,
     pub user_id: Uuid,
+    pub subscription_id: Option<Uuid>,
     pub amount_cents: i64,
     pub currency: String,
     pub status: String,
