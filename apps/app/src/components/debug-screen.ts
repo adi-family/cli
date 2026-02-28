@@ -85,8 +85,7 @@ export class AppDebugScreen extends LitElement {
     installedVersion: string;
     pluginTypes?: string[];
   }> = [];
-  @state() private enabledWebIds: Set<string> =
-    getEnabledWebPluginIds() ?? new Set();
+  @state() private enabledWebIds: Set<string> = new Set();
   @state() private pluginsDirty = false;
   @state() private serverStates: Map<
     string,
@@ -129,6 +128,7 @@ export class AppDebugScreen extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    void this.#loadEnabledWebIds();
     this.#loadDebugData();
     if ((window as { sdk?: unknown }).sdk) {
       this.#subscribeEventLog();
@@ -516,12 +516,16 @@ export class AppDebugScreen extends LitElement {
     );
   }
 
-  #toggleWebPlugin(id: string, enabled: boolean): void {
+  async #loadEnabledWebIds(): Promise<void> {
+    this.enabledWebIds = await getEnabledWebPluginIds() ?? new Set();
+  }
+
+  async #toggleWebPlugin(id: string, enabled: boolean): Promise<void> {
     const next = new Set(this.enabledWebIds);
     if (enabled) next.add(id);
     else next.delete(id);
     this.enabledWebIds = next;
-    setEnabledWebPluginIds(next);
+    await setEnabledWebPluginIds(next);
     this.pluginsDirty = true;
   }
 

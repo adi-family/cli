@@ -7,7 +7,7 @@ import './components/actions-loop.ts';
 import './components/ops-log.ts';
 import './components/cocoon-manual-setup.ts';
 import './components/signaling-status.ts';
-import { getEnabledWebPluginIds } from './plugin-prefs.ts';
+import { getEnabledWebPluginIds, migrateFromLocalStorage as migratePluginPrefs } from './plugin-prefs.ts';
 import { PluginsPlugin } from './plugins/plugins-page.ts';
 import { ActionsPlugin } from './components/actions-loop.ts';
 import {
@@ -59,6 +59,9 @@ const debugInfo = { loaded: [] as string[], failed: [] as string[], timedOut: []
 (window as unknown as Record<string, unknown>)['__adiDebug'] = debugInfo;
 (window as unknown as Record<string, unknown>)['__adiRegistryHub'] = registryHub;
 
+// Migrate plugin preferences from localStorage to IndexedDB (one-time).
+await migratePluginPrefs();
+
 // Initialize built-in internal plugins.
 await initInternalPlugin(bus, new PluginsPlugin());
 await initInternalPlugin(bus, new ActionsPlugin());
@@ -81,7 +84,7 @@ const pluginDescriptors = results.flatMap(r => r.status === 'fulfilled' ? r.valu
 const webPlugins = pluginDescriptors.filter(d => d.pluginTypes?.includes('web'));
 
 // Filter to only user-enabled web plugins (null = never configured → load none).
-const enabledWebIds = getEnabledWebPluginIds();
+const enabledWebIds = await getEnabledWebPluginIds();
 const enabledWebPlugins = enabledWebIds === null ? [] : webPlugins.filter(d => enabledWebIds.has(d.id));
 
 // Map each plugin id to its source registry so upgrades use the correct one.

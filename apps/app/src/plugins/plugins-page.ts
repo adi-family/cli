@@ -40,7 +40,7 @@ export class AppPluginsPage extends LitElement {
     this.unsub = null;
   }
 
-  #load(): void {
+  async #load(): Promise<void> {
     const w = window as unknown as Record<string, unknown>;
     const all = w['__adiAllPlugins'];
     if (Array.isArray(all)) this.plugins = all as PluginEntry[];
@@ -52,14 +52,14 @@ export class AppPluginsPage extends LitElement {
       this.timedOutIds = new Set(debug.timedOut ?? []);
     }
 
-    this.enabledIds = getEnabledWebPluginIds() ?? new Set();
+    this.enabledIds = await getEnabledWebPluginIds() ?? new Set();
   }
 
-  #toggle(id: string, enabled: boolean): void {
+  async #toggle(id: string, enabled: boolean): Promise<void> {
     const next = new Set(this.enabledIds);
     if (enabled) next.add(id); else next.delete(id);
     this.enabledIds = next;
-    setEnabledWebPluginIds(next);
+    await setEnabledWebPluginIds(next);
     this.dirty = true;
   }
 
