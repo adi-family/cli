@@ -74,7 +74,7 @@ For each file, report:
 ### After Review
 
 1. **Fix** all NEEDS_WORK issues by editing the files
-2. **Verify** fixes compile: `cargo check -p hive-core` or `cargo check -p hive-http` or `cargo check -p hive-plugin`
+2. **Verify** fixes compile: `cargo check -p hive-core` or `cargo check -p hive-plugin`
 3. **Flag** all passing files:
    ```bash
    adi flags set hive_clean_code <file1> <file2> ...

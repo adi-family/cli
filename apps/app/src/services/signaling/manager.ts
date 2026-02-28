@@ -27,6 +27,7 @@ export interface SignalingManager {
   listCocoons(): void;
   listHives(): void;
   spawnCocoon(name?: string): void;
+  requestSetupToken(): Promise<string>;
   startSession(deviceId: string): string;
   closeSession(deviceId: string): void;
   sendOnChannel(deviceId: string, channel: DataChannelName, payload: unknown): boolean;
@@ -46,6 +47,7 @@ export const createSignalingManager = (
   const deviceToSession = new Map<string, string>();
   let authenticatedUserId: string | null = null;
   let lastAuthOptions: string[] = [];
+  let pendingSetupToken: { resolve: (token: string) => void; reject: (err: Error) => void } | null = null;
 
   // -- WebSocket layer -------------------------------------------------------
 
@@ -63,6 +65,7 @@ export const createSignalingManager = (
   async function handleWsMessage(msg: SignalingMessage): Promise<void> {
     switch (msg.type) {
       case 'hello':
+        bus.emit('signaling:connection-info', { url, connectionInfo: msg.connection_info }, 'signaling');
         await handleHello(msg.auth_kind, msg.auth_domain, msg.auth_requirement, msg.auth_options);
         break;
 
@@ -156,8 +159,19 @@ export const createSignalingManager = (
         }, 'signaling');
         break;
 
+      case 'setup_token':
+        if (pendingSetupToken) {
+          pendingSetupToken.resolve(msg.token);
+          pendingSetupToken = null;
+        }
+        break;
+
       case 'error':
         console.debug('[signaling:manager] server error:', msg.message);
+        if (pendingSetupToken) {
+          pendingSetupToken.reject(new Error(msg.message));
+          pendingSetupToken = null;
+        }
         break;
 
       default:
@@ -315,6 +329,18 @@ export const createSignalingManager = (
     ws.send({ type: 'list_hives' });
   };
 
+  const requestSetupToken = (): Promise<string> =>
+    new Promise((resolve, reject) => {
+      pendingSetupToken = { resolve, reject };
+      ws.send({ type: 'request_setup_token' });
+      setTimeout(() => {
+        if (pendingSetupToken) {
+          pendingSetupToken.reject(new Error('Setup token request timed out'));
+          pendingSetupToken = null;
+        }
+      }, 10_000);
+    });
+
   const spawnCocoon = (name?: string): void => {
     const requestId = `spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     ws.send({
@@ -422,5 +448,5 @@ export const createSignalingManager = (
     }
   }, 'signaling');
 
-  return { url, connect, disconnect, listCocoons, listHives, spawnCocoon, startSession, closeSession, sendOnChannel };
+  return { url, connect, disconnect, listCocoons, listHives, spawnCocoon, requestSetupToken, startSession, closeSession, sendOnChannel };
 };

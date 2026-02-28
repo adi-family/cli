@@ -80,7 +80,7 @@ For each file, report:
 ### After Review
 
 1. **Refactor** all NEEDS_WORK functions by splitting them
-2. **Verify** refactored code compiles: `cargo check -p hive-core` or `cargo check -p hive-http` or `cargo check -p hive-plugin`
+2. **Verify** refactored code compiles: `cargo check -p hive-core` or `cargo check -p hive-plugin`
 3. **Verify** behavior preserved — no logic changes, only structural
 4. **Flag** all passing files:
    ```bash

@@ -1,14 +1,5 @@
-//! Bundled shell prelude for workflow scripts
-//!
-//! This module provides a self-contained bash prelude that is automatically
-//! injected into every workflow step. It provides:
-//! - Useful variables ($PROJECT_ROOT, $PLATFORM, $GIT_BRANCH, etc.)
-//! - Logging functions (info, success, warn, error)
-//! - Spinner/progress functions (spinner_start, spinner_stop, etc.)
-//! - Prompt functions (prompt_confirm, prompt_input, etc.)
-//! - Common utilities (require_file, ensure_dir, etc.)
+//! Bundled shell prelude injected into every workflow step
 
-/// The complete bundled prelude script
 pub const PRELUDE: &str = r#"
 # =============================================================================
 # ADI Workflow Prelude (Bundled)
@@ -398,7 +389,6 @@ fi
 # End of prelude
 "#;
 
-/// Get the prelude script to inject before commands
 pub fn get_prelude() -> &'static str {
     PRELUDE
 }

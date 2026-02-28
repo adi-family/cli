@@ -191,7 +191,6 @@ get_plugin_crate() {
         # Hive plugins
         hive-plugin-abi) echo "crates/hive/plugins/abi" ;;
         hive-runner-docker) echo "crates/hive/plugins/runner-docker" ;;
-        hive-runner-compose) echo "crates/hive/plugins/runner-compose" ;;
         hive-runner-podman) echo "crates/hive/plugins/runner-podman" ;;
         hive-obs-stdout) echo "crates/hive/plugins/obs-stdout" ;;
         hive-obs-file) echo "crates/hive/plugins/obs-file" ;;

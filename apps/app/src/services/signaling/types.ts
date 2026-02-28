@@ -48,13 +48,23 @@ export interface HiveInfo {
   cocoon_kinds: CocoonKind[];
 }
 
+export interface HelloHiveInfo {
+  hive_id: string;
+  cocoon_kinds: string[];
+}
+
+export interface ConnectionInfo {
+  manual_allowed: boolean;
+  hives: HelloHiveInfo[];
+}
+
 // ---------------------------------------------------------------------------
 // Signaling messages (WebSocket JSON frames)
 // ---------------------------------------------------------------------------
 
 export type SignalingMessage =
   // Authentication handshake
-  | { type: 'hello'; auth_kind: string; auth_domain: string; auth_requirement: 'required' | 'optional'; auth_options: Array<'verified' | 'anonymous'> }
+  | { type: 'hello'; auth_kind: string; auth_domain: string; auth_requirement: 'required' | 'optional'; auth_options: Array<'verified' | 'anonymous'>; connection_info: ConnectionInfo }
   | { type: 'authenticate'; access_token: string }
   | { type: 'authenticated'; user_id: string }
   // Cocoon management
@@ -65,6 +75,8 @@ export type SignalingMessage =
   | { type: 'connect_to_cocoon'; device_id: string }
   | { type: 'connected'; device_id: string }
   | { type: 'access_denied'; reason: string; auth_kind?: string; auth_domain?: string; plugin?: string }
+  | { type: 'request_setup_token' }
+  | { type: 'setup_token'; token: string }
   | { type: 'error'; message: string }
   | { type: 'sync_data'; payload: unknown }
   | { type: 'peer_connected'; peer_id: string }
@@ -211,6 +223,7 @@ declare module '@adi-family/sdk-plugin' {
     'signaling:session-state': { url: string; deviceId: string; state: RtcState; sessionId: string };
     'signaling:spawn-result': { url: string; requestId: string; success: boolean; deviceId?: string; error?: string };
     'signaling:auth-error': { url: string; reason: string; authKind?: string; authDomain?: string };
+    'signaling:connection-info': { url: string; connectionInfo: ConnectionInfo };
     'signaling:auth-anonymous': { signalingUrl: string; authDomain: string };
     'connection:added': { id: string; services: string[] };
     'connection:removed': { id: string };

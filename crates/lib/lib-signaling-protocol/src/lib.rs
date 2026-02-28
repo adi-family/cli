@@ -45,6 +45,24 @@ pub enum AuthOption {
     Anonymous,
 }
 
+/// Hive info advertised in the Hello handshake.
+/// Exposes only what clients need to choose a connection method.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HelloHiveInfo {
+    pub hive_id: String,
+    /// Cocoon kind IDs this hive can spawn (e.g. "linux", "linux-cuda", "native").
+    pub cocoon_kinds: Vec<String>,
+}
+
+/// Connection capabilities advertised in the Hello message.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConnectionInfo {
+    /// Whether users can manually register their own machines as cocoons.
+    pub manual_allowed: bool,
+    /// Connected hives and the cocoon kinds each can spawn.
+    pub hives: Vec<HelloHiveInfo>,
+}
+
 /// Signaling server messages for device pairing and relay
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -56,6 +74,8 @@ pub enum SignalingMessage {
         auth_domain: String,
         auth_requirement: AuthRequirement,
         auth_options: Vec<AuthOption>,
+        /// Available connection methods (hives, manual registration).
+        connection_info: ConnectionInfo,
     },
 
     /// Client → server. Presents access token obtained from `auth_domain`.
@@ -134,6 +154,14 @@ pub enum SignalingMessage {
 
     /// Peer went offline
     PeerDisconnected { peer_id: String },
+
+    // ========== Setup Token Generation ==========
+    /// Client → server. Request a setup token for cocoon registration.
+    /// Requires session-level authentication (via Authenticate handshake).
+    RequestSetupToken,
+
+    /// Server → client. JWT setup token for passing to a cocoon's local HTTP server.
+    SetupToken { token: String },
 
     // ========== Token-Based Ownership ==========
     /// Claim ownership of a cocoon by proving secret knowledge

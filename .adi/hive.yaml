@@ -93,7 +93,7 @@ services:
     healthcheck:
       type: cmd
       cmd:
-        command: pg_isready -U adi -h localhost -p 8027
+        command: pg_isready -U adi -h localhost -p 5432
         interval: 5s
         timeout: 5s
         retries: 5
@@ -129,7 +129,7 @@ services:
     healthcheck:
       type: cmd
       cmd:
-        command: pg_isready -U adi -h localhost -p 8028
+        command: pg_isready -U adi -h localhost -p 5432
         interval: 5s
         timeout: 5s
         retries: 5
@@ -211,6 +211,7 @@ services:
         PORT: "8011"
         HIVE_SECRETS: ${env.HIVE_SECRETS:-}
         AUTH_DOMAIN: ${env.AUTH_DOMAIN:-http://adi.test/api/auth}
+        ALLOW_MANUAL_REGISTRATION: "true"
     restart: on-failure
     # Expose signaling URL for other services
     expose:
@@ -344,6 +345,7 @@ services:
     environment:
       static:
         PORT: "8035"
+        VITE_LOCAL_PROXY_PORT: "8011"
         VITE_REGISTRY_URL: ${env.VITE_REGISTRY_URL:-http://adi.test/registry}
         VITE_SIGNALING_URL: ${env.VITE_SIGNALING_URL:-ws://adi.test/api/signaling/ws}
     restart: on-failure
