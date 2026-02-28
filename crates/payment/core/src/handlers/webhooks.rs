@@ -124,8 +124,8 @@ async fn process_event(state: &AppState, event: &ParsedWebhookEvent) -> ApiResul
             .execute(state.db.pool())
             .await?;
 
-            // If this payment is linked to a subscription, activate it and deposit to balance
-            handle_subscription_payment(state, provider_payment_id).await?;
+            // Deposit to balance and activate subscription if linked
+            handle_completed_payment(state, provider_payment_id).await?;
         }
         ParsedWebhookEvent::PaymentFailed {
             provider_payment_id,
@@ -168,12 +168,12 @@ async fn process_event(state: &AppState, event: &ParsedWebhookEvent) -> ApiResul
     Ok(())
 }
 
-async fn handle_subscription_payment(
+async fn handle_completed_payment(
     state: &AppState,
     provider_payment_id: &str,
 ) -> ApiResult<()> {
     let payment: Option<Payment> = sqlx::query_as(
-        "SELECT * FROM payments WHERE provider_payment_id = $1 AND subscription_id IS NOT NULL",
+        "SELECT * FROM payments WHERE provider_payment_id = $1",
     )
     .bind(provider_payment_id)
     .fetch_optional(state.db.pool())
@@ -184,27 +184,27 @@ async fn handle_subscription_payment(
         None => return Ok(()),
     };
 
-    let subscription_id = match payment.subscription_id {
-        Some(id) => id,
-        None => return Ok(()),
-    };
+    // If linked to a subscription, activate it
+    if let Some(subscription_id) = payment.subscription_id {
+        sqlx::query(
+            "UPDATE subscriptions SET status = 'active', current_period_start = NOW(), updated_at = NOW() WHERE id = $1",
+        )
+        .bind(subscription_id)
+        .execute(state.db.pool())
+        .await?;
 
-    // Activate the subscription
-    sqlx::query(
-        "UPDATE subscriptions SET status = 'active', current_period_start = NOW(), updated_at = NOW() WHERE id = $1",
-    )
-    .bind(subscription_id)
-    .execute(state.db.pool())
-    .await?;
+        tracing::info!(
+            subscription_id = %subscription_id,
+            payment_id = %payment.id,
+            "Subscription activated via payment"
+        );
+    }
 
-    tracing::info!(
-        subscription_id = %subscription_id,
-        payment_id = %payment.id,
-        amount_cents = payment.amount_cents,
-        "Subscription activated via crypto payment"
-    );
+    // Deposit to internal balance
+    deposit_to_balance(state, &payment).await
+}
 
-    // Deposit to internal balance if configured
+async fn deposit_to_balance(state: &AppState, payment: &Payment) -> ApiResult<()> {
     let balance_url = match state.config.balance_api_url.as_deref() {
         Some(url) => url,
         None => {
@@ -216,15 +216,21 @@ async fn handle_subscription_payment(
     // Convert cents to microtokens (1 cent = 10,000 microtokens, since 1 dollar = 1,000,000)
     let microtokens = payment.amount_cents * 10_000;
 
+    let reference_type = if payment.subscription_id.is_some() {
+        "coinbase_subscription"
+    } else {
+        "coinbase_checkout"
+    };
+
     let deposit_req = DepositRequest {
         user_id: payment.user_id,
         amount: microtokens,
         description: Some(format!(
-            "Crypto subscription payment: {} {}",
+            "Crypto payment: {} {}",
             payment.amount_cents as f64 / 100.0,
             payment.currency
         )),
-        reference_type: Some("coinbase_subscription".to_string()),
+        reference_type: Some(reference_type.to_string()),
         reference_id: Some(payment.id.to_string()),
         idempotency_key: Some(format!("payment:{}", payment.id)),
     };
@@ -233,7 +239,7 @@ async fn handle_subscription_payment(
         tracing::error!(
             payment_id = %payment.id,
             error = %e,
-            "Failed to deposit to balance after subscription payment"
+            "Failed to deposit to balance after payment"
         );
         return Err(ApiError::Internal(format!("Balance deposit failed: {e}")));
     }
@@ -241,7 +247,8 @@ async fn handle_subscription_payment(
     tracing::info!(
         user_id = %payment.user_id,
         microtokens = microtokens,
-        "Deposited to internal balance from subscription payment"
+        reference_type = reference_type,
+        "Deposited to internal balance"
     );
 
     Ok(())
