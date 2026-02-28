@@ -78,6 +78,7 @@ pub struct Spinner {
     last_tick: Instant,
     interactive: bool,
     mode: OutputMode,
+    rendered: bool,
 }
 
 impl Spinner {
@@ -95,6 +96,7 @@ impl Spinner {
             last_tick: Instant::now(),
             interactive,
             mode,
+            rendered: false,
         }
     }
 
@@ -157,12 +159,15 @@ impl Spinner {
     }
 
     /// Render the current spinner state.
-    fn render(&self) {
+    fn render(&mut self) {
         let frame = theme::SPINNER_FRAMES[self.frame];
         let line = format!("{} {}", theme::brand(frame), self.message);
-        let _ = self.term.clear_line();
-        let _ = write!(&self.term, "\r{}", line);
+        if self.rendered {
+            let _ = self.term.clear_last_lines(1);
+        }
+        let _ = writeln!(&self.term, "{}", line);
         let _ = self.term.flush();
+        self.rendered = true;
     }
 
     /// Complete the spinner with success.
@@ -198,16 +203,18 @@ impl Spinner {
                 println!("{}", event.to_json());
             }
             OutputMode::Text if self.interactive => {
-                let _ = self.term.clear_line();
+                if self.rendered {
+                    let _ = self.term.clear_last_lines(1);
+                }
                 if success {
                     println!(
-                        "\r{} {}",
+                        "{} {}",
                         theme::success(theme::icons::SUCCESS),
                         final_message
                     );
                 } else {
                     eprintln!(
-                        "\r{} {}{}",
+                        "{} {}{}",
                         theme::error(theme::icons::ERROR),
                         final_message,
                         error.map(|e| format!(": {}", e)).unwrap_or_default()
@@ -245,6 +252,7 @@ pub struct ProgressBar {
     mode: OutputMode,
     width: usize,
     last_percent: u8,
+    rendered: bool,
 }
 
 impl ProgressBar {
@@ -263,11 +271,12 @@ impl ProgressBar {
             mode,
             width: 30,
             last_percent: 0,
+            rendered: false,
         }
     }
 
     /// Start the progress bar.
-    pub fn start(&self) {
+    pub fn start(&mut self) {
         match self.mode {
             OutputMode::JsonStream => {
                 let event = ProgressEvent::Start {
@@ -359,7 +368,7 @@ impl ProgressBar {
     }
 
     /// Render the progress bar.
-    fn render(&self) {
+    fn render(&mut self) {
         let current = self.position();
         let percent = self.percent();
         let filled = ((percent / 100.0) * self.width as f32) as usize;
@@ -380,9 +389,12 @@ impl ProgressBar {
             percent
         );
 
-        let _ = self.term.clear_line();
-        let _ = write!(&self.term, "\r{}", line);
+        if self.rendered {
+            let _ = self.term.clear_last_lines(1);
+        }
+        let _ = writeln!(&self.term, "{}", line);
         let _ = self.term.flush();
+        self.rendered = true;
     }
 
     /// Complete the progress bar with success.
@@ -418,16 +430,18 @@ impl ProgressBar {
                 println!("{}", event.to_json());
             }
             OutputMode::Text if self.interactive => {
-                let _ = self.term.clear_line();
+                if self.rendered {
+                    let _ = self.term.clear_last_lines(1);
+                }
                 if success {
                     println!(
-                        "\r{} {}",
+                        "{} {}",
                         theme::success(theme::icons::SUCCESS),
                         final_message
                     );
                 } else {
                     eprintln!(
-                        "\r{} {}",
+                        "{} {}",
                         theme::error(theme::icons::ERROR),
                         final_message
                     );
@@ -781,7 +795,7 @@ pub fn spinner(message: impl Into<String>) -> Spinner {
 
 /// Create and start a progress bar.
 pub fn progress_bar(total: u64, message: impl Into<String>) -> ProgressBar {
-    let pb = ProgressBar::new(total, message);
+    let mut pb = ProgressBar::new(total, message);
     pb.start();
     pb
 }
