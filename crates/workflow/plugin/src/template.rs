@@ -1,13 +1,12 @@
 //! Variable templating engine using minijinja
 
+use lib_plugin_prelude::t;
 use minijinja::Environment;
 use std::collections::HashMap;
 
-/// Create a template environment with built-in variables and functions
 pub fn create_env() -> Environment<'static> {
     let mut env = Environment::new();
 
-    // Add built-in globals
     env.add_global(
         "cwd",
         std::env::current_dir()
@@ -24,7 +23,6 @@ pub fn create_env() -> Environment<'static> {
     );
     env.add_global("date", chrono_date());
 
-    // Add custom filters for condition evaluation
     env.add_filter("starts_with", filter_starts_with);
     env.add_filter("ends_with", filter_ends_with);
     env.add_filter("contains", filter_contains);
@@ -32,30 +30,25 @@ pub fn create_env() -> Environment<'static> {
     env
 }
 
-/// Filter: checks if string starts with prefix
 fn filter_starts_with(value: &str, prefix: &str) -> bool {
     value.starts_with(prefix)
 }
 
-/// Filter: checks if string ends with suffix
 fn filter_ends_with(value: &str, suffix: &str) -> bool {
     value.ends_with(suffix)
 }
 
-/// Filter: checks if string contains substring
 fn filter_contains(value: &str, substring: &str) -> bool {
     value.contains(substring)
 }
 
 fn chrono_date() -> String {
-    // Simple date format without chrono dependency
     let now = std::time::SystemTime::now();
     let duration = now
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
     let secs = duration.as_secs();
 
-    // Basic date calculation
     let days = secs / 86400;
     let years = (days / 365) + 1970;
     let remaining_days = days % 365;
@@ -65,16 +58,13 @@ fn chrono_date() -> String {
     format!("{:04}-{:02}-{:02}", years, months, day)
 }
 
-/// Render a template string with the given variables
 pub fn render(
     env: &Environment,
     template: &str,
     variables: &HashMap<String, serde_json::Value>,
 ) -> Result<String, String> {
-    // Build context from variables with env access
     let mut all_vars = variables.clone();
 
-    // Add environment variable access as nested object
     let env_vars: HashMap<String, String> = std::env::vars().collect();
     all_vars.insert(
         "env".to_string(),
@@ -84,10 +74,9 @@ pub fn render(
     let ctx = build_context(&all_vars);
 
     env.render_str(template, ctx)
-        .map_err(|e| format!("Template error: {}", e))
+        .map_err(|e| t!("workflow-exec-error-template", "error" => e.to_string()))
 }
 
-/// Build minijinja context from variable map
 fn build_context(variables: &HashMap<String, serde_json::Value>) -> minijinja::Value {
     let mut map = std::collections::BTreeMap::new();
 
@@ -98,7 +87,6 @@ fn build_context(variables: &HashMap<String, serde_json::Value>) -> minijinja::V
     minijinja::Value::from_serialize(&map)
 }
 
-/// Convert serde_json::Value to minijinja::Value
 fn json_to_minijinja(value: &serde_json::Value) -> minijinja::Value {
     match value {
         serde_json::Value::Null => minijinja::Value::UNDEFINED,
@@ -127,7 +115,6 @@ fn json_to_minijinja(value: &serde_json::Value) -> minijinja::Value {
     }
 }
 
-/// Render environment variables map with templating
 pub fn render_env_vars(
     env: &Environment,
     env_vars: &HashMap<String, String>,

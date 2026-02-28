@@ -79,9 +79,6 @@
 [submodule "crates/adi-knowledgebase"]
 	path = crates/knowledgebase
 	url = https://github.com/adi-family/adi-knowledgebase.git
-[submodule "apps/infra-service-web"]
-	path = apps/infra-service-web
-	url = git@github.com:adi-family/infra-service-web.git
 [submodule "crates/adi-platform-api"]
 	path = crates/platform
 	url = https://github.com/adi-family/adi-platform-api.git
@@ -100,9 +97,6 @@
 [submodule "crates/adi-llm-uzu-plugin"]
 	path = crates/llm-uzu-plugin
 	url = https://github.com/adi-family/adi-llm-uzu-plugin.git
-[submodule "apps/web-app"]
-	path = apps/web-app
-	url = git@github.com:adi-family/web-app.git
 [submodule "apps/flowmap-api"]
 	path = apps/flowmap-api
 	url = https://github.com/adi-family/flowmap-api.git

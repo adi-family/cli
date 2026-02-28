@@ -1,10 +1,10 @@
 //! TOML workflow file parsing and types
 
+use lib_plugin_prelude::t;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
-/// Root workflow file structure
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WorkflowFile {
     pub workflow: WorkflowMeta,
@@ -14,7 +14,6 @@ pub struct WorkflowFile {
     pub steps: Vec<Step>,
 }
 
-/// Workflow metadata
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WorkflowMeta {
     pub name: String,
@@ -22,27 +21,20 @@ pub struct WorkflowMeta {
     pub description: Option<String>,
 }
 
-/// Input parameter definition
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Input {
     pub name: String,
     #[serde(rename = "type")]
     pub input_type: InputType,
     pub prompt: String,
-    /// Static options list
     #[serde(default)]
     pub options: Option<Vec<String>>,
-    /// Shell command that outputs options (one per line)
     #[serde(default)]
     pub options_cmd: Option<String>,
-    /// Built-in options provider (git-branches, git-tags, plugins, services, directories, files)
     #[serde(default)]
     pub options_source: Option<OptionsSource>,
-    /// Enable fuzzy search/autocomplete for select inputs
     #[serde(default)]
     pub autocomplete: Option<bool>,
-    /// Maximum number of options to display in autocomplete mode (default: 10)
-    /// When there are more matches, shows "and N more" message
     #[serde(default)]
     pub autocomplete_count: Option<usize>,
     #[serde(default)]
@@ -51,41 +43,31 @@ pub struct Input {
     pub validation: Option<String>,
     #[serde(default)]
     pub env: Option<String>,
-    /// Conditional expression (Jinja2 template that evaluates to truthy/falsy)
     #[serde(rename = "if", default)]
     pub condition: Option<String>,
 }
 
-/// Built-in options source providers
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case", tag = "type")]
 pub enum OptionsSource {
-    /// Git branches from current repository
     GitBranches,
-    /// Git tags from current repository
     GitTags,
-    /// Git remotes from current repository
     GitRemotes,
-    /// Services from docker-compose.yml
     DockerComposeServices {
         #[serde(default = "default_compose_file")]
         file: String,
     },
-    /// Directories matching a glob pattern
     Directories {
         path: String,
         #[serde(default)]
         pattern: Option<String>,
     },
-    /// Files matching a glob pattern
     Files {
         path: String,
         #[serde(default)]
         pattern: Option<String>,
     },
-    /// Lines from a file
     LinesFromFile { path: String },
-    /// Cargo workspace members
     CargoWorkspaceMembers,
 }
 
@@ -93,7 +75,6 @@ fn default_compose_file() -> String {
     "docker-compose.yml".to_string()
 }
 
-/// Input types for interactive prompts
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum InputType {
@@ -104,7 +85,6 @@ pub enum InputType {
     Password,
 }
 
-/// Workflow step definition
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Step {
     pub name: String,
@@ -115,19 +95,16 @@ pub struct Step {
     pub env: Option<HashMap<String, String>>,
 }
 
-/// Parse a workflow file from TOML
 pub fn parse_workflow(content: &str) -> Result<WorkflowFile, String> {
-    toml::from_str(content).map_err(|e| format!("Failed to parse workflow: {}", e))
+    toml::from_str(content).map_err(|e| t!("workflow-common-error-parse", "error" => e.to_string()))
 }
 
-/// Load and parse a workflow file from path
 pub fn load_workflow(path: &Path) -> Result<WorkflowFile, String> {
     let content = std::fs::read_to_string(path)
-        .map_err(|e| format!("Failed to read workflow file: {}", e))?;
+        .map_err(|e| t!("workflow-common-error-read", "error" => e.to_string()))?;
     parse_workflow(&content)
 }
 
-/// Workflow summary for listing
 #[derive(Debug, Clone, Serialize)]
 pub struct WorkflowSummary {
     pub name: String,
@@ -206,17 +183,14 @@ run = "echo {{ branch }} {{ dir }} {{ service }}"
         assert_eq!(workflow.workflow.name, "dynamic-test");
         assert_eq!(workflow.inputs.len(), 3);
 
-        // Check branch input
         let branch_input = &workflow.inputs[0];
         assert!(branch_input.options_source.is_some());
         assert_eq!(branch_input.autocomplete, Some(true));
-        assert_eq!(branch_input.autocomplete_count, None); // Not set
+        assert_eq!(branch_input.autocomplete_count, None);
 
-        // Check dir input
         let dir_input = &workflow.inputs[1];
         assert!(dir_input.options_source.is_some());
 
-        // Check service input
         let service_input = &workflow.inputs[2];
         assert!(service_input.options_source.is_some());
     }
@@ -283,12 +257,10 @@ run = "echo {{ crate }}"
         let workflow = parse_workflow(toml).unwrap();
         assert_eq!(workflow.inputs.len(), 2);
 
-        // Check crate input has autocomplete_count
         let crate_input = &workflow.inputs[0];
         assert_eq!(crate_input.autocomplete, Some(true));
         assert_eq!(crate_input.autocomplete_count, Some(5));
 
-        // Check branch input doesn't have autocomplete_count (defaults to None)
         let branch_input = &workflow.inputs[1];
         assert_eq!(branch_input.autocomplete, Some(true));
         assert_eq!(branch_input.autocomplete_count, None);

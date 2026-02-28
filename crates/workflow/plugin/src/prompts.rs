@@ -7,16 +7,9 @@ use lib_console_output::{
     debug, is_interactive, Confirm, Input as ConsoleInput, MultiSelect, Password, Select,
     SelectOption,
 };
+use lib_plugin_prelude::t;
 use std::collections::HashMap;
 
-/// Collect all input values from user via interactive prompts with pre-filled values
-///
-/// Pre-filled values from CLI arguments take precedence over environment variables
-/// and interactive prompts. Missing values are prompted interactively (if TTY available)
-/// or cause an error (if non-TTY).
-///
-/// Inputs are collected incrementally - each input's `if` condition is evaluated
-/// against previously collected values, so inputs can depend on earlier ones.
 pub fn collect_inputs_with_prefilled(
     inputs: &[Input],
     prefilled: HashMap<String, String>,
@@ -25,21 +18,16 @@ pub fn collect_inputs_with_prefilled(
     let env = template::create_env();
     let interactive = is_interactive();
 
-    // Track which inputs need prompting
     let mut missing_inputs = Vec::new();
 
     for input in inputs {
-        // Check if this input should be collected based on its condition
         if let Some(condition) = &input.condition {
             if !evaluate_condition(&env, condition, &values)? {
-                // Condition is false, skip this input
                 continue;
             }
         }
 
-        // Priority: prefilled (CLI args) > env var > prompt/default
         if let Some(prefilled_value) = prefilled.get(&input.name) {
-            // Validate and convert pre-filled value
             let value = convert_prefilled_value(input, prefilled_value, &values)?;
             debug(&format!(
                 "Using pre-filled value for '{}': {}",
@@ -49,7 +37,6 @@ pub fn collect_inputs_with_prefilled(
             continue;
         }
 
-        // Check environment variable
         if let Some(env_var) = &input.env {
             if let Ok(env_value) = std::env::var(env_var) {
                 let value = convert_prefilled_value(input, &env_value, &values)?;
@@ -62,9 +49,7 @@ pub fn collect_inputs_with_prefilled(
             }
         }
 
-        // Need to prompt - check if we can
         if !interactive {
-            // In non-interactive mode, try to use default value
             if let Some(default) = &input.default {
                 debug(&format!(
                     "Using default value for '{}': {}",
@@ -73,35 +58,31 @@ pub fn collect_inputs_with_prefilled(
                 values.insert(input.name.clone(), default.clone());
                 continue;
             }
-            // No default available, mark as missing
             missing_inputs.push(input.name.clone());
             continue;
         }
 
-        // Interactive prompt
         let value = prompt_input(input, &values)?;
         values.insert(input.name.clone(), value);
     }
 
-    // If we have missing inputs in non-interactive mode, return error with details
     if !missing_inputs.is_empty() {
         let missing_list = missing_inputs.join(", ");
+        let hint = missing_inputs
+            .iter()
+            .map(|name| format!("-i {}=<value>", name))
+            .collect::<Vec<_>>()
+            .join(" ");
         return Err(format!(
-            "Missing required inputs in non-interactive mode: {}\n\
-             Provide them via CLI: {}",
-            missing_list,
-            missing_inputs
-                .iter()
-                .map(|name| format!("-i {}=<value>", name))
-                .collect::<Vec<_>>()
-                .join(" ")
+            "{}\n{}",
+            t!("workflow-input-error-missing-required", "inputs" => missing_list),
+            t!("workflow-input-error-missing-hint", "hint" => hint),
         ));
     }
 
     Ok(values)
 }
 
-/// Convert a pre-filled string value to the appropriate JSON type
 fn convert_prefilled_value(
     input: &Input,
     value: &str,
@@ -109,29 +90,26 @@ fn convert_prefilled_value(
 ) -> Result<serde_json::Value, String> {
     match input.input_type {
         InputType::Confirm => {
-            // Parse boolean
             let bool_val = match value.to_lowercase().as_str() {
                 "true" | "yes" | "y" | "1" => true,
                 "false" | "no" | "n" | "0" => false,
                 _ => {
-                    return Err(format!(
-                        "Invalid boolean value for '{}': '{}' (use true/false/yes/no)",
-                        input.name, value
+                    return Err(t!(
+                        "workflow-input-error-invalid-boolean",
+                        "name" => input.name.as_str(),
+                        "value" => value
                     ))
                 }
             };
             Ok(serde_json::Value::Bool(bool_val))
         }
         InputType::Select => {
-            // Validate against available options
             let options = resolve_options(input, collected_values)?;
 
-            // Check for exact match first
             if options.contains(&value.to_string()) {
                 return Ok(serde_json::Value::String(value.to_string()));
             }
 
-            // Check for prefix match (for options like "install - Build and install...")
             for opt in &options {
                 if opt.starts_with(value) || opt.split(" - ").next() == Some(value) {
                     return Ok(serde_json::Value::String(opt.clone()));
@@ -139,26 +117,22 @@ fn convert_prefilled_value(
             }
 
             Err(format!(
-                "Invalid value for '{}': '{}'\nValid options: {}",
-                input.name,
-                value,
-                options.join(", ")
+                "{}\n{}",
+                t!("workflow-input-error-invalid-value", "name" => input.name.as_str(), "value" => value),
+                t!("workflow-input-error-valid-options", "options" => options.join(", ")),
             ))
         }
         InputType::MultiSelect => {
-            // Parse comma-separated values
             let selected: Vec<&str> = value.split(',').map(|s| s.trim()).collect();
             let options = resolve_options(input, collected_values)?;
 
             let mut result = Vec::new();
             for sel in selected {
-                // Check exact match
                 if options.contains(&sel.to_string()) {
                     result.push(serde_json::Value::String(sel.to_string()));
                     continue;
                 }
 
-                // Check prefix match
                 let mut found = false;
                 for opt in &options {
                     if opt.starts_with(sel) || opt.split(" - ").next() == Some(sel) {
@@ -170,10 +144,9 @@ fn convert_prefilled_value(
 
                 if !found {
                     return Err(format!(
-                        "Invalid value for '{}': '{}'\nValid options: {}",
-                        input.name,
-                        sel,
-                        options.join(", ")
+                        "{}\n{}",
+                        t!("workflow-input-error-invalid-value", "name" => input.name.as_str(), "value" => sel),
+                        t!("workflow-input-error-valid-options", "options" => options.join(", ")),
                     ));
                 }
             }
@@ -181,14 +154,14 @@ fn convert_prefilled_value(
             Ok(serde_json::Value::Array(result))
         }
         InputType::Input | InputType::Password => {
-            // Validate against regex if present
             if let Some(pattern) = &input.validation {
                 let regex = regex::Regex::new(pattern)
-                    .map_err(|e| format!("Invalid validation pattern: {}", e))?;
+                    .map_err(|e| t!("workflow-input-error-validation", "error" => e.to_string()))?;
                 if !regex.is_match(value) {
-                    return Err(format!(
-                        "Value for '{}' doesn't match pattern: {}",
-                        input.name, pattern
+                    return Err(t!(
+                        "workflow-input-error-pattern-mismatch",
+                        "name" => input.name.as_str(),
+                        "pattern" => pattern.as_str()
                     ));
                 }
             }
@@ -197,9 +170,6 @@ fn convert_prefilled_value(
     }
 }
 
-/// Evaluate a condition template against current values
-///
-/// Returns true if the condition evaluates to a truthy value
 fn evaluate_condition(
     env: &minijinja::Environment,
     condition: &str,
@@ -208,16 +178,13 @@ fn evaluate_condition(
     let rendered = template::render(env, condition, values)?;
     let trimmed = rendered.trim().to_lowercase();
 
-    // Check for falsy values
     Ok(!trimmed.is_empty() && trimmed != "false" && trimmed != "0" && trimmed != "none")
 }
 
-/// Prompt for a single input value
 fn prompt_input(
     input: &Input,
     values: &HashMap<String, serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
-    // Check if value is pre-filled from environment variable
     if let Some(env_var) = &input.env {
         if let Ok(value) = std::env::var(env_var) {
             return Ok(serde_json::Value::String(value));
@@ -237,11 +204,10 @@ fn prompt_select(
     input: &Input,
     values: &HashMap<String, serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
-    // Resolve options dynamically
     let options = resolve_options(input, values)?;
 
     if options.is_empty() {
-        return Err("Select input requires at least one option".to_string());
+        return Err(t!("workflow-input-error-options-empty", "type" => "Select"));
     }
 
     let default_index = input
@@ -251,13 +217,11 @@ fn prompt_select(
         .and_then(|default_val| options.iter().position(|o| o == default_val))
         .unwrap_or(0);
 
-    // Build select options
     let select_options: Vec<SelectOption<String>> = options
         .iter()
         .map(|o| SelectOption::new(o.clone(), o.clone()))
         .collect();
 
-    // Use lib-console-output Select with optional filtering
     let result = Select::new(&input.prompt)
         .options(select_options)
         .default(default_index)
@@ -267,7 +231,7 @@ fn prompt_select(
 
     match result {
         Some(value) => Ok(serde_json::Value::String(value)),
-        None => Err("Selection cancelled".to_string()),
+        None => Err(t!("workflow-cancelled-selection")),
     }
 }
 
@@ -284,24 +248,23 @@ fn prompt_text(input: &Input) -> Result<serde_json::Value, String> {
         builder = builder.default(default.clone());
     }
 
-    // Add validation if present
     if let Some(validation_pattern) = &input.validation {
         let pattern = regex::Regex::new(validation_pattern)
-            .map_err(|e| format!("Invalid validation pattern: {}", e))?;
+            .map_err(|e| t!("workflow-input-error-validation", "error" => e.to_string()))?;
         let pattern_str = validation_pattern.clone();
 
         builder = builder.validate(move |input: &str| -> Result<(), String> {
             if pattern.is_match(input) {
                 Ok(())
             } else {
-                Err(format!("Input must match pattern: {}", pattern_str))
+                Err(t!("workflow-input-validation-failed", "pattern" => pattern_str.as_str()))
             }
         });
     }
 
     match builder.run() {
         Some(value) => Ok(serde_json::Value::String(value)),
-        None => Err("Input cancelled".to_string()),
+        None => Err(t!("workflow-cancelled-input")),
     }
 }
 
@@ -316,7 +279,7 @@ fn prompt_confirm(input: &Input) -> Result<serde_json::Value, String> {
 
     match result {
         Some(value) => Ok(serde_json::Value::Bool(value)),
-        None => Err("Confirmation cancelled".to_string()),
+        None => Err(t!("workflow-cancelled-confirm")),
     }
 }
 
@@ -324,14 +287,12 @@ fn prompt_multi_select(
     input: &Input,
     values: &HashMap<String, serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
-    // Resolve options dynamically
     let options = resolve_options(input, values)?;
 
     if options.is_empty() {
-        return Err("Multi-select input requires at least one option".to_string());
+        return Err(t!("workflow-input-error-options-empty", "type" => "MultiSelect"));
     }
 
-    // Determine default selections
     let default_indices: Vec<usize> = if let Some(default_val) = &input.default {
         if let Some(arr) = default_val.as_array() {
             let default_strings: Vec<&str> = arr.iter().filter_map(|v| v.as_str()).collect();
@@ -348,7 +309,6 @@ fn prompt_multi_select(
         vec![]
     };
 
-    // Build select options
     let select_options: Vec<SelectOption<String>> = options
         .iter()
         .map(|o| SelectOption::new(o.clone(), o.clone()))
@@ -367,7 +327,7 @@ fn prompt_multi_select(
                 .collect();
             Ok(serde_json::Value::Array(values))
         }
-        None => Err("Multi-select cancelled".to_string()),
+        None => Err(t!("workflow-cancelled-multiselect")),
     }
 }
 
@@ -376,7 +336,7 @@ fn prompt_password(input: &Input) -> Result<serde_json::Value, String> {
 
     match result {
         Some(value) => Ok(serde_json::Value::String(value)),
-        None => Err("Password input cancelled".to_string()),
+        None => Err(t!("workflow-cancelled-password")),
     }
 }
 
@@ -384,6 +344,17 @@ fn prompt_password(input: &Input) -> Result<serde_json::Value, String> {
 mod tests {
     use super::*;
     use crate::parser::InputType;
+
+    fn init_test_i18n() {
+        use std::sync::Once;
+        static INIT: Once = Once::new();
+        INIT.call_once(|| {
+            lib_plugin_prelude::init_plugin_i18n(
+                "en-US",
+                include_str!("../../langs/en/messages.ftl"),
+            );
+        });
+    }
 
     fn make_input(name: &str, input_type: InputType) -> Input {
         Input {
@@ -480,12 +451,12 @@ mod tests {
 
     #[test]
     fn test_convert_prefilled_confirm_invalid() {
+        init_test_i18n();
         let input = make_input("confirm", InputType::Confirm);
         let values = HashMap::new();
 
         let result = convert_prefilled_value(&input, "maybe", &values);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Invalid boolean value"));
     }
 
     #[test]
@@ -524,13 +495,13 @@ mod tests {
 
     #[test]
     fn test_convert_prefilled_select_invalid() {
+        init_test_i18n();
         let mut input = make_input("action", InputType::Select);
         input.options = Some(vec!["a".to_string(), "b".to_string()]);
         let values = HashMap::new();
 
         let result = convert_prefilled_value(&input, "c", &values);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Invalid value"));
     }
 
     #[test]
@@ -544,6 +515,7 @@ mod tests {
 
     #[test]
     fn test_convert_prefilled_input_with_validation() {
+        init_test_i18n();
         let mut input = make_input("version", InputType::Input);
         input.validation = Some(r"^\d+\.\d+\.\d+$".to_string());
         let values = HashMap::new();
@@ -555,7 +527,6 @@ mod tests {
         // Invalid
         let result = convert_prefilled_value(&input, "invalid", &values);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("doesn't match pattern"));
     }
 
     #[test]

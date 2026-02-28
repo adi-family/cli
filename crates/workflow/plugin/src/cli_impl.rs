@@ -6,11 +6,11 @@ use crate::options::resolve_options;
 use crate::parser::{load_workflow, InputType, WorkflowScope};
 use crate::prompts::collect_inputs_with_prefilled;
 use lib_console_output::{debug, info, is_interactive, success, Select, SelectOption};
+use lib_plugin_prelude::t;
 use serde_json::json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-/// Parsed CLI arguments for workflow execution
 #[derive(Debug, Default)]
 struct ParsedArgs {
     workflow_name: Option<String>,
@@ -19,7 +19,6 @@ struct ParsedArgs {
     show_help: bool,
 }
 
-/// Parse CLI arguments, extracting --input/-i flags
 fn parse_args(args: &[String]) -> ParsedArgs {
     let mut parsed = ParsedArgs::default();
     let mut i = 0;
@@ -48,7 +47,6 @@ fn parse_args(args: &[String]) -> ParsedArgs {
                 }
             }
             arg if arg.starts_with("--input=") => {
-                // --input=key=value format
                 if let Some(kv) = arg.strip_prefix("--input=") {
                     if let Some((key, value)) = kv.split_once('=') {
                         parsed.inputs.insert(key.to_string(), value.to_string());
@@ -57,7 +55,6 @@ fn parse_args(args: &[String]) -> ParsedArgs {
                 i += 1;
             }
             arg if arg.starts_with("-i=") => {
-                // -i=key=value format
                 if let Some(kv) = arg.strip_prefix("-i=") {
                     if let Some((key, value)) = kv.split_once('=') {
                         parsed.inputs.insert(key.to_string(), value.to_string());
@@ -78,19 +75,16 @@ fn parse_args(args: &[String]) -> ParsedArgs {
     parsed
 }
 
-/// Run the CLI command
 pub fn run_command(context_json: &str) -> Result<String, String> {
-    let context: serde_json::Value =
-        serde_json::from_str(context_json).map_err(|e| format!("Invalid context: {}", e))?;
+    let context: serde_json::Value = serde_json::from_str(context_json)
+        .map_err(|e| t!("workflow-common-error-context", "error" => e.to_string()))?;
 
-    // Get current working directory
     let cwd: PathBuf = context
         .get("cwd")
         .and_then(|v| v.as_str())
         .map(PathBuf::from)
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 
-    // Parse command and args from context
     let args: Vec<String> = context
         .get("args")
         .and_then(|v| v.as_array())
@@ -109,12 +103,8 @@ pub fn run_command(context_json: &str) -> Result<String, String> {
         "show" => cmd_show(&cwd, &cmd_args),
         "--completions" => cmd_completions(&cwd, &cmd_args),
         "--help" | "-h" => Ok(help_text()),
-        "" => {
-            // No subcommand - show interactive workflow selector
-            cmd_select_and_run(&cwd)
-        }
+        "" => cmd_select_and_run(&cwd),
         workflow_name => {
-            // Parse remaining args for --input flags
             let remaining_args: Vec<String> = args.iter().skip(1).cloned().collect();
             let parsed = parse_args(&remaining_args);
 
@@ -126,51 +116,66 @@ pub fn run_command(context_json: &str) -> Result<String, String> {
                 return cmd_schema(&cwd, workflow_name);
             }
 
-            // Run workflow with pre-filled inputs
             cmd_run_with_inputs(&cwd, workflow_name, parsed.inputs)
         }
     }
 }
 
 fn help_text() -> String {
-    r#"ADI Workflow - Run workflows defined in TOML files
-
-Commands:
-  <name>              Run a workflow by name
-  list                List available workflows
-  show <name>         Show workflow definition
-
-Options:
-  -i, --input KEY=VAL  Pre-fill input value (repeatable)
-  --schema             Output workflow inputs as JSON schema (for LLM/automation)
-  -h, --help           Show this help message
-
-Workflow locations:
-  ./.adi/workflows/<name>.toml  (local, highest priority)
-  ~/.adi/workflows/<name>.toml  (global)
-
-Examples:
-  adi workflow deploy                              # Interactive mode
-  adi workflow list                                # List available workflows
-  adi workflow show deploy                         # Show workflow details
-  adi workflow deploy --schema                     # Get inputs as JSON schema
-  adi workflow deploy -i env=prod -i version=1.0  # Non-interactive with inputs"#
-        .to_string()
+    format!(
+        "{title}\n\n\
+         {commands}\n\
+         \x20 <name>              {run}\n\
+         \x20 list                {list}\n\
+         \x20 show <name>         {show}\n\n\
+         {options}\n\
+         \x20 -i, --input KEY=VAL  {opt_input}\n\
+         \x20 --schema             {opt_schema}\n\
+         \x20 -h, --help           {opt_help}\n\n\
+         {locations}\n\
+         \x20 ./.adi/workflows/<name>.toml  {local}\n\
+         \x20 ~/.adi/workflows/<name>.toml  {global}\n\n\
+         {examples}\n\
+         \x20 adi workflow deploy                              # Interactive mode\n\
+         \x20 adi workflow list                                # {list}\n\
+         \x20 adi workflow show deploy                         # {show}\n\
+         \x20 adi workflow deploy --schema                     # {opt_schema}\n\
+         \x20 adi workflow deploy -i env=prod -i version=1.0  # Non-interactive",
+        title = t!("workflow-help-title"),
+        commands = t!("workflow-help-commands"),
+        run = t!("workflow-help-run"),
+        list = t!("workflow-help-list"),
+        show = t!("workflow-help-show"),
+        options = t!("workflow-help-options"),
+        opt_input = t!("workflow-help-option-input"),
+        opt_schema = t!("workflow-help-option-schema"),
+        opt_help = t!("workflow-help-option-help"),
+        locations = t!("workflow-help-locations"),
+        local = t!("workflow-help-local"),
+        global = t!("workflow-help-global"),
+        examples = t!("workflow-help-examples"),
+    )
 }
 
 fn cmd_list(cwd: &PathBuf) -> Result<String, String> {
     let workflows = discover_workflows(cwd);
 
     if workflows.is_empty() {
-        return Ok("No workflows found.\n\nCreate workflows at:\n  ./.adi/workflows/<name>.toml  (local)\n  ~/.adi/workflows/<name>.toml  (global)".to_string());
+        return Ok(format!(
+            "{}\n\n{}:\n  ./.adi/workflows/<name>.toml  {}\n  ~/.adi/workflows/<name>.toml  {}",
+            t!("workflow-list-empty"),
+            t!("workflow-list-hint-create"),
+            t!("workflow-help-local"),
+            t!("workflow-help-global"),
+        ));
     }
 
-    let mut output = String::from("Available workflows:\n\n");
+    let mut output = format!("{}\n\n", t!("workflow-list-title"));
 
     for workflow in workflows {
         let scope_indicator = match workflow.scope {
-            WorkflowScope::Local => "[local]",
-            WorkflowScope::Global => "[global]",
+            WorkflowScope::Local => t!("workflow-list-scope-local"),
+            WorkflowScope::Global => t!("workflow-list-scope-global"),
         };
 
         output.push_str(&format!("  {} {}\n", workflow.name, scope_indicator));
@@ -183,27 +188,29 @@ fn cmd_list(cwd: &PathBuf) -> Result<String, String> {
     Ok(output.trim_end().to_string())
 }
 
-/// Interactive workflow selector - shown when `adi workflow` is called without arguments
 fn cmd_select_and_run(cwd: &PathBuf) -> Result<String, String> {
     let workflows = discover_workflows(cwd);
 
     if workflows.is_empty() {
-        return Ok("No workflows found.\n\nCreate workflows at:\n  ./.adi/workflows/<name>.toml  (local)\n  ~/.adi/workflows/<name>.toml  (global)".to_string());
+        return Ok(format!(
+            "{}\n\n{}:\n  ./.adi/workflows/<name>.toml  {}\n  ~/.adi/workflows/<name>.toml  {}",
+            t!("workflow-list-empty"),
+            t!("workflow-list-hint-create"),
+            t!("workflow-help-local"),
+            t!("workflow-help-global"),
+        ));
     }
 
-    // Check if we're in an interactive terminal
     if !is_interactive() {
-        // Non-interactive: show help text
         return Ok(help_text());
     }
 
-    // Build selection options with descriptions
     let options: Vec<SelectOption<String>> = workflows
         .iter()
         .map(|w| {
             let scope = match w.scope {
-                WorkflowScope::Local => "[local]",
-                WorkflowScope::Global => "[global]",
+                WorkflowScope::Local => t!("workflow-list-scope-local"),
+                WorkflowScope::Global => t!("workflow-list-scope-global"),
             };
             let label = match &w.description {
                 Some(desc) => format!("{} {} - {}", w.name, scope, desc),
@@ -213,36 +220,37 @@ fn cmd_select_and_run(cwd: &PathBuf) -> Result<String, String> {
         })
         .collect();
 
-    info("Select a workflow to run:");
+    info(&t!("workflow-select-prompt"));
 
     let selection = Select::new("Workflow").options(options).default(0).run();
 
     match selection {
         Some(workflow_name) => cmd_run_with_inputs(cwd, &workflow_name, HashMap::new()),
-        None => Err("Selection cancelled".to_string()),
+        None => Err(t!("workflow-cancelled-selection")),
     }
 }
 
 fn cmd_show(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {
     if args.is_empty() {
-        return Err("Missing workflow name. Usage: show <name>".to_string());
+        return Err(t!("workflow-show-error-missing-name"));
     }
 
     let name = args[0];
-    let path = find_workflow(cwd, name).ok_or_else(|| format!("Workflow '{}' not found", name))?;
+    let path = find_workflow(cwd, name)
+        .ok_or_else(|| t!("workflow-show-error-not-found", "name" => name))?;
 
     let workflow = load_workflow(&path)?;
 
-    let mut output = format!("Workflow: {}\n", workflow.workflow.name);
+    let mut output = format!("{}\n", t!("workflow-show-title", "name" => workflow.workflow.name.as_str()));
 
     if let Some(desc) = &workflow.workflow.description {
-        output.push_str(&format!("Description: {}\n", desc));
+        output.push_str(&format!("{}\n", t!("workflow-show-description", "description" => desc.as_str())));
     }
 
-    output.push_str(&format!("Path: {}\n", path.display()));
+    output.push_str(&format!("{}\n", t!("workflow-show-path", "path" => path.display().to_string())));
 
     if !workflow.inputs.is_empty() {
-        output.push_str("\nInputs:\n");
+        output.push_str(&format!("\n{}\n", t!("workflow-show-inputs")));
         for input in &workflow.inputs {
             output.push_str(&format!(
                 "  {} ({:?}): {}\n",
@@ -250,36 +258,47 @@ fn cmd_show(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {
             ));
 
             if let Some(options) = &input.options {
-                output.push_str(&format!("    Options: {}\n", options.join(", ")));
+                output.push_str(&format!(
+                    "    {}\n",
+                    t!("workflow-show-input-options", "options" => options.join(", "))
+                ));
             }
 
             if let Some(default) = &input.default {
-                output.push_str(&format!("    Default: {}\n", default));
+                output.push_str(&format!(
+                    "    {}\n",
+                    t!("workflow-show-input-default", "default" => default.to_string())
+                ));
             }
         }
     }
 
     if !workflow.steps.is_empty() {
-        output.push_str("\nSteps:\n");
+        output.push_str(&format!("\n{}\n", t!("workflow-show-steps")));
         for (i, step) in workflow.steps.iter().enumerate() {
             output.push_str(&format!("  {}. {}\n", i + 1, step.name));
 
             if let Some(condition) = &step.condition {
-                output.push_str(&format!("     if: {}\n", condition));
+                output.push_str(&format!(
+                    "     {}\n",
+                    t!("workflow-show-step-if", "condition" => condition.as_str())
+                ));
             }
 
-            // Show first line of command
             let first_line = step.run.lines().next().unwrap_or(&step.run);
-            output.push_str(&format!("     run: {}\n", first_line));
+            output.push_str(&format!(
+                "     {}\n",
+                t!("workflow-show-step-run", "command" => first_line)
+            ));
         }
     }
 
     Ok(output.trim_end().to_string())
 }
 
-/// Output workflow inputs as JSON schema for LLM/automation use
 fn cmd_schema(cwd: &PathBuf, name: &str) -> Result<String, String> {
-    let path = find_workflow(cwd, name).ok_or_else(|| format!("Workflow '{}' not found", name))?;
+    let path = find_workflow(cwd, name)
+        .ok_or_else(|| t!("workflow-show-error-not-found", "name" => name))?;
     let workflow = load_workflow(&path)?;
 
     let mut inputs_schema = Vec::new();
@@ -291,9 +310,7 @@ fn cmd_schema(cwd: &PathBuf, name: &str) -> Result<String, String> {
             "prompt": input.prompt,
         });
 
-        // Add options if available (try to resolve them)
         if input.input_type == InputType::Select || input.input_type == InputType::MultiSelect {
-            // Try to resolve options, but don't fail if we can't
             if let Ok(options) = resolve_options(input, &HashMap::new()) {
                 input_obj["options"] = json!(options);
             } else if let Some(opts) = &input.options {
@@ -339,22 +356,21 @@ fn cmd_schema(cwd: &PathBuf, name: &str) -> Result<String, String> {
     Ok(serde_json::to_string_pretty(&schema).unwrap_or_else(|_| schema.to_string()))
 }
 
-/// Run workflow with pre-filled inputs from CLI arguments
 fn cmd_run_with_inputs(
     cwd: &PathBuf,
     name: &str,
     prefilled: HashMap<String, String>,
 ) -> Result<String, String> {
-    let path = find_workflow(cwd, name).ok_or_else(|| format!("Workflow '{}' not found", name))?;
+    let path = find_workflow(cwd, name)
+        .ok_or_else(|| t!("workflow-run-error-not-found", "name" => name))?;
 
     let workflow = load_workflow(&path)?;
 
-    info(&format!("Running workflow: {}", workflow.workflow.name));
+    info(&t!("workflow-run-title", "name" => workflow.workflow.name.as_str()));
     if let Some(desc) = &workflow.workflow.description {
         debug(&format!("  {}", desc));
     }
 
-    // Collect inputs with pre-filled values
     let variables = if workflow.inputs.is_empty() {
         HashMap::new()
     } else {
@@ -367,35 +383,26 @@ fn cmd_run_with_inputs(
         collect_inputs_with_prefilled(&workflow.inputs, prefilled)?
     };
 
-    // Execute steps
     if workflow.steps.is_empty() {
-        return Ok("Workflow has no steps to execute".to_string());
+        return Ok(t!("workflow-run-error-no-steps"));
     }
 
-    info("Executing steps...");
+    info(&t!("workflow-run-executing-steps"));
     execute_steps(&workflow.steps, &variables)?;
 
-    success(&format!("Workflow '{}' completed successfully!", name));
+    success(&t!("workflow-run-success", "name" => name));
     Ok(String::new())
 }
 
-/// Generate shell completions for workflow names
 fn cmd_completions(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {
-    // Parse position (1-based, position of word being completed)
     let position: usize = args.first().and_then(|s| s.parse().ok()).unwrap_or(1);
-
-    // Get the words typed so far (after --completions and position)
     let words: Vec<&str> = args.iter().skip(1).copied().collect();
 
-    // Position 1 = completing the subcommand/workflow name
     if position == 1 {
         let mut completions = Vec::new();
+        completions.push(format!("list\t{}", t!("workflow-help-list")));
+        completions.push(format!("show\t{}", t!("workflow-help-show")));
 
-        // Add static subcommands
-        completions.push("list\tList available workflows".to_string());
-        completions.push("show\tShow workflow definition".to_string());
-
-        // Add workflow names
         let workflows = discover_workflows(cwd);
         for wf in workflows {
             let desc = wf.description.as_deref().unwrap_or("Run workflow");
@@ -405,12 +412,10 @@ fn cmd_completions(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {
         return Ok(completions.join("\n"));
     }
 
-    // Position 2+ = context-dependent completions
     let subcommand = words.first().copied().unwrap_or("");
 
     match subcommand {
         "show" => {
-            // Complete workflow names for 'show'
             if position == 2 {
                 let workflows = discover_workflows(cwd);
                 let completions: Vec<String> = workflows
@@ -423,21 +428,18 @@ fn cmd_completions(cwd: &PathBuf, args: &[&str]) -> Result<String, String> {
                 return Ok(completions.join("\n"));
             }
         }
-        _ => {
-            // For workflow runs or unknown subcommands, no additional completions
-        }
+        _ => {}
     }
 
     Ok(String::new())
 }
 
-/// List available commands for discovery (used by external tooling)
 #[allow(dead_code)]
 pub fn list_commands() -> serde_json::Value {
     json!([
-        {"name": "list", "description": "List available workflows", "usage": "list"},
-        {"name": "show", "description": "Show workflow definition", "usage": "show <name>"},
-        {"name": "<name>", "description": "Run a workflow by name", "usage": "<name>"}
+        {"name": "list", "description": t!("workflow-help-list"), "usage": "list"},
+        {"name": "show", "description": t!("workflow-help-show"), "usage": "show <name>"},
+        {"name": "<name>", "description": t!("workflow-help-run"), "usage": "<name>"}
     ])
 }
 

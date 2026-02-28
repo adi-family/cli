@@ -1,44 +1,33 @@
 //! Dynamic options providers for workflow inputs
-//!
-//! This module provides various ways to generate options dynamically:
-//! - Shell commands (options_cmd)
-//! - Built-in providers (options_source)
-//! - Static options (options)
 
 use crate::parser::{Input, OptionsSource};
+use lib_plugin_prelude::t;
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
 
-/// Resolve options for an input, checking dynamic sources first
 pub fn resolve_options(
     input: &Input,
     values: &HashMap<String, serde_json::Value>,
 ) -> Result<Vec<String>, String> {
-    // Priority: options_cmd > options_source > options (static)
-
-    // 1. Try shell command
     if let Some(cmd) = &input.options_cmd {
         return resolve_from_command(cmd, values);
     }
 
-    // 2. Try built-in source
     if let Some(source) = &input.options_source {
         return resolve_from_source(source);
     }
 
-    // 3. Fall back to static options
     if let Some(opts) = &input.options {
         return Ok(opts.clone());
     }
 
-    Err(format!(
-        "Input '{}' requires options, options_cmd, or options_source",
-        input.name
+    Err(t!(
+        "workflow-options-error-requires",
+        "name" => input.name.as_str()
     ))
 }
 
-/// Resolve options from a shell command
 fn resolve_from_command(
     cmd: &str,
     _values: &HashMap<String, serde_json::Value>,
@@ -47,11 +36,14 @@ fn resolve_from_command(
         .arg("-c")
         .arg(cmd)
         .output()
-        .map_err(|e| format!("Failed to execute options_cmd: {}", e))?;
+        .map_err(|e| t!("workflow-options-error-cmd-exec", "error" => e.to_string()))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("options_cmd failed: {}", stderr.trim()));
+        return Err(t!(
+            "workflow-options-error-cmd-failed",
+            "error" => stderr.trim().to_string()
+        ));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -62,13 +54,12 @@ fn resolve_from_command(
         .collect();
 
     if options.is_empty() {
-        return Err("options_cmd returned no options".to_string());
+        return Err(t!("workflow-options-error-cmd-empty"));
     }
 
     Ok(options)
 }
 
-/// Resolve options from a built-in source
 fn resolve_from_source(source: &OptionsSource) -> Result<Vec<String>, String> {
     match source {
         OptionsSource::GitBranches => get_git_branches(),
@@ -82,15 +73,14 @@ fn resolve_from_source(source: &OptionsSource) -> Result<Vec<String>, String> {
     }
 }
 
-/// Get git branches from current repository
 fn get_git_branches() -> Result<Vec<String>, String> {
     let output = Command::new("git")
         .args(["branch", "--format=%(refname:short)"])
         .output()
-        .map_err(|e| format!("Failed to get git branches: {}", e))?;
+        .map_err(|e| t!("workflow-options-error-git-branches", "error" => e.to_string()))?;
 
     if !output.status.success() {
-        return Err("Not a git repository or git not installed".to_string());
+        return Err(t!("workflow-options-error-not-git"));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -101,21 +91,20 @@ fn get_git_branches() -> Result<Vec<String>, String> {
         .collect();
 
     if branches.is_empty() {
-        return Err("No git branches found".to_string());
+        return Err(t!("workflow-options-error-no-branches"));
     }
 
     Ok(branches)
 }
 
-/// Get git tags from current repository
 fn get_git_tags() -> Result<Vec<String>, String> {
     let output = Command::new("git")
         .args(["tag", "--sort=-version:refname"])
         .output()
-        .map_err(|e| format!("Failed to get git tags: {}", e))?;
+        .map_err(|e| t!("workflow-options-error-git-tags", "error" => e.to_string()))?;
 
     if !output.status.success() {
-        return Err("Not a git repository or git not installed".to_string());
+        return Err(t!("workflow-options-error-not-git"));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -126,21 +115,20 @@ fn get_git_tags() -> Result<Vec<String>, String> {
         .collect();
 
     if tags.is_empty() {
-        return Err("No git tags found".to_string());
+        return Err(t!("workflow-options-error-no-tags"));
     }
 
     Ok(tags)
 }
 
-/// Get git remotes from current repository
 fn get_git_remotes() -> Result<Vec<String>, String> {
     let output = Command::new("git")
         .args(["remote"])
         .output()
-        .map_err(|e| format!("Failed to get git remotes: {}", e))?;
+        .map_err(|e| t!("workflow-options-error-git-remotes", "error" => e.to_string()))?;
 
     if !output.status.success() {
-        return Err("Not a git repository or git not installed".to_string());
+        return Err(t!("workflow-options-error-not-git"));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -151,15 +139,13 @@ fn get_git_remotes() -> Result<Vec<String>, String> {
         .collect();
 
     if remotes.is_empty() {
-        return Err("No git remotes found".to_string());
+        return Err(t!("workflow-options-error-no-remotes"));
     }
 
     Ok(remotes)
 }
 
-/// Get services from docker-compose.yml
 fn get_docker_compose_services(file: &str) -> Result<Vec<String>, String> {
-    // Try to parse with docker-compose config
     let output = Command::new("docker")
         .args(["compose", "-f", file, "config", "--services"])
         .output();
@@ -179,9 +165,9 @@ fn get_docker_compose_services(file: &str) -> Result<Vec<String>, String> {
         }
     }
 
-    // Fallback: parse YAML manually (basic)
-    let content =
-        std::fs::read_to_string(file).map_err(|e| format!("Failed to read {}: {}", file, e))?;
+    // Fallback: basic YAML parsing
+    let content = std::fs::read_to_string(file)
+        .map_err(|e| t!("workflow-options-error-read-file", "path" => file, "error" => e.to_string()))?;
 
     let mut services = Vec::new();
     let mut in_services = false;
@@ -195,7 +181,6 @@ fn get_docker_compose_services(file: &str) -> Result<Vec<String>, String> {
         }
 
         if in_services {
-            // Check if this is a top-level key under services (2 spaces indent)
             if line.starts_with("  ") && !line.starts_with("    ") && trimmed.ends_with(':') {
                 let service = trimmed.trim_end_matches(':').to_string();
                 if !service.starts_with('#') {
@@ -203,7 +188,6 @@ fn get_docker_compose_services(file: &str) -> Result<Vec<String>, String> {
                 }
             }
 
-            // Check if we've left the services section
             if !line.starts_with(' ') && !trimmed.is_empty() && trimmed != "services:" {
                 break;
             }
@@ -211,27 +195,25 @@ fn get_docker_compose_services(file: &str) -> Result<Vec<String>, String> {
     }
 
     if services.is_empty() {
-        return Err(format!("No services found in {}", file));
+        return Err(t!("workflow-options-error-no-services", "file" => file));
     }
 
     Ok(services)
 }
 
-/// Get directories matching a pattern
 fn get_directories(base_path: &str, pattern: Option<&str>) -> Result<Vec<String>, String> {
     let path = Path::new(base_path);
 
     if !path.exists() {
-        return Err(format!("Directory not found: {}", base_path));
+        return Err(t!("workflow-options-error-dir-not-found", "path" => base_path));
     }
 
     let mut dirs = Vec::new();
 
     if let Some(pat) = pattern {
-        // Use glob pattern
         let glob_pattern = format!("{}/{}", base_path, pat);
         for entry in
-            glob::glob(&glob_pattern).map_err(|e| format!("Invalid glob pattern: {}", e))?
+            glob::glob(&glob_pattern).map_err(|e| t!("workflow-options-error-glob", "error" => e.to_string()))?
         {
             if let Ok(path) = entry {
                 if path.is_dir() {
@@ -242,7 +224,6 @@ fn get_directories(base_path: &str, pattern: Option<&str>) -> Result<Vec<String>
             }
         }
     } else {
-        // List all directories
         if let Ok(entries) = std::fs::read_dir(path) {
             for entry in entries.flatten() {
                 if entry.path().is_dir() {
@@ -257,30 +238,25 @@ fn get_directories(base_path: &str, pattern: Option<&str>) -> Result<Vec<String>
     dirs.sort();
 
     if dirs.is_empty() {
-        return Err(format!(
-            "No directories found in {} matching {:?}",
-            base_path, pattern
-        ));
+        return Err(t!("workflow-options-error-no-dirs", "path" => base_path));
     }
 
     Ok(dirs)
 }
 
-/// Get files matching a pattern
 fn get_files(base_path: &str, pattern: Option<&str>) -> Result<Vec<String>, String> {
     let path = Path::new(base_path);
 
     if !path.exists() {
-        return Err(format!("Path not found: {}", base_path));
+        return Err(t!("workflow-options-error-path-not-found", "path" => base_path));
     }
 
     let mut files = Vec::new();
 
     if let Some(pat) = pattern {
-        // Use glob pattern
         let glob_pattern = format!("{}/{}", base_path, pat);
         for entry in
-            glob::glob(&glob_pattern).map_err(|e| format!("Invalid glob pattern: {}", e))?
+            glob::glob(&glob_pattern).map_err(|e| t!("workflow-options-error-glob", "error" => e.to_string()))?
         {
             if let Ok(path) = entry {
                 if path.is_file() {
@@ -291,7 +267,6 @@ fn get_files(base_path: &str, pattern: Option<&str>) -> Result<Vec<String>, Stri
             }
         }
     } else {
-        // List all files
         if let Ok(entries) = std::fs::read_dir(path) {
             for entry in entries.flatten() {
                 if entry.path().is_file() {
@@ -306,19 +281,15 @@ fn get_files(base_path: &str, pattern: Option<&str>) -> Result<Vec<String>, Stri
     files.sort();
 
     if files.is_empty() {
-        return Err(format!(
-            "No files found in {} matching {:?}",
-            base_path, pattern
-        ));
+        return Err(t!("workflow-options-error-no-files", "path" => base_path));
     }
 
     Ok(files)
 }
 
-/// Get lines from a file (one option per line)
 fn get_lines_from_file(path: &str) -> Result<Vec<String>, String> {
-    let content =
-        std::fs::read_to_string(path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| t!("workflow-options-error-read-file", "path" => path, "error" => e.to_string()))?;
 
     let lines: Vec<String> = content
         .lines()
@@ -327,15 +298,13 @@ fn get_lines_from_file(path: &str) -> Result<Vec<String>, String> {
         .collect();
 
     if lines.is_empty() {
-        return Err(format!("No options found in {}", path));
+        return Err(t!("workflow-options-error-no-lines", "path" => path));
     }
 
     Ok(lines)
 }
 
-/// Get cargo workspace members
 fn get_cargo_workspace_members() -> Result<Vec<String>, String> {
-    // Try cargo metadata first
     let output = Command::new("cargo")
         .args(["metadata", "--no-deps", "--format-version=1"])
         .output();
@@ -358,12 +327,12 @@ fn get_cargo_workspace_members() -> Result<Vec<String>, String> {
         }
     }
 
-    // Fallback: parse Cargo.toml manually
+    // Fallback: parse Cargo.toml directly
     let content = std::fs::read_to_string("Cargo.toml")
-        .map_err(|_| "No Cargo.toml found in current directory".to_string())?;
+        .map_err(|_| t!("workflow-options-error-no-cargo"))?;
 
     let toml: toml::Value =
-        toml::from_str(&content).map_err(|e| format!("Failed to parse Cargo.toml: {}", e))?;
+        toml::from_str(&content).map_err(|e| t!("workflow-options-error-cargo-parse", "error" => e.to_string()))?;
 
     let mut members = Vec::new();
 
@@ -371,7 +340,6 @@ fn get_cargo_workspace_members() -> Result<Vec<String>, String> {
         if let Some(member_list) = workspace.get("members").and_then(|m| m.as_array()) {
             for member in member_list {
                 if let Some(m) = member.as_str() {
-                    // Handle glob patterns
                     if m.contains('*') {
                         if let Ok(entries) = glob::glob(m) {
                             for entry in entries.flatten() {
@@ -392,7 +360,7 @@ fn get_cargo_workspace_members() -> Result<Vec<String>, String> {
     }
 
     if members.is_empty() {
-        return Err("No workspace members found".to_string());
+        return Err(t!("workflow-options-error-no-members"));
     }
 
     members.sort();

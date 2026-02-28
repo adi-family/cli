@@ -20,19 +20,21 @@ impl Plugin for WorkflowPlugin {
     fn metadata(&self) -> PluginMetadata {
         PluginMetadata {
             id: "adi.workflow".to_string(),
-            name: "ADI Workflow".to_string(),
+            name: t!("plugin-name"),
             version: env!("CARGO_PKG_VERSION").to_string(),
             plugin_type: PluginType::Core,
             author: Some("ADI Team".to_string()),
-            description: Some(
-                "Run workflows defined in TOML files with interactive prompts".to_string(),
-            ),
+            description: Some(t!("plugin-description")),
             category: None,
         }
     }
 
     async fn init(&mut self, ctx: &PluginContext) -> Result<()> {
         PluginCtx::init(ctx);
+        lib_plugin_prelude::init_plugin_i18n(
+            "en-US",
+            include_str!("../../langs/en/messages.ftl"),
+        );
         Ok(())
     }
 
@@ -47,25 +49,25 @@ impl CliCommands for WorkflowPlugin {
         vec![
             CliCommand {
                 name: "run".to_string(),
-                description: "Run a workflow by name".to_string(),
+                description: t!("workflow-help-run"),
                 args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "list".to_string(),
-                description: "List available workflows".to_string(),
+                description: t!("workflow-help-list"),
                 args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "show".to_string(),
-                description: "Show workflow definition".to_string(),
+                description: t!("workflow-help-show"),
                 args: vec![],
                 has_subcommands: false,
             },
             CliCommand {
                 name: "--completions".to_string(),
-                description: "Output completion suggestions (internal use)".to_string(),
+                description: t!("workflow-help-completions"),
                 args: vec![],
                 has_subcommands: false,
             },
@@ -73,14 +75,12 @@ impl CliCommands for WorkflowPlugin {
     }
 
     async fn run_command(&self, ctx: &CliContext) -> Result<CliResult> {
-        // Build full args list: [subcommand, ...remaining_args]
         let mut full_args = Vec::new();
         if let Some(ref subcmd) = ctx.subcommand {
             full_args.push(subcmd.clone());
         }
         full_args.extend(ctx.args.iter().cloned());
 
-        // Convert context to JSON format expected by cli_impl::run_command
         let context_json = serde_json::json!({
             "command": &ctx.command,
             "args": &full_args,
