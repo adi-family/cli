@@ -121,6 +121,15 @@ pub enum DaemonRequest {
     /// Stop streaming logs
     StopLogStream { stream_id: Uuid },
 
+    /// Subscribe to service status changes (streaming)
+    SubscribeServices {
+        /// Source name filter (optional)
+        source: Option<String>,
+    },
+
+    /// Stop a service status stream
+    StopServiceStream { stream_id: Uuid },
+
     /// Ping (for connection check)
     Ping,
 }
@@ -131,6 +140,9 @@ pub enum DaemonRequest {
 pub enum DaemonResponse {
     /// Success with optional message
     Ok { message: Option<String> },
+
+    /// Source added/reloaded (returns resolved name)
+    SourceAdded { name: String },
 
     /// Error response
     Error { code: String, message: String },
@@ -161,6 +173,12 @@ pub enum DaemonResponse {
 
     /// Log stream ended
     StreamEnded { stream_id: Uuid },
+
+    /// Service status update (sent during service status streaming)
+    ServiceStatusUpdate {
+        stream_id: Uuid,
+        services: Vec<ServiceStatus>,
+    },
 
     /// Pong response
     Pong,
@@ -492,7 +510,9 @@ impl DaemonClient {
         .await
     }
 
-    /// Add a source
+    /// Add a source (idempotent — reloads if path already registered)
+    ///
+    /// Returns the resolved source name.
     pub async fn add_source(&self, path: &str, name: Option<&str>) -> Result<String> {
         self.extract(
             DaemonRequest::AddSource {
@@ -500,9 +520,7 @@ impl DaemonClient {
                 name: name.map(String::from),
             },
             |r| match r {
-                DaemonResponse::Ok { message } => {
-                    Some(message.unwrap_or_else(|| "Source added".to_string()))
-                }
+                DaemonResponse::SourceAdded { name } => Some(name),
                 _ => None,
             },
         )
@@ -687,6 +705,54 @@ impl DaemonClient {
         })
     }
 
+    /// Subscribe to service status changes, returning a handle for receiving updates.
+    ///
+    /// Opens a dedicated connection (like `stream_logs`) so status updates
+    /// can be received concurrently with other requests.
+    pub async fn subscribe_services(
+        &self,
+        source: Option<&str>,
+    ) -> Result<ServiceStreamHandle> {
+        let stream = UnixStream::connect(&self.socket_path)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to connect to daemon at {}. Is the daemon running?",
+                    self.socket_path.display()
+                )
+            })?;
+
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        let request = DaemonRequest::SubscribeServices {
+            source: source.map(String::from),
+        };
+        let request_json = serde_json::to_string(&request)?;
+        writer.write_all(request_json.as_bytes()).await?;
+        writer.write_all(b"\n").await?;
+
+        let mut response_line = String::new();
+        reader.read_line(&mut response_line).await?;
+
+        let response: DaemonResponse = serde_json::from_str(response_line.trim())
+            .with_context(|| "Invalid response from daemon")?;
+
+        let stream_id = match response {
+            DaemonResponse::StreamStarted { stream_id } => stream_id,
+            DaemonResponse::Error { code, message } => {
+                return Err(anyhow!("Daemon error [{}]: {}", code, message));
+            }
+            _ => return Err(anyhow!("Unexpected response")),
+        };
+
+        Ok(ServiceStreamHandle {
+            stream_id,
+            reader,
+            writer,
+        })
+    }
+
     /// Disconnect from daemon
     pub async fn disconnect(&self) {
         let mut inner = self.inner.lock().await;
@@ -739,6 +805,56 @@ impl LogStreamHandle {
     /// Stop the log stream
     pub async fn stop(mut self) -> Result<()> {
         let request = DaemonRequest::StopLogStream {
+            stream_id: self.stream_id,
+        };
+        let request_json = serde_json::to_string(&request)?;
+        self.writer.write_all(request_json.as_bytes()).await?;
+        self.writer.write_all(b"\n").await?;
+        Ok(())
+    }
+}
+
+/// Handle for streaming service status updates from the daemon.
+///
+/// Uses a dedicated Unix socket connection so updates can be received
+/// independently of other daemon requests.
+pub struct ServiceStreamHandle {
+    stream_id: Uuid,
+    reader: BufReader<tokio::net::unix::OwnedReadHalf>,
+    writer: tokio::net::unix::OwnedWriteHalf,
+}
+
+impl ServiceStreamHandle {
+    /// Get the stream ID
+    pub fn stream_id(&self) -> Uuid {
+        self.stream_id
+    }
+
+    /// Receive the next service status update, or `None` when the stream ends.
+    pub async fn recv(&mut self) -> Result<Option<Vec<ServiceStatus>>> {
+        let mut line = String::new();
+        let bytes_read = self.reader.read_line(&mut line).await?;
+
+        if bytes_read == 0 {
+            return Ok(None);
+        }
+
+        let response: DaemonResponse = serde_json::from_str(line.trim())
+            .with_context(|| "Invalid response from daemon")?;
+
+        match response {
+            DaemonResponse::ServiceStatusUpdate { services, .. } => Ok(Some(services)),
+            DaemonResponse::StreamEnded { .. } => Ok(None),
+            DaemonResponse::Error { code, message } => {
+                Err(anyhow!("Daemon error [{}]: {}", code, message))
+            }
+            _ => Err(anyhow!("Unexpected response")),
+        }
+    }
+
+    /// Stop the service status stream
+    pub async fn stop(mut self) -> Result<()> {
+        let request = DaemonRequest::StopServiceStream {
             stream_id: self.stream_id,
         };
         let request_json = serde_json::to_string(&request)?;
