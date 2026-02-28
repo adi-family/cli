@@ -1,4 +1,5 @@
-import type { EventBus, PluginDescriptor } from './types.js';
+import type { EventBus } from './bus.js';
+import type { PluginDescriptor } from './types.js';
 import { AdiPlugin } from './plugin.js';
 
 const registry = new Map<string, AdiPlugin>();

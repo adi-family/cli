@@ -1,4 +1,4 @@
-import type { EventBus } from './types.js';
+import type { EventBus } from './bus.js';
 
 export abstract class AdiPlugin {
   abstract readonly id: string;

@@ -2,7 +2,6 @@ import './events.js';
 
 export type {
   EventRegistry,
-  EventBus,
   EventMeta,
   BusMiddleware,
   ReplyableEvent,
@@ -12,7 +11,7 @@ export type {
   PluginDescriptor,
 } from './types.js';
 
-export { createEventBus } from './bus.js';
+export { EventBus } from './bus.js';
 export { Logger } from './logger.js';
 export type { LogLevel } from './logger.js';
 export { AdiPlugin } from './plugin.js';

@@ -28,29 +28,6 @@ export interface BusMiddleware {
   ignored?(event: string, payload: unknown, meta: EventMeta): void;
 }
 
-export interface EventBus {
-  emit<K extends keyof EventRegistry>(event: K, payload: EventRegistry[K], producer: string): void;
-
-  on<K extends keyof EventRegistry>(
-    event: K,
-    handler: EventHandler<K>,
-    consumer: string,
-  ): () => void;
-
-  once<K extends keyof EventRegistry>(
-    event: K,
-    handler: EventHandler<K>,
-    consumer: string,
-  ): () => void;
-
-  send<K extends ReplyableEvent>(
-    event: K,
-    payload: EventRegistry[K],
-    producer: string,
-  ): SendHandle<EventRegistry[`${K}:ok`]>;
-
-  use(middleware: BusMiddleware): () => void;
-}
 
 export interface PluginRegistry {
   bundleUrl(id: string, version: string): Promise<string>;

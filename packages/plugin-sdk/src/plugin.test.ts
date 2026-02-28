@@ -1,7 +1,7 @@
 // src/plugin.test.ts
 import { describe, it, expect, vi } from 'vitest';
 import { AdiPlugin } from './plugin.js';
-import { createEventBus } from './bus.js';
+import { EventBus } from './bus.js';
 
 class MinimalPlugin extends AdiPlugin {
   readonly id = 'minimal';
@@ -36,7 +36,7 @@ describe('AdiPlugin', () => {
   });
 
   it('_init() injects bus — this.bus is accessible in onRegister()', async () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const emitSpy = vi.spyOn(bus, 'emit');
     const plugin = new HooksPlugin();
     await plugin._init(bus);
@@ -45,14 +45,14 @@ describe('AdiPlugin', () => {
   });
 
   it('_init() calls onRegister()', async () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const plugin = new HooksPlugin();
     await plugin._init(bus);
     expect(plugin.registerCalls).toEqual(['called']);
   });
 
   it('_init() emits register-finished after onRegister resolves', async () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const handler = vi.fn();
     bus.on('register-finished', handler, 'test');
     await new HooksPlugin()._init(bus);
@@ -60,7 +60,7 @@ describe('AdiPlugin', () => {
   });
 
   it('_init() emits register-finished even without onRegister defined', async () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const handler = vi.fn();
     bus.on('register-finished', handler, 'test');
     await new MinimalPlugin()._init(bus);
@@ -68,7 +68,7 @@ describe('AdiPlugin', () => {
   });
 
   it('_destroy() calls onUnregister()', async () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const plugin = new HooksPlugin();
     await plugin._init(bus);
     await plugin._destroy();

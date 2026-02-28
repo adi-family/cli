@@ -1,6 +1,6 @@
 // src/bus.test.ts
 import { describe, it, expect, vi } from 'vitest';
-import { createEventBus } from './bus.js';
+import { EventBus } from './bus.js';
 
 declare module './types.js' {
   interface EventRegistry {
@@ -11,7 +11,7 @@ declare module './types.js' {
 
 describe('EventBus — emit + on', () => {
   it('calls handler when event emitted', () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const handler = vi.fn();
     bus.on('test:ping', handler, 'test');
     bus.emit('test:ping', { value: 42 }, 'test');
@@ -19,7 +19,7 @@ describe('EventBus — emit + on', () => {
   });
 
   it('calls multiple handlers', () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const h1 = vi.fn();
     const h2 = vi.fn();
     bus.on('test:ping', h1, 'test-a');
@@ -30,7 +30,7 @@ describe('EventBus — emit + on', () => {
   });
 
   it('unsubscribe stops handler', () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const handler = vi.fn();
     const unsub = bus.on('test:ping', handler, 'test');
     unsub();
@@ -41,7 +41,7 @@ describe('EventBus — emit + on', () => {
 
 describe('EventBus — FIFO queue', () => {
   it('queues events emitted before any subscriber', () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     bus.emit('test:ping', { value: 1 }, 'test');
     bus.emit('test:ping', { value: 2 }, 'test');
     const received: number[] = [];
@@ -50,7 +50,7 @@ describe('EventBus — FIFO queue', () => {
   });
 
   it('flushes queue only to first subscriber; later subscribers get fresh events only', () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     bus.emit('test:ping', { value: 10 }, 'test');
     const first: number[] = [];
     const second: number[] = [];
@@ -66,7 +66,7 @@ describe('EventBus — FIFO queue', () => {
 
 describe('EventBus — once', () => {
   it('handler called only once', () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const handler = vi.fn();
     bus.once('test:ping', handler, 'test');
     bus.emit('test:ping', { value: 1 }, 'test');
@@ -76,7 +76,7 @@ describe('EventBus — once', () => {
   });
 
   it('once flushes queued event immediately on subscribe', () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     bus.emit('test:ping', { value: 5 }, 'test');
     const handler = vi.fn();
     bus.once('test:ping', handler, 'test');
@@ -84,7 +84,7 @@ describe('EventBus — once', () => {
   });
 
   it('once fires at most once even when queue is flushed then emitted again', () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     bus.emit('test:ping', { value: 1 }, 'test');  // queue before subscriber
     const handler = vi.fn();
     bus.once('test:ping', handler, 'test');        // flushes queue synchronously
@@ -94,7 +94,7 @@ describe('EventBus — once', () => {
   });
 
   it('once returns a no-op unsubscribe after synchronous flush', () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     bus.emit('test:ping', { value: 10 }, 'test'); // pre-queue event
     const handler = vi.fn();
     const unsub = bus.once('test:ping', handler, 'test'); // flushes synchronously
@@ -113,7 +113,7 @@ describe('EventBus — once', () => {
 
 describe('EventBus — send', () => {
   it('resolves when :ok emitted with matching _cid', async () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     bus.on('test:ping', (payload) => {
       const p = payload as { value: number; _cid: string };
       bus.emit('test:ping:ok', { echo: p.value, _cid: p._cid }, 'responder');
@@ -123,7 +123,7 @@ describe('EventBus — send', () => {
   });
 
   it('ignores :ok replies with wrong _cid', async () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     bus.on('test:ping', (payload) => {
       const p = payload as { value: number; _cid: string };
       bus.emit('test:ping:ok', { echo: 0, _cid: 'wrong' }, 'responder');
@@ -134,12 +134,12 @@ describe('EventBus — send', () => {
   });
 
   it('send rejects with timeout error when no reply arrives', async () => {
-    const bus = createEventBus({ sendTimeout: 50 });
+    const bus = EventBus.init({ sendTimeout: 50 });
     await expect(bus.send('test:ping', { value: 1 }, 'test').wait()).rejects.toThrow('timed out');
   });
 
   it('handle() calls callback when :ok arrives with matching _cid', async () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     bus.on('test:ping', (payload) => {
       const p = payload as { value: number; _cid: string };
       bus.emit('test:ping:ok', { echo: p.value, _cid: p._cid }, 'responder');
@@ -153,7 +153,7 @@ describe('EventBus — send', () => {
   });
 
   it('handle() ignores :ok replies with wrong _cid', async () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     let callCount = 0;
     bus.on('test:ping', (payload) => {
       const p = payload as { value: number; _cid: string };
@@ -173,7 +173,7 @@ describe('EventBus — send', () => {
 
 describe('EventBus — middleware meta', () => {
   it('before/after receive producer and consumers', () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const metas: { phase: string; producer: string; consumers: string[] }[] = [];
     bus.use({
       before: (_e, _p, meta) => metas.push({ phase: 'before', ...meta }),
@@ -189,7 +189,7 @@ describe('EventBus — middleware meta', () => {
   });
 
   it('ignored fires instead of after when no handlers', () => {
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const phases: string[] = [];
     bus.use({
       after: () => phases.push('after'),

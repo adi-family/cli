@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerPlugin, loadPlugins, _resetRegistry } from './registry.js';
 import { AdiPlugin } from './plugin.js';
-import { createEventBus } from './bus.js';
+import { EventBus } from './bus.js';
 import type { PluginDescriptor, PluginRegistry } from './types.js';
 
 function makePlugin(
@@ -41,7 +41,7 @@ describe('registerPlugin', () => {
   it('allows plugin to be found by loadPlugins', async () => {
     const plugin = makePlugin('tasks');
     registerPlugin(plugin);
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const handler = vi.fn();
     bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 1000 });
@@ -56,7 +56,7 @@ describe('loadPlugins — ordering', () => {
     const order: string[] = [];
     registerPlugin(makePlugin('a', '1.0.0', [], async () => { order.push('a'); }));
     registerPlugin(makePlugin('b', '1.0.0', [], async () => { order.push('b'); }));
-    await loadPlugins(createEventBus(), [], { timeout: 1000 });
+    await loadPlugins(EventBus.init(), [], { timeout: 1000 });
     expect(order).toEqual(['a', 'b']);
   });
 
@@ -64,14 +64,14 @@ describe('loadPlugins — ordering', () => {
     const order: string[] = [];
     registerPlugin(makePlugin('notes', '1.0.0', ['tasks'], async () => { order.push('notes'); }));
     registerPlugin(makePlugin('tasks', '1.0.0', [], async () => { order.push('tasks'); }));
-    await loadPlugins(createEventBus(), [], { timeout: 1000 });
+    await loadPlugins(EventBus.init(), [], { timeout: 1000 });
     expect(order.indexOf('tasks')).toBeLessThan(order.indexOf('notes'));
   });
 
   it('emits loading-finished with all loaded ids', async () => {
     registerPlugin(makePlugin('a'));
     registerPlugin(makePlugin('b'));
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const handler = vi.fn();
     bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 1000 });
@@ -84,7 +84,7 @@ describe('loadPlugins — ordering', () => {
 describe('loadPlugins — timeout', () => {
   it('marks plugin as timedOut if onRegister never resolves', async () => {
     registerPlugin(makePlugin('hang', '1.0.0', [], () => new Promise(() => {})));
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const handler = vi.fn();
     bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 50 });
@@ -98,7 +98,7 @@ describe('loadPlugins — cycle detection', () => {
   it('marks cycled plugins as failed', async () => {
     registerPlugin(makePlugin('a', '1.0.0', ['b']));
     registerPlugin(makePlugin('b', '1.0.0', ['a']));
-    const bus = createEventBus();
+    const bus = EventBus.init();
     const handler = vi.fn();
     bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 1000 });
