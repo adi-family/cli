@@ -4,6 +4,7 @@
 
 # 插件元数据
 plugin-name = 任务
+plugin-author = ADI Team
 plugin-description = 带依赖关系的任务管理
 
 # 命令描述

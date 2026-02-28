@@ -113,7 +113,7 @@ impl Plugin for TasksPlugin {
     fn metadata(&self) -> PluginMetadata {
         PluginMetadata::new("adi.tasks", t!("plugin-name"), env!("CARGO_PKG_VERSION"))
             .with_type(PluginType::Core)
-            .with_author("ADI Team")
+            .with_author(t!("plugin-author"))
             .with_description(t!("plugin-description"))
     }
 

@@ -4,6 +4,7 @@
 
 # Plugin-Metadaten
 plugin-name = Aufgaben
+plugin-author = ADI Team
 plugin-description = Aufgabenverwaltung mit Abhängigkeitsverfolgung
 
 # Befehlsbeschreibungen

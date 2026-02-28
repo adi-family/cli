@@ -4,6 +4,7 @@
 
 # Метадані плагіна
 plugin-name = Завдання
+plugin-author = ADI Team
 plugin-description = Управління завданнями з відстеженням залежностей
 
 # Описи команд

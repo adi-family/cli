@@ -4,6 +4,7 @@
 
 # Plugin metadata
 plugin-name = Tasks
+plugin-author = ADI Team
 plugin-description = Task management with dependency tracking
 
 # Command descriptions
