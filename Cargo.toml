@@ -230,6 +230,7 @@ members = [
 
     # Payment
     "crates/payment/core",
+    "crates/payment/client",
     "crates/payment/plugin",
 
     # Credentials

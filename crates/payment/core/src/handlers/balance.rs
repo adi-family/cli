@@ -1,5 +1,5 @@
 use axum::{Json, extract::State};
-use serde::Deserialize;
+use serde::Serialize;
 
 use crate::auth::AuthUser;
 use crate::balance_client::{
@@ -36,30 +36,16 @@ pub async fn list_transactions(
     Ok(Json(txns.into_iter().map(Into::into).collect()))
 }
 
-#[derive(Debug, Deserialize)]
-pub struct DebitRequest {
-    pub amount: i64,
-    pub description: Option<String>,
+#[derive(Debug, Serialize)]
+pub struct CanChargeMoreResponse {
+    pub allowed: bool,
 }
 
-pub async fn debit_balance(
+pub async fn can_charge_more(
     State(state): State<AppState>,
     auth: AuthUser,
-    Json(req): Json<DebitRequest>,
-) -> ApiResult<Json<BalanceResponse>> {
-    let description = req
-        .description
-        .as_deref()
-        .unwrap_or("Manual debit");
-
-    balance_client::debit(state.db.pool(), auth.id, req.amount, description).await?;
-
+) -> ApiResult<Json<CanChargeMoreResponse>> {
     let balance = balance_client::get_or_create_balance(state.db.pool(), auth.id).await?;
-
-    Ok(Json(BalanceResponse {
-        subscription_credits: balance.subscription_credits,
-        extra_credits: balance.extra_credits,
-        total_credits: balance.total(),
-        updated_at: balance.updated_at,
-    }))
+    let allowed = balance.total() > 0;
+    Ok(Json(CanChargeMoreResponse { allowed }))
 }
