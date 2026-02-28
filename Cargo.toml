@@ -65,7 +65,6 @@ members = [
 
     # Hive components
     "crates/hive/core",
-    "crates/hive/http",
     # Hive plugins
     "crates/hive/plugins/proxy-ssl",
     "crates/hive/plugins/runner-docker",
@@ -84,7 +83,6 @@ members = [
     "crates/hive/plugins/env-vault",
     "crates/hive/plugins/env-1password",
     "crates/hive/plugins/env-aws-secrets",
-    "crates/hive/plugins/runner-compose",
     "crates/hive/plugins/runner-podman",
     "crates/hive/plugins/runner-watcher",
     "crates/hive/plugins/rollout-recreate",
@@ -101,6 +99,7 @@ members = [
     "crates/hive/plugins/proxy-auth-api-key",
     "crates/hive/plugins/proxy-auth-oidc",
     "crates/hive/plugins/orchestrator",
+    "crates/hive/plugins/signaling-control",
 
     # Tarminal components (flat submodules)
     "crates/lib/lib-misc-color",
@@ -177,7 +176,6 @@ members = [
     "crates/linter/plugin",
     "crates/workflow/plugin",
     "crates/hive/plugin",
-    "crates/hive/integration-tests",
     "crates/llm-extract-plugin",
     "crates/lib/lib-typespec-api/plugin",
     "crates/cocoon",
@@ -230,6 +228,10 @@ members = [
     "crates/balance/cli",
     "crates/balance/plugin",
 
+    # Payment
+    "crates/payment/core",
+    "crates/payment/plugin",
+
     # Credentials
     "crates/credentials/core",
     "crates/credentials/http",
@@ -270,6 +272,7 @@ hive-core = { path = "crates/hive/core" }
 platform-core = { path = "crates/platform/core" }
 tools-core = { path = "crates/tools/core" }
 balance-core = { path = "crates/balance/core" }
+payment-core = { path = "crates/payment/core" }
 credentials-core = { path = "crates/credentials/core" }
 executor-core = { path = "crates/executor/core" }
 video-core = { path = "crates/video/core" }
@@ -294,7 +297,6 @@ hive-env-dotenv = { path = "crates/hive/plugins/env-dotenv" }
 hive-env-vault = { path = "crates/hive/plugins/env-vault" }
 hive-env-1password = { path = "crates/hive/plugins/env-1password" }
 hive-env-aws-secrets = { path = "crates/hive/plugins/env-aws-secrets" }
-hive-runner-compose = { path = "crates/hive/plugins/runner-compose" }
 hive-runner-podman = { path = "crates/hive/plugins/runner-podman" }
 hive-runner-watcher = { path = "crates/hive/plugins/runner-watcher" }
 hive-rollout-recreate = { path = "crates/hive/plugins/rollout-recreate" }
@@ -310,6 +312,7 @@ hive-proxy-cache = { path = "crates/hive/plugins/proxy-cache" }
 hive-proxy-rewrite = { path = "crates/hive/plugins/proxy-rewrite" }
 hive-proxy-auth-api-key = { path = "crates/hive/plugins/proxy-auth-api-key" }
 hive-proxy-auth-oidc = { path = "crates/hive/plugins/proxy-auth-oidc" }
+hive-signaling-control = { path = "crates/hive/plugins/signaling-control" }
 
 # Libraries (flat submodules)
 lib-misc-color = { path = "crates/lib/lib-misc-color" }

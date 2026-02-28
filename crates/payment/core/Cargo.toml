@@ -1,0 +1,61 @@
+[package]
+name = "payment-core"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Core library for ADI Payment API - checkout sessions, subscriptions, and webhook handling"
+
+[lib]
+name = "payment_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "payment-http"
+path = "src/main.rs"
+
+[dependencies]
+# Web framework
+axum = { version = "0.8", features = ["macros"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "json"] }
+
+# Environment
+lib-env-parse = { path = "../../lib/lib-env-parse" }
+
+# HTTP utilities
+lib-http-common = { path = "../../lib/lib-http-common" }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Auth
+jsonwebtoken = "9"
+
+# HTTP client (for provider API calls)
+reqwest = { version = "0.12", features = ["json"] }
+
+# Crypto (for webhook signature verification)
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# Utils
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Config
+dotenvy = "0.15"

@@ -1,0 +1,32 @@
+[package]
+name = "payment-plugin"
+version = "0.1.0"
+edition = "2021"
+description = "ADI plugin: Payment HTTP server"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+payment-core = { path = "../core" }
+async-trait = "0.1"
+anyhow = "1"
+
+[package.metadata.plugin]
+id = "adi.payment"
+name = "Payment"
+type = "extension"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.payment.cli"
+version = "1.0.0"
+description = "CLI commands for payment HTTP server"
+
+[package.metadata.plugin.tags]
+categories = ["payment", "server", "http"]
