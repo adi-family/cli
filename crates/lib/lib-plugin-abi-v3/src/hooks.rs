@@ -874,21 +874,10 @@ impl HookExecutor {
             interpolated.lines().next().unwrap_or(&interpolated)
         );
 
-        // Execute via login shell so the user's PATH setup (nvm, fnm, etc.) is available.
-        // Login shell sources ~/.zprofile and ~/.zlogin in addition to ~/.zshenv.
-        let (shell_cmd, shell_flag) = if cfg!(target_os = "windows") {
-            ("cmd".to_string(), "/C")
-        } else {
-            let cmd = runtime_ctx
-                .shell
-                .clone()
-                .or_else(|| std::env::var("SHELL").ok())
-                .unwrap_or_else(|| "sh".to_string());
-            (cmd, "-lc")
-        };
+        let shell = crate::utils::resolve_shell(runtime_ctx.shell.as_deref(), true);
 
-        let mut child = tokio::process::Command::new(&shell_cmd)
-            .arg(shell_flag)
+        let mut child = tokio::process::Command::new(&shell.program)
+            .arg(shell.flag)
             .arg(&interpolated)
             .current_dir(&working_dir)
             .envs(env)

@@ -7,6 +7,36 @@ pub use crate::runner::RuntimeContext;
 
 use std::time::Duration;
 
+/// Resolved shell program and flag for command execution.
+#[derive(Debug, Clone)]
+pub struct ShellInvocation {
+    pub program: String,
+    pub flag: &'static str,
+}
+
+/// Resolve the user's shell for command execution.
+///
+/// `config_shell` overrides `$SHELL` env var; falls back to `"sh"`.
+/// `login` uses `-lc` (sources full profile) so PATH setup like nvm/fnm is available.
+pub fn resolve_shell(config_shell: Option<&str>, login: bool) -> ShellInvocation {
+    if cfg!(target_os = "windows") {
+        return ShellInvocation {
+            program: "cmd".into(),
+            flag: "/C",
+        };
+    }
+
+    let program = config_shell
+        .map(String::from)
+        .or_else(|| std::env::var("SHELL").ok())
+        .unwrap_or_else(|| "sh".into());
+
+    ShellInvocation {
+        program,
+        flag: if login { "-lc" } else { "-c" },
+    }
+}
+
 /// Parse a duration string (e.g., "10s", "5m", "500ms", "1h").
 /// Falls back to treating bare numbers as seconds.
 pub fn parse_duration(s: &str) -> Option<Duration> {
