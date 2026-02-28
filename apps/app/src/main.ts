@@ -7,11 +7,11 @@ import './components/actions-loop.ts';
 import './components/ops-log.ts';
 import './components/cocoon-manual-setup.ts';
 import './components/signaling-status.ts';
+
 import { getEnabledWebPluginIds, migrateFromLocalStorage as migratePluginPrefs } from './plugin-prefs.ts';
 import { PluginsPlugin } from './plugins/plugins-page.ts';
 import { ActionsPlugin } from './components/actions-loop.ts';
 import {
-  createEventBus,
   initInternalPlugin,
   loadPlugins,
   registerPluginSW,
@@ -20,6 +20,8 @@ import {
 } from '@adi-family/sdk-plugin';
 import { initSignalingHub } from './services/signaling/index.ts';
 import { initRegistryHub } from './services/registry/index.ts';
+
+import { setGlobal, getGlobal } from './app/global.ts';
 
 interface Connection {
   id: string;
@@ -39,7 +41,7 @@ declare global {
   }
 }
 
-const bus = createEventBus();
+const bus = getGlobal().bus;
 
 const connections = new Map<string, Connection>();
 const getToken = (authDomain: string, sourceUrl?: string): Promise<string | null> =>
@@ -55,9 +57,10 @@ const debugInfo = { loaded: [] as string[], failed: [] as string[], timedOut: []
   getConnections: () => connections,
   bus,
 };
-// Expose debug info outside the typed interface to avoid declaration conflicts
-(window as unknown as Record<string, unknown>)['__adiDebug'] = debugInfo;
-(window as unknown as Record<string, unknown>)['__adiRegistryHub'] = registryHub;
+setGlobal({
+  debug: debugInfo,
+  registryHub,
+});
 
 // Migrate plugin preferences from localStorage to IndexedDB (one-time).
 await migratePluginPrefs();
@@ -69,16 +72,12 @@ await initInternalPlugin(bus, new ActionsPlugin());
 // Register service worker for plugin bundle caching.
 await registerPluginSW('/sw.js', bus);
 
-// Expose bus globally so app components can access it.
-(globalThis as Record<string, unknown>)['__adiBus'] = bus;
-
 // Discover plugins from all configured registries; failures are isolated per registry.
 const registries = [...registryHub.registries.values()];
 const results = await Promise.allSettled(registries.map(r => r.listPlugins()));
 const pluginDescriptors = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
 
-// Expose all discovered plugins so the debug screen can display them.
-(window as unknown as Record<string, unknown>)['__adiAllPlugins'] = pluginDescriptors;
+setGlobal({ allPlugins: pluginDescriptors });
 
 // Only load plugins explicitly declared as web-loadable.
 const webPlugins = pluginDescriptors.filter(d => d.pluginTypes?.includes('web'));
@@ -112,7 +111,6 @@ bus.on('loading-finished', ({ loaded, failed, timedOut }) => {
 await loadPlugins(bus, enabledWebPlugins, { timeout: 5000 });
 
 // Initialize signaling AFTER plugins are loaded so auth:get-token has a handler.
-const signalingHub = initSignalingHub(connections, bus, getToken);
-(window as unknown as Record<string, unknown>)['__adiSignaling'] = signalingHub;
+initSignalingHub(connections, bus, getToken);
 
-window.dispatchEvent(new Event('sdk-ready'));
+window.dispatchEvent(new Event('app-ready'));

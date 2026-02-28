@@ -9,6 +9,7 @@ import {
   getEnabledWebPluginIds,
   setEnabledWebPluginIds,
 } from "../plugin-prefs.ts";
+import { getGlobal } from "../global.ts";
 import type {
   SignalingHub,
   WsState,
@@ -140,7 +141,7 @@ export class AppDebugScreen extends LitElement {
       );
     } else {
       window.addEventListener(
-        "sdk-ready",
+        "app-ready",
         () => {
           this.#loadDebugData();
           this.#subscribeEventLog();
@@ -167,10 +168,7 @@ export class AppDebugScreen extends LitElement {
   }
 
   #loadDebugData(): void {
-    const w = window as unknown as Record<string, unknown>;
-    const debug = w["__adiDebug"] as
-      | { loaded?: string[]; failed?: string[]; timedOut?: string[] }
-      | undefined;
+    const debug = getGlobal('debug');
     if (debug) {
       this.pluginStatus = {
         loaded: debug.loaded ?? [],
@@ -179,7 +177,7 @@ export class AppDebugScreen extends LitElement {
       };
     }
     // Build registry list from hub, preserving existing health results.
-    const hub = this.#registryHub();
+    const hub = getGlobal('registryHub');
     if (hub) {
       this.registries = [...hub.registries.values()].map((registry) => {
         const existing = this.registries.find((r) => r.registry === registry);
@@ -193,13 +191,9 @@ export class AppDebugScreen extends LitElement {
         );
       });
     }
-    const all = w["__adiAllPlugins"];
-    if (Array.isArray(all)) {
-      this.allPlugins = all as Array<{
-        id: string;
-        installedVersion: string;
-        pluginTypes?: string[];
-      }>;
+    const all = getGlobal('allPlugins');
+    if (all) {
+      this.allPlugins = all;
     }
   }
 
@@ -236,19 +230,11 @@ export class AppDebugScreen extends LitElement {
   }
 
   #signalingHub(): SignalingHub | null {
-    return (
-      ((window as unknown as Record<string, unknown>)["__adiSignaling"] as
-        | SignalingHub
-        | undefined) ?? null
-    );
+    return getGlobal('signalingHub') ?? null;
   }
 
   #registryHub(): RegistryHub | null {
-    return (
-      ((window as unknown as Record<string, unknown>)["__adiRegistryHub"] as
-        | RegistryHub
-        | undefined) ?? null
-    );
+    return getGlobal('registryHub') ?? null;
   }
 
   #subscribeSignaling(): void {

@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { SignalingHub } from "../services/signaling/index.ts";
+import { getGlobal } from "../global.ts";
 
 type Status =
   | "idle"
@@ -22,10 +22,7 @@ const resolveLocalUrl = (url: string): string =>
     ? url.replace("://adi.test/", `://127.0.0.1:${LOCAL_PROXY_PORT}/`)
     : url;
 
-const getSignalingHub = (): SignalingHub | null =>
-  ((window as unknown as Record<string, unknown>)["__adiSignaling"] as
-    | SignalingHub
-    | undefined) ?? null;
+const getSignalingHub = () => getGlobal('signalingHub') ?? null;
 
 const getSignalingUrl = (): string | null => {
   const hub = getSignalingHub();

@@ -29,8 +29,7 @@ export { createSignalingManager, type SignalingManager } from "./manager.ts";
 import type { EventBus } from "@adi-family/sdk-plugin";
 import type { Connection } from "./connection.ts";
 import { createSignalingManager, type SignalingManager } from "./manager.ts";
-
-const GLOBAL_KEY = "__signaling_hub__";
+import { getGlobal, setGlobal } from "../../global.ts";
 const STORAGE_KEY = "adi:signaling-urls";
 
 export interface SignalingHub {
@@ -109,25 +108,16 @@ export const initSignalingHub = (
   bus: EventBus,
   getToken: (authDomain: string, sourceUrl?: string) => Promise<string | null>,
 ): SignalingHub => {
-  const existing = (globalThis as Record<string, unknown>)[GLOBAL_KEY] as
-    | SignalingHub
-    | undefined;
+  const existing = getGlobal('signalingHub');
   if (existing) return existing;
 
   const hub = createSignalingHub(connections, bus, getToken);
-  (globalThis as Record<string, unknown>)[GLOBAL_KEY] = hub;
-
-  // Register renderer for auth-required actions with anonymous option
-  (globalThis as Record<string, unknown>)["__adiAuthAnonymous"] = (
-    signalingUrl: string,
-    authDomain: string,
-  ) => {
-    bus.emit(
-      "signaling:auth-anonymous",
-      { signalingUrl, authDomain },
-      "signaling",
-    );
-  };
+  setGlobal({
+    signalingHub: hub,
+    authAnonymous: (signalingUrl, authDomain) => {
+      bus.emit("signaling:auth-anonymous", { signalingUrl, authDomain }, "signaling");
+    },
+  });
 
   bus.emit(
     "actions:register-renderer",
@@ -144,7 +134,7 @@ export const initSignalingHub = (
           ? `<button
              type="button"
              class="mt-2 px-3 py-1.5 text-xs font-medium rounded bg-brand text-white hover:bg-brand/80 transition-colors"
-             onclick="globalThis.__adiAuthAnonymous('${escaped(signalingUrl)}', '${escaped(authDomain)}')"
+             onclick="globalThis.__adi?.authAnonymous?.('${escaped(signalingUrl)}', '${escaped(authDomain)}')"
            >Continue as Guest</button>`
           : "";
 

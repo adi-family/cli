@@ -31,7 +31,7 @@ export class SignalingStatus extends LitElement {
     if ((window as { sdk?: unknown }).sdk) {
       this.#subscribe();
     } else {
-      window.addEventListener('sdk-ready', () => this.#subscribe(), { once: true });
+      window.addEventListener('app-ready', () => this.#subscribe(), { once: true });
     }
   }
 

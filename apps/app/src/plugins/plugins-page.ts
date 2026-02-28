@@ -2,17 +2,12 @@ import { LitElement, html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { AdiPlugin } from '@adi-family/sdk-plugin';
 import { getEnabledWebPluginIds, setEnabledWebPluginIds } from '../plugin-prefs.ts';
+import { getGlobal } from '../global.ts';
 
 interface PluginEntry {
   id: string;
   installedVersion: string;
   pluginTypes?: string[];
-}
-
-interface DebugInfo {
-  loaded?: string[];
-  failed?: string[];
-  timedOut?: string[];
 }
 
 @customElement('app-plugins-page')
@@ -41,11 +36,10 @@ export class AppPluginsPage extends LitElement {
   }
 
   async #load(): Promise<void> {
-    const w = window as unknown as Record<string, unknown>;
-    const all = w['__adiAllPlugins'];
-    if (Array.isArray(all)) this.plugins = all as PluginEntry[];
+    const all = getGlobal('allPlugins');
+    if (all) this.plugins = all;
 
-    const debug = w['__adiDebug'] as DebugInfo | undefined;
+    const debug = getGlobal('debug');
     if (debug) {
       this.loadedIds = new Set(debug.loaded ?? []);
       this.failedIds = new Set(debug.failed ?? []);
