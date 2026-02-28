@@ -1,4 +1,4 @@
-import type { EventBus } from '@adi-family/sdk-plugin';
+import { Logger, type EventBus } from '@adi-family/sdk-plugin';
 import type {
   SignalingMessage,
   DataChannelName,
@@ -41,8 +41,8 @@ export const createSignalingManager = (
   url: string,
   connections: Map<string, Connection>,
   bus: EventBus,
-  getToken: (authDomain: string, sourceUrl?: string) => Promise<string | null>,
 ): SignalingManager => {
+  const log = new Logger('signaling-manager');
   const sessions = new Map<string, SessionEntry>();
   const deviceToSession = new Map<string, string>();
   let authenticatedUserId: string | null = null;
@@ -59,7 +59,7 @@ export const createSignalingManager = (
       }
     },
     onMessage: (msg) => void handleWsMessage(msg),
-    onError: (msg) => console.debug('[signaling:manager] ws error:', msg),
+    onError: (msg) => log.error(bus, { msg: 'ws error', error: msg }),
   });
 
   async function handleWsMessage(msg: SignalingMessage): Promise<void> {
@@ -112,7 +112,7 @@ export const createSignalingManager = (
       case 'web_rtc_error': {
         const entry = sessions.get(msg.session_id);
         if (entry) {
-          console.debug(`[signaling:manager] session error: ${msg.message}`);
+          log.error(bus, { msg: 'session error', sessionId: msg.session_id, error: msg.message });
           bus.emit('signaling:session-state', {
             url,
             deviceId: entry.deviceId,
@@ -170,7 +170,7 @@ export const createSignalingManager = (
         break;
 
       case 'error':
-        console.debug('[signaling:manager] server error:', msg.message);
+        log.error(bus, { msg: 'server error', error: msg.message });
         if (pendingSetupToken) {
           pendingSetupToken.reject(new Error(msg.message));
           pendingSetupToken = null;
@@ -190,7 +190,7 @@ export const createSignalingManager = (
   ): Promise<void> {
     lastAuthOptions = authOptions;
 
-    const token = await getToken(authDomain, url);
+    const { token } = await bus.send('auth:get-token', { authDomain, sourceUrl: url }, 'signaling').wait();
     if (token) {
       ws.send({ type: 'authenticate', access_token: token });
       return;
@@ -229,7 +229,7 @@ export const createSignalingManager = (
 
       ws.send({ type: 'authenticate', access_token: token });
     } catch (err) {
-      console.debug('[signaling:manager] anonymous auth failed:', err);
+      log.warn(bus, { msg: 'anonymous auth failed', error: err instanceof Error ? err.message : String(err) });
     }
   }, 'signaling');
 
@@ -296,7 +296,7 @@ export const createSignalingManager = (
       connections.set(entry.deviceId, conn);
       bus.emit('connection:added', { id: entry.deviceId, services: serviceNames }, 'signaling');
     }).catch((err) => {
-      console.debug('[signaling:manager] service discovery failed:', err);
+      log.warn(bus, { msg: 'service discovery failed', error: err instanceof Error ? err.message : String(err) });
     });
   }
 
@@ -307,7 +307,7 @@ export const createSignalingManager = (
       try {
         entry.adi.handleResponse(JSON.parse(raw) as AdiResponse | AdiDiscovery);
       } catch {
-        console.debug('[signaling:manager] failed to parse adi message');
+        log.warn(bus, { msg: 'failed to parse adi message' });
       }
     }
   }
@@ -395,14 +395,14 @@ export const createSignalingManager = (
         });
       },
       onChannelOpen: (name) => {
-        console.debug(`[signaling:manager] channel ${name} open for ${deviceId.slice(0, 8)}`);
+        log.trace(bus, { msg: 'channel open', channel: name, deviceId: deviceId.slice(0, 8) });
         const entry = sessions.get(sessionId);
         if (name === 'adi' && entry && !entry.adi) {
           onAdiChannelOpen(sessionId, entry);
         }
       },
       onChannelClose: (name) => {
-        console.debug(`[signaling:manager] channel ${name} closed for ${deviceId.slice(0, 8)}`);
+        log.trace(bus, { msg: 'channel closed', channel: name, deviceId: deviceId.slice(0, 8) });
       },
       onChannelMessage: (name, data) => {
         const entry = sessions.get(sessionId);
