@@ -9,15 +9,15 @@ import {
   getEnabledWebPluginIds,
   setEnabledWebPluginIds,
 } from "../plugin-prefs.ts";
-import { getGlobal } from "../global.ts";
+import { App } from "../app/app.ts";
 import type {
-  SignalingHub,
   WsState,
   RtcState,
   CocoonInfo,
   ConnectionInfo,
 } from "../services/signaling/index.ts";
-import type { RegistryHub } from "../services/registry/index.ts";
+import type { SignalingHub } from "../app/signaling-hub.ts";
+import type { RegistryHub } from "../app/registry-hub.ts";
 
 interface NavItem {
   id: string;
@@ -168,7 +168,7 @@ export class AppDebugScreen extends LitElement {
   }
 
   #loadDebugData(): void {
-    const debug = getGlobal('debug');
+    const debug = App.instance?.debug;
     if (debug) {
       this.pluginStatus = {
         loaded: debug.loaded ?? [],
@@ -177,9 +177,9 @@ export class AppDebugScreen extends LitElement {
       };
     }
     // Build registry list from hub, preserving existing health results.
-    const hub = getGlobal('registryHub');
+    const hub = App.instance?.registryHub;
     if (hub) {
-      this.registries = [...hub.registries.values()].map((registry) => {
+      this.registries = [...hub.allRegistries().values()].map((registry) => {
         const existing = this.registries.find((r) => r.registry === registry);
         return (
           existing ?? {
@@ -191,7 +191,7 @@ export class AppDebugScreen extends LitElement {
         );
       });
     }
-    const all = getGlobal('allPlugins');
+    const all = App.instance?.allPlugins;
     if (all) {
       this.allPlugins = all;
     }
@@ -230,11 +230,11 @@ export class AppDebugScreen extends LitElement {
   }
 
   #signalingHub(): SignalingHub | null {
-    return getGlobal('signalingHub') ?? null;
+    return App.instance?.signalingHub ?? null;
   }
 
   #registryHub(): RegistryHub | null {
-    return getGlobal('registryHub') ?? null;
+    return App.instance?.registryHub ?? null;
   }
 
   #subscribeSignaling(): void {
@@ -244,7 +244,7 @@ export class AppDebugScreen extends LitElement {
     const hub = this.#signalingHub();
     if (hub) {
       const next = new Map(this.serverStates);
-      for (const url of hub.managers.keys()) {
+      for (const url of hub.allServers().keys()) {
         if (!next.has(url))
           next.set(url, {
             wsState: "disconnected",
@@ -416,7 +416,7 @@ export class AppDebugScreen extends LitElement {
           if (id === "signaling" || id === "cocoons") {
             const hub = this.#signalingHub();
             if (hub) {
-              for (const m of hub.managers.values()) m.listCocoons();
+              for (const m of hub.allServers().values()) m.listCocoons();
             }
           }
         }}
@@ -799,7 +799,7 @@ export class AppDebugScreen extends LitElement {
     const serverUrl = this.spawnCocoonServer;
     if (!serverUrl) return;
     const hub = this.#signalingHub();
-    const manager = hub?.getManager(serverUrl);
+    const manager = hub?.getServer(serverUrl);
     if (!manager) return;
     this.spawnStatus = { spawning: true, error: null };
     manager.spawnCocoon(
@@ -851,7 +851,7 @@ export class AppDebugScreen extends LitElement {
         <cocoon-manual-setup
           @cocoon-connected=${() => {
             if (hub) {
-              for (const m of hub.managers.values()) m.listCocoons();
+              for (const m of hub.allServers().values()) m.listCocoons();
             }
           }}
         ></cocoon-manual-setup>
@@ -1039,7 +1039,7 @@ export class AppDebugScreen extends LitElement {
                 ${allCocoons.map(({ cocoon: c, serverUrl }) => {
                   const session = this.rtcSessions.get(c.device_id);
                   const isConnected = connections.has(c.device_id);
-                  const manager = hub?.getManager(serverUrl);
+                  const manager = hub?.getServer(serverUrl);
                   return html`
                     <div
                       class="flex items-center gap-3 px-3 py-2 bg-surface-alt rounded border border-border/50"
@@ -1163,7 +1163,7 @@ export class AppDebugScreen extends LitElement {
               No signaling servers configured. Add one above.
             </p>`
           : [...this.serverStates.entries()].map(([url, serverState]) => {
-              const manager = hub?.getManager(url);
+              const manager = hub?.getServer(url);
               return html`
                 <!-- Server card -->
                 <div

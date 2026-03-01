@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { getGlobal } from "../global.ts";
+import { App } from "../app/app.ts";
 
 type Status =
   | "idle"
@@ -22,20 +22,18 @@ const resolveLocalUrl = (url: string): string =>
     ? url.replace("://adi.test/", `://127.0.0.1:${LOCAL_PROXY_PORT}/`)
     : url;
 
-const getSignalingHub = () => getGlobal('signalingHub') ?? null;
-
 const getSignalingUrl = (): string | null => {
-  const hub = getSignalingHub();
+  const hub = App.instance?.signalingHub;
   if (!hub) return null;
-  const first = hub.managers.values().next();
+  const first = hub.allServers().values().next();
   if (first.done) return null;
   return first.value.url;
 };
 
-const getFirstManager = () => {
-  const hub = getSignalingHub();
+const getFirstServer = () => {
+  const hub = App.instance?.signalingHub;
   if (!hub) return null;
-  const first = hub.managers.values().next();
+  const first = hub.allServers().values().next();
   return first.done ? null : first.value;
 };
 
@@ -110,7 +108,7 @@ export class CocoonManualSetup extends LitElement {
   }
 
   private async fetchRemoteToken() {
-    const manager = getFirstManager();
+    const manager = getFirstServer();
     if (!manager) return;
     try {
       this.remoteToken = await manager.requestSetupToken();
@@ -176,7 +174,7 @@ export class CocoonManualSetup extends LitElement {
 
     // Request a setup token from signaling server so the cocoon auto-claims ownership
     let setupToken = "";
-    const manager = getFirstManager();
+    const manager = getFirstServer();
     if (manager) {
       try {
         setupToken = await manager.requestSetupToken();

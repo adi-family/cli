@@ -2,7 +2,7 @@ import { LitElement, html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { AdiPlugin } from '@adi-family/sdk-plugin';
 import { getEnabledWebPluginIds, setEnabledWebPluginIds } from '../plugin-prefs.ts';
-import { getGlobal } from '../global.ts';
+import { App } from '../app/app.ts';
 
 interface PluginEntry {
   id: string;
@@ -36,10 +36,10 @@ export class AppPluginsPage extends LitElement {
   }
 
   async #load(): Promise<void> {
-    const all = getGlobal('allPlugins');
+    const all = App.instance?.allPlugins;
     if (all) this.plugins = all;
 
-    const debug = getGlobal('debug');
+    const debug = App.instance?.debug;
     if (debug) {
       this.loadedIds = new Set(debug.loaded ?? []);
       this.failedIds = new Set(debug.failed ?? []);

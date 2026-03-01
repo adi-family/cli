@@ -1,132 +1,69 @@
-import { Logger, type EventBus } from '@adi-family/sdk-plugin';
-import type { WsState, CocoonInfo, HiveInfo } from '../services/signaling';
-import type { Connection } from '../services/signaling';
-import { SignalingManager } from '../services/signaling';
+import { Logger } from '@adi-family/sdk-plugin';
+import type { Connection } from '../services/signaling/connection.ts';
+import { SignalingServer } from './signaling-server';
 import { DEFAULT_SIGNALING_SERVERS } from './env';
 import type { Context } from './app';
+
+export { SignalingServer };
 
 const DB_NAME = 'adi-app';
 const DB_VERSION = 1;
 const STORE = 'prefs';
 const DB_KEY = 'signaling-urls';
 
-export class SignalingServer {
-  readonly url: string;
-
-  private readonly log = new Logger('signaling-server');
-  private readonly manager: SignalingManager;
-  private state: WsState = 'disconnected';
-  private cocoons: CocoonInfo[] = [];
-  private hives: HiveInfo[] = [];
-  private disposed = false;
-  private readonly unsubscribers: (() => void)[] = [];
-
-  constructor(
-    url: string,
-    bus: EventBus,
-    connections: Map<string, Connection>,
-  ) {
-    this.url = url;
-    this.manager = new SignalingManager(url, connections, bus);
-
-    this.unsubscribers.push(
-      bus.on(
-        'signaling:state',
-        ({ url: u, state }) => {
-          if (u !== url) return;
-          this.state = state;
-        },
-        'signaling-server',
-      ),
-      bus.on(
-        'signaling:cocoons',
-        ({ url: u, cocoons }) => {
-          if (u !== url) return;
-          this.cocoons = cocoons;
-        },
-        'signaling-server',
-      ),
-      bus.on(
-        'signaling:hives',
-        ({ url: u, hives }) => {
-          if (u !== url) return;
-          this.hives = hives;
-        },
-        'signaling-server',
-      ),
-    );
-  }
-
-  getState(): WsState {
-    return this.state;
-  }
-
-  getCocoons(): readonly CocoonInfo[] {
-    return this.cocoons;
-  }
-
-  getHives(): readonly HiveInfo[] {
-    return this.hives;
-  }
-
-  getManager(): SignalingManager {
-    return this.manager;
-  }
-
-  connect(): void {
-    if (this.disposed) return;
-    this.log.trace({ msg: 'connecting', url: this.url });
-    this.manager.connect();
-  }
-
-  disconnect(): void {
-    this.log.trace({ msg: 'disconnecting', url: this.url });
-    this.disposed = true;
-    this.manager.disconnect();
-    this.unsubscribers.forEach((fn) => fn());
-    this.unsubscribers.length = 0;
-  }
-}
-
 export class SignalingHub {
   private readonly log = new Logger('signaling-hub');
   private readonly servers = new Map<string, SignalingServer>();
   private readonly connections = new Map<string, Connection>();
   private readonly protectedUrls: ReadonlySet<string>;
+  private readonly ctx: Context;
 
-  private constructor(protectedUrls: string[]) {
+  private constructor(ctx: Context, protectedUrls: string[]) {
+    this.ctx = ctx;
     this.protectedUrls = new Set(protectedUrls);
   }
 
   static async init(ctx: Context): Promise<SignalingHub> {
-    const hub = new SignalingHub(DEFAULT_SIGNALING_SERVERS);
-    const saved = await hub.loadUrls(ctx);
+    const hub = new SignalingHub(ctx, DEFAULT_SIGNALING_SERVERS);
+    const saved = await hub.loadUrls();
     const urls = saved.length > 0 ? saved : DEFAULT_SIGNALING_SERVERS;
-    for (const url of urls) hub.connectOne(ctx, url);
+    for (const url of urls) hub.addServer(url);
     return hub;
+  }
+
+  allServers(): ReadonlyMap<string, SignalingServer> {
+    return this.servers;
   }
 
   getServer(url: string): SignalingServer | undefined {
     return this.servers.get(url);
   }
 
-  allServers(): ReadonlySet<SignalingServer> {
-    return new Set(this.servers.values());
-  }
-
   getConnection(deviceId: string): Connection | undefined {
     return this.connections.get(deviceId);
   }
 
-  addUrl(ctx: Context, url: string): void {
-    this.connectOne(ctx, url);
-    void this.persist(ctx);
+  addServer(url: string): SignalingServer {
+    const existing = this.servers.get(url);
+    if (existing) return existing;
+
+    this.log.trace({ msg: 'connecting', url });
+    const server = new SignalingServer(url, this.connections, this.ctx.bus);
+    this.servers.set(url, server);
+    server.connect();
+    void this.persist();
+    return server;
   }
 
-  removeUrl(ctx: Context, url: string): void {
+  removeServer(url: string): void {
     if (this.protectedUrls.has(url)) return;
-    this.disconnectOne(url);
-    void this.persist(ctx);
+    const server = this.servers.get(url);
+    if (!server) return;
+
+    this.log.trace({ msg: 'disconnecting', url });
+    server.disconnect();
+    this.servers.delete(url);
+    void this.persist();
   }
 
   dispose(): void {
@@ -134,25 +71,9 @@ export class SignalingHub {
     this.servers.clear();
   }
 
-  private connectOne(ctx: Context, url: string): void {
-    if (this.servers.has(url)) return;
-    this.log.trace({ msg: 'connecting', url });
-    const server = new SignalingServer(url, ctx.bus, this.connections);
-    this.servers.set(url, server);
-    server.connect();
-  }
-
-  private disconnectOne(url: string): void {
-    const server = this.servers.get(url);
-    if (!server) return;
-    this.log.trace({ msg: 'disconnecting', url });
-    server.disconnect();
-    this.servers.delete(url);
-  }
-
-  private async loadUrls(ctx: Context): Promise<string[]> {
+  private async loadUrls(): Promise<string[]> {
     try {
-      const db = await ctx.db.open(DB_NAME, DB_VERSION);
+      const db = await this.ctx.db.open(DB_NAME, DB_VERSION);
       return await new Promise((resolve, reject) => {
         const tx = db.transaction(STORE, 'readonly');
         const req = tx.objectStore(STORE).get(DB_KEY);
@@ -165,9 +86,9 @@ export class SignalingHub {
     }
   }
 
-  private async persist(ctx: Context): Promise<void> {
+  private async persist(): Promise<void> {
     try {
-      const db = await ctx.db.open(DB_NAME, DB_VERSION);
+      const db = await this.ctx.db.open(DB_NAME, DB_VERSION);
       const tx = db.transaction(STORE, 'readwrite');
       tx.objectStore(STORE).put([...this.servers.keys()], DB_KEY);
     } catch (err) {
