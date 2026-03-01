@@ -9,4 +9,5 @@ import './components/cocoon-manual-setup.ts';
 import './components/signaling-status.ts';
 import { App } from './app/app.ts';
 
-App.init();
+const app = App.init();
+app.start();

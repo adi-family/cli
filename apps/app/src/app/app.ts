@@ -5,7 +5,6 @@ import { SignalingHub } from './signaling-hub';
 
 export interface Context {
   db: DbConnection;
-  bus: EventBus;
 }
 
 export class App {
@@ -36,19 +35,26 @@ export class App {
     return App._instance;
   }
 
-  static async init(): Promise<App> {
+  static init(): App {
     const bus = EventBus.init();
     const db = DbConnection.init();
     db.registerStore('prefs');
 
-    const ctx: Context = { db, bus };
-    const registryHub = await RegistryHub.init(ctx);
-    const signalingHub = await SignalingHub.init(ctx);
+    const registryHub = RegistryHub.init();
+    const signalingHub = SignalingHub.init(bus);
 
     const app = new App(bus, db, registryHub, signalingHub);
     App._instance = app;
 
     return app;
+  }
+
+  async start(): Promise<void> {
+    const ctx = { db: this.db };
+    await Promise.all([
+      this.registryHub.start(ctx),
+      this.signalingHub.start(ctx),
+    ]);
   }
 
   dispose(): void {

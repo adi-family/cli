@@ -15,19 +15,23 @@ export class RegistryHub {
   private readonly servers = new Map<string, RegistryServer>();
   private readonly registries = new Map<string, HttpPluginRegistry>();
   private readonly protectedUrls: ReadonlySet<string>;
-  private readonly ctx: Context;
+  private ctx!: Context;
+  private started = false;
 
-  private constructor(ctx: Context, protectedUrls: string[]) {
-    this.ctx = ctx;
+  private constructor(protectedUrls: string[]) {
     this.protectedUrls = new Set(protectedUrls);
   }
 
-  static async init(ctx: Context): Promise<RegistryHub> {
-    const hub = new RegistryHub(ctx, DEFAULT_REGISTRIES);
-    const saved = await hub.loadUrls();
+  static init(): RegistryHub {
+    return new RegistryHub(DEFAULT_REGISTRIES);
+  }
+
+  async start(ctx: Context): Promise<void> {
+    this.ctx = ctx;
+    this.started = true;
+    const saved = await this.loadUrls();
     const urls = saved.length > 0 ? saved : DEFAULT_REGISTRIES;
-    for (const url of urls) hub.addRegistry(url);
-    return hub;
+    for (const url of urls) this.addRegistry(url);
   }
 
   allRegistries(): ReadonlyMap<string, HttpPluginRegistry> {
@@ -43,7 +47,7 @@ export class RegistryHub {
     if (existing) return existing.getClient();
 
     this.log.trace({ msg: 'connecting', url });
-    const server = new RegistryServer(url);
+    const server = new RegistryServer(url, () => this.started);
     this.servers.set(url, server);
     this.registries.set(url, server.getClient());
     server.connect();

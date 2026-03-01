@@ -24,7 +24,7 @@ export class RegistryServer {
   private reconnectAttempt = 0;
   private disposed = false;
 
-  constructor(url: string) {
+  constructor(url: string, private readonly isStarted: () => boolean) {
     this.url = url;
     this.client = new HttpPluginRegistry(url);
   }
@@ -46,7 +46,7 @@ export class RegistryServer {
   }
 
   connect(): void {
-    if (this.disposed) return;
+    if (this.disposed || !this.isStarted()) return;
     this.scheduleCheck(0);
   }
 

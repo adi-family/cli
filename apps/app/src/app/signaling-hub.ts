@@ -1,4 +1,4 @@
-import { Logger } from '@adi-family/sdk-plugin';
+import { Logger, type EventBus } from '@adi-family/sdk-plugin';
 import type { Connection } from '../services/signaling/connection.ts';
 import { SignalingServer } from './signaling-server';
 import { DEFAULT_SIGNALING_SERVERS } from './env';
@@ -16,19 +16,25 @@ export class SignalingHub {
   private readonly servers = new Map<string, SignalingServer>();
   private readonly connections = new Map<string, Connection>();
   private readonly protectedUrls: ReadonlySet<string>;
-  private readonly ctx: Context;
+  private readonly bus: EventBus;
+  private ctx!: Context;
+  private started = false;
 
-  private constructor(ctx: Context, protectedUrls: string[]) {
-    this.ctx = ctx;
+  private constructor(bus: EventBus, protectedUrls: string[]) {
+    this.bus = bus;
     this.protectedUrls = new Set(protectedUrls);
   }
 
-  static async init(ctx: Context): Promise<SignalingHub> {
-    const hub = new SignalingHub(ctx, DEFAULT_SIGNALING_SERVERS);
-    const saved = await hub.loadUrls();
+  static init(bus: EventBus): SignalingHub {
+    return new SignalingHub(bus, DEFAULT_SIGNALING_SERVERS);
+  }
+
+  async start(ctx: Context): Promise<void> {
+    this.ctx = ctx;
+    this.started = true;
+    const saved = await this.loadUrls();
     const urls = saved.length > 0 ? saved : DEFAULT_SIGNALING_SERVERS;
-    for (const url of urls) hub.addServer(url);
-    return hub;
+    for (const url of urls) this.addServer(url);
   }
 
   allServers(): ReadonlyMap<string, SignalingServer> {
@@ -48,7 +54,7 @@ export class SignalingHub {
     if (existing) return existing;
 
     this.log.trace({ msg: 'connecting', url });
-    const server = new SignalingServer(url, this.connections, this.ctx.bus);
+    const server = new SignalingServer(url, this.connections, this.bus, () => this.started);
     this.servers.set(url, server);
     server.connect();
     void this.persist();

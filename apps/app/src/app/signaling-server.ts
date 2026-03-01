@@ -46,6 +46,7 @@ export class SignalingServer {
     url: string,
     connections: Map<string, Connection>,
     bus: EventBus,
+    private readonly isStarted: () => boolean,
   ) {
     this.url = url;
     this.connections = connections;
@@ -121,7 +122,7 @@ export class SignalingServer {
   }
 
   connect(): void {
-    if (this.disposed) return;
+    if (this.disposed || !this.isStarted()) return;
     this.ws.connect();
   }
 
