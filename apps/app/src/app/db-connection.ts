@@ -1,7 +1,9 @@
 import { Logger, trace } from '@adi-family/sdk-plugin';
 
 export class DbConnection {
-  private log: Logger = new Logger('db-connection');
+  private log: Logger = new Logger('db-connection', () => ({
+    stores: [...this.seenStores],
+  }));
   private dbPromise: Promise<IDBDatabase> | null = null;
   private seenStores: Set<string> = new Set();
 

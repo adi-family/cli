@@ -15,7 +15,7 @@ import type {
   RtcState,
   CocoonInfo,
   ConnectionInfo,
-} from '../services/signaling/index.ts';
+} from '../app/signaling-types.ts';
 import type { SignalingHub } from '../app/signaling-hub.ts';
 import type { RegistryHub } from '../app/registry-hub.ts';
 

@@ -1,7 +1,7 @@
 import { LitElement, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { EventBus } from '@adi-family/sdk-plugin';
-import type { WsState } from '../services/signaling/index.ts';
+import type { WsState } from '../app/signaling-types.ts';
 
 const dotColor: Record<WsState, string> = {
   connected: 'bg-green-400',

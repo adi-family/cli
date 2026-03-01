@@ -1,4 +1,5 @@
-import type { AdiRequest, AdiResponse, AdiDiscovery, AdiServiceInfo } from './types.ts';
+import { Logger, trace } from '@adi-family/sdk-plugin';
+import type { AdiRequest, AdiResponse, AdiDiscovery, AdiServiceInfo } from './signaling-types.ts';
 
 // ---------------------------------------------------------------------------
 // Error types
@@ -61,7 +62,7 @@ export interface AdiChannel {
 }
 
 // ---------------------------------------------------------------------------
-// Factory
+// Implementation
 // ---------------------------------------------------------------------------
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -69,49 +70,46 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 let idCounter = 0;
 const nextId = (): string => `req-${Date.now()}-${++idCounter}`;
 
-export const createAdiChannel = (
-  send: SendFn,
-  options?: AdiChannelOptions,
-): AdiChannel => {
-  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const pending = new Map<string, PendingRequest>();
-  const streams = new Map<string, PendingStream>();
+class AdiChannelClient implements AdiChannel {
+  private readonly log = new Logger('adi-channel', () => ({
+    pending: this.pending.size,
+    streams: this.streams.size,
+  }));
+  private readonly timeoutMs: number;
+  private readonly pending = new Map<string, PendingRequest>();
+  private readonly streams = new Map<string, PendingStream>();
+  private pendingDiscoveryId: string | null = null;
 
-  const cleanup = (id: string): void => {
-    const req = pending.get(id);
-    if (req) {
-      clearTimeout(req.timer);
-      pending.delete(id);
-    }
-    const s = streams.get(id);
-    if (s) {
-      clearTimeout(s.timer);
-      streams.delete(id);
-    }
-  };
+  constructor(
+    private readonly send: SendFn,
+    options?: AdiChannelOptions,
+  ) {
+    this.timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  }
 
-  const request = <T>(service: string, method: string, params?: Record<string, unknown>): Promise<T> => {
+  @trace('requesting')
+  request<T>(service: string, method: string, params?: Record<string, unknown>): Promise<T> {
     const requestId = nextId();
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
-        pending.delete(requestId);
+        this.pending.delete(requestId);
         reject(new AdiTimeoutError(requestId));
-      }, timeoutMs);
+      }, this.timeoutMs);
 
-      pending.set(requestId, {
+      this.pending.set(requestId, {
         resolve: resolve as (data: unknown) => void,
         reject,
         timer,
       });
 
-      send({ request_id: requestId, service, method, params: params ?? {} });
+      this.send({ request_id: requestId, service, method, params: params ?? {} });
     });
-  };
+  }
 
-  const stream = <T>(service: string, method: string, params?: Record<string, unknown>): AsyncGenerator<T> => {
+  @trace('streaming')
+  stream<T>(service: string, method: string, params?: Record<string, unknown>): AsyncGenerator<T> {
     const requestId = nextId();
 
-    // Buffered async generator backed by push queue
     const buffer: T[] = [];
     let done = false;
     let error: Error | null = null;
@@ -123,13 +121,14 @@ export const createAdiChannel = (
       });
 
     const timer = setTimeout(() => {
-      streams.delete(requestId);
+      this.streams.delete(requestId);
       error = new AdiTimeoutError(requestId);
       done = true;
       notify?.();
-    }, timeoutMs);
+    }, this.timeoutMs);
 
-    streams.set(requestId, {
+    const streamsMap = this.streams;
+    streamsMap.set(requestId, {
       push(data: unknown) {
         buffer.push(data as T);
         notify?.();
@@ -137,20 +136,20 @@ export const createAdiChannel = (
       finish() {
         done = true;
         clearTimeout(timer);
-        streams.delete(requestId);
+        streamsMap.delete(requestId);
         notify?.();
       },
       reject(err: Error) {
         error = err;
         done = true;
         clearTimeout(timer);
-        streams.delete(requestId);
+        streamsMap.delete(requestId);
         notify?.();
       },
       timer,
     });
 
-    send({ request_id: requestId, service, method, params: params ?? {} });
+    this.send({ request_id: requestId, service, method, params: params ?? {} });
 
     return (async function* () {
       while (true) {
@@ -162,66 +161,58 @@ export const createAdiChannel = (
         await wait();
       }
     })();
-  };
+  }
 
-  const listServices = (): Promise<AdiServiceInfo[]> => {
+  @trace('listing services')
+  listServices(): Promise<AdiServiceInfo[]> {
     const requestId = nextId();
     return new Promise<AdiServiceInfo[]>((resolve, reject) => {
       const timer = setTimeout(() => {
-        pending.delete(requestId);
+        this.pending.delete(requestId);
         reject(new AdiTimeoutError(requestId));
-      }, timeoutMs);
+      }, this.timeoutMs);
 
-      // Reuse pending map with a synthetic key for discovery
-      pending.set(requestId, {
+      this.pending.set(requestId, {
         resolve: resolve as (data: unknown) => void,
         reject,
         timer,
       });
 
-      // Discovery uses list_services but we tag with requestId for correlation
-      // The server responds with services_list (no request_id), so we handle it
-      // specially in handleResponse.
-      send({ type: 'list_services' });
-
-      // Store the requestId so handleResponse can find it
-      (listServices as { _pendingId?: string })._pendingId = requestId;
+      this.send({ type: 'list_services' });
+      this.pendingDiscoveryId = requestId;
     });
-  };
+  }
 
-  const handleResponse = (msg: AdiResponse | AdiDiscovery): void => {
-    // Handle discovery response (no request_id)
+  handleResponse(msg: AdiResponse | AdiDiscovery): void {
     if ('type' in msg && msg.type === 'services_list') {
       const discoveryMsg = msg as Extract<AdiDiscovery, { type: 'services_list' }>;
-      const pendingId = (listServices as { _pendingId?: string })._pendingId;
-      if (pendingId) {
-        const req = pending.get(pendingId);
+      if (this.pendingDiscoveryId) {
+        const req = this.pending.get(this.pendingDiscoveryId);
         if (req) {
           clearTimeout(req.timer);
-          pending.delete(pendingId);
+          this.pending.delete(this.pendingDiscoveryId);
           req.resolve(discoveryMsg.services);
         }
-        delete (listServices as { _pendingId?: string })._pendingId;
+        this.pendingDiscoveryId = null;
       }
       return;
     }
 
-    // All other responses have request_id
     if (!('request_id' in msg)) return;
     const response = msg as AdiResponse;
     const { request_id: id } = response;
 
     switch (response.type) {
       case 'success': {
-        const req = pending.get(id);
+        const req = this.pending.get(id);
         if (req) {
-          cleanup(id);
+          this.cleanup(id);
           req.resolve(response.data);
         }
         break;
       }
       case 'stream': {
-        const s = streams.get(id);
+        const s = this.streams.get(id);
         if (s) {
           s.push(response.data);
           if (response.done) s.finish();
@@ -230,17 +221,17 @@ export const createAdiChannel = (
       }
       case 'error': {
         const err = new AdiError(response.message, response.code, id);
-        const req = pending.get(id);
-        if (req) { cleanup(id); req.reject(err); }
-        const s = streams.get(id);
+        const req = this.pending.get(id);
+        if (req) { this.cleanup(id); req.reject(err); }
+        const s = this.streams.get(id);
         if (s) { s.reject(err); }
         break;
       }
       case 'service_not_found': {
         const err = new AdiServiceNotFoundError(id, response.service);
-        const req = pending.get(id);
-        if (req) { cleanup(id); req.reject(err); }
-        const s = streams.get(id);
+        const req = this.pending.get(id);
+        if (req) { this.cleanup(id); req.reject(err); }
+        const s = this.streams.get(id);
         if (s) { s.reject(err); }
         break;
       }
@@ -250,30 +241,48 @@ export const createAdiChannel = (
           'METHOD_NOT_FOUND',
           id,
         );
-        const req = pending.get(id);
-        if (req) { cleanup(id); req.reject(err); }
-        const s = streams.get(id);
+        const req = this.pending.get(id);
+        if (req) { this.cleanup(id); req.reject(err); }
+        const s = this.streams.get(id);
         if (s) { s.reject(err); }
         break;
       }
     }
-  };
+  }
 
-  const cancelAll = (): void => {
-    for (const [id, req] of pending) {
+  @trace('cancelling all')
+  cancelAll(): void {
+    this.log.trace({ msg: 'cancelling all', pending: this.pending.size, streams: this.streams.size });
+    for (const [id, req] of this.pending) {
       clearTimeout(req.timer);
       req.reject(new AdiError('Channel closed', 'CANCELLED', id));
     }
-    pending.clear();
+    this.pending.clear();
 
-    for (const [id, s] of streams) {
+    for (const [id, s] of this.streams) {
       clearTimeout(s.timer);
       s.reject(new AdiError('Channel closed', 'CANCELLED', id));
     }
-    streams.clear();
+    this.streams.clear();
 
-    delete (listServices as { _pendingId?: string })._pendingId;
-  };
+    this.pendingDiscoveryId = null;
+  }
 
-  return { request, stream, listServices, handleResponse, cancelAll };
-};
+  private cleanup(id: string): void {
+    const req = this.pending.get(id);
+    if (req) {
+      clearTimeout(req.timer);
+      this.pending.delete(id);
+    }
+    const s = this.streams.get(id);
+    if (s) {
+      clearTimeout(s.timer);
+      this.streams.delete(id);
+    }
+  }
+}
+
+export const createAdiChannel = (
+  send: SendFn,
+  options?: AdiChannelOptions,
+): AdiChannel => new AdiChannelClient(send, options);

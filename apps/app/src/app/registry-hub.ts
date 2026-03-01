@@ -11,7 +11,10 @@ const STORE = 'prefs';
 const DB_KEY = 'registry-urls';
 
 export class RegistryHub {
-  private readonly log = new Logger('registry-hub');
+  private readonly log = new Logger('registry-hub', () => ({
+    servers: this.servers.size,
+    started: this.started,
+  }));
   private readonly servers = new Map<string, RegistryServer>();
   private readonly registries = new Map<string, HttpPluginRegistry>();
   private readonly protectedUrls: ReadonlySet<string>;
@@ -46,14 +49,14 @@ export class RegistryHub {
   @trace('adding registry')
   addRegistry(url: string): HttpPluginRegistry {
     const existing = this.servers.get(url);
-    if (existing) return existing.getClient();
+    if (existing) return existing.client;
 
     const server = new RegistryServer(url, () => this.started);
     this.servers.set(url, server);
-    this.registries.set(url, server.getClient());
+    this.registries.set(url, server.client);
     server.connect();
     void this.persist();
-    return server.getClient();
+    return server.client;
   }
 
   @trace('removing registry')

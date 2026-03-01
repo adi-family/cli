@@ -14,9 +14,13 @@ export type RegistryState = 'disconnected' | 'connecting' | 'connected';
 
 export class RegistryServer {
   readonly url: string;
+  public readonly client: HttpPluginRegistry;
 
-  private readonly log = new Logger('registry-server');
-  private readonly client: HttpPluginRegistry;
+  private readonly log = new Logger('registry-server', () => ({
+    url: this.url,
+    state: this.state,
+    plugins: this.plugins.length,
+  }));
   private state: RegistryState = 'disconnected';
   private health: RegistryHealth | null = null;
   private plugins: PluginDescriptor[] = [];
@@ -25,7 +29,10 @@ export class RegistryServer {
   private reconnectAttempt = 0;
   private disposed = false;
 
-  constructor(url: string, private readonly isStarted: () => boolean) {
+  constructor(
+    url: string,
+    private readonly isStarted: () => boolean,
+  ) {
     this.url = url;
     this.client = new HttpPluginRegistry(url);
   }
@@ -40,10 +47,6 @@ export class RegistryServer {
 
   getPlugins(): readonly PluginDescriptor[] {
     return this.plugins;
-  }
-
-  getClient(): HttpPluginRegistry {
-    return this.client;
   }
 
   @trace('connecting')

@@ -1,5 +1,5 @@
 import { Logger, trace, type EventBus } from '@adi-family/sdk-plugin';
-import type { Connection } from '../services/signaling/connection.ts';
+import type { Connection } from './connection.ts';
 import { SignalingServer } from './signaling-server';
 import { DEFAULT_SIGNALING_SERVERS } from './env';
 import type { Context } from './app';
@@ -12,7 +12,11 @@ const STORE = 'prefs';
 const DB_KEY = 'signaling-urls';
 
 export class SignalingHub {
-  private readonly log = new Logger('signaling-hub');
+  private readonly log = new Logger('signaling-hub', () => ({
+    servers: this.servers.size,
+    connections: this.connections.size,
+    started: this.started,
+  }));
   private readonly servers = new Map<string, SignalingServer>();
   private readonly connections = new Map<string, Connection>();
   private readonly protectedUrls: ReadonlySet<string>;

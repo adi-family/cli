@@ -7,23 +7,23 @@ import type {
   WsState,
   CocoonInfo,
   HiveInfo,
-} from '../services/signaling/types.ts';
+} from './signaling-types.ts';
 import {
   createWebSocket,
   type WsControl,
-} from '../services/signaling/websocket.ts';
+} from './websocket';
 import {
   createRtcSession,
   type RtcSession,
-} from '../services/signaling/webrtc.ts';
+} from './rtc-session';
 import {
   createAdiChannel,
   type AdiChannel,
-} from '../services/signaling/adi-channel.ts';
+} from './adi-channel';
 import {
   createConnection,
   type Connection,
-} from '../services/signaling/connection.ts';
+} from './connection';
 
 interface SessionEntry {
   rtc: RtcSession;
@@ -36,7 +36,11 @@ const SOURCE = 'signaling';
 export class SignalingServer {
   readonly url: string;
 
-  private readonly log = new Logger('signaling-server');
+  private readonly log = new Logger('signaling-server', () => ({
+    url: this.url,
+    state: this.state,
+    sessions: this.sessions.size,
+  }));
   private readonly bus: EventBus;
   private readonly connections: Map<string, Connection>;
   private readonly ws: WsControl;
