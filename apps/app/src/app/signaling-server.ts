@@ -1,4 +1,4 @@
-import { Logger, type EventBus } from '@adi-family/sdk-plugin';
+import { Logger, trace, type EventBus } from '@adi-family/sdk-plugin';
 import type {
   SignalingMessage,
   DataChannelName,
@@ -8,10 +8,22 @@ import type {
   CocoonInfo,
   HiveInfo,
 } from '../services/signaling/types.ts';
-import { createWebSocket, type WsControl } from '../services/signaling/websocket.ts';
-import { createRtcSession, type RtcSession } from '../services/signaling/webrtc.ts';
-import { createAdiChannel, type AdiChannel } from '../services/signaling/adi-channel.ts';
-import { createConnection, type Connection } from '../services/signaling/connection.ts';
+import {
+  createWebSocket,
+  type WsControl,
+} from '../services/signaling/websocket.ts';
+import {
+  createRtcSession,
+  type RtcSession,
+} from '../services/signaling/webrtc.ts';
+import {
+  createAdiChannel,
+  type AdiChannel,
+} from '../services/signaling/adi-channel.ts';
+import {
+  createConnection,
+  type Connection,
+} from '../services/signaling/connection.ts';
 
 interface SessionEntry {
   rtc: RtcSession;
@@ -121,11 +133,13 @@ export class SignalingServer {
     return this.hives;
   }
 
+  @trace('connecting')
   connect(): void {
     if (this.disposed || !this.isStarted()) return;
     this.ws.connect();
   }
 
+  @trace('disconnecting')
   disconnect(): void {
     this.disposed = true;
     for (const [sessionId, entry] of this.sessions) {
@@ -141,30 +155,35 @@ export class SignalingServer {
     this.unsubscribers.length = 0;
   }
 
+  @trace('listing cocoons')
   listCocoons(): void {
     this.ws.send({ type: 'list_my_cocoons' });
   }
 
+  @trace('listing hives')
   listHives(): void {
     this.ws.send({ type: 'list_hives' });
   }
 
+  @trace('requesting setup token')
   requestSetupToken(): Promise<string> {
     return new Promise((resolve, reject) => {
       this.pendingSetupToken = { resolve, reject };
       this.ws.send({ type: 'request_setup_token' });
+
       setTimeout(() => {
-        if (this.pendingSetupToken) {
-          this.pendingSetupToken.reject(
-            new Error('Setup token request timed out'),
-          );
-          this.pendingSetupToken = null;
-        }
+        if (!this.pendingSetupToken) return;
+
+        this.pendingSetupToken.reject(
+          new Error('Setup token request timed out'),
+        );
+        this.pendingSetupToken = null;
       }, 10_000);
     });
   }
 
-  spawnCocoon(name?: string, kind?: string): void {
+  @trace('spawning cocoon')
+  spawnCocoon(kind: string, name?: string): void {
     const requestId = `spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     this.requestSetupToken()
@@ -173,7 +192,7 @@ export class SignalingServer {
           type: 'spawn_cocoon',
           request_id: requestId,
           setup_token: token,
-          kind: kind ?? 'ubuntu',
+          kind: kind,
           ...(name ? { name } : {}),
         });
       })
@@ -191,6 +210,7 @@ export class SignalingServer {
       });
   }
 
+  @trace('starting session')
   startSession(deviceId: string): string {
     const existingId = this.deviceToSession.get(deviceId);
     if (existingId) {
@@ -267,6 +287,7 @@ export class SignalingServer {
     return sessionId;
   }
 
+  @trace('closing session')
   closeSession(deviceId: string): void {
     const sessionId = this.deviceToSession.get(deviceId);
     if (!sessionId) return;
@@ -281,6 +302,7 @@ export class SignalingServer {
     this.teardownSession(sessionId, entry);
   }
 
+  @trace('sending on channel')
   sendOnChannel(
     deviceId: string,
     channel: DataChannelName,
@@ -305,6 +327,7 @@ export class SignalingServer {
 
   // -- WebSocket message handling ---------------------------------------------
 
+  @trace('handling ws message')
   private async handleWsMessage(msg: SignalingMessage): Promise<void> {
     switch (msg.type) {
       case 'hello':
@@ -479,6 +502,7 @@ export class SignalingServer {
     }
   }
 
+  @trace('handling hello')
   private async handleHello(
     authKind: string,
     authDomain: string,
@@ -488,11 +512,7 @@ export class SignalingServer {
     this.lastAuthOptions = authOptions;
 
     const { token } = await this.bus
-      .send(
-        'auth:get-token',
-        { authDomain, sourceUrl: this.url },
-        SOURCE,
-      )
+      .send('auth:get-token', { authDomain, sourceUrl: this.url }, SOURCE)
       .wait();
 
     if (token) {
@@ -519,6 +539,7 @@ export class SignalingServer {
     );
   }
 
+  @trace('handling anonymous auth')
   private async handleAnonymousAuth(authDomain: string): Promise<void> {
     try {
       const res = await fetch(`${authDomain}/anonymous`, { method: 'POST' });
@@ -555,6 +576,7 @@ export class SignalingServer {
 
   // -- Session lifecycle ------------------------------------------------------
 
+  @trace('session started')
   private onSessionStarted(sessionId: string): void {
     const entry = this.sessions.get(sessionId);
     if (!entry) return;
@@ -566,11 +588,13 @@ export class SignalingServer {
     });
   }
 
+  @trace('received answer')
   private onAnswer(sessionId: string, sdp: string): void {
     const entry = this.sessions.get(sessionId);
     if (entry) void entry.rtc.applyAnswer(sdp);
   }
 
+  @trace('received ice candidate')
   private onIceCandidate(
     sessionId: string,
     candidate: RTCIceCandidateInit,
@@ -579,12 +603,14 @@ export class SignalingServer {
     if (entry) void entry.rtc.addIceCandidate(candidate);
   }
 
+  @trace('session ended')
   private onSessionEnded(sessionId: string): void {
     const entry = this.sessions.get(sessionId);
     if (!entry) return;
     this.teardownSession(sessionId, entry);
   }
 
+  @trace('tearing down session')
   private teardownSession(sessionId: string, entry: SessionEntry): void {
     entry.adi?.cancelAll();
     entry.rtc.close();
@@ -593,11 +619,7 @@ export class SignalingServer {
 
     if (this.connections.has(entry.deviceId)) {
       this.connections.delete(entry.deviceId);
-      this.bus.emit(
-        'connection:removed',
-        { id: entry.deviceId },
-        SOURCE,
-      );
+      this.bus.emit('connection:removed', { id: entry.deviceId }, SOURCE);
     }
 
     this.bus.emit(
@@ -614,6 +636,7 @@ export class SignalingServer {
 
   // -- ADI channel wiring ----------------------------------------------------
 
+  @trace('adi channel open')
   private onAdiChannelOpen(entry: SessionEntry): void {
     const adi = createAdiChannel((payload) =>
       entry.rtc.sendOnChannel('adi', payload),
@@ -649,9 +672,7 @@ export class SignalingServer {
   ): void {
     if (channel === 'adi' && entry.adi) {
       try {
-        entry.adi.handleResponse(
-          JSON.parse(raw) as AdiResponse | AdiDiscovery,
-        );
+        entry.adi.handleResponse(JSON.parse(raw) as AdiResponse | AdiDiscovery);
       } catch {
         this.log.warn({ msg: 'failed to parse adi message' });
       }

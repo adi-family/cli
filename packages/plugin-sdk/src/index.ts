@@ -14,6 +14,7 @@ export type {
 export { EventBus } from './bus.js';
 export { Logger } from './logger.js';
 export type { LogLevel } from './logger.js';
+export { trace } from './log-decorator.js';
 export { AdiPlugin } from './plugin.js';
 export { HttpPluginRegistry } from './registry-http.js';
 export type { RegistryHealth } from './registry-http.js';

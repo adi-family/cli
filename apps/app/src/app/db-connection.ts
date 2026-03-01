@@ -1,4 +1,4 @@
-import { Logger } from '@adi-family/sdk-plugin';
+import { Logger, trace } from '@adi-family/sdk-plugin';
 
 export class DbConnection {
   private log: Logger = new Logger('db-connection');
@@ -15,11 +15,12 @@ export class DbConnection {
     this.dbPromise = null;
   }
 
+  @trace('registering store')
   registerStore(storeName: string): void {
     this.seenStores.add(storeName);
-    this.log.trace({ msg: `Store is seen`, storeName });
   }
 
+  @trace('opening database')
   open(dbName: string, version: number): Promise<IDBDatabase> {
     if (this.dbPromise) return this.dbPromise;
 

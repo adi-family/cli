@@ -1,4 +1,4 @@
-import { EventBus } from '@adi-family/sdk-plugin';
+import { EventBus, Logger, trace } from '@adi-family/sdk-plugin';
 import { DbConnection } from './db-connection';
 import { RegistryHub } from './registry-hub';
 import { SignalingHub } from './signaling-hub';
@@ -9,6 +9,9 @@ export interface Context {
 
 export class App {
   private static _instance: App | null = null;
+
+  // @ts-expect-error accessed by @trace decorator at runtime
+  private readonly log = new Logger('app');
 
   readonly bus: EventBus;
   readonly db: DbConnection;
@@ -49,6 +52,7 @@ export class App {
     return app;
   }
 
+  @trace('starting')
   async start(): Promise<void> {
     const ctx = { db: this.db };
     await Promise.all([
@@ -57,6 +61,7 @@ export class App {
     ]);
   }
 
+  @trace('disposing')
   dispose(): void {
     this.signalingHub.dispose();
     this.registryHub.dispose();

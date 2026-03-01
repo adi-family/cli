@@ -1,4 +1,4 @@
-import { type HttpPluginRegistry, Logger } from '@adi-family/sdk-plugin';
+import { type HttpPluginRegistry, Logger, trace } from '@adi-family/sdk-plugin';
 import { RegistryServer } from './registry-server';
 import { DEFAULT_REGISTRIES } from './env';
 import type { Context } from './app';
@@ -26,6 +26,7 @@ export class RegistryHub {
     return new RegistryHub(DEFAULT_REGISTRIES);
   }
 
+  @trace('starting')
   async start(ctx: Context): Promise<void> {
     this.ctx = ctx;
     this.started = true;
@@ -42,11 +43,11 @@ export class RegistryHub {
     return this.servers.get(url);
   }
 
+  @trace('adding registry')
   addRegistry(url: string): HttpPluginRegistry {
     const existing = this.servers.get(url);
     if (existing) return existing.getClient();
 
-    this.log.trace({ msg: 'connecting', url });
     const server = new RegistryServer(url, () => this.started);
     this.servers.set(url, server);
     this.registries.set(url, server.getClient());
@@ -55,18 +56,19 @@ export class RegistryHub {
     return server.getClient();
   }
 
+  @trace('removing registry')
   removeRegistry(url: string): void {
     if (this.protectedUrls.has(url)) return;
     const server = this.servers.get(url);
     if (!server) return;
 
-    this.log.trace({ msg: 'disconnecting', url });
     server.disconnect();
     this.servers.delete(url);
     this.registries.delete(url);
     void this.persist();
   }
 
+  @trace('disposing')
   dispose(): void {
     for (const server of this.servers.values()) server.disconnect();
     this.servers.clear();

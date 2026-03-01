@@ -1,4 +1,4 @@
-version: "1"
+version: '1'
 
 defaults:
   # Script runner uses the user's shell
@@ -34,7 +34,7 @@ defaults:
 
 proxy:
   bind:
-    - "0.0.0.0:80"
+    - '0.0.0.0:80'
   debug: true
 
 # -----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ environment:
       - .env.local
   static:
     RUST_LOG: info
-    SHOW_VERSION_IN_HEADERS: "true"
+    SHOW_VERSION_IN_HEADERS: 'true'
 
 # =============================================================================
 # Services
@@ -70,7 +70,7 @@ services:
         image: postgres:16-alpine
         container_name: adi-postgres
         ports:
-          - "8027:5432"
+          - '8027:5432'
         volumes:
           - adi-postgres-data:/var/lib/postgresql/data
           - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
@@ -106,7 +106,7 @@ services:
         image: timescale/timescaledb:latest-pg16
         container_name: adi-timescaledb
         ports:
-          - "8028:5432"
+          - '8028:5432'
         volumes:
           - adi-timescaledb-data:/var/lib/postgresql/data
           - ./scripts/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql:ro
@@ -147,17 +147,17 @@ services:
         container_name: adi-coturn
         network_mode: host
         command:
-          - "turnserver"
-          - "-n"
-          - "--log-file=stdout"
-          - "--listening-port=8039"
-          - "--fingerprint"
-          - "--lt-cred-mech"
-          - "--user=adi:adi"
-          - "--realm=adi.test"
-          - "--no-tls"
-          - "--no-dtls"
-          - "--no-cli"
+          - 'turnserver'
+          - '-n'
+          - '--log-file=stdout'
+          - '--listening-port=8039'
+          - '--fingerprint'
+          - '--lt-cred-mech'
+          - '--user=adi:adi'
+          - '--realm=adi.test'
+          - '--no-tls'
+          - '--no-dtls'
+          - '--no-cli'
         security:
           cap_add:
             - NET_BIND_SERVICE
@@ -172,7 +172,7 @@ services:
     healthcheck:
       type: cmd
       cmd:
-        command: "nc -z localhost 8039 || exit 0"
+        command: 'nc -z localhost 8039 || exit 0'
         interval: 10s
         timeout: 5s
         retries: 3
@@ -204,21 +204,21 @@ services:
     healthcheck:
       type: http
       http:
-        port: "{{runtime.port.http}}"
+        port: '{{runtime.port.http}}'
         path: /health
     environment:
       static:
-        PORT: "8011"
+        PORT: '8011'
         HIVE_SECRETS: ${env.HIVE_SECRETS:-}
         AUTH_DOMAIN: ${env.AUTH_DOMAIN:-http://adi.test/api/auth}
-        ALLOW_MANUAL_REGISTRATION: "true"
+        ALLOW_MANUAL_REGISTRATION: 'true'
     restart: on-failure
     # Expose signaling URL for other services
     expose:
       name: signaling
       vars:
-        URL: "ws://localhost:8011/ws"
-        PORT: "8011"
+        URL: 'ws://localhost:8011/ws'
+        PORT: '8011'
 
   auth:
     hooks:
@@ -243,12 +243,12 @@ services:
     healthcheck:
       type: http
       http:
-        port: "{{runtime.port.http}}"
+        port: '{{runtime.port.http}}'
         path: /health
     environment:
       static:
-        PORT: "8012"
-        DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_auth"
+        PORT: '8012'
+        DATABASE_URL: 'postgres://adi:adi@localhost:8027/adi_auth'
         JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
         ADMIN_EMAILS: ${env.ADMIN_EMAILS:-}
         SMTP_HOST: ${env.SMTP_HOST:-}
@@ -284,15 +284,15 @@ services:
     healthcheck:
       type: http
       http:
-        port: "{{runtime.port.http}}"
+        port: '{{runtime.port.http}}'
         path: /health
     environment:
       static:
-        PORT: "8015"
-        DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_platform"
+        PORT: '8015'
+        DATABASE_URL: 'postgres://adi:adi@localhost:8027/adi_platform'
         JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
         PUBLIC_BASE_URL: ${env.PUBLIC_BASE_URL:-http://adi.test}
-        CORS_ORIGIN: "http://adi.test"
+        CORS_ORIGIN: 'http://adi.test'
     depends_on:
       - postgres
     restart: on-failure
@@ -317,11 +317,11 @@ services:
     healthcheck:
       type: http
       http:
-        port: "{{runtime.port.http}}"
+        port: '{{runtime.port.http}}'
         path: /
     environment:
       static:
-        PORT: "8048"
+        PORT: '8048'
     restart: on-failure
 
   app:
@@ -341,12 +341,12 @@ services:
     healthcheck:
       type: tcp
       tcp:
-        port: "{{runtime.port.http}}"
+        port: '{{runtime.port.http}}'
     environment:
       static:
-        PORT: "8035"
-        VITE_LOCAL_PROXY_PORT: "8011"
-        VITE_REGISTRY_URL: ${env.VITE_REGISTRY_URL:-http://adi.test/registry}
+        PORT: '8035'
+        VITE_LOCAL_PROXY_PORT: '8011'
+        VITE_DEFAULT_REGISTRY_URLS: ${env.VITE_DEFAULT_REGISTRY_URLS:-http://adi.test/registry}
         VITE_SIGNALING_URL: ${env.VITE_SIGNALING_URL:-ws://adi.test/api/signaling/ws}
     restart: on-failure
 
@@ -375,12 +375,12 @@ services:
     healthcheck:
       type: http
       http:
-        port: "{{runtime.port.http}}"
+        port: '{{runtime.port.http}}'
         path: /health
     environment:
       static:
-        PORT: "8022"
-        DATABASE_URL: "postgres://adi:adi@localhost:8028/adi_analytics"
+        PORT: '8022'
+        DATABASE_URL: 'postgres://adi:adi@localhost:8028/adi_analytics'
     depends_on:
       - timescaledb
     restart: on-failure
@@ -388,7 +388,7 @@ services:
     expose:
       name: analytics-ingestion
       vars:
-        URL: "http://localhost:8022"
+        URL: 'http://localhost:8022'
 
   analytics:
     hooks:
@@ -411,12 +411,12 @@ services:
     healthcheck:
       type: http
       http:
-        port: "{{runtime.port.http}}"
+        port: '{{runtime.port.http}}'
         path: /health
     environment:
       static:
-        PORT: "8023"
-        DATABASE_URL: "postgres://adi:adi@localhost:8028/adi_analytics"
+        PORT: '8023'
+        DATABASE_URL: 'postgres://adi:adi@localhost:8028/adi_analytics'
     depends_on:
       - timescaledb
     restart: on-failure
@@ -446,14 +446,14 @@ services:
     healthcheck:
       type: http
       http:
-        port: "{{runtime.port.http}}"
+        port: '{{runtime.port.http}}'
         path: /health
     environment:
       static:
-        PORT: "8030"
-        DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_balance"
+        PORT: '8030'
+        DATABASE_URL: 'postgres://adi:adi@localhost:8027/adi_balance'
         JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
-        ANALYTICS_URL: "http://localhost:8022"
+        ANALYTICS_URL: 'http://localhost:8022'
     depends_on:
       - postgres
       - analytics-ingestion
@@ -480,15 +480,15 @@ services:
     healthcheck:
       type: http
       http:
-        port: "{{runtime.port.http}}"
+        port: '{{runtime.port.http}}'
         path: /health
     environment:
       static:
-        PORT: "8033"
-        DATABASE_URL: "postgres://adi:adi@localhost:8027/adi_credentials"
+        PORT: '8033'
+        DATABASE_URL: 'postgres://adi:adi@localhost:8027/adi_credentials'
         JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
         ENCRYPTION_KEY: ${env.ENCRYPTION_KEY:-5a747f27420b903522ae3746c4ba79b5ecffea02f6bc333fd4da39fb2ef27de4}
-        ANALYTICS_URL: "http://localhost:8022"
+        ANALYTICS_URL: 'http://localhost:8022'
     depends_on:
       - postgres
       - analytics-ingestion
@@ -505,7 +505,7 @@ services:
         run: adi run adi.cocoon-spawner run
     environment:
       static:
-        SIGNALING_SERVER_URL: "ws://adi.test/api/signaling/ws"
+        SIGNALING_SERVER_URL: 'ws://adi.test/api/signaling/ws'
         COCOON_SPAWNER_ID: ${env.COCOON_SPAWNER_ID:-local-spawner}
         COCOON_SPAWNER_SECRET: ${env.COCOON_SPAWNER_SECRET:-}
         COCOON_SPAWNER_KINDS: ${env.COCOON_SPAWNER_KINDS:-ubuntu}
@@ -538,6 +538,6 @@ services:
     healthcheck:
       type: http
       http:
-        port: "{{runtime.port.http}}"
+        port: '{{runtime.port.http}}'
         path: /health
     restart: on-failure

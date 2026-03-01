@@ -1,6 +1,7 @@
 import {
   HttpPluginRegistry,
   Logger,
+  trace,
   type PluginDescriptor,
   type RegistryHealth,
 } from '@adi-family/sdk-plugin';
@@ -45,11 +46,13 @@ export class RegistryServer {
     return this.client;
   }
 
+  @trace('connecting')
   connect(): void {
     if (this.disposed || !this.isStarted()) return;
     this.scheduleCheck(0);
   }
 
+  @trace('disconnecting')
   disconnect(): void {
     this.disposed = true;
     this.clearTimers();
@@ -85,10 +88,10 @@ export class RegistryServer {
     this.reconnectTimer = setTimeout(() => this.poll(), delay);
   }
 
+  @trace('polling')
   private async poll(): Promise<void> {
     if (this.disposed) return;
     this.state = 'connecting';
-    this.log.trace({ msg: 'polling', url: this.url });
 
     const health = await this.client.checkHealth();
     if (this.disposed) return;

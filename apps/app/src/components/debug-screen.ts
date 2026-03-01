@@ -1,23 +1,23 @@
-import { LitElement, html, nothing } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { LitElement, html, nothing } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
 import {
   type EventBus,
   HttpPluginRegistry,
   type RegistryHealth,
-} from "@adi-family/sdk-plugin";
+} from '@adi-family/sdk-plugin';
 import {
   getEnabledWebPluginIds,
   setEnabledWebPluginIds,
-} from "../plugin-prefs.ts";
-import { App } from "../app/app.ts";
+} from '../plugin-prefs.ts';
+import { App } from '../app/app.ts';
 import type {
   WsState,
   RtcState,
   CocoonInfo,
   ConnectionInfo,
-} from "../services/signaling/index.ts";
-import type { SignalingHub } from "../app/signaling-hub.ts";
-import type { RegistryHub } from "../app/registry-hub.ts";
+} from '../services/signaling/index.ts';
+import type { SignalingHub } from '../app/signaling-hub.ts';
+import type { RegistryHub } from '../app/registry-hub.ts';
 
 interface NavItem {
   id: string;
@@ -39,7 +39,7 @@ interface Command {
 interface EventLogEntry {
   id: number;
   time: string;
-  phase: "before" | "after";
+  phase: 'before' | 'after';
   event: string;
   payload: unknown;
 }
@@ -60,25 +60,25 @@ interface SessionInfo {
 let seq = 0;
 
 type Tab =
-  | "overview"
-  | "plugins"
-  | "routes"
-  | "commands"
-  | "connections"
-  | "cocoons"
-  | "events"
-  | "registries"
-  | "signaling";
+  | 'overview'
+  | 'plugins'
+  | 'routes'
+  | 'commands'
+  | 'connections'
+  | 'cocoons'
+  | 'events'
+  | 'registries'
+  | 'signaling';
 
-@customElement("app-debug-screen")
+@customElement('app-debug-screen')
 export class AppDebugScreen extends LitElement {
   @property({ attribute: false }) routes: RouteEntry[] = [];
   @property({ attribute: false }) navItems: NavItem[] = [];
   @property({ attribute: false }) commands: Command[] = [];
 
-  @state() private activeTab: Tab = "overview";
+  @state() private activeTab: Tab = 'overview';
   @state() private eventLog: EventLogEntry[] = [];
-  @state() private eventFilter = "";
+  @state() private eventFilter = '';
   @state() private eventPaused = false;
   @state() private registries: RegistryStatus[] = [];
   @state() private allPlugins: Array<{
@@ -98,12 +98,12 @@ export class AppDebugScreen extends LitElement {
     }
   > = new Map();
   @state() private rtcSessions: Map<string, SessionInfo> = new Map();
-  @state() private newServerUrlInput = "";
-  @state() private newRegistryUrlInput = "";
+  @state() private newServerUrlInput = '';
+  @state() private newRegistryUrlInput = '';
   @state() private registryDirty = false;
-  @state() private spawnCocoonName = "";
-  @state() private spawnCocoonServer = "";
-  @state() private spawnCocoonKind = "";
+  @state() private spawnCocoonName = '';
+  @state() private spawnCocoonServer = '';
+  @state() private spawnCocoonKind = '';
   @state() private spawnStatus: { spawning: boolean; error: string | null } = {
     spawning: false,
     error: null,
@@ -135,21 +135,21 @@ export class AppDebugScreen extends LitElement {
       this.#subscribeEventLog();
       this.#subscribeSignaling();
       this.loadingUnsub = window.sdk.bus.on(
-        "loading-finished",
+        'loading-finished',
         () => this.#loadDebugData(),
-        "debug-screen",
+        'debug-screen',
       );
     } else {
       window.addEventListener(
-        "app-ready",
+        'app-ready',
         () => {
           this.#loadDebugData();
           this.#subscribeEventLog();
           this.#subscribeSignaling();
           this.loadingUnsub = window.sdk.bus.on(
-            "loading-finished",
+            'loading-finished',
             () => this.#loadDebugData(),
-            "debug-screen",
+            'debug-screen',
           );
         },
         { once: true },
@@ -204,9 +204,9 @@ export class AppDebugScreen extends LitElement {
     const health = await registry.checkHealth();
     const checkedAt = new Date().toLocaleTimeString([], {
       hour12: false,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
     });
     this.registries = this.registries.map((r) =>
       r.registry === registry
@@ -223,9 +223,9 @@ export class AppDebugScreen extends LitElement {
   #subscribeEventLog(): void {
     const bus = window.sdk.bus as EventBus;
     this.eventUnsub = bus.use({
-      before: (event, payload) => this.#pushEvent("before", event, payload),
-      after: (event, payload) => this.#pushEvent("after", event, payload),
-      ignored: (event, payload) => this.#pushEvent("after", event, payload),
+      before: (event, payload) => this.#pushEvent('before', event, payload),
+      after: (event, payload) => this.#pushEvent('after', event, payload),
+      ignored: (event, payload) => this.#pushEvent('after', event, payload),
     });
   }
 
@@ -247,7 +247,7 @@ export class AppDebugScreen extends LitElement {
       for (const url of hub.allServers().keys()) {
         if (!next.has(url))
           next.set(url, {
-            wsState: "disconnected",
+            wsState: 'disconnected',
             cocoons: [],
             authError: null,
             connectionInfo: null,
@@ -258,11 +258,11 @@ export class AppDebugScreen extends LitElement {
 
     this.signalingUnsubs.push(
       bus.on(
-        "signaling:state",
+        'signaling:state',
         ({ url, state }) => {
           const next = new Map(this.serverStates);
           const entry = next.get(url) ?? {
-            wsState: "disconnected",
+            wsState: 'disconnected',
             cocoons: [],
             authError: null,
             connectionInfo: null,
@@ -270,14 +270,14 @@ export class AppDebugScreen extends LitElement {
           next.set(url, { ...entry, wsState: state });
           this.serverStates = next;
         },
-        "debug-screen",
+        'debug-screen',
       ),
       bus.on(
-        "signaling:cocoons",
+        'signaling:cocoons',
         ({ url, cocoons }) => {
           const next = new Map(this.serverStates);
           const entry = next.get(url) ?? {
-            wsState: "disconnected",
+            wsState: 'disconnected',
             cocoons: [],
             authError: null,
             connectionInfo: null,
@@ -285,14 +285,14 @@ export class AppDebugScreen extends LitElement {
           next.set(url, { ...entry, cocoons });
           this.serverStates = next;
         },
-        "debug-screen",
+        'debug-screen',
       ),
       bus.on(
-        "signaling:auth-error",
+        'signaling:auth-error',
         ({ url, reason, authKind, authDomain }) => {
           const next = new Map(this.serverStates);
           const entry = next.get(url) ?? {
-            wsState: "disconnected",
+            wsState: 'disconnected',
             cocoons: [],
             authError: null,
             connectionInfo: null,
@@ -303,14 +303,14 @@ export class AppDebugScreen extends LitElement {
           });
           this.serverStates = next;
         },
-        "debug-screen",
+        'debug-screen',
       ),
       bus.on(
-        "signaling:connection-info",
+        'signaling:connection-info',
         ({ url, connectionInfo }) => {
           const next = new Map(this.serverStates);
           const entry = next.get(url) ?? {
-            wsState: "disconnected",
+            wsState: 'disconnected',
             cocoons: [],
             authError: null,
             connectionInfo: null,
@@ -318,10 +318,10 @@ export class AppDebugScreen extends LitElement {
           next.set(url, { ...entry, connectionInfo });
           this.serverStates = next;
         },
-        "debug-screen",
+        'debug-screen',
       ),
       bus.on(
-        "signaling:auth-ok",
+        'signaling:auth-ok',
         ({ url }) => {
           const next = new Map(this.serverStates);
           const entry = next.get(url);
@@ -330,46 +330,46 @@ export class AppDebugScreen extends LitElement {
             this.serverStates = next;
           }
         },
-        "debug-screen",
+        'debug-screen',
       ),
       bus.on(
-        "signaling:session-state",
+        'signaling:session-state',
         ({ deviceId, state, sessionId }) => {
           const next = new Map(this.rtcSessions);
-          if (state === "idle") {
+          if (state === 'idle') {
             next.delete(deviceId);
           } else {
             next.set(deviceId, { deviceId, state, sessionId });
           }
           this.rtcSessions = next;
         },
-        "debug-screen",
+        'debug-screen',
       ),
       bus.on(
-        "signaling:spawn-result",
+        'signaling:spawn-result',
         ({ success, error }) => {
           this.spawnStatus = {
             spawning: false,
-            error: success ? null : (error ?? "Unknown error"),
+            error: success ? null : (error ?? 'Unknown error'),
           };
         },
-        "debug-screen",
+        'debug-screen',
       ),
-      bus.on("connection:added", () => this.requestUpdate(), "debug-screen"),
-      bus.on("connection:removed", () => this.requestUpdate(), "debug-screen"),
+      bus.on('connection:added', () => this.requestUpdate(), 'debug-screen'),
+      bus.on('connection:removed', () => this.requestUpdate(), 'debug-screen'),
     );
   }
 
-  #pushEvent(phase: "before" | "after", event: string, payload: unknown): void {
+  #pushEvent(phase: 'before' | 'after', event: string, payload: unknown): void {
     if (this.eventPaused) return;
     this.eventLog = [
       {
         id: ++seq,
         time: new Date().toLocaleTimeString([], {
           hour12: false,
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
           fractionalSecondDigits: 3,
         } as Intl.DateTimeFormatOptions),
         phase,
@@ -401,19 +401,19 @@ export class AppDebugScreen extends LitElement {
       <button
         type="button"
         class=${[
-          "px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+          'px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
           this.activeTab === id
-            ? "border-accent text-accent"
-            : "border-transparent text-text-muted hover:text-text",
-        ].join(" ")}
+            ? 'border-accent text-accent'
+            : 'border-transparent text-text-muted hover:text-text',
+        ].join(' ')}
         @click=${() => {
           this.activeTab = id;
-          if (id === "registries") {
+          if (id === 'registries') {
             this.#loadDebugData();
             if (this.registries.every((r) => r.health === null))
               this.#checkAllRegistries();
           }
-          if (id === "signaling" || id === "cocoons") {
+          if (id === 'signaling' || id === 'cocoons') {
             const hub = this.#signalingHub();
             if (hub) {
               for (const m of hub.allServers().values()) m.listCocoons();
@@ -435,16 +435,16 @@ export class AppDebugScreen extends LitElement {
   #renderOverview() {
     const connections = this.#connections();
     const rows = [
-      ["Plugins loaded", String(this.pluginStatus.loaded.length)],
-      ["Plugins failed", String(this.pluginStatus.failed.length)],
-      ["Plugins timed out", String(this.pluginStatus.timedOut.length)],
-      ["Routes registered", String(this.routes.length)],
-      ["Nav items", String(this.navItems.length)],
-      ["Commands", String(this.commands.length)],
-      ["Connections", String(connections.size)],
-      ["Signaling servers", String(this.serverStates.size)],
+      ['Plugins loaded', String(this.pluginStatus.loaded.length)],
+      ['Plugins failed', String(this.pluginStatus.failed.length)],
+      ['Plugins timed out', String(this.pluginStatus.timedOut.length)],
+      ['Routes registered', String(this.routes.length)],
+      ['Nav items', String(this.navItems.length)],
+      ['Commands', String(this.commands.length)],
+      ['Connections', String(connections.size)],
+      ['Signaling servers', String(this.serverStates.size)],
       [
-        "Cocoons",
+        'Cocoons',
         String(
           [...this.serverStates.values()].reduce(
             (n, s) => n + s.cocoons.length,
@@ -452,9 +452,9 @@ export class AppDebugScreen extends LitElement {
           ),
         ),
       ],
-      ["RTC sessions", String(this.rtcSessions.size)],
-      ["Registries", String(this.registries.length)],
-      ["Events captured", String(this.eventLog.length)],
+      ['RTC sessions', String(this.rtcSessions.size)],
+      ['Registries', String(this.registries.length)],
+      ['Events captured', String(this.eventLog.length)],
     ];
     return html`
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-6">
@@ -503,7 +503,7 @@ export class AppDebugScreen extends LitElement {
   }
 
   async #loadEnabledWebIds(): Promise<void> {
-    this.enabledWebIds = await getEnabledWebPluginIds() ?? new Set();
+    this.enabledWebIds = (await getEnabledWebPluginIds()) ?? new Set();
   }
 
   async #toggleWebPlugin(id: string, enabled: boolean): Promise<void> {
@@ -545,7 +545,7 @@ export class AppDebugScreen extends LitElement {
             `
           : nothing}
         ${plugins.map((p) => {
-          const isWeb = p.pluginTypes?.includes("web") ?? false;
+          const isWeb = p.pluginTypes?.includes('web') ?? false;
           const enabled = this.enabledWebIds.has(p.id);
           return html`
             <div
@@ -623,7 +623,7 @@ export class AppDebugScreen extends LitElement {
                           >
                         </td>
                         <td class="py-2.5 text-text-muted">
-                          ${r.label ?? "—"}
+                          ${r.label ?? '—'}
                         </td>
                       </tr>
                     `,
@@ -733,11 +733,11 @@ export class AppDebugScreen extends LitElement {
 
   #rtcStateBadge(s: RtcState) {
     const styles: Record<RtcState, string> = {
-      idle: "text-text-muted bg-surface-alt",
-      signaling: "text-yellow-400 bg-yellow-400/10",
-      connecting: "text-blue-400 bg-blue-400/10",
-      connected: "text-green-400 bg-green-400/10",
-      failed: "text-red-400 bg-red-400/10",
+      idle: 'text-text-muted bg-surface-alt',
+      signaling: 'text-yellow-400 bg-yellow-400/10',
+      connecting: 'text-blue-400 bg-blue-400/10',
+      connected: 'text-green-400 bg-green-400/10',
+      failed: 'text-red-400 bg-red-400/10',
     };
     return html`<span
       class="text-[10px] font-medium px-1.5 py-0.5 rounded ${styles[s]}"
@@ -755,13 +755,13 @@ export class AppDebugScreen extends LitElement {
     const next = new Map(this.serverStates);
     if (!next.has(url))
       next.set(url, {
-        wsState: "connecting",
+        wsState: 'connecting',
         cocoons: [],
         authError: null,
         connectionInfo: null,
       });
     this.serverStates = next;
-    this.newServerUrlInput = "";
+    this.newServerUrlInput = '';
   }
 
   #removeServer(url: string): void {
@@ -783,13 +783,14 @@ export class AppDebugScreen extends LitElement {
       ...this.registries,
       { registry, checking: false, health: null, checkedAt: null },
     ];
-    this.newRegistryUrlInput = "";
+    this.newRegistryUrlInput = '';
     this.registryDirty = true;
   }
 
   #removeRegistry(url: string): void {
     const hub = this.#registryHub();
     if (!hub) return;
+
     hub.removeRegistry(url);
     this.registries = this.registries.filter((r) => r.registry.url !== url);
     this.registryDirty = true;
@@ -798,15 +799,17 @@ export class AppDebugScreen extends LitElement {
   #spawnCocoon(): void {
     const serverUrl = this.spawnCocoonServer;
     if (!serverUrl) return;
+
     const hub = this.#signalingHub();
     const manager = hub?.getServer(serverUrl);
     if (!manager) return;
+
     this.spawnStatus = { spawning: true, error: null };
     manager.spawnCocoon(
+      this.spawnCocoonKind,
       this.spawnCocoonName.trim() || undefined,
-      this.spawnCocoonKind || undefined,
     );
-    this.spawnCocoonName = "";
+    this.spawnCocoonName = '';
   }
 
   #renderCocoons() {
@@ -833,7 +836,10 @@ export class AppDebugScreen extends LitElement {
     }
 
     // Auto-select first kind if current selection is invalid
-    if (availableKinds.length > 0 && !availableKinds.includes(this.spawnCocoonKind)) {
+    if (
+      availableKinds.length > 0 &&
+      !availableKinds.includes(this.spawnCocoonKind)
+    ) {
       this.spawnCocoonKind = availableKinds[0];
     }
 
@@ -867,7 +873,7 @@ export class AppDebugScreen extends LitElement {
               this.spawnCocoonName = (e.target as HTMLInputElement).value;
             }}
             @keydown=${(e: KeyboardEvent) => {
-              if (e.key === "Enter") this.#spawnCocoon();
+              if (e.key === 'Enter') this.#spawnCocoon();
             }}
           />
           <select
@@ -890,15 +896,19 @@ export class AppDebugScreen extends LitElement {
           >
             ${availableKinds.length === 0
               ? html`<option value="" disabled>No kinds</option>`
-              : availableKinds.map((k) => html`<option value=${k}>${k}</option>`)}
+              : availableKinds.map(
+                  (k) => html`<option value=${k}>${k}</option>`,
+                )}
           </select>
           <button
             type="button"
             class="text-xs px-3 py-1.5 rounded border border-accent/30 text-accent hover:bg-accent/10 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            ?disabled=${this.spawnStatus.spawning || serverUrls.length === 0 || availableKinds.length === 0}
+            ?disabled=${this.spawnStatus.spawning ||
+            serverUrls.length === 0 ||
+            availableKinds.length === 0}
             @click=${() => this.#spawnCocoon()}
           >
-            ${this.spawnStatus.spawning ? "Spawning…" : "Add Cocoon"}
+            ${this.spawnStatus.spawning ? 'Spawning…' : 'Add Cocoon'}
           </button>
         </div>
 
@@ -993,10 +1003,10 @@ export class AppDebugScreen extends LitElement {
                   <code class="font-mono truncate">${url}</code>
                   <span
                     class="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded ${info.manual_allowed
-                      ? "text-green-400 bg-green-400/10"
-                      : "text-text-muted bg-surface"}"
+                      ? 'text-green-400 bg-green-400/10'
+                      : 'text-text-muted bg-surface'}"
                   >
-                    manual: ${info.manual_allowed ? "allowed" : "disabled"}
+                    manual: ${info.manual_allowed ? 'allowed' : 'disabled'}
                   </span>
                 </div>
                 ${info.hives.length > 0
@@ -1046,9 +1056,9 @@ export class AppDebugScreen extends LitElement {
                     >
                       <span
                         class="w-2 h-2 rounded-full shrink-0 ${c.status ===
-                        "online"
-                          ? "bg-green-400"
-                          : "bg-border"}"
+                        'online'
+                          ? 'bg-green-400'
+                          : 'bg-border'}"
                       ></span>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
@@ -1064,9 +1074,9 @@ export class AppDebugScreen extends LitElement {
                       <div class="flex items-center gap-1 shrink-0">
                         <span
                           class="text-[10px] font-medium px-1.5 py-0.5 rounded ${c.status ===
-                          "online"
-                            ? "text-green-400 bg-green-400/10"
-                            : "text-text-muted bg-surface-alt"}"
+                          'online'
+                            ? 'text-green-400 bg-green-400/10'
+                            : 'text-text-muted bg-surface-alt'}"
                           >${c.status}</span
                         >
                         ${session
@@ -1146,7 +1156,7 @@ export class AppDebugScreen extends LitElement {
               this.newServerUrlInput = (e.target as HTMLInputElement).value;
             }}
             @keydown=${(e: KeyboardEvent) => {
-              if (e.key === "Enter") this.#addServer();
+              if (e.key === 'Enter') this.#addServer();
             }}
           />
           <button
@@ -1290,9 +1300,9 @@ export class AppDebugScreen extends LitElement {
                                 >
                                   <span
                                     class="w-2 h-2 rounded-full shrink-0 ${c.status ===
-                                    "online"
-                                      ? "bg-green-400"
-                                      : "bg-border"}"
+                                    'online'
+                                      ? 'bg-green-400'
+                                      : 'bg-border'}"
                                   ></span>
                                   <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2">
@@ -1303,9 +1313,9 @@ export class AppDebugScreen extends LitElement {
                                       >
                                       <span
                                         class="text-[10px] font-medium px-1.5 py-0.5 rounded ${c.status ===
-                                        "online"
-                                          ? "text-green-400 bg-green-400/10"
-                                          : "text-text-muted bg-surface-alt"}"
+                                        'online'
+                                          ? 'text-green-400 bg-green-400/10'
+                                          : 'text-text-muted bg-surface-alt'}"
                                         >${c.status}</span
                                       >
                                       ${session
@@ -1434,7 +1444,7 @@ export class AppDebugScreen extends LitElement {
               this.newRegistryUrlInput = (e.target as HTMLInputElement).value;
             }}
             @keydown=${(e: KeyboardEvent) => {
-              if (e.key === "Enter") this.#addRegistry();
+              if (e.key === 'Enter') this.#addRegistry();
             }}
           />
           <button
@@ -1480,12 +1490,12 @@ export class AppDebugScreen extends LitElement {
 
               ${this.registries.map((r) => {
                 const statusText = r.checking
-                  ? "checking…"
+                  ? 'checking…'
                   : r.health === null
-                    ? "unknown"
+                    ? 'unknown'
                     : r.health.online
-                      ? "online"
-                      : "offline";
+                      ? 'online'
+                      : 'offline';
                 return html`
                   <div
                     class="border border-border rounded-lg p-4 bg-surface-alt space-y-4"
@@ -1520,7 +1530,7 @@ export class AppDebugScreen extends LitElement {
                           ?disabled=${r.checking}
                           @click=${() => this.#checkRegistry(r.registry)}
                         >
-                          ${r.checking ? "Checking…" : "Check"}
+                          ${r.checking ? 'Checking…' : 'Check'}
                         </button>
                         <button
                           type="button"
@@ -1550,10 +1560,10 @@ export class AppDebugScreen extends LitElement {
                                 </p>
                                 <p
                                   class="text-sm font-medium ${r.health.online
-                                    ? "text-green-400"
-                                    : "text-red-400"}"
+                                    ? 'text-green-400'
+                                    : 'text-red-400'}"
                                 >
-                                  ${r.health.online ? "Online" : "Offline"}
+                                  ${r.health.online ? 'Online' : 'Offline'}
                                 </p>
                               </div>
                               <div>
@@ -1565,7 +1575,7 @@ export class AppDebugScreen extends LitElement {
                                 <p class="text-sm font-mono text-text">
                                   ${r.health.online
                                     ? String(r.health.pluginCount)
-                                    : "—"}
+                                    : '—'}
                                 </p>
                               </div>
                               <div>
@@ -1577,7 +1587,7 @@ export class AppDebugScreen extends LitElement {
                                 <p class="text-sm font-mono text-text">
                                   ${r.health.online
                                     ? `${r.health.latencyMs} ms`
-                                    : "—"}
+                                    : '—'}
                                 </p>
                               </div>
                               ${r.health.version
@@ -1646,21 +1656,21 @@ export class AppDebugScreen extends LitElement {
             />
           </div>
           <span class="text-xs text-text-muted ml-auto"
-            >${rows.length} event${rows.length !== 1 ? "s" : ""}</span
+            >${rows.length} event${rows.length !== 1 ? 's' : ''}</span
           >
           <button
             type="button"
             class=${[
-              "text-xs px-3 py-1 rounded border transition-colors",
+              'text-xs px-3 py-1 rounded border transition-colors',
               this.eventPaused
-                ? "border-accent text-accent bg-accent/10 hover:bg-accent/20"
-                : "border-border text-text-muted hover:text-text hover:bg-surface-alt",
-            ].join(" ")}
+                ? 'border-accent text-accent bg-accent/10 hover:bg-accent/20'
+                : 'border-border text-text-muted hover:text-text hover:bg-surface-alt',
+            ].join(' ')}
             @click=${() => {
               this.eventPaused = !this.eventPaused;
             }}
           >
-            ${this.eventPaused ? "▶ Resume" : "⏸ Pause"}
+            ${this.eventPaused ? '▶ Resume' : '⏸ Pause'}
           </button>
           <button
             type="button"
@@ -1683,8 +1693,8 @@ export class AppDebugScreen extends LitElement {
                   <span class="text-2xl">📭</span>
                   <span
                     >${this.eventLog.length === 0
-                      ? "Waiting for events…"
-                      : "No events match the filter"}</span
+                      ? 'Waiting for events…'
+                      : 'No events match the filter'}</span
                   >
                 </div>
               `
@@ -1695,11 +1705,11 @@ export class AppDebugScreen extends LitElement {
                   >
                     <span
                       class=${[
-                        "shrink-0 w-14 text-center py-2 text-[10px] font-bold uppercase tracking-wider",
-                        entry.phase === "before"
-                          ? "text-blue-400"
-                          : "text-purple-400",
-                      ].join(" ")}
+                        'shrink-0 w-14 text-center py-2 text-[10px] font-bold uppercase tracking-wider',
+                        entry.phase === 'before'
+                          ? 'text-blue-400'
+                          : 'text-purple-400',
+                      ].join(' ')}
                       >${entry.phase}</span
                     >
                     <span class="shrink-0 w-28 py-2 text-text-muted"
@@ -1772,39 +1782,39 @@ export class AppDebugScreen extends LitElement {
         <div
           class="flex items-center gap-0 border-b border-border bg-surface px-4 overflow-x-auto"
         >
-          ${this.#renderTab("overview", "Overview")}
-          ${this.#renderTab("plugins", "Plugins")}
-          ${this.#renderTab("routes", "Routes")}
-          ${this.#renderTab("commands", "Commands")}
-          ${this.#renderTab("connections", "Connections")}
+          ${this.#renderTab('overview', 'Overview')}
+          ${this.#renderTab('plugins', 'Plugins')}
+          ${this.#renderTab('routes', 'Routes')}
+          ${this.#renderTab('commands', 'Commands')}
+          ${this.#renderTab('connections', 'Connections')}
           ${this.#renderTab(
-            "cocoons",
-            "Cocoons",
+            'cocoons',
+            'Cocoons',
             [...this.serverStates.values()].reduce(
               (n, s) => n + s.cocoons.length,
               0,
             ),
           )}
-          ${this.#renderTab("signaling", "Signaling")}
-          ${this.#renderTab("registries", "Registries")}
-          ${this.#renderTab("events", "Operations")}
+          ${this.#renderTab('signaling', 'Signaling')}
+          ${this.#renderTab('registries', 'Registries')}
+          ${this.#renderTab('events', 'Operations')}
         </div>
 
         <!-- Tab content -->
         <div class="overflow-auto">
-          ${this.activeTab === "overview" ? this.#renderOverview() : nothing}
-          ${this.activeTab === "plugins" ? this.#renderPlugins() : nothing}
-          ${this.activeTab === "routes" ? this.#renderRoutes() : nothing}
-          ${this.activeTab === "commands" ? this.#renderCommands() : nothing}
-          ${this.activeTab === "connections"
+          ${this.activeTab === 'overview' ? this.#renderOverview() : nothing}
+          ${this.activeTab === 'plugins' ? this.#renderPlugins() : nothing}
+          ${this.activeTab === 'routes' ? this.#renderRoutes() : nothing}
+          ${this.activeTab === 'commands' ? this.#renderCommands() : nothing}
+          ${this.activeTab === 'connections'
             ? this.#renderConnections()
             : nothing}
-          ${this.activeTab === "cocoons" ? this.#renderCocoons() : nothing}
-          ${this.activeTab === "signaling" ? this.#renderSignaling() : nothing}
-          ${this.activeTab === "registries"
+          ${this.activeTab === 'cocoons' ? this.#renderCocoons() : nothing}
+          ${this.activeTab === 'signaling' ? this.#renderSignaling() : nothing}
+          ${this.activeTab === 'registries'
             ? this.#renderRegistries()
             : nothing}
-          ${this.activeTab === "events" ? this.#renderEventLog() : nothing}
+          ${this.activeTab === 'events' ? this.#renderEventLog() : nothing}
         </div>
       </div>
     `;

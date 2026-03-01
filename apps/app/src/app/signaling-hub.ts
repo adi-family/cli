@@ -1,4 +1,4 @@
-import { Logger, type EventBus } from '@adi-family/sdk-plugin';
+import { Logger, trace, type EventBus } from '@adi-family/sdk-plugin';
 import type { Connection } from '../services/signaling/connection.ts';
 import { SignalingServer } from './signaling-server';
 import { DEFAULT_SIGNALING_SERVERS } from './env';
@@ -29,6 +29,7 @@ export class SignalingHub {
     return new SignalingHub(bus, DEFAULT_SIGNALING_SERVERS);
   }
 
+  @trace('starting')
   async start(ctx: Context): Promise<void> {
     this.ctx = ctx;
     this.started = true;
@@ -49,11 +50,11 @@ export class SignalingHub {
     return this.connections.get(deviceId);
   }
 
+  @trace('adding server')
   addServer(url: string): SignalingServer {
     const existing = this.servers.get(url);
     if (existing) return existing;
 
-    this.log.trace({ msg: 'connecting', url });
     const server = new SignalingServer(url, this.connections, this.bus, () => this.started);
     this.servers.set(url, server);
     server.connect();
@@ -61,17 +62,18 @@ export class SignalingHub {
     return server;
   }
 
+  @trace('removing server')
   removeServer(url: string): void {
     if (this.protectedUrls.has(url)) return;
     const server = this.servers.get(url);
     if (!server) return;
 
-    this.log.trace({ msg: 'disconnecting', url });
     server.disconnect();
     this.servers.delete(url);
     void this.persist();
   }
 
+  @trace('disposing')
   dispose(): void {
     for (const server of this.servers.values()) server.disconnect();
     this.servers.clear();
