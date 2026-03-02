@@ -73,6 +73,7 @@ members = [
     # Hive plugins
     "crates/hive/plugins/proxy-ssl",
     "crates/hive/plugins/runner-docker",
+    "crates/hive/plugins/runner-script",
     "crates/hive/plugins/obs-stdout",
     "crates/hive/plugins/obs-file",
     "crates/hive/plugins/proxy-cors",
@@ -293,6 +294,7 @@ signaling-core = { path = "crates/signaling/core" }
 # Hive plugin system
 hive-plugin-abi = { path = "crates/hive/plugins/abi" }
 hive-runner-docker = { path = "crates/hive/plugins/runner-docker" }
+hive-runner-script = { path = "crates/hive/plugins/runner-script" }
 hive-obs-stdout = { path = "crates/hive/plugins/obs-stdout" }
 hive-obs-file = { path = "crates/hive/plugins/obs-file" }
 hive-proxy-cors = { path = "crates/hive/plugins/proxy-cors" }

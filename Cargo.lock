@@ -4733,15 +4733,7 @@ dependencies = [
  "dirs 6.0.0",
  "futures",
  "hex",
- "hive-env-dotenv",
- "hive-health-http",
- "hive-health-tcp",
- "hive-obs-file",
- "hive-obs-stdout",
- "hive-proxy-cors",
- "hive-proxy-rate-limit",
- "hive-runner-docker",
- "hive-runner-watcher",
+ "hive-runner-script",
  "hmac",
  "http 1.4.0",
  "http-body-util",
@@ -5241,6 +5233,21 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "hive-runner-script"
+version = "0.8.4"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "dashmap",
+ "lib-plugin-abi-v3",
+ "libc",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
