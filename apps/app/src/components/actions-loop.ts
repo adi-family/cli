@@ -1,30 +1,33 @@
-import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import { AdiPlugin } from "@adi-family/sdk-plugin";
+import { LitElement, html } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { AdiPlugin } from '@adi-family/sdk-plugin';
+import { App, type AppContext } from '../app/app.ts';
 
 interface ActionCard {
   id: string;
   plugin: string;
   kind: string;
   data: Record<string, unknown>;
-  priority: "low" | "normal" | "urgent";
+  priority: 'low' | 'normal' | 'urgent';
 }
 
 type RenderFn = (data: Record<string, unknown>, actionId: string) => string;
+type KindMode = 'exclusive';
 
-const rendererKey = (plugin: string, kind: string) => `${plugin}::${kind}`;
+const kindKey = (plugin: string, kind: string) => `${plugin}::${kind}`;
 
 const store = {
   actions: [] as ActionCard[],
   renderers: new Map<string, RenderFn>(),
+  kindModes: new Map<string, KindMode>(),
   listeners: new Set<() => void>(),
   notify() {
     for (const fn of this.listeners) fn();
   },
 };
 
-@customElement("app-actions-loop")
+@customElement('app-actions-loop')
 export class AppActionsLoop extends LitElement {
   @state() private actions: ActionCard[] = [];
 
@@ -51,15 +54,13 @@ export class AppActionsLoop extends LitElement {
   }
 
   #dismiss(id: string): void {
-    if ((window as { sdk?: unknown }).sdk) {
-      window.sdk.bus.emit("actions:dismiss", { id }, "actions-loop");
-    }
+    App.reqInstance.bus.emit('actions:dismiss', { id }, 'actions-loop');
   }
 
   #renderCard(card: ActionCard) {
-    const renderer = store.renderers.get(rendererKey(card.plugin, card.kind));
+    const renderer = store.renderers.get(kindKey(card.plugin, card.kind));
     const borderColor =
-      card.priority === "urgent" ? "border-red-500/60" : "border-border";
+      card.priority === 'urgent' ? 'border-red-500/60' : 'border-border';
 
     const body = renderer
       ? unsafeHTML(renderer(card.data, card.id))
@@ -97,7 +98,7 @@ export class AppActionsLoop extends LitElement {
           <h1 class="text-xl font-semibold text-text">Actions</h1>
           <p class="text-sm text-text-muted">
             ${this.actions.length} pending
-            action${this.actions.length !== 1 ? "s" : ""}
+            action${this.actions.length !== 1 ? 's' : ''}
           </p>
         </div>
 
@@ -118,59 +119,96 @@ export class AppActionsLoop extends LitElement {
 }
 
 export class ActionsPlugin extends AdiPlugin {
-  readonly id = "app.actions";
-  readonly version = "1.0.0";
+  readonly id = 'app.actions';
+  readonly version = '1.0.0';
+
+  private constructor() {
+    super();
+  }
+
+  static init(_ctx: AppContext): ActionsPlugin {
+    return new ActionsPlugin();
+  }
 
   override onRegister(): void {
     this.bus.emit(
-      "route:register",
-      { path: "/actions", element: "app-actions-loop", label: "Actions" },
-      "actions-loop",
+      'route:register',
+      { path: '/actions', element: 'app-actions-loop', label: 'Actions' },
+      'actions-loop',
     );
-    this.bus
-      .send(
-        "nav:add",
-        { id: "app.actions", label: "Actions", path: "/actions" },
-        "actions-loop",
-      )
-      .handle(() => {});
 
     this.bus.emit(
-      "command:register",
-      { id: "app:actions", label: "Open Actions", shortcut: "⌘⇧A" },
-      "actions-loop",
+      'nav:add',
+      { id: 'app.actions', label: 'Actions', path: '/actions' },
+      'actions-loop',
     );
+
+    this.bus.emit(
+      'command:register',
+      { id: 'app:actions', label: 'Open Actions', shortcut: '⌘⇧A' },
+      'actions-loop',
+    );
+
     this.bus.on(
-      "command:execute",
+      'command:execute',
       ({ id }) => {
-        if (id === "app:actions")
+        if (id === 'app:actions')
           this.bus.emit(
-            "router:navigate",
-            { path: "/actions" },
-            "actions-loop",
+            'router:navigate',
+            { path: '/actions' },
+            'actions-loop',
           );
       },
-      "actions-loop",
+      'actions-loop',
     );
 
     this.bus.on(
-      "actions:register-renderer",
+      'actions:register-kind',
+      ({ plugin, kind, mode }) => {
+        store.kindModes.set(kindKey(plugin, kind), mode);
+      },
+      'actions-loop',
+    );
+
+    this.bus.on(
+      'actions:register-renderer',
       ({ plugin, kind, render }) => {
-        store.renderers.set(rendererKey(plugin, kind), render);
+        store.renderers.set(kindKey(plugin, kind), render);
         store.notify();
       },
-      "actions-loop",
+      'actions-loop',
     );
 
     this.bus.on(
-      "actions:push",
+      'actions:push',
       ({ id, plugin, kind, data, priority }) => {
+        const key = kindKey(plugin, kind);
+        const mode = store.kindModes.get(key);
+
+        if (mode === 'exclusive') {
+          const dismissed = store.actions.filter(
+            (a) => a.plugin === plugin && a.kind === kind && a.id !== id,
+          );
+          if (dismissed.length > 0) {
+            store.actions = store.actions.filter(
+              (a) => !(a.plugin === plugin && a.kind === kind && a.id !== id),
+            );
+            for (const d of dismissed) {
+              this.bus.emit(
+                'actions:dismissed',
+                { id: d.id, plugin: d.plugin, kind: d.kind },
+                'actions-loop',
+              );
+            }
+          }
+        }
+
         const card: ActionCard = {
           id,
           plugin,
           kind,
           data,
-          priority: priority ?? "normal",
+          priority: priority ?? 'normal',
         };
         const idx = store.actions.findIndex((a) => a.id === id);
         store.actions =
@@ -179,23 +217,23 @@ export class ActionsPlugin extends AdiPlugin {
             : [...store.actions, card];
         store.notify();
       },
-      "actions-loop",
+      'actions-loop',
     );
 
     this.bus.on(
-      "actions:dismiss",
+      'actions:dismiss',
       ({ id }) => {
         const card = store.actions.find((a) => a.id === id);
         if (!card) return;
         store.actions = store.actions.filter((a) => a.id !== id);
         this.bus.emit(
-          "actions:dismissed",
+          'actions:dismissed',
           { id: card.id, plugin: card.plugin, kind: card.kind },
-          "actions-loop",
+          'actions-loop',
         );
         store.notify();
       },
-      "actions-loop",
+      'actions-loop',
     );
   }
 }

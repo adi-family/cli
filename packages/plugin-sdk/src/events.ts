@@ -38,6 +38,9 @@ declare module './types.js' {
 
     'plugin:upgrade-failed': { pluginId: string; reason: string };
 
+    /** Emitted when a plugin is installed (auto-required or restored from prefs). */
+    'plugin:installed': { pluginId: string; reason: 'auto' | 'restored' };
+
     // --- UI registration ---
 
     /** Register a client-side route. element = custom element tag to render. */
@@ -49,9 +52,6 @@ declare module './types.js' {
       path: string;
       icon?: string;
     };
-
-    /** Reply to nav:add. Host emits after adding the nav item. */
-    'nav:add:ok': { id: string; _cid: string };
 
     'command:register': { id: string; label: string; shortcut?: string };
     'command:execute': { id: string };
@@ -73,6 +73,13 @@ declare module './types.js' {
     'router:changed': { path: string; params: Record<string, string> };
 
     // --- Actions loop ---
+
+    /** Register a kind with a display mode. 'exclusive' = only one action of this plugin+kind visible at a time. */
+    'actions:register-kind': {
+      plugin: string;
+      kind: string;
+      mode: 'exclusive';
+    };
 
     /** Push an action card into the floating overlay. Same id replaces existing. */
     'actions:push': {
