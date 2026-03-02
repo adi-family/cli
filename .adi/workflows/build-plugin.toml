@@ -51,13 +51,13 @@ fi
 
 case "$ACTION" in
     install)
-        "$WORKFLOWS_DIR/build-plugin.sh" "$PLUGIN" --install $LINT_FLAG
+        python3 "$WORKFLOWS_DIR/_core/build_plugin.py" "$PLUGIN" --install $LINT_FLAG
         ;;
     build)
-        "$WORKFLOWS_DIR/build-plugin.sh" "$PLUGIN" $LINT_FLAG
+        python3 "$WORKFLOWS_DIR/_core/build_plugin.py" "$PLUGIN" $LINT_FLAG
         ;;
     replace)
-        "$WORKFLOWS_DIR/build-plugin.sh" "$PLUGIN" --install --force $LINT_FLAG
+        python3 "$WORKFLOWS_DIR/_core/build_plugin.py" "$PLUGIN" --install --force $LINT_FLAG
         ;;
 esac
 """

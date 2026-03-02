@@ -1,3 +1,9 @@
 [workflow]
 name = "sync-theme"
 description = "Sync theme JSON to CSS + Rust outputs"
+
+[[steps]]
+name = "Sync theme"
+run = """
+python3 "$WORKFLOWS_DIR/_core/sync_theme.py"
+"""

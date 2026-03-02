@@ -39,13 +39,13 @@ info "Linting plugin: $PLUGIN (mode: $MODE)"
 
 case "$MODE" in
     check)
-        "$WORKFLOWS_DIR/lint-plugin.sh" "$PLUGIN"
+        python3 "$WORKFLOWS_DIR/_core/lint_plugin.py" "$PLUGIN"
         ;;
     fix)
-        "$WORKFLOWS_DIR/lint-plugin.sh" --fix "$PLUGIN"
+        python3 "$WORKFLOWS_DIR/_core/lint_plugin.py" --fix "$PLUGIN"
         ;;
     strict)
-        "$WORKFLOWS_DIR/lint-plugin.sh" --strict "$PLUGIN"
+        python3 "$WORKFLOWS_DIR/_core/lint_plugin.py" --strict "$PLUGIN"
         ;;
 esac
 """

@@ -36,5 +36,5 @@ PRESET="{{ preset | split(' ') | first }}"
 SOURCE_DIR="{{ source_dir }}"
 OUTPUT_DIR="{{ output_dir }}"
 
-"$WORKFLOWS_DIR/convert-sounds.sh" "$PRESET" "$SOURCE_DIR" "$OUTPUT_DIR"
+python3 "$WORKFLOWS_DIR/_core/convert_sounds.py" "$PRESET" "$SOURCE_DIR" "$OUTPUT_DIR"
 """

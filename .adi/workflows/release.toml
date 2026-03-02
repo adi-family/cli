@@ -1,58 +1,127 @@
-# ADI Service Release Workflow
-# Build Linux binaries, Docker images, and optionally push to registry
+# ADI Release Workflow
+# Unified release for CLI binary or plugin
 
 [workflow]
 name = "release"
-description = "Build and release service images (cross-compile + Docker)"
+description = "Release CLI binary or plugin"
 
 [[inputs]]
-name = "services"
-type = "multi-select"
-prompt = "Select services to release (empty for all)"
-# Dynamic options: discover services from release.sh ALL_SERVICES
-options_cmd = '''
-grep '^ALL_SERVICES=' "$WORKFLOWS_DIR/release.sh" 2>/dev/null | sed 's/^ALL_SERVICES="//;s/"$//' | tr ' ' '\n'
-'''
+name = "target"
+type = "select"
+prompt = "What to release?"
+options = [
+    "cli - Build and release adi CLI to GitHub",
+    "plugin - Build and publish a plugin to the registry",
+]
+default = "cli - Build and release adi CLI to GitHub"
+
+# --- CLI inputs ---
 
 [[inputs]]
-name = "push"
-type = "confirm"
-prompt = "Push images to registry?"
-default = false
-
-[[inputs]]
-name = "tag"
+name = "version"
 type = "input"
-prompt = "Image tag (leave empty for 'latest')"
+prompt = "Version to release (e.g., 1.0.1)"
+required = true
+if = "{{ target | contains('cli') }}"
+
+[[inputs]]
+name = "title"
+type = "input"
+prompt = "Release title (short description)"
 default = ""
+if = "{{ target | contains('cli') }}"
+
+[[inputs]]
+name = "draft"
+type = "confirm"
+prompt = "Create as draft release?"
+default = false
+if = "{{ target | contains('cli') }}"
+
+# --- Plugin inputs ---
+
+[[inputs]]
+name = "plugin"
+type = "select"
+prompt = "Select plugin to release"
+options_cmd = '''
+grep -rl 'package.metadata.plugin' crates/*/Cargo.toml crates/*/*/Cargo.toml crates/*/*/*/Cargo.toml 2>/dev/null | while read f; do
+    sed -n 's/^id = "\(.*\)"/\1/p' "$f" | head -1
+done | sort -u
+'''
+autocomplete = true
+autocomplete_count = 10
+if = "{{ target | contains('plugin') }}"
+
+[[inputs]]
+name = "version_bump"
+type = "select"
+prompt = "Version bump type"
+options = [
+    "same - Keep current version",
+    "patch - Bug fixes (0.0.x)",
+    "minor - New features (0.x.0)",
+    "major - Breaking changes (x.0.0)",
+]
+default = "same - Keep current version"
+if = "{{ target | contains('plugin') }}"
+
+[[inputs]]
+name = "registry_target"
+type = "select"
+prompt = "Target registry"
+options = [
+    "production - adi-plugin-registry.the-ihor.com",
+    "local - adi.test/registry",
+    "dry-run - Build only, no publish",
+]
+default = "production - adi-plugin-registry.the-ihor.com"
+if = "{{ target | contains('plugin') }}"
+
+# --- Steps ---
 
 [[steps]]
-name = "Release services"
+name = "Release"
 run = """
-SERVICES="{{ services | join(' ') }}"
-PUSH="{{ push }}"
-TAG="{{ tag }}"
+TARGET="{{ target | split(' ') | first }}"
 
-# Build args
-ARGS=""
+case "$TARGET" in
+    cli)
+        VERSION="{{ version }}"
+        TITLE="{{ title }}"
+        DRAFT="{{ draft }}"
 
-if [ -n "$SERVICES" ]; then
-    ARGS="$SERVICES"
-else
-    ARGS="all"
-fi
+        ARGS="--version $VERSION"
+        if [ -n "$TITLE" ]; then
+            ARGS="$ARGS --title \"$TITLE\""
+        fi
+        if [ "$DRAFT" = "true" ]; then
+            ARGS="$ARGS --draft"
+        fi
 
-if [ "$PUSH" = "true" ]; then
-    ARGS="$ARGS --push"
-fi
+        eval "python3 \"$WORKFLOWS_DIR/_core/release_cli.py\" $ARGS"
+        ;;
+    plugin)
+        PLUGIN="{{ plugin }}"
+        REGISTRY="{{ registry_target | split(' ') | first }}"
+        BUMP="{{ version_bump | split(' ') | first }}"
 
-if [ -n "$TAG" ]; then
-    ARGS="$ARGS --tag $TAG"
-fi
+        BUMP_FLAG=""
+        if [ "$BUMP" != "same" ]; then
+            BUMP_FLAG="--bump $BUMP"
+        fi
 
-info "Releasing: $ARGS"
-
-"$WORKFLOWS_DIR/release.sh" $ARGS
-
-success "Release complete!"
+        case "$REGISTRY" in
+            production)
+                python3 "$WORKFLOWS_DIR/_core/release_plugin.py" "$PLUGIN" $BUMP_FLAG
+                ;;
+            local)
+                python3 "$WORKFLOWS_DIR/_core/release_plugin.py" "$PLUGIN" --local $BUMP_FLAG
+                ;;
+            dry-run)
+                python3 "$WORKFLOWS_DIR/_core/release_plugin.py" "$PLUGIN" --no-push $BUMP_FLAG
+                ;;
+        esac
+        ;;
+esac
 """

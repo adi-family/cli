@@ -8,5 +8,5 @@ description = "Generate AGENTS.md and CLAUDE.md with crate structure documentati
 [[steps]]
 name = "Generate AGENTS.md and CLAUDE.md"
 run = """
-"$WORKFLOWS_DIR/generate-agents-md.sh"
+python3 "$WORKFLOWS_DIR/_core/generate_agents_md.py"
 """

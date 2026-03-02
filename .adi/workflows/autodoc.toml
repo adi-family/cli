@@ -65,5 +65,5 @@ FORCE="{{ force }}"
 
 info "Generating documentation for: $CRATE (language: $LANGUAGE)"
 
-"$WORKFLOWS_DIR/autodoc.sh" "$CRATE" --lang "$LANGUAGE" $([ "$ENRICH" = "true" ] && echo "--enrich") $([ "$FORCE" = "true" ] && echo "--force")
+python3 "$WORKFLOWS_DIR/_core/autodoc.py" "$CRATE" --lang "$LANGUAGE" $([ "$ENRICH" = "true" ] && echo "--enrich") $([ "$FORCE" = "true" ] && echo "--force")
 """

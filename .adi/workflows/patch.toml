@@ -36,10 +36,10 @@ PLUGIN="{{ plugin }}"
 
 case "$TARGET" in
     cli)
-        "$WORKFLOWS_DIR/patch.sh" cli
+        python3 "$WORKFLOWS_DIR/_core/patch.py" cli
         ;;
     plugin)
-        "$WORKFLOWS_DIR/patch.sh" plugin "$PLUGIN"
+        python3 "$WORKFLOWS_DIR/_core/patch.py" plugin "$PLUGIN"
         ;;
 esac
 '''

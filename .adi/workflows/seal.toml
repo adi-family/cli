@@ -27,5 +27,5 @@ run = """
 MESSAGE="{{ message }}"
 PUSH="{{ push | split(' ') | first }}"
 
-"$WORKFLOWS_DIR/seal.sh" --message "$MESSAGE" --push "$PUSH"
+python3 "$WORKFLOWS_DIR/_core/seal.py" --message "$MESSAGE" --push "$PUSH"
 """

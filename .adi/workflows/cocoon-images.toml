@@ -91,7 +91,7 @@ ARGS="$ARGS --platform $PLATFORM"
 
 info "Building cocoon images: $ARGS"
 
-"$PROJECT_ROOT/crates/cocoon/scripts/build-images.sh" $ARGS
+python3 "$WORKFLOWS_DIR/_core/cocoon_images.py" $ARGS
 
 success "Cocoon images build complete!"
 """
