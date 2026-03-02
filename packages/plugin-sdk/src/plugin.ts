@@ -4,6 +4,7 @@ export abstract class AdiPlugin {
   abstract readonly id: string;
   abstract readonly version: string;
   readonly dependencies: string[] = [];
+  readonly requires: string[] = [];
 
   #bus: EventBus | undefined;
 

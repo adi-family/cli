@@ -3,11 +3,7 @@ import type {
   EventHandler,
   EventMeta,
   BusMiddleware,
-  ReplyableEvent,
-  SendHandle,
-  WithCid,
 } from './types.js';
-import { generateCid } from './cid.js';
 import { Logger } from './logger.js';
 
 interface ChannelState {
@@ -15,22 +11,15 @@ interface ChannelState {
   queue: unknown[];
 }
 
-export interface EventBusOptions {
-  sendTimeout?: number;
-}
-
 export class EventBus {
   private readonly log: Logger = new Logger(`event-bus`);
-  private readonly sendTimeoutMs: number;
   private readonly channels = new Map<string, ChannelState>();
   private readonly middlewares = new Set<BusMiddleware>();
 
-  private constructor(options: EventBusOptions = {}) {
-    this.sendTimeoutMs = options.sendTimeout ?? 30_000;
-  }
+  private constructor() {}
 
-  static init(options: EventBusOptions = {}): EventBus {
-    return new EventBus(options);
+  static init(): EventBus {
+    return new EventBus();
   }
 
   private getChannel(event: string): ChannelState {
@@ -72,7 +61,7 @@ export class EventBus {
   ): () => void {
     const ch = this.getChannel(event as string);
     ch.handlers.set(handler as EventHandler<never>, consumer);
-    this.log.debug({ event, consumer, msg: 'subscribed' });
+    this.log.trace({ event, consumer, msg: 'subscribed' });
     if (ch.queue.length > 0) {
       const flushed = ch.queue.splice(0);
       this.log.debug({ event, consumer, count: flushed.length, msg: 'flushing queue' });
@@ -106,75 +95,6 @@ export class EventBus {
       return () => {};
     }
     return unsub;
-  }
-
-  send<K extends ReplyableEvent>(
-    event: K,
-    payload: EventRegistry[K],
-    producer: string,
-  ): SendHandle<EventRegistry[`${K}:ok`]> {
-    const cid = generateCid();
-    const payloadWithCid = {
-      ...(payload as object),
-      _cid: cid,
-    } as unknown as EventRegistry[K];
-    const replyEvent = `${event as string}:ok` as `${K}:ok`;
-
-    this.log.debug({ event, cid, producer, msg: 'send' });
-    this.emit(event, payloadWithCid, producer);
-
-    return {
-      wait: (): Promise<EventRegistry[`${K}:ok`]> => {
-        return new Promise((resolve, reject) => {
-          const unsubRef: { fn?: () => void } = {};
-          const timer = setTimeout(() => {
-            unsubRef.fn?.();
-            this.log.warn({ event, cid, producer, msg: 'send timed out' });
-            reject(
-              new Error(
-                `send('${event as string}') timed out after ${this.sendTimeoutMs}ms`,
-              ),
-            );
-          }, this.sendTimeoutMs);
-          const unsub = this.on(
-            replyEvent as keyof EventRegistry,
-            (reply) => {
-              const typed = reply as WithCid<EventRegistry[`${K}:ok`]>;
-              if (typed._cid === cid) {
-                clearTimeout(timer);
-                unsubRef.fn?.();
-                resolve(typed);
-              }
-            },
-            `${producer}:reply`,
-          );
-          unsubRef.fn = unsub;
-        });
-      },
-      handle: (cb: (reply: EventRegistry[`${K}:ok`]) => void): (() => void) => {
-        let fired = false;
-        const unsubRef: { fn?: () => void } = {};
-        const unsub = this.on(
-          replyEvent as keyof EventRegistry,
-          (reply) => {
-            const typed = reply as WithCid<EventRegistry[`${K}:ok`]>;
-            if (typed._cid === cid) {
-              if (fired) return;
-              fired = true;
-              unsubRef.fn?.();
-              cb(typed);
-            }
-          },
-          `${producer}:reply`,
-        );
-        unsubRef.fn = unsub;
-        if (fired) {
-          unsub();
-          return () => {};
-        }
-        return unsub;
-      },
-    };
   }
 
   use(middleware: BusMiddleware): () => void {

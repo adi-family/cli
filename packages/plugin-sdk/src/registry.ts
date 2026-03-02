@@ -19,6 +19,8 @@ export function _resetRegistry(): void {
 
 export interface LoadPluginsOptions {
   timeout?: number;
+  /** Known plugins available in the registry, used to auto-fetch missing `requires`. */
+  availablePlugins?: PluginDescriptor[];
 }
 
 export async function loadPlugins(
@@ -40,15 +42,21 @@ export async function loadPlugins(
     }
   }
 
+  // Resolve `requires`: auto-fetch missing required plugins from availablePlugins.
+  const available = new Map((options.availablePlugins ?? []).map((d) => [d.id, d]));
+  const autoInstalled = await resolveRequires(bus, available);
+
   const plugins = [...registry.values()];
-  const { order, cycled } = topoSort(plugins);
+  const requiresEdges = collectRequiresEdges(plugins);
+  const { order, cycled } = topoSort(plugins, requiresEdges);
 
   const loaded: string[] = [];
   const failed: string[] = [...cycled];
   const timedOut: string[] = [];
 
+  const allDescriptors = [...pluginDescriptors, ...autoInstalled];
   const registeredIds = new Set(plugins.map((p) => p.id));
-  for (const d of pluginDescriptors) {
+  for (const d of allDescriptors) {
     if (!registeredIds.has(d.id)) {
       console.error(`[plugin] '${d.id}' bundle loaded but did not register — export your plugin class as PluginShell: export { MyPlugin as PluginShell }`);
       failed.push(d.id);
@@ -68,7 +76,7 @@ export async function loadPlugins(
   }
 
   // Phase 4: Background update checks (non-blocking).
-  void checkForUpdates(bus, pluginDescriptors);
+  void checkForUpdates(bus, allDescriptors);
 
   // Phase 5: Signal completion.
   bus.emit('loading-finished', { loaded, failed, timedOut }, 'plugin-registry');
@@ -209,10 +217,31 @@ async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
     descriptor.id,
     descriptor.installedVersion
   );
-  const res = await fetch(url);
+
+  // Derive CSS URL from bundle URL (sibling style.css next to web.js)
+  const cssUrl = url.replace(/\/[^/]+$/, '/style.css');
+
+  // Fetch JS + CSS in parallel
+  const [res, cssRes] = await Promise.all([
+    fetch(url),
+    fetch(cssUrl).catch(() => null),
+  ]);
+
   if (!res.ok) {
     throw new Error(`Failed to fetch plugin bundle: ${res.status} ${res.statusText} (${url})`);
   }
+
+  // Inject CSS if available (backwards compat: silently ignore 404 / fetch errors)
+  if (cssRes?.ok) {
+    const cssText = await cssRes.text();
+    if (cssText) {
+      const style = document.createElement('style');
+      style.setAttribute('data-plugin', descriptor.id);
+      style.textContent = cssText;
+      document.head.appendChild(style);
+    }
+  }
+
   const blob = await res.blob();
   const blobUrl = URL.createObjectURL(blob);
   try {
@@ -238,9 +267,56 @@ async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
   }
 }
 
+/** Walk registered plugins' `requires`, fetch missing ones from availablePlugins. */
+async function resolveRequires(
+  bus: EventBus,
+  available: Map<string, PluginDescriptor>
+): Promise<PluginDescriptor[]> {
+  const installed: PluginDescriptor[] = [];
+  const seen = new Set<string>();
+  let frontier = [...registry.values()].flatMap((p) => p.requires ?? []);
+
+  while (frontier.length > 0) {
+    const next: string[] = [];
+    for (const reqId of frontier) {
+      if (seen.has(reqId) || registry.has(reqId)) continue;
+      seen.add(reqId);
+
+      const desc = available.get(reqId);
+      if (!desc) {
+        console.error(`[plugin] required plugin '${reqId}' not found in availablePlugins`);
+        continue;
+      }
+
+      try {
+        await fetchAndImport(desc);
+        descriptors.set(desc.id, desc);
+        installed.push(desc);
+        bus.emit('plugin:installed', { pluginId: reqId, reason: 'auto' }, 'plugin-registry');
+
+        const newPlugin = registry.get(reqId);
+        if (newPlugin) {
+          next.push(...(newPlugin.requires ?? []));
+        }
+      } catch (err) {
+        console.error(`[plugin] failed to auto-install required plugin '${reqId}':`, err);
+      }
+    }
+    frontier = next;
+  }
+
+  return installed;
+}
+
+/** Collect dependency edges from `requires` (same direction as `dependencies`). */
+function collectRequiresEdges(plugins: AdiPlugin[]): Array<[string, string]> {
+  return plugins.flatMap((p) => (p.requires ?? []).map((req): [string, string] => [req, p.id]));
+}
+
 /** Kahn's algorithm topological sort. */
 function topoSort(
-  plugins: AdiPlugin[]
+  plugins: AdiPlugin[],
+  extraEdges: Array<[string, string]> = []
 ): { order: AdiPlugin[]; cycled: string[] } {
   const ids = new Set(plugins.map((p) => p.id));
   const inDegree = new Map<string, number>();
@@ -257,6 +333,12 @@ function topoSort(
       adj.get(dep)!.push(p.id);
       inDegree.set(p.id, (inDegree.get(p.id) ?? 0) + 1);
     }
+  }
+
+  for (const [from, to] of extraEdges) {
+    if (!ids.has(from) || !ids.has(to)) continue;
+    adj.get(from)!.push(to);
+    inDegree.set(to, (inDegree.get(to) ?? 0) + 1);
   }
 
   const queue = plugins.filter((p) => inDegree.get(p.id) === 0);

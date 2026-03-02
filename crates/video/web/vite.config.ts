@@ -1,6 +1,8 @@
 import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+  plugins: [tailwindcss()],
   build: {
     lib: {
       entry: "src/index.ts",
@@ -10,6 +12,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         inlineDynamicImports: true,
+        assetFileNames: "style[extname]",
       },
     },
     target: "es2022",

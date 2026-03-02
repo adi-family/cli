@@ -1,17 +1,9 @@
 import { LitElement, html, nothing } from 'lit';
 import { state } from 'lit/decorators.js';
 import type { RenderJob, CompositionEntry } from './types.js';
+import { getBus } from './context.js';
 import './events.js';
 import { DEMO_COMPOSITIONS } from './compositions/demo.js';
-
-declare global {
-  interface Window {
-    sdk: {
-      bus: import('@adi-family/sdk-plugin').EventBus;
-      getConnections(): Map<string, unknown>;
-    };
-  }
-}
 
 type Tab = 'editor' | 'render-queue';
 
@@ -24,6 +16,9 @@ export class AdiVideoElement extends LitElement {
   @state() private renderProgress: number | null = null;
   @state() private renderPhase: string | null = null;
 
+  private unsubs: Array<() => void> = [];
+  private pollingJobId: string | null = null;
+
   override createRenderRoot() { return this; }
 
   override connectedCallback(): void {
@@ -31,70 +26,71 @@ export class AdiVideoElement extends LitElement {
     if (this.compositions.length > 0 && !this.selectedId) {
       this.selectedId = this.compositions[0]!.id;
     }
+    this.unsubs.push(
+      this.bus.on('video:jobs-changed', ({ jobs }) => {
+        this.jobs = jobs;
+        this.loading = false;
+      }, 'video-ui'),
+      this.bus.on('video:render-started', ({ jobId }) => {
+        this.renderPhase = 'created';
+        this.pollingJobId = jobId;
+        this._pollStatus();
+      }, 'video-ui'),
+      this.bus.on('video:status-changed', ({ job }) => {
+        this.renderPhase = job.phase;
+        this.renderProgress = job.progress;
+        if (job.phase === 'done' || job.phase === 'error') {
+          this.pollingJobId = null;
+          this._loadJobs();
+        }
+      }, 'video-ui'),
+    );
     this._loadJobs();
   }
 
-  private get bus() { return window.sdk.bus; }
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.unsubs.forEach(fn => fn());
+    this.unsubs = [];
+    this.pollingJobId = null;
+  }
+
+  private get bus() { return getBus(); }
 
   private get selected(): CompositionEntry | undefined {
     return this.compositions.find(c => c.id === this.selectedId);
   }
 
-  private async _loadJobs(): Promise<void> {
+  private _loadJobs(): void {
     this.loading = true;
-    try {
-      const result = await this.bus.send('video:jobs', {}, 'video-ui').wait();
-      this.jobs = result.jobs;
-    } catch {
-      this.jobs = [];
-    } finally {
-      this.loading = false;
-    }
+    this.bus.emit('video:jobs', {}, 'video-ui');
   }
 
-  private async _startRender(): Promise<void> {
+  private _startRender(): void {
     const comp = this.selected;
     if (!comp) return;
 
     this.renderProgress = 0;
     this.renderPhase = 'starting';
 
-    try {
-      const result = await this.bus.send('video:render', {
-        compositionId: comp.id,
-        format: 'mp4',
-        width: comp.width,
-        height: comp.height,
-        fps: comp.fps,
-        durationInFrames: comp.durationInFrames,
-      }, 'video-ui').wait();
-
-      this.renderPhase = 'submitted';
-      void this._pollStatus(result.jobId);
-    } catch {
-      this.renderPhase = 'error';
-      this.renderProgress = null;
-    }
+    this.bus.emit('video:render', {
+      compositionId: comp.id,
+      format: 'mp4',
+      width: comp.width,
+      height: comp.height,
+      fps: comp.fps,
+      durationInFrames: comp.durationInFrames,
+    }, 'video-ui');
   }
 
-  private async _pollStatus(jobId: string): Promise<void> {
-    let done = false;
-    while (!done) {
-      await new Promise(r => setTimeout(r, 1000));
-      try {
-        const result = await this.bus.send('video:status', { jobId }, 'video-ui').wait();
-        const job = result.job;
-        this.renderPhase = job.phase;
-        this.renderProgress = job.progress;
-        if (job.phase === 'done' || job.phase === 'error') {
-          done = true;
-          void this._loadJobs();
-        }
-      } catch {
-        done = true;
-        this.renderPhase = 'error';
-      }
-    }
+  private _pollStatus(): void {
+    if (!this.pollingJobId) return;
+    const jobId = this.pollingJobId;
+    setTimeout(() => {
+      if (this.pollingJobId !== jobId) return;
+      this.bus.emit('video:status', { jobId }, 'video-ui');
+      this._pollStatus();
+    }, 1000);
   }
 
   private _phaseBadge(phase: string) {
@@ -120,7 +116,7 @@ export class AdiVideoElement extends LitElement {
           >Editor</button>
           <button
             class="px-4 py-2 rounded text-sm ${this.tab === 'render-queue' ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-400'}"
-            @click=${() => { this.tab = 'render-queue'; void this._loadJobs(); }}
+            @click=${() => { this.tab = 'render-queue'; this._loadJobs(); }}
           >Render Queue</button>
         </div>
 

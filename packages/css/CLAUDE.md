@@ -71,6 +71,7 @@ Inner radius = `max(0, outer_radius - padding)` for optically consistent nested 
 | `tokens.css` | (custom properties) | Standalone ADID design tokens (colors, borders, radii, fonts) |
 | `base.css` | (element styles) | HTML/body resets, grain overlay, scrollbar |
 | `tailwind.css` | (theme block) | Tailwind v4 `@theme inline` mapping of ADI tokens |
+| `plugin-base.css` | (imports) | Bundle base for web plugins — imports theme + tailwind mapping + AX |
 | `animations.css` | `.stagger-1`..`.stagger-4` | Keyframes (fade-in, fade-in-up, slide-in-left, draw-line) + stagger delays |
 | `glass.css` | `.glass`, `.glass-light` | Glass morphism backgrounds |
 | `effects.css` | `.glow`, `.glow-sm`, `.gradient-text` | Box-shadow glow, gradient-filled text |

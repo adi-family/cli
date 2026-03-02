@@ -1,4 +1,4 @@
-import { type HttpPluginRegistry, Logger, trace } from '@adi-family/sdk-plugin';
+import { type HttpPluginRegistry, type PluginDescriptor, Logger, trace } from '@adi-family/sdk-plugin';
 import { RegistryServer } from './registry-server';
 import { DEFAULT_REGISTRIES } from './env';
 import type { Context } from './app';
@@ -69,6 +69,13 @@ export class RegistryHub {
     this.servers.delete(url);
     this.registries.delete(url);
     void this.persist();
+  }
+
+  async fetchAllDescriptors(): Promise<PluginDescriptor[]> {
+    const results = await Promise.allSettled(
+      [...this.registries.values()].map((r) => r.listPlugins()),
+    );
+    return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
   }
 
   @trace('disposing')

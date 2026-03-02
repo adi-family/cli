@@ -195,6 +195,10 @@ pub struct WebUiMeta {
     /// Size of the JS file in bytes
     #[serde(alias = "size_bytes")]
     pub size_bytes: u64,
+
+    /// URL path to the CSS file (e.g., "/v1/plugins/{id}/{version}/style.css"), if present.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "style_url")]
+    pub style_url: Option<String>,
 }
 
 /// Certificate issued by the registry binding a publisher ID to their public key.

@@ -1,5 +1,4 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import type { WithCid } from '@adi-family/sdk-plugin';
 import * as api from './api.js';
 import type { Connection, Task, TasksStats } from './types.js';
 import './events.js';
@@ -47,15 +46,14 @@ export class TasksPlugin extends AdiPlugin {
     }
 
     this.bus.emit('route:register', { path: '/tasks', element: 'adi-tasks' }, 'tasks');
-    this.bus.send('nav:add', { id: 'tasks', label: 'Tasks', path: '/tasks' }, 'tasks').handle(() => {});
+    this.bus.emit('nav:add', { id: 'tasks', label: 'Tasks', path: '/tasks' }, 'tasks');
 
     this.bus.emit('command:register', { id: 'tasks:open', label: 'Go to Tasks page' }, 'tasks');
     this.bus.on('command:execute', ({ id }) => {
       if (id === 'tasks:open') this.bus.emit('router:navigate', { path: '/tasks' }, 'tasks');
     }, 'tasks');
 
-    this.bus.on('tasks:list', async (p) => {
-      const { _cid, status } = p as WithCid<typeof p>;
+    this.bus.on('tasks:list', async ({ status }) => {
       try {
         const conns = connectionsWithTasks();
         const [taskResults, statsResults] = await Promise.all([
@@ -67,19 +65,18 @@ export class TasksPlugin extends AdiPlugin {
             ? r.value.map(t => ({ ...t, cocoonId: conns[i].id }))
             : []
         );
-        const stats = statsResults.reduce(
+        const stats = statsResults.reduce<TasksStats>(
           (acc, r) => r.status === 'fulfilled' ? mergeStats(acc, r.value) : acc,
-          emptyStats()
+          emptyStats(),
         );
-        this.bus.emit('tasks:list:ok', { tasks, stats, _cid }, 'tasks');
+        this.bus.emit('tasks:list-changed', { tasks, stats }, 'tasks');
       } catch (err) {
         console.error('[TasksPlugin] tasks:list error:', err);
-        this.bus.emit('tasks:list:ok', { tasks: [], stats: emptyStats(), _cid }, 'tasks');
+        this.bus.emit('tasks:list-changed', { tasks: [], stats: emptyStats() }, 'tasks');
       }
     }, 'tasks');
 
-    this.bus.on('tasks:search', async (p) => {
-      const { _cid, query, limit } = p as WithCid<typeof p>;
+    this.bus.on('tasks:search', async ({ query, limit }) => {
       try {
         const conns = connectionsWithTasks();
         const results = await Promise.allSettled(conns.map(c => api.searchTasks(c, query, limit)));
@@ -88,70 +85,65 @@ export class TasksPlugin extends AdiPlugin {
             ? r.value.map(t => ({ ...t, cocoonId: conns[i].id }))
             : []
         );
-        this.bus.emit('tasks:search:ok', { tasks, _cid }, 'tasks');
+        this.bus.emit('tasks:search-changed', { tasks }, 'tasks');
       } catch (err) {
         console.error('[TasksPlugin] tasks:search error:', err);
-        this.bus.emit('tasks:search:ok', { tasks: [], _cid }, 'tasks');
+        this.bus.emit('tasks:search-changed', { tasks: [] }, 'tasks');
       }
     }, 'tasks');
 
-    this.bus.on('tasks:stats', async (p) => {
-      const { _cid } = p as WithCid<typeof p>;
+    this.bus.on('tasks:stats', async () => {
       try {
         const conns = connectionsWithTasks();
         const results = await Promise.allSettled(conns.map(c => api.getStats(c)));
-        const stats = results.reduce(
+        const stats = results.reduce<TasksStats>(
           (acc, r) => r.status === 'fulfilled' ? mergeStats(acc, r.value) : acc,
-          emptyStats()
+          emptyStats(),
         );
-        this.bus.emit('tasks:stats:ok', { stats, _cid }, 'tasks');
+        this.bus.emit('tasks:stats-changed', { stats }, 'tasks');
       } catch (err) {
         console.error('[TasksPlugin] tasks:stats error:', err);
-        this.bus.emit('tasks:stats:ok', { stats: emptyStats(), _cid }, 'tasks');
+        this.bus.emit('tasks:stats-changed', { stats: emptyStats() }, 'tasks');
       }
     }, 'tasks');
 
-    this.bus.on('tasks:get', async (p) => {
-      const { _cid, task_id, cocoonId } = p as WithCid<typeof p>;
+    this.bus.on('tasks:get', async ({ task_id, cocoonId }) => {
       try {
         const raw = await api.getTask(getConnection(cocoonId), task_id);
-        const task = {
-          ...raw,
-          task: { ...raw.task, cocoonId },
-          depends_on: raw.depends_on.map(t => ({ ...t, cocoonId })),
-          dependents:  raw.dependents.map(t => ({ ...t, cocoonId })),
-        };
-        this.bus.emit('tasks:get:ok', { task, _cid }, 'tasks');
+        this.bus.emit('tasks:detail-changed', {
+          task: {
+            task: { ...raw.task, cocoonId },
+            depends_on: raw.depends_on.map(t => ({ ...t, cocoonId })),
+            dependents: raw.dependents.map(t => ({ ...t, cocoonId })),
+          },
+        }, 'tasks');
       } catch (err) {
         console.error('[TasksPlugin] tasks:get error:', err);
       }
     }, 'tasks');
 
-    this.bus.on('tasks:create', async (p) => {
-      const { _cid, cocoonId, title, description, depends_on } = p as WithCid<typeof p>;
+    this.bus.on('tasks:create', async ({ cocoonId, title, description, depends_on }) => {
       try {
         const raw = await api.createTask(getConnection(cocoonId), { title, description, depends_on });
-        this.bus.emit('tasks:create:ok', { task: { ...raw, cocoonId }, _cid }, 'tasks');
+        this.bus.emit('tasks:task-mutated', { task: { ...raw, cocoonId } }, 'tasks');
       } catch (err) {
         console.error('[TasksPlugin] tasks:create error:', err);
       }
     }, 'tasks');
 
-    this.bus.on('tasks:update', async (p) => {
-      const { _cid, cocoonId, task_id, title, description, status } = p as WithCid<typeof p>;
+    this.bus.on('tasks:update', async ({ cocoonId, task_id, title, description, status }) => {
       try {
         const raw = await api.updateTask(getConnection(cocoonId), { task_id, title, description, status });
-        this.bus.emit('tasks:update:ok', { task: { ...raw, cocoonId }, _cid }, 'tasks');
+        this.bus.emit('tasks:task-mutated', { task: { ...raw, cocoonId } }, 'tasks');
       } catch (err) {
         console.error('[TasksPlugin] tasks:update error:', err);
       }
     }, 'tasks');
 
-    this.bus.on('tasks:delete', async (p) => {
-      const { _cid, cocoonId, task_id } = p as WithCid<typeof p>;
+    this.bus.on('tasks:delete', async ({ cocoonId, task_id }) => {
       try {
         await api.deleteTask(getConnection(cocoonId), task_id);
-        this.bus.emit('tasks:delete:ok', { _cid }, 'tasks');
+        this.bus.emit('tasks:task-deleted', { task_id, cocoonId }, 'tasks');
       } catch (err) {
         console.error('[TasksPlugin] tasks:delete error:', err);
       }

@@ -1,3 +1,4 @@
+import './styles.css';
 import './events.js';
 export { PaymentPlugin, PaymentPlugin as PluginShell } from './plugin.js';
 export { AdiPaymentElement } from './component.js';

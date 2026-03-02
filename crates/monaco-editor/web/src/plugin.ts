@@ -1,5 +1,4 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import type { WithCid } from '@adi-family/sdk-plugin';
 import { setupWorkers } from './workers.js';
 import './events.js';
 
@@ -16,7 +15,7 @@ export class MonacoEditorPlugin extends AdiPlugin {
     }
 
     this.bus.emit('route:register', { path: '/editor', element: 'adi-monaco-editor' });
-    this.bus.send('nav:add', { id: 'editor', label: 'Editor', path: '/editor' }).handle(() => {});
+    this.bus.emit('nav:add', { id: 'editor', label: 'Editor', path: '/editor' });
 
     this.bus.emit('command:register', { id: 'editor:open-page', label: 'Go to Editor' });
     this.bus.on('command:execute', ({ id }) => {
@@ -25,15 +24,13 @@ export class MonacoEditorPlugin extends AdiPlugin {
       }
     });
 
-    this.bus.on('editor:open', (payload) => {
-      const { _cid, content, options } = payload as WithCid<typeof payload>;
+    this.bus.on('editor:open', ({ content, options }) => {
       this.bus.emit('router:navigate', { path: '/editor' });
 
       // Defer content setting to allow the component to mount
       requestAnimationFrame(() => {
         this.bus.emit('editor:set-content', { content });
         if (options) this.bus.emit('editor:set-options', { options });
-        this.bus.emit('editor:open:ok', { _cid });
       });
     });
 

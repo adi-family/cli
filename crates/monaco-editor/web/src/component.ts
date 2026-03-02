@@ -71,12 +71,9 @@ export class AdiMonacoEditorElement extends LitElement {
         monaco.editor.setTheme(theme);
       }),
 
-      this.bus.on('editor:get-content', (payload) => {
-        const { _cid } = payload as typeof payload & { _cid: string };
-        this.bus.emit('editor:get-content:ok', {
-          content: this.editor?.getValue() ?? '',
-          _cid,
-        });
+      this.bus.on('editor:get-content', () => {
+        const content = this.editor?.getValue() ?? '';
+        this.bus.emit('editor:changed', { content });
       }),
     );
   }

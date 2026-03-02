@@ -1,7 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import {
-  type EventBus,
   HttpPluginRegistry,
   type RegistryHealth,
 } from '@adi-family/sdk-plugin';
@@ -74,7 +73,7 @@ type Tab =
 export class AppDebugScreen extends LitElement {
   @property({ attribute: false }) routes: RouteEntry[] = [];
   @property({ attribute: false }) navItems: NavItem[] = [];
-  @property({ attribute: false }) commands: Command[] = [];
+  @state() private commands: Command[] = [];
 
   @state() private activeTab: Tab = 'overview';
   @state() private eventLog: EventLogEntry[] = [];
@@ -109,6 +108,7 @@ export class AppDebugScreen extends LitElement {
     error: null,
   };
 
+  private commandsUnsub: (() => void) | null = null;
   private eventUnsub: (() => void) | null = null;
   private loadingUnsub: (() => void) | null = null;
   private signalingUnsubs: Array<() => void> = [];
@@ -131,34 +131,24 @@ export class AppDebugScreen extends LitElement {
     super.connectedCallback();
     void this.#loadEnabledWebIds();
     this.#loadDebugData();
-    if ((window as { sdk?: unknown }).sdk) {
-      this.#subscribeEventLog();
-      this.#subscribeSignaling();
-      this.loadingUnsub = window.sdk.bus.on(
-        'loading-finished',
-        () => this.#loadDebugData(),
-        'debug-screen',
-      );
-    } else {
-      window.addEventListener(
-        'app-ready',
-        () => {
-          this.#loadDebugData();
-          this.#subscribeEventLog();
-          this.#subscribeSignaling();
-          this.loadingUnsub = window.sdk.bus.on(
-            'loading-finished',
-            () => this.#loadDebugData(),
-            'debug-screen',
-          );
-        },
-        { once: true },
-      );
-    }
+    this.#subscribeEventLog();
+    this.#subscribeSignaling();
+    this.commandsUnsub = App.reqInstance.bus.on('command:register', ({ id, label, shortcut }) => {
+      if (!this.commands.find(c => c.id === id)) {
+        this.commands = [...this.commands, { id, label, shortcut }];
+      }
+    }, 'debug-screen');
+    this.loadingUnsub = App.reqInstance.bus.on(
+      'loading-finished',
+      () => this.#loadDebugData(),
+      'debug-screen',
+    );
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.commandsUnsub?.();
+    this.commandsUnsub = null;
     this.eventUnsub?.();
     this.eventUnsub = null;
     this.loadingUnsub?.();
@@ -221,7 +211,7 @@ export class AppDebugScreen extends LitElement {
   }
 
   #subscribeEventLog(): void {
-    const bus = window.sdk.bus as EventBus;
+    const bus = App.reqInstance.bus;
     this.eventUnsub = bus.use({
       before: (event, payload) => this.#pushEvent('before', event, payload),
       after: (event, payload) => this.#pushEvent('after', event, payload),
@@ -238,7 +228,7 @@ export class AppDebugScreen extends LitElement {
   }
 
   #subscribeSignaling(): void {
-    const bus = window.sdk.bus as EventBus;
+    const bus = App.reqInstance.bus;
 
     // Initialize server states from hub
     const hub = this.#signalingHub();
@@ -387,12 +377,6 @@ export class AppDebugScreen extends LitElement {
   }
 
   #connections(): Map<string, { id: string; services: string[] }> {
-    if ((window as { sdk?: unknown }).sdk) {
-      return window.sdk.getConnections() as Map<
-        string,
-        { id: string; services: string[] }
-      >;
-    }
     return new Map();
   }
 

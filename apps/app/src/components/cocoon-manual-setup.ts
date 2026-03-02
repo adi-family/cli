@@ -1,15 +1,15 @@
-import { LitElement, html, nothing } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { App } from "../app/app.ts";
+import { LitElement, html, nothing } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { App } from '../app/app.ts';
 
 type Status =
-  | "idle"
-  | "waiting"
-  | "detected"
-  | "connecting"
-  | "connected"
-  | "error";
-type Mode = "pick" | "local" | "remote";
+  | 'idle'
+  | 'waiting'
+  | 'detected'
+  | 'connecting'
+  | 'connected'
+  | 'error';
+type Mode = 'pick' | 'local' | 'remote';
 
 const LOCAL_PORT = 14730;
 const POLL_MS = 2000;
@@ -19,7 +19,9 @@ const LOCAL_PROXY_PORT = import.meta.env.VITE_LOCAL_PROXY_PORT as
   | undefined;
 const resolveLocalUrl = (url: string): string =>
   LOCAL_PROXY_PORT
-    ? url.replace("://adi.test/", `://127.0.0.1:${LOCAL_PROXY_PORT}/`)
+    ? url
+        .replace('://adi.test/', `://127.0.0.1:${LOCAL_PROXY_PORT}/`)
+        .replace('/api/signaling/', '/')
     : url;
 
 const getSignalingUrl = (): string | null => {
@@ -65,15 +67,15 @@ const svgCheck = html`<svg
   />
 </svg>`;
 
-@customElement("cocoon-manual-setup")
+@customElement('cocoon-manual-setup')
 export class CocoonManualSetup extends LitElement {
   @state() private expanded = false;
-  @state() private mode: Mode = "pick";
-  @state() private status: Status = "idle";
+  @state() private mode: Mode = 'pick';
+  @state() private status: Status = 'idle';
   @state() private copied = false;
-  @state() private errorMsg = "";
-  @state() private machineName = "";
-  @state() private remoteToken = "";
+  @state() private errorMsg = '';
+  @state() private machineName = '';
+  @state() private remoteToken = '';
 
   private pollTimer: number | null = null;
 
@@ -90,19 +92,19 @@ export class CocoonManualSetup extends LitElement {
     this.expanded = !this.expanded;
     if (!this.expanded) {
       this.stopPolling();
-      if (this.status !== "connected") {
-        this.status = "idle";
-        this.mode = "pick";
+      if (this.status !== 'connected') {
+        this.status = 'idle';
+        this.mode = 'pick';
       }
     }
   }
 
-  private pickMode(mode: "local" | "remote") {
+  private pickMode(mode: 'local' | 'remote') {
     this.mode = mode;
-    if (mode === "local") {
-      this.status = "waiting";
+    if (mode === 'local') {
+      this.status = 'waiting';
       this.startPolling();
-    } else if (mode === "remote") {
+    } else if (mode === 'remote') {
       this.fetchRemoteToken();
     }
   }
@@ -113,14 +115,14 @@ export class CocoonManualSetup extends LitElement {
     try {
       this.remoteToken = await manager.requestSetupToken();
     } catch (err) {
-      console.debug("[cocoon-setup] failed to get remote setup token:", err);
+      console.debug('[cocoon-setup] failed to get remote setup token:', err);
     }
   }
 
   private backToPick() {
     this.stopPolling();
-    this.status = "idle";
-    this.mode = "pick";
+    this.status = 'idle';
+    this.mode = 'pick';
   }
 
   // --- Polling ---
@@ -138,56 +140,64 @@ export class CocoonManualSetup extends LitElement {
     }
   }
 
+  private polling = false;
+
   private async poll() {
+    if (this.polling) return;
+    this.polling = true;
     try {
       const res = await fetch(`http://localhost:${LOCAL_PORT}/health`, {
-        method: "GET",
-        mode: "cors",
+        method: 'GET',
+        mode: 'cors',
       });
       if (!res.ok) return;
 
       const data = await res.json().catch(() => ({}));
-      const name = data.name || "Local Machine";
+      const name = data.name || 'Local Machine';
 
       if (data.connected) {
         this.handleConnected(name);
         return;
       }
 
-      this.status = "detected";
+      this.status = 'detected';
       this.machineName = name;
       await this.sendConnect(name);
     } catch {
       // Server not up yet
+    } finally {
+      this.polling = false;
     }
   }
 
   private async sendConnect(name: string) {
-    this.status = "connecting";
+    this.status = 'connecting';
     const signalingUrl = getSignalingUrl();
 
     if (!signalingUrl) {
-      this.status = "error";
-      this.errorMsg = "No signaling server configured";
+      this.status = 'error';
+      this.errorMsg = 'No signaling server configured';
       return;
     }
 
     // Request a setup token from signaling server so the cocoon auto-claims ownership
-    let setupToken = "";
+    let setupToken = '';
     const manager = getFirstServer();
+    console.debug('[cocoon-setup] manager:', manager ? `${manager.url}` : 'null');
     if (manager) {
       try {
         setupToken = await manager.requestSetupToken();
+        console.debug('[cocoon-setup] got setup token:', setupToken ? 'yes' : 'empty');
       } catch (err) {
-        console.debug("[cocoon-setup] failed to get setup token:", err);
+        console.warn('[cocoon-setup] failed to get setup token:', err);
       }
     }
 
     try {
       const res = await fetch(`http://localhost:${LOCAL_PORT}/connect`, {
-        method: "POST",
-        mode: "cors",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token: setupToken,
           signaling_url: resolveLocalUrl(signalingUrl),
@@ -195,34 +205,34 @@ export class CocoonManualSetup extends LitElement {
       });
 
       if (!res.ok) {
-        this.status = "error";
+        this.status = 'error';
         this.errorMsg = `Server responded ${res.status}`;
         return;
       }
 
       const result = await res.json();
       if (
-        result.status === "connecting" ||
-        result.status === "connected" ||
-        result.status === "already_connected"
+        result.status === 'connecting' ||
+        result.status === 'connected' ||
+        result.status === 'already_connected'
       ) {
         this.handleConnected(result.name || name);
       } else {
-        this.status = "error";
-        this.errorMsg = result.error || "Unexpected response";
+        this.status = 'error';
+        this.errorMsg = result.error || 'Unexpected response';
       }
     } catch (err) {
-      this.status = "error";
-      this.errorMsg = err instanceof Error ? err.message : "Connection failed";
+      this.status = 'error';
+      this.errorMsg = err instanceof Error ? err.message : 'Connection failed';
     }
   }
 
   private handleConnected(name: string) {
     this.stopPolling();
     this.machineName = name;
-    this.status = "connected";
+    this.status = 'connected';
     this.dispatchEvent(
-      new CustomEvent("cocoon-connected", {
+      new CustomEvent('cocoon-connected', {
         bubbles: true,
         composed: true,
         detail: { name },
@@ -267,7 +277,7 @@ export class CocoonManualSetup extends LitElement {
             Connect Machine
           </span>
           <span class="flex items-center gap-2">
-            ${this.status === "connected"
+            ${this.status === 'connected'
               ? html`
                   <span class="text-green-400 text-[10px] font-medium"
                     >Connected</span
@@ -277,8 +287,8 @@ export class CocoonManualSetup extends LitElement {
             <svg
               class="w-3.5 h-3.5 text-text-muted transition-transform ${this
                 .expanded
-                ? "rotate-180"
-                : ""}"
+                ? 'rotate-180'
+                : ''}"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -296,11 +306,11 @@ export class CocoonManualSetup extends LitElement {
         ${this.expanded
           ? html`
               <div class="px-4 pb-4 pt-1 border-t border-border space-y-3">
-                ${this.status === "connected"
+                ${this.status === 'connected'
                   ? this.renderConnected()
-                  : this.mode === "pick"
+                  : this.mode === 'pick'
                     ? this.renderPick()
-                    : this.mode === "local"
+                    : this.mode === 'local'
                       ? this.renderLocal()
                       : this.renderRemote()}
               </div>
@@ -316,7 +326,7 @@ export class CocoonManualSetup extends LitElement {
         <button
           type="button"
           class="flex flex-col items-center gap-1.5 px-3 py-3 rounded border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors"
-          @click=${() => this.pickMode("local")}
+          @click=${() => this.pickMode('local')}
         >
           <svg
             class="w-5 h-5 text-text-muted"
@@ -339,7 +349,7 @@ export class CocoonManualSetup extends LitElement {
         <button
           type="button"
           class="flex flex-col items-center gap-1.5 px-3 py-3 rounded border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors"
-          @click=${() => this.pickMode("remote")}
+          @click=${() => this.pickMode('remote')}
         >
           <svg
             class="w-5 h-5 text-text-muted"
@@ -367,13 +377,13 @@ export class CocoonManualSetup extends LitElement {
     return html`
       ${this.renderBackButton()}
       <p class="text-xs text-text-muted">Run this command in your terminal:</p>
-      ${this.renderCommandBox("adi cocoon setup")} ${this.renderStatus()}
+      ${this.renderCommandBox('adi cocoon setup')} ${this.renderStatus()}
     `;
   }
 
   private renderRemote() {
-    const signalingUrl = getSignalingUrl() || "<signaling-url>";
-    const tokenPart = this.remoteToken ? ` --token ${this.remoteToken}` : "";
+    const signalingUrl = getSignalingUrl() || '<signaling-url>';
+    const tokenPart = this.remoteToken ? ` --token ${this.remoteToken}` : '';
     const cmd = `adi cocoon setup --url ${signalingUrl}${tokenPart}`;
     return html`
       ${this.renderBackButton()}
@@ -424,8 +434,8 @@ export class CocoonManualSetup extends LitElement {
           type="button"
           class="flex items-center justify-center w-6 h-6 rounded transition-colors shrink-0 ${this
             .copied
-            ? "text-green-400"
-            : "text-text-muted hover:text-text"}"
+            ? 'text-green-400'
+            : 'text-text-muted hover:text-text'}"
           @click=${() => this.copy(cmd)}
           title="Copy command"
         >
@@ -437,7 +447,7 @@ export class CocoonManualSetup extends LitElement {
 
   private renderStatus() {
     switch (this.status) {
-      case "waiting":
+      case 'waiting':
         return html`
           <div class="flex items-center gap-2 text-xs text-text-muted">
             <span
@@ -446,7 +456,7 @@ export class CocoonManualSetup extends LitElement {
             Waiting for local server on port ${LOCAL_PORT}...
           </div>
         `;
-      case "detected":
+      case 'detected':
         return html`
           <div class="flex items-center gap-2 text-xs text-accent">
             ${svgCheck} Server
@@ -455,7 +465,7 @@ export class CocoonManualSetup extends LitElement {
               : nothing}
           </div>
         `;
-      case "connecting":
+      case 'connecting':
         return html`
           <div class="flex items-center gap-2 text-xs text-accent">
             <span
@@ -464,7 +474,7 @@ export class CocoonManualSetup extends LitElement {
             Connecting...
           </div>
         `;
-      case "error":
+      case 'error':
         return html`
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2 text-xs text-red-400">
@@ -487,7 +497,7 @@ export class CocoonManualSetup extends LitElement {
               type="button"
               class="text-[10px] px-2 py-1 rounded border border-border text-text-muted hover:text-text transition-colors"
               @click=${() => {
-                this.status = "waiting";
+                this.status = 'waiting';
                 this.startPolling();
               }}
             >
@@ -516,7 +526,7 @@ export class CocoonManualSetup extends LitElement {
             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <span class="font-medium">${this.machineName || "Local Machine"}</span>
+        <span class="font-medium">${this.machineName || 'Local Machine'}</span>
         connected
       </div>
     `;
@@ -525,6 +535,6 @@ export class CocoonManualSetup extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "cocoon-manual-setup": CocoonManualSetup;
+    'cocoon-manual-setup': CocoonManualSetup;
   }
 }

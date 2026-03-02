@@ -1,3 +1,4 @@
+import './styles.css';
 import './events.js';
 export { KnowledgebasePlugin, KnowledgebasePlugin as PluginShell } from './plugin.js';
 export { AdiKnowledgebaseElement } from './component.js';

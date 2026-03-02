@@ -666,14 +666,19 @@ impl RegistryStorage {
         })
         .await?;
 
-        // Auto-extract web.js from the archive and publish it
+        // Auto-extract web.js and style.css from the archive and publish them
         let mut plugin_types = plugin_types.to_vec();
-        if let Some(web_js_bytes) = extract_web_js_from_tar_gz(data) {
+        let extracted = extract_web_assets_from_tar_gz(data);
+        if let Some(web_js_bytes) = extracted.web_js {
             tracing::info!("Auto-extracted web.js ({} bytes) from archive for {id}", web_js_bytes.len());
             self.publish_plugin_web_ui(id, version, &web_js_bytes).await?;
             if !plugin_types.iter().any(|t| t == "web") {
                 plugin_types.push("web".to_string());
             }
+        }
+        if let Some(style_css_bytes) = extracted.style_css {
+            tracing::info!("Auto-extracted style.css ({} bytes) from archive for {id}", style_css_bytes.len());
+            self.publish_plugin_style_css(id, version, &style_css_bytes).await?;
         }
 
         let name = name.to_string();
@@ -742,6 +747,28 @@ impl RegistryStorage {
         self.get_plugin_web_ui_path(id, version).exists()
     }
 
+    /// Store the CSS stylesheet for a plugin's web UI.
+    pub async fn publish_plugin_style_css(
+        &self,
+        id: &str,
+        version: &str,
+        data: &[u8],
+    ) -> Result<()> {
+        let version_dir = self.artifact_version_dir(ArtifactKind::Plugin, id, version);
+        fs::create_dir_all(&version_dir).await?;
+
+        let css_path = version_dir.join("style.css");
+        let mut file = fs::File::create(&css_path).await?;
+        file.write_all(data).await?;
+        Ok(())
+    }
+
+    /// Get the filesystem path to a plugin's web UI CSS file.
+    pub fn get_plugin_style_css_path(&self, id: &str, version: &str) -> PathBuf {
+        self.artifact_version_dir(ArtifactKind::Plugin, id, version)
+            .join("style.css")
+    }
+
     /// Build WebUiMeta for a plugin version if web.js exists.
     fn web_ui_meta(&self, id: &str, version: &str) -> Option<WebUiMeta> {
         let js_path = self.get_plugin_web_ui_path(id, version);
@@ -749,9 +776,14 @@ impl RegistryStorage {
             return None;
         }
         let size_bytes = std::fs::metadata(&js_path).map(|m| m.len()).unwrap_or(0);
+        let css_path = self.get_plugin_style_css_path(id, version);
+        let style_url = css_path.exists().then(|| {
+            format!("/v1/plugins/{}/{}/style.css", id, version)
+        });
         Some(WebUiMeta {
             entry_url: format!("/v1/plugins/{}/{}/web.js", id, version),
             size_bytes,
+            style_url,
         })
     }
 
@@ -809,30 +841,53 @@ impl RegistryStorage {
     }
 }
 
-/// Scan a tar.gz archive in memory for a `web.js` entry and return its contents.
-fn extract_web_js_from_tar_gz(data: &[u8]) -> Option<Vec<u8>> {
+struct ExtractedWebAssets {
+    web_js: Option<Vec<u8>>,
+    style_css: Option<Vec<u8>>,
+}
+
+/// Scan a tar.gz archive in memory for `web.js` and `style.css` entries.
+fn extract_web_assets_from_tar_gz(data: &[u8]) -> ExtractedWebAssets {
     use flate2::read::GzDecoder;
     use std::io::Read;
 
+    let mut result = ExtractedWebAssets { web_js: None, style_css: None };
+
     let decoder = GzDecoder::new(data);
     let mut archive = tar::Archive::new(decoder);
-    let entries = archive.entries().ok()?;
+    let entries = match archive.entries() {
+        Ok(e) => e,
+        Err(_) => return result,
+    };
 
     for entry in entries {
-        let mut entry = entry.ok()?;
-        let is_web_js = entry
+        let mut entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let filename = entry
             .path()
             .ok()
-            .and_then(|p| p.file_name().map(|f| f == "web.js"))
-            .unwrap_or(false);
-        if !is_web_js {
-            continue;
+            .and_then(|p| p.file_name().map(|f| f.to_os_string()))
+            .unwrap_or_default();
+
+        if filename == "web.js" && result.web_js.is_none() {
+            let mut buf = Vec::new();
+            if entry.read_to_end(&mut buf).is_ok() {
+                result.web_js = Some(buf);
+            }
+        } else if filename == "style.css" && result.style_css.is_none() {
+            let mut buf = Vec::new();
+            if entry.read_to_end(&mut buf).is_ok() {
+                result.style_css = Some(buf);
+            }
         }
-        let mut buf = Vec::new();
-        entry.read_to_end(&mut buf).ok()?;
-        return Some(buf);
+
+        if result.web_js.is_some() && result.style_css.is_some() {
+            break;
+        }
     }
-    None
+    result
 }
 
 fn now_unix() -> u64 {
@@ -1180,14 +1235,29 @@ mod tests {
             ("plugin.toml", b"[plugin]\nid = \"test\""),
             ("web.js", b"console.log('hello');"),
         ]);
-        let result = extract_web_js_from_tar_gz(&archive);
-        assert_eq!(result.as_deref(), Some(b"console.log('hello');" as &[u8]));
+        let result = extract_web_assets_from_tar_gz(&archive);
+        assert_eq!(result.web_js.as_deref(), Some(b"console.log('hello');" as &[u8]));
+        assert!(result.style_css.is_none());
     }
 
     #[test]
     fn test_extract_web_js_not_found() {
         let archive = make_tar_gz(&[("plugin.toml", b"[plugin]\nid = \"test\"")]);
-        assert!(extract_web_js_from_tar_gz(&archive).is_none());
+        let result = extract_web_assets_from_tar_gz(&archive);
+        assert!(result.web_js.is_none());
+        assert!(result.style_css.is_none());
+    }
+
+    #[test]
+    fn test_extract_web_assets_both() {
+        let archive = make_tar_gz(&[
+            ("plugin.toml", b"[plugin]\nid = \"test\""),
+            ("web.js", b"console.log('hello');"),
+            ("style.css", b".foo { color: red; }"),
+        ]);
+        let result = extract_web_assets_from_tar_gz(&archive);
+        assert_eq!(result.web_js.as_deref(), Some(b"console.log('hello');" as &[u8]));
+        assert_eq!(result.style_css.as_deref(), Some(b".foo { color: red; }" as &[u8]));
     }
 
     #[tokio::test]

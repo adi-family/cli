@@ -18,33 +18,39 @@ export class AdiPaymentElement extends LitElement {
   @state() private loading = false;
   @state() private error: string | null = null;
 
+  private unsubs: Array<() => void> = [];
+
   override createRenderRoot() { return this; }
 
   private get bus() { return window.sdk.bus; }
 
   override connectedCallback() {
     super.connectedCallback();
+    this.unsubs.push(
+      this.bus.on('payment:data-changed', ({ balance, canCharge }) => {
+        this.balance = balance;
+        this.canCharge = canCharge;
+        this.loading = false;
+      }, 'payment-ui'),
+      this.bus.on('payment:transactions-changed', ({ transactions }) => {
+        this.transactions = transactions;
+        this.loading = false;
+      }, 'payment-ui'),
+    );
     this.refresh();
   }
 
-  private async refresh(): Promise<void> {
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    this.unsubs.forEach(fn => fn());
+    this.unsubs = [];
+  }
+
+  private refresh(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const [balanceResult, chargeResult, txResult] = await Promise.allSettled([
-        this.bus.send('payment:balance', {}, 'payment-ui').wait(),
-        this.bus.send('payment:can-charge-more', {}, 'payment-ui').wait(),
-        this.bus.send('payment:transactions', {}, 'payment-ui').wait(),
-      ]);
-
-      if (balanceResult.status === 'fulfilled') this.balance = balanceResult.value.balance;
-      if (chargeResult.status === 'fulfilled') this.canCharge = chargeResult.value.allowed;
-      if (txResult.status === 'fulfilled') this.transactions = txResult.value.transactions;
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Failed to load payment data';
-    } finally {
-      this.loading = false;
-    }
+    this.bus.emit('payment:balance', {}, 'payment-ui');
+    this.bus.emit('payment:transactions', {}, 'payment-ui');
   }
 
   private formatDate(iso: string): string {

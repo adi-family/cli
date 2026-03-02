@@ -28,89 +28,83 @@ export class AdiTasksElement extends LitElement {
   @state() private confirmingDelete = false;
   @state() private error: string | null = null;
 
+  private unsubs: Array<() => void> = [];
+
   override createRenderRoot() { return this; }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.unsubs.push(
+      this.bus.on('tasks:list-changed', ({ tasks, stats }) => {
+        this.tasks = tasks;
+        this.stats = stats;
+        this.loading = false;
+      }, 'tasks-ui'),
+      this.bus.on('tasks:search-changed', ({ tasks }) => {
+        this.tasks = tasks;
+        this.loading = false;
+      }, 'tasks-ui'),
+      this.bus.on('tasks:detail-changed', ({ task }) => {
+        this.selectedTask = task;
+        this.loading = false;
+      }, 'tasks-ui'),
+      this.bus.on('tasks:task-mutated', () => {
+        this.submitting = false;
+        this.loadData();
+      }, 'tasks-ui'),
+      this.bus.on('tasks:task-deleted', ({ task_id, cocoonId }) => {
+        this.tasks = this.tasks.filter(t => !(t.id === task_id && t.cocoonId === cocoonId));
+        this.view = 'list';
+        this.selectedTask = null;
+        this.confirmingDelete = false;
+        this.submitting = false;
+      }, 'tasks-ui'),
+      this.bus.on('tasks:stats-changed', ({ stats }) => {
+        this.stats = stats;
+      }, 'tasks-ui'),
+    );
     this.loadData();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.unsubs.forEach(fn => fn());
+    this.unsubs = [];
   }
 
   private get bus() { return window.sdk.bus; }
 
-  private async loadData(): Promise<void> {
+  private loadData(): void {
     this.loading = true;
     this.error = null;
-    try {
-      if (this.searchQuery.trim()) {
-        this.stats = null;
-        const result = await this.bus.send('tasks:search', { query: this.searchQuery }, 'tasks-ui').wait();
-        this.tasks = result.tasks;
-      } else {
-        const result = await this.bus.send('tasks:list', { status: this.filter }, 'tasks-ui').wait();
-        this.tasks = result.tasks;
-        this.stats = result.stats;
-      }
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Failed to load tasks';
-    } finally {
-      this.loading = false;
+    if (this.searchQuery.trim()) {
+      this.stats = null;
+      this.bus.emit('tasks:search', { query: this.searchQuery }, 'tasks-ui');
+    } else {
+      this.bus.emit('tasks:list', { status: this.filter }, 'tasks-ui');
     }
   }
 
-  private async loadDetail(task: Task): Promise<void> {
+  private loadDetail(task: Task): void {
     this.loading = true;
-    try {
-      const result = await this.bus.send('tasks:get', { task_id: task.id, cocoonId: task.cocoonId }, 'tasks-ui').wait();
-      this.selectedTask = result.task;
-      this.view = 'detail';
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Failed to load task';
-    } finally {
-      this.loading = false;
-    }
+    this.view = 'detail';
+    this.bus.emit('tasks:get', { task_id: task.id, cocoonId: task.cocoonId }, 'tasks-ui');
   }
 
-  private async handleStatusChange(task: Task, status: TaskStatus): Promise<void> {
-    try {
-      const result = await this.bus.send('tasks:update', { task_id: task.id, cocoonId: task.cocoonId, status }, 'tasks-ui').wait();
-      this.tasks = this.tasks.map(t =>
-        t.id === task.id && t.cocoonId === task.cocoonId ? result.task : t
-      );
-      if (this.selectedTask?.task.id === task.id) {
-        this.selectedTask = { ...this.selectedTask, task: result.task };
-      }
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Failed to update task';
-    }
+  private handleStatusChange(task: Task, status: TaskStatus): void {
+    this.bus.emit('tasks:update', { task_id: task.id, cocoonId: task.cocoonId, status }, 'tasks-ui');
   }
 
-  private async handleDelete(task: Task): Promise<void> {
+  private handleDelete(task: Task): void {
     if (!this.confirmingDelete) { this.confirmingDelete = true; return; }
     this.submitting = true;
-    try {
-      await this.bus.send('tasks:delete', { task_id: task.id, cocoonId: task.cocoonId }, 'tasks-ui').wait();
-      this.tasks = this.tasks.filter(t => !(t.id === task.id && t.cocoonId === task.cocoonId));
-      this.view = 'list';
-      this.confirmingDelete = false;
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Failed to delete task';
-      this.confirmingDelete = false;
-    } finally {
-      this.submitting = false;
-    }
+    this.bus.emit('tasks:delete', { task_id: task.id, cocoonId: task.cocoonId }, 'tasks-ui');
   }
 
-  private async handleCreate(data: { title: string; description?: string; cocoonId: string }): Promise<void> {
+  private handleCreate(data: { title: string; description?: string; cocoonId: string }): void {
     this.submitting = true;
-    try {
-      const result = await this.bus.send('tasks:create', data, 'tasks-ui').wait();
-      this.tasks = [...this.tasks, result.task];
-      this.view = 'list';
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Failed to create task';
-    } finally {
-      this.submitting = false;
-    }
+    this.bus.emit('tasks:create', data, 'tasks-ui');
+    this.view = 'list';
   }
 
   private handleFilterChange(status: TaskStatus | undefined): void {

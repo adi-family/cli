@@ -1,3 +1,4 @@
+import './styles.css';
 import './events.js';
 export { TasksPlugin, TasksPlugin as PluginShell } from './plugin.js';
 export { AdiTasksElement } from './component.js';

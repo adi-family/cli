@@ -297,6 +297,28 @@ async fn plugin_web_ui(
         .map_err(internal_error)
 }
 
+async fn plugin_style_css(
+    State(st): State<Arc<AppState>>,
+    Path((id, version)): Path<(String, String)>,
+) -> Result<axum::response::Response, ApiError> {
+    let path = st.storage.get_plugin_style_css_path(&id, &version);
+    if !path.exists() {
+        return Err(not_found("Plugin style.css not found"));
+    }
+
+    let file = File::open(&path).await.map_err(internal_error)?;
+    let stream = ReaderStream::new(file);
+    let body = Body::from_stream(stream);
+
+    axum::response::Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/css")
+        .header(header::CACHE_CONTROL, "public, max-age=31536000, immutable")
+        .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+        .body(body)
+        .map_err(internal_error)
+}
+
 // ---------------------------------------------------------------------------
 // Handlers — packages
 // ---------------------------------------------------------------------------
@@ -521,6 +543,31 @@ async fn publish_plugin_web_ui(
     ))
 }
 
+async fn publish_plugin_style_css(
+    State(st): State<Arc<AppState>>,
+    Path((id, version)): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<(StatusCode, Json<serde_json::Value>), ApiError> {
+    if body.is_empty() {
+        return Err(bad_request("Empty body — expected CSS content"));
+    }
+
+    st.storage
+        .publish_plugin_style_css(&id, &version, &body)
+        .await
+        .map_err(internal_error)?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::json!({
+            "status": "published",
+            "id": id,
+            "version": version,
+            "asset": "style.css",
+        })),
+    ))
+}
+
 // ---------------------------------------------------------------------------
 // Handlers — publisher management
 // ---------------------------------------------------------------------------
@@ -597,6 +644,7 @@ fn build_router(state: Arc<AppState>) -> Router {
         )
         .route("/v1/plugins/:id/versions", get(plugin_versions))
         .route("/v1/plugins/:id/:version/web.js", get(plugin_web_ui))
+        .route("/v1/plugins/:id/:version/style.css", get(plugin_style_css))
         .route("/v1/packages/:id/latest", get(package_latest))
         .route("/v1/packages/:id/:version", get(package_version))
         .route(
@@ -621,6 +669,10 @@ fn build_router(state: Arc<AppState>) -> Router {
         .route(
             "/v1/publish/plugins/:id/:version/web",
             post(publish_plugin_web_ui),
+        )
+        .route(
+            "/v1/publish/plugins/:id/:version/style",
+            post(publish_plugin_style_css),
         )
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),

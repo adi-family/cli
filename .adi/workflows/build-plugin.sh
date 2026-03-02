@@ -306,6 +306,7 @@ build_plugin() {
 
     # Build web UI if present (sibling web/ directory with package.json)
     PLUGIN_WEB_JS=""
+    PLUGIN_STYLE_CSS=""
     local parent_dir
     parent_dir=$(dirname "$PROJECT_ROOT/$crate_dir")
     local web_dir=""
@@ -323,6 +324,10 @@ build_plugin() {
             success "Web UI built: $(du -h "$PLUGIN_WEB_JS" | cut -f1) ($(basename "$PLUGIN_WEB_JS"))"
         else
             warn "Web UI build did not produce dist/web.js, skipping"
+        fi
+        if [[ -f "$web_dir/dist/style.css" ]]; then
+            PLUGIN_STYLE_CSS="$web_dir/dist/style.css"
+            success "Style CSS built: $(du -h "$PLUGIN_STYLE_CSS" | cut -f1) ($(basename "$PLUGIN_STYLE_CSS"))"
         fi
     fi
 }
@@ -361,6 +366,10 @@ install_plugin() {
     if [[ -n "${PLUGIN_WEB_JS:-}" ]] && [[ -f "$PLUGIN_WEB_JS" ]]; then
         cp "$PLUGIN_WEB_JS" "$install_dir/web.js"
         info "Installed web UI: web.js"
+    fi
+    if [[ -n "${PLUGIN_STYLE_CSS:-}" ]] && [[ -f "$PLUGIN_STYLE_CSS" ]]; then
+        cp "$PLUGIN_STYLE_CSS" "$install_dir/style.css"
+        info "Installed style: style.css"
     fi
     
     # Sign binary on macOS
@@ -506,6 +515,10 @@ main() {
         if [[ -n "${PLUGIN_WEB_JS:-}" ]] && [[ -f "$PLUGIN_WEB_JS" ]]; then
             cp "$PLUGIN_WEB_JS" "$pkg_dir/web.js"
             pkg_files+=("web.js")
+        fi
+        if [[ -n "${PLUGIN_STYLE_CSS:-}" ]] && [[ -f "$PLUGIN_STYLE_CSS" ]]; then
+            cp "$PLUGIN_STYLE_CSS" "$pkg_dir/style.css"
+            pkg_files+=("style.css")
         fi
 
         tar -czf "$archive_path" -C "$pkg_dir" "${pkg_files[@]}"

@@ -5,7 +5,6 @@ import { EventBus } from './bus.js';
 declare module './types.js' {
   interface EventRegistry {
     'test:ping': { value: number };
-    'test:ping:ok': { echo: number; _cid: string };
   }
 }
 
@@ -108,66 +107,6 @@ describe('EventBus — once', () => {
     bus.emit('test:ping', { value: 20 }, 'test');
     expect(handler2).toHaveBeenCalledTimes(1);
     expect(handler2).toHaveBeenCalledWith({ value: 20 });
-  });
-});
-
-describe('EventBus — send', () => {
-  it('resolves when :ok emitted with matching _cid', async () => {
-    const bus = EventBus.init();
-    bus.on('test:ping', (payload) => {
-      const p = payload as { value: number; _cid: string };
-      bus.emit('test:ping:ok', { echo: p.value, _cid: p._cid }, 'responder');
-    }, 'responder');
-    const result = await bus.send('test:ping', { value: 7 }, 'test').wait();
-    expect(result.echo).toBe(7);
-  });
-
-  it('ignores :ok replies with wrong _cid', async () => {
-    const bus = EventBus.init();
-    bus.on('test:ping', (payload) => {
-      const p = payload as { value: number; _cid: string };
-      bus.emit('test:ping:ok', { echo: 0, _cid: 'wrong' }, 'responder');
-      bus.emit('test:ping:ok', { echo: p.value, _cid: p._cid }, 'responder');
-    }, 'responder');
-    const result = await bus.send('test:ping', { value: 3 }, 'test').wait();
-    expect(result.echo).toBe(3);
-  });
-
-  it('send rejects with timeout error when no reply arrives', async () => {
-    const bus = EventBus.init({ sendTimeout: 50 });
-    await expect(bus.send('test:ping', { value: 1 }, 'test').wait()).rejects.toThrow('timed out');
-  });
-
-  it('handle() calls callback when :ok arrives with matching _cid', async () => {
-    const bus = EventBus.init();
-    bus.on('test:ping', (payload) => {
-      const p = payload as { value: number; _cid: string };
-      bus.emit('test:ping:ok', { echo: p.value, _cid: p._cid }, 'responder');
-    }, 'responder');
-    await new Promise<void>((resolve) => {
-      bus.send('test:ping', { value: 42 }, 'test').handle(({ echo }) => {
-        expect(echo).toBe(42);
-        resolve();
-      });
-    });
-  });
-
-  it('handle() ignores :ok replies with wrong _cid', async () => {
-    const bus = EventBus.init();
-    let callCount = 0;
-    bus.on('test:ping', (payload) => {
-      const p = payload as { value: number; _cid: string };
-      bus.emit('test:ping:ok', { echo: 0, _cid: 'wrong' }, 'responder');
-      bus.emit('test:ping:ok', { echo: p.value, _cid: p._cid }, 'responder');
-    }, 'responder');
-    await new Promise<void>((resolve) => {
-      bus.send('test:ping', { value: 5 }, 'test').handle(({ echo }) => {
-        callCount++;
-        expect(echo).toBe(5);
-        resolve();
-      });
-    });
-    expect(callCount).toBe(1);
   });
 });
 

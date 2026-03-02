@@ -226,10 +226,7 @@ declare module '@adi-family/sdk-plugin' {
     'signaling:auth-error': { url: string; reason: string; authKind?: string; authDomain?: string };
     'signaling:connection-info': { url: string; connectionInfo: ConnectionInfo };
     'signaling:auth-anonymous': { signalingUrl: string; authDomain: string };
-    'connection:added': { id: string; services: string[] };
+    'connection:added': { id: string; services: string[]; connection: unknown };
     'connection:removed': { id: string };
-
-    'auth:get-token': { authDomain: string; sourceUrl?: string };
-    'auth:get-token:ok': { token: string | null };
   }
 }

@@ -1,0 +1,6 @@
+/* Plugin CSS base — ADI theme tokens + Tailwind mapping + AX system */
+/* Import after `@import "tailwindcss"` in your plugin's styles.css */
+
+@import "../theme/generated/adi-theme.css";
+@import "./tailwind.css";
+@import "./ax.css";

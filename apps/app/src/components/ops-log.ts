@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import type { EventBus, EventMeta } from '@adi-family/sdk-plugin';
+import type { EventMeta } from '@adi-family/sdk-plugin';
+import { App } from '../app/app.ts';
 
 type Phase = 'before' | 'after' | 'both' | 'ignored';
 
@@ -44,11 +45,7 @@ export class AppOpsLog extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     window.addEventListener('keydown', this.#onKeyDown, true);
-    if ((window as { sdk?: unknown }).sdk) {
-      this.#subscribe();
-    } else {
-      window.addEventListener('app-ready', () => this.#subscribe(), { once: true });
-    }
+    this.#subscribe();
   }
 
   override disconnectedCallback(): void {
@@ -59,7 +56,7 @@ export class AppOpsLog extends LitElement {
   }
 
   #subscribe(): void {
-    const bus = window.sdk.bus as EventBus;
+    const bus = App.reqInstance.bus;
     this.unsub = bus.use({
       before:  (event, payload, meta) => this.#push('before', event, payload, meta),
       after:   (event, payload, meta) => this.#push('after', event, payload, meta),
@@ -187,7 +184,7 @@ export class AppOpsLog extends LitElement {
         <button
           type="button"
           class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface border border-border shadow-lg text-sm text-text-muted hover:text-text hover:bg-surface-alt transition-colors cursor-pointer"
-          @click=${() => { window.sdk?.bus.emit('router:navigate', { path: '/debug' }, 'ops-log'); }}
+          @click=${() => { App.reqInstance.bus.emit('router:navigate', { path: '/debug' }, 'ops-log'); }}
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>

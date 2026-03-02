@@ -1,21 +1,8 @@
 export interface EventRegistry {}
 
-export type ReplyableEvent = {
-  [K in keyof EventRegistry & string]: `${K}:ok` extends keyof EventRegistry
-    ? K
-    : never;
-}[keyof EventRegistry & string];
-
 export type EventHandler<K extends keyof EventRegistry> = (
   payload: EventRegistry[K]
 ) => void;
-
-export type WithCid<T> = T & { _cid: string };
-
-export interface SendHandle<T> {
-  wait(): Promise<T>;
-  handle(cb: (reply: T) => void): () => void;
-}
 
 export interface EventMeta {
   producer: string;

@@ -385,6 +385,7 @@ build_plugin() {
         web_dir="$PROJECT_ROOT/$crate_dir/web"
     fi
     PLUGIN_WEB_JS=""
+    PLUGIN_STYLE_CSS=""
     if [[ -n "$web_dir" ]]; then
         info "Building web UI from $web_dir..."
         ensure_command "npm" "Install Node.js: https://nodejs.org"
@@ -394,6 +395,10 @@ build_plugin() {
             success "Web UI built: $(du -h "$PLUGIN_WEB_JS" | cut -f1) ($(basename "$PLUGIN_WEB_JS"))"
         else
             warn "Web UI build did not produce dist/web.js, skipping"
+        fi
+        if [[ -f "$web_dir/dist/style.css" ]]; then
+            PLUGIN_STYLE_CSS="$web_dir/dist/style.css"
+            success "Style CSS built: $(du -h "$PLUGIN_STYLE_CSS" | cut -f1) ($(basename "$PLUGIN_STYLE_CSS"))"
         fi
     fi
 
@@ -407,6 +412,10 @@ build_plugin() {
     if [[ -n "$PLUGIN_WEB_JS" ]]; then
         cp "$PLUGIN_WEB_JS" "$pkg_dir/web.js"
         pkg_files+=("web.js")
+    fi
+    if [[ -n "$PLUGIN_STYLE_CSS" ]]; then
+        cp "$PLUGIN_STYLE_CSS" "$pkg_dir/style.css"
+        pkg_files+=("style.css")
     fi
 
     local archive_name="${PLUGIN_ID}-v${PLUGIN_VERSION}-${PLUGIN_PLATFORM}.tar.gz"
@@ -458,6 +467,23 @@ publish_plugin() {
         echo "$body" | jq '.' 2>/dev/null || echo "$body"
     else
         error "Failed to publish (HTTP $http_code): $body"
+    fi
+
+    # Upload style.css separately if present (complements tar.gz auto-extraction)
+    if [[ -n "${PLUGIN_STYLE_CSS:-}" ]] && [[ -f "$PLUGIN_STYLE_CSS" ]]; then
+        info "Uploading style.css..."
+        local css_url="$registry/v1/publish/plugins/$plugin_id/$version/style"
+        local css_response
+        css_response=$(curl -s -w "\n%{http_code}" --max-time 60 -X POST "$css_url" \
+            -H "Content-Type: text/css" \
+            --data-binary "@$PLUGIN_STYLE_CSS")
+        local css_http_code
+        css_http_code=$(echo "$css_response" | tail -n 1)
+        if [ "$css_http_code" = "200" ] || [ "$css_http_code" = "201" ]; then
+            success "Uploaded style.css"
+        else
+            warn "Failed to upload style.css (HTTP $css_http_code) — server may not support it yet"
+        fi
     fi
 }
 

@@ -1,6 +1,6 @@
 import { LitElement, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import type { EventBus } from '@adi-family/sdk-plugin';
+import { App } from '../app/app.ts';
 import type { WsState } from '../app/signaling-types.ts';
 
 const dotColor: Record<WsState, string> = {
@@ -28,11 +28,7 @@ export class SignalingStatus extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if ((window as { sdk?: unknown }).sdk) {
-      this.#subscribe();
-    } else {
-      window.addEventListener('app-ready', () => this.#subscribe(), { once: true });
-    }
+    this.#subscribe();
   }
 
   override disconnectedCallback(): void {
@@ -42,7 +38,7 @@ export class SignalingStatus extends LitElement {
   }
 
   #subscribe(): void {
-    const bus = window.sdk.bus as EventBus;
+    const bus = App.reqInstance.bus;
     this.unsub = bus.on('signaling:state', ({ url, state }) => {
       if (url === this.url) this.wsState = state;
     }, 'signaling-status');

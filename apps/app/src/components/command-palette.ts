@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import type { EventBus } from '@adi-family/sdk-plugin';
+import { App } from '../app/app.ts';
 
 interface Command {
   id: string;
@@ -20,11 +20,7 @@ export class AppCommandPalette extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     window.addEventListener('keydown', this.#onGlobalKeyDown);
-    if ((window as { sdk?: unknown }).sdk) {
-      this.#subscribe();
-    } else {
-      window.addEventListener('app-ready', () => this.#subscribe(), { once: true });
-    }
+    this.#subscribe();
   }
 
   override disconnectedCallback(): void {
@@ -42,7 +38,7 @@ export class AppCommandPalette extends LitElement {
   }
 
   #subscribe(): void {
-    const bus = window.sdk.bus as EventBus;
+    const bus = App.reqInstance.bus;
 
     bus.on('command:register', ({ id, label, shortcut }) => {
       if (!this.commands.find(c => c.id === id)) {
@@ -102,9 +98,7 @@ export class AppCommandPalette extends LitElement {
 
   #execute(cmd: Command): void {
     this.open = false;
-    if ((window as { sdk?: unknown }).sdk) {
-      window.sdk.bus.emit('command:execute', { id: cmd.id }, 'command-palette');
-    }
+    App.reqInstance.bus.emit('command:execute', { id: cmd.id }, 'command-palette');
   }
 
   override render() {

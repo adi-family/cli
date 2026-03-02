@@ -48,6 +48,7 @@ export class SignalingServer {
   private readonly deviceToSession = new Map<string, string>();
   private readonly unsubscribers: (() => void)[] = [];
   private authenticatedUserId: string | null = null;
+  private authenticating = false;
   private lastAuthOptions: string[] = [];
   private disposed = false;
   private state: WsState = 'disconnected';
@@ -73,6 +74,7 @@ export class SignalingServer {
         bus.emit('signaling:state', { url, state }, SOURCE);
         if (state === 'disconnected') {
           this.authenticatedUserId = null;
+          this.authenticating = false;
         }
       },
       onMessage: (msg) => void this.handleWsMessage(msg),
@@ -115,7 +117,7 @@ export class SignalingServer {
       bus.on(
         'auth:state-changed',
         ({ user }) => {
-          if (user && !this.authenticatedUserId) {
+          if (user && !this.authenticatedUserId && !this.authenticating) {
             this.ws.disconnect();
             this.ws.connect();
           }
@@ -344,6 +346,7 @@ export class SignalingServer {
         break;
 
       case 'authenticated':
+        this.authenticating = false;
         this.authenticatedUserId = msg.user_id;
         this.bus.emit('signaling:auth-ok', { url: this.url }, SOURCE);
         this.bus.emit(
@@ -454,6 +457,7 @@ export class SignalingServer {
         break;
 
       case 'access_denied':
+        this.authenticating = false;
         this.bus.emit(
           'signaling:auth-error',
           {
@@ -464,6 +468,10 @@ export class SignalingServer {
           },
           SOURCE,
         );
+        if (this.pendingSetupToken) {
+          this.pendingSetupToken.reject(new Error(msg.reason));
+          this.pendingSetupToken = null;
+        }
         if (this.authenticatedUserId) {
           this.authenticatedUserId = null;
         }
@@ -514,33 +522,39 @@ export class SignalingServer {
     authOptions: string[],
   ): Promise<void> {
     this.lastAuthOptions = authOptions;
+    this.authenticating = true;
 
-    const { token } = await this.bus
-      .send('auth:get-token', { authDomain, sourceUrl: this.url }, SOURCE)
-      .wait();
+    this.bus.once(
+      'auth:token-resolved',
+      ({ token }) => {
+        if (token) {
+          this.ws.send({ type: 'authenticate', access_token: token });
+          return;
+        }
 
-    if (token) {
-      this.ws.send({ type: 'authenticate', access_token: token });
-      return;
-    }
-
-    this.bus.emit(
-      'actions:push',
-      {
-        id: `auth-required:${this.url}`,
-        plugin: authKind,
-        kind: 'auth-required',
-        data: {
-          url: this.url,
-          authKind,
-          authDomain,
-          authRequirement,
-          authOptions,
-        },
-        priority: 'urgent',
+        this.authenticating = false;
+        this.bus.emit(
+          'actions:push',
+          {
+            id: `auth-required:${this.url}`,
+            plugin: authKind,
+            kind: 'auth-required',
+            data: {
+              url: this.url,
+              authKind,
+              authDomain,
+              authRequirement,
+              authOptions,
+            },
+            priority: 'urgent',
+          },
+          SOURCE,
+        );
       },
       SOURCE,
     );
+
+    this.bus.emit('auth:get-token', { authDomain, sourceUrl: this.url }, SOURCE);
   }
 
   @trace('handling anonymous auth')
@@ -569,6 +583,7 @@ export class SignalingServer {
         SOURCE,
       );
 
+      this.authenticating = true;
       this.ws.send({ type: 'authenticate', access_token: token });
     } catch (err) {
       this.log.warn({
@@ -655,7 +670,7 @@ export class SignalingServer {
         this.connections.set(entry.deviceId, conn);
         this.bus.emit(
           'connection:added',
-          { id: entry.deviceId, services: serviceNames },
+          { id: entry.deviceId, services: serviceNames, connection: conn },
           SOURCE,
         );
       })
@@ -694,6 +709,8 @@ declare module '@adi-family/sdk-plugin' {
       authUrl: string;
     };
     'auth:state-changed': { user: unknown };
+    'auth:get-token': { authDomain: string; sourceUrl?: string };
+    'auth:token-resolved': { authDomain: string; token: string | null };
     'actions:push': {
       id: string;
       plugin: string;

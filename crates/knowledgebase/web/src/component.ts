@@ -1,18 +1,10 @@
 import { LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
 import type { Node, Edge, SearchResult, NodeType, Connection } from './types.js';
+import { getBus, connections } from './context.js';
 import { renderNodeList } from './views/node-list.js';
 import { renderNodeDetail } from './views/node-detail.js';
 import { renderNodeForm } from './views/node-form.js';
-
-declare global {
-  interface Window {
-    sdk: {
-      bus: import('@adi-family/sdk-plugin').EventBus;
-      getConnections(): Map<string, Connection>;
-    };
-  }
-}
 
 type View = 'list' | 'detail' | 'add';
 
@@ -28,25 +20,48 @@ export class AdiKnowledgebaseElement extends LitElement {
   @state() private confirmingDelete = false;
   @state() private error: string | null = null;
 
+  private unsubs: Array<() => void> = [];
+
   override createRenderRoot() { return this; }
 
-  private get bus() { return window.sdk.bus; }
+  private get bus() { return getBus(); }
 
-  private async doSearch(): Promise<void> {
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.unsubs.push(
+      this.bus.on('kb:results-changed', ({ results }) => {
+        this.results = results;
+        this.loading = false;
+      }, 'kb-ui'),
+      this.bus.on('kb:node-changed', ({ node, edges }) => {
+        this.selectedNode = node;
+        this.selectedEdges = edges;
+        this.submitting = false;
+      }, 'kb-ui'),
+      this.bus.on('kb:node-deleted', ({ id }) => {
+        this.results = this.results.filter(sr => sr.node.id !== id);
+        this.view = 'list';
+        this.selectedNode = null;
+        this.confirmingDelete = false;
+        this.submitting = false;
+      }, 'kb-ui'),
+    );
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.unsubs.forEach(fn => fn());
+    this.unsubs = [];
+  }
+
+  private doSearch(): void {
     if (!this.searchQuery.trim()) {
       this.results = [];
       return;
     }
     this.loading = true;
     this.error = null;
-    try {
-      const result = await this.bus.send('kb:query', { q: this.searchQuery }, 'kb-ui').wait();
-      this.results = result.results;
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Search failed';
-    } finally {
-      this.loading = false;
-    }
+    this.bus.emit('kb:query', { q: this.searchQuery }, 'kb-ui');
   }
 
   private handleSearch(query: string): void {
@@ -61,54 +76,30 @@ export class AdiKnowledgebaseElement extends LitElement {
     this.confirmingDelete = false;
   }
 
-  private async handleApprove(): Promise<void> {
+  private handleApprove(): void {
     if (!this.selectedNode) return;
     this.submitting = true;
-    try {
-      await this.bus.send('kb:approve', { id: this.selectedNode.id, cocoonId: this.selectedNode.cocoonId }, 'kb-ui').wait();
-      this.selectedNode = { ...this.selectedNode, confidence: { 0: 1.0 } };
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Approve failed';
-    } finally {
-      this.submitting = false;
-    }
+    this.bus.emit('kb:approve', { id: this.selectedNode.id, cocoonId: this.selectedNode.cocoonId }, 'kb-ui');
   }
 
-  private async handleDelete(): Promise<void> {
+  private handleDelete(): void {
     if (!this.selectedNode) return;
     if (!this.confirmingDelete) { this.confirmingDelete = true; return; }
     this.submitting = true;
-    try {
-      await this.bus.send('kb:delete', { id: this.selectedNode.id, cocoonId: this.selectedNode.cocoonId }, 'kb-ui').wait();
-      this.results = this.results.filter(sr => sr.node.id !== this.selectedNode!.id);
-      this.view = 'list';
-      this.selectedNode = null;
-      this.confirmingDelete = false;
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Delete failed';
-      this.confirmingDelete = false;
-    } finally {
-      this.submitting = false;
-    }
+    this.bus.emit('kb:delete', { id: this.selectedNode.id, cocoonId: this.selectedNode.cocoonId }, 'kb-ui');
   }
 
-  private async handleCreate(data: { user_said: string; derived_knowledge: string; node_type?: string; cocoonId: string }): Promise<void> {
+  private handleCreate(data: { user_said: string; derived_knowledge: string; node_type?: string; cocoonId: string }): void {
     this.submitting = true;
-    try {
-      await this.bus.send('kb:add', data, 'kb-ui').wait();
-      this.view = 'list';
-      if (this.searchQuery.trim()) {
-        this.doSearch();
-      }
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Failed to add knowledge';
-    } finally {
-      this.submitting = false;
+    this.bus.emit('kb:add', data, 'kb-ui');
+    this.view = 'list';
+    if (this.searchQuery.trim()) {
+      this.doSearch();
     }
   }
 
   override render() {
-    const connections: Connection[] = [...window.sdk.getConnections().values()];
+    const allConnections: Connection[] = [...connections.values()];
 
     if (this.view === 'detail' && this.selectedNode) {
       return renderNodeDetail({
@@ -125,7 +116,7 @@ export class AdiKnowledgebaseElement extends LitElement {
 
     if (this.view === 'add') {
       return renderNodeForm({
-        connections,
+        connections: allConnections,
         submitting: this.submitting,
         onBack: () => { this.view = 'list'; },
         onCreate: (data) => this.handleCreate(data),
