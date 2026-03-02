@@ -11,7 +11,8 @@ type = "select"
 prompt = "What to patch?"
 options = [
     "cli - Rebuild and replace adi binary (with codesign)",
-    "plugin - Rebuild and reinstall a plugin locally"
+    "plugin - Rebuild and reinstall a plugin locally",
+    "plugin-related - Rebuild plugin and all related plugins"
 ]
 default = "cli - Rebuild and replace adi binary (with codesign)"
 
@@ -40,6 +41,9 @@ case "$TARGET" in
         ;;
     plugin)
         python3 "$WORKFLOWS_DIR/_core/patch.py" plugin "$PLUGIN"
+        ;;
+    plugin-related)
+        python3 "$WORKFLOWS_DIR/_core/patch.py" plugin-related "$PLUGIN"
         ;;
 esac
 '''
