@@ -52,6 +52,11 @@ members = [
     "crates/auth/cli",
     "crates/auth/plugin",
 
+    # Mux components
+    "crates/mux/core",
+    "crates/mux/http",
+    "crates/mux/plugin",
+
     # Knowledgebase components
     "crates/knowledgebase/core",
     "crates/knowledgebase/cli",
@@ -268,6 +273,8 @@ tasks-core = { path = "crates/tasks/core" }
 knowledgebase-core = { path = "crates/knowledgebase/core" }
 agent-loop-core = { path = "crates/agent-loop/core" }
 auth-core = { path = "crates/auth/core" }
+mux-core = { path = "crates/mux/core" }
+mux-http = { path = "crates/mux/http" }
 flags-core = { path = "crates/flags/core" }
 linter-core = { path = "crates/linter/core" }
 llm-proxy-core = { path = "crates/llm-proxy/core" }

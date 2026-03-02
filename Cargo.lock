@@ -7794,6 +7794,48 @@ dependencies = [
 ]
 
 [[package]]
+name = "mux-core"
+version = "0.8.4"
+dependencies = [
+ "bytes",
+ "dirs 6.0.0",
+ "futures",
+ "http 1.4.0",
+ "lib-env-parse",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "toml 0.8.23",
+ "tracing",
+]
+
+[[package]]
+name = "mux-http"
+version = "0.8.4"
+dependencies = [
+ "anyhow",
+ "axum 0.7.9",
+ "bytes",
+ "lib-http-common",
+ "mux-core",
+ "serde_json",
+ "tokio",
+ "tower-http 0.5.2",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "mux-plugin"
+version = "0.8.4"
+dependencies = [
+ "lib-plugin-prelude",
+ "mux-http",
+]
+
+[[package]]
 name = "naga"
 version = "0.19.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

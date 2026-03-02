@@ -1,0 +1,21 @@
+[package]
+name = "mux-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Core library for ADI Mux - HTTP request fan-out multiplexer"
+
+[dependencies]
+thiserror.workspace = true
+tokio.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+toml.workspace = true
+futures.workspace = true
+reqwest = { workspace = true, features = ["json", "native-tls-vendored"] }
+dirs.workspace = true
+tracing.workspace = true
+lib-env-parse = { path = "../../lib/lib-env-parse" }
+bytes = "1"
+http = { workspace = true }
