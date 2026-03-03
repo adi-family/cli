@@ -5,7 +5,7 @@
 use async_trait::async_trait;
 
 use crate::error::{AgentError, Result};
-use crate::llm::{LlmConfig, LlmProvider, LlmResponse, TokenUsage};
+use crate::llm::{LlmConfig, LlmProvider, LlmResponse};
 use crate::tool::ToolSchema;
 use crate::types::Message;
 

@@ -738,7 +738,7 @@ impl PythonBlockExtractor {
             .map(|c| self.node_text(&c, source))
             .unwrap_or_default();
 
-        let mut uses = condition
+        let uses = condition
             .map(|c| self.extract_used_identifiers(&c, source, scope))
             .unwrap_or_default();
         let mut children = Vec::new();

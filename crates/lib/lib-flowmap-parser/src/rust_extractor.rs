@@ -1629,7 +1629,7 @@ impl RustBlockExtractor {
         source: &str,
         file_path: &str,
         output: &mut FlowMapOutput,
-        scope: &mut Scope,
+        _scope: &mut Scope,
     ) -> Option<BlockId> {
         let mut closure_scope = Scope::new();
         let params = self.extract_closure_parameters(node, source, &mut closure_scope);
