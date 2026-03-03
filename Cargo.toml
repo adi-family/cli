@@ -46,6 +46,7 @@ members = [
 
     # Auth components
     "crates/auth/core",
+    "crates/auth/http",
     "crates/auth/plugin",
 
     # Mux components
@@ -117,6 +118,7 @@ members = [
 
     # Platform components
     "crates/platform/core",
+    "crates/platform/http",
     "crates/platform/plugin",
 
     # Tools
@@ -227,6 +229,7 @@ members = [
 
     # Credentials
     "crates/credentials/core",
+    "crates/credentials/http",
     "crates/credentials/plugin",
 
     # Shortcuts

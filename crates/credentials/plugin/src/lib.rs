@@ -56,7 +56,16 @@ impl CliCommands for CredentialsPlugin {
 
         match subcommand {
             "start" => {
-                Ok(CliResult::error("HTTP server has been removed. Use the credentials core API directly."))
+                let port: u16 = ctx
+                    .option::<u16>("port")
+                    .or_else(|| ctx.option::<String>("port").and_then(|s| s.parse().ok()))
+                    .or_else(|| ctx.args.first().and_then(|s| s.parse().ok()))
+                    .unwrap_or(8033);
+
+                if let Err(e) = credentials_http::run_server(port) {
+                    return Ok(CliResult::error(format!("Credentials server failed: {e}")));
+                }
+                Ok(CliResult::success("Credentials server stopped"))
             }
             _ => Ok(CliResult::error(format!(
                 "Unknown command: {subcommand}\nUsage: adi run adi.credentials start [--port PORT]"
