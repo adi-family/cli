@@ -1,5 +1,4 @@
 use lib_plugin_prelude::*;
-use std::path::PathBuf;
 
 #[derive(CliArgs)]
 pub struct StartArgs {
@@ -70,11 +69,8 @@ impl MuxPlugin {
     }
 
     #[command(name = "start", description = "cmd-start-help")]
-    async fn start(&self, args: StartArgs) -> CmdResult {
-        let config = args.config.map(PathBuf::from);
-        mux_http::run_server(args.port, config)
-            .map_err(|e| format!("Mux server failed: {e}"))?;
-        Ok("Mux server stopped".to_string())
+    async fn start(&self, _args: StartArgs) -> CmdResult {
+        Err("HTTP server has been removed. Use the mux core API directly.".to_string())
     }
 }
 

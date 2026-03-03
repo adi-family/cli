@@ -29,7 +29,6 @@ members = [
     # Indexer components (flat submodules)
     "crates/lib/lib-embed",
     "crates/indexer/core",
-    "crates/indexer/http",
 
     # Tasks components
     "crates/tasks/core",
@@ -47,12 +46,10 @@ members = [
 
     # Auth components
     "crates/auth/core",
-    "crates/auth/http",
     "crates/auth/plugin",
 
     # Mux components
     "crates/mux/core",
-    "crates/mux/http",
     "crates/mux/plugin",
 
     # Knowledgebase components
@@ -120,7 +117,6 @@ members = [
 
     # Platform components
     "crates/platform/core",
-    "crates/platform/http",
     "crates/platform/plugin",
 
     # Tools
@@ -216,19 +212,13 @@ members = [
 
     # Executor
     "crates/executor/core",
-    "crates/executor/http",
 
     # Video
     "crates/video/core",
-    "crates/video/http",
     "crates/video/plugin",
 
     # Plugin Registry
     "crates/registry/core",
-
-    # Balance
-    "crates/balance/core",
-    "crates/balance/plugin",
 
     # Payment
     "crates/payment/core",
@@ -237,7 +227,6 @@ members = [
 
     # Credentials
     "crates/credentials/core",
-    "crates/credentials/http",
     "crates/credentials/plugin",
 
     # Shortcuts
@@ -268,14 +257,12 @@ knowledgebase-core = { path = "crates/knowledgebase/core" }
 agent-loop-core = { path = "crates/agent-loop/core" }
 auth-core = { path = "crates/auth/core" }
 mux-core = { path = "crates/mux/core" }
-mux-http = { path = "crates/mux/http" }
 flags-core = { path = "crates/flags/core" }
 linter-core = { path = "crates/linter/core" }
 llm-proxy-core = { path = "crates/llm-proxy/core" }
 hive-core = { path = "crates/hive/core" }
 platform-core = { path = "crates/platform/core" }
 tools-core = { path = "crates/tools/core" }
-balance-core = { path = "crates/balance/core" }
 payment-core = { path = "crates/payment/core" }
 credentials-core = { path = "crates/credentials/core" }
 executor-core = { path = "crates/executor/core" }
