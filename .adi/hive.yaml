@@ -187,7 +187,7 @@ services:
     hooks:
       pre-up:
         - type: script
-          run: .adi/workflows/patch.sh plugin adi.signaling
+          run: python3 .adi/workflows/_core/patch.py plugin adi.signaling
     runner:
       type: script
       script:
@@ -224,7 +224,7 @@ services:
     hooks:
       pre-up:
         - type: script
-          run: .adi/workflows/patch.sh plugin adi.auth
+          run: python3 .adi/workflows/_core/patch.py plugin adi.auth
         - type: script
           run: cargo run -p auth-cli --release -- run
     runner:
@@ -267,7 +267,7 @@ services:
     hooks:
       pre-up:
         - type: script
-          run: .adi/workflows/patch.sh plugin adi.platform
+          run: python3 .adi/workflows/_core/patch.py plugin adi.platform
     runner:
       type: script
       script:
@@ -358,7 +358,7 @@ services:
     hooks:
       pre-up:
         - type: script
-          run: .adi/workflows/patch.sh plugin adi.analytics
+          run: python3 .adi/workflows/_core/patch.py plugin adi.analytics
     runner:
       type: script
       script:
@@ -394,7 +394,7 @@ services:
     hooks:
       pre-up:
         - type: script
-          run: .adi/workflows/patch.sh plugin adi.analytics
+          run: python3 .adi/workflows/_core/patch.py plugin adi.analytics
     runner:
       type: script
       script:
@@ -429,7 +429,7 @@ services:
     hooks:
       pre-up:
         - type: script
-          run: .adi/workflows/patch.sh plugin adi.balance
+          run: python3 .adi/workflows/_core/patch.py plugin adi.balance
     runner:
       type: script
       script:
@@ -463,7 +463,7 @@ services:
     hooks:
       pre-up:
         - type: script
-          run: .adi/workflows/patch.sh plugin adi.credentials
+          run: python3 .adi/workflows/_core/patch.py plugin adi.credentials
     runner:
       type: script
       script:
@@ -498,7 +498,7 @@ services:
     hooks:
       pre-up:
         - type: script
-          run: .adi/workflows/patch.sh plugin adi.cocoon-spawner
+          run: python3 .adi/workflows/_core/patch.py plugin adi.cocoon-spawner
     runner:
       type: script
       script:
@@ -518,7 +518,7 @@ services:
     hooks:
       pre-up:
         - type: script
-          run: .adi/workflows/patch.sh plugin adi.registry
+          run: python3 .adi/workflows/_core/patch.py plugin adi.registry
     runner:
       type: script
       script:

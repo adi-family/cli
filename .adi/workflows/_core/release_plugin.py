@@ -428,29 +428,75 @@ def publish_plugin(build: PluginBuild, registry: str):
             warn(f"Failed to upload style.css (HTTP {css_code}) — server may not support it yet")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Release a single plugin to the ADI plugin registry.")
-    parser.add_argument("plugin_name", help="Plugin name/ID to release")
-    parser.add_argument("--no-push", action="store_true", help="Build only, skip publishing")
-    parser.add_argument("--local", action="store_true", help="Push to local registry")
-    parser.add_argument("--bump", default="", choices=["", "patch", "minor", "major"], help="Version bump type")
-    args = parser.parse_args()
+def find_related_plugins(plugin_id: str) -> list[str]:
+    """Find all plugin IDs that share the same crate family directory."""
+    crates_dir = PROJECT_ROOT / "crates"
+    target_crate_dir: Path | None = None
 
-    registry = REGISTRY_URL
-    if args.local:
-        registry = "http://adi.test/registry"
+    for cargo_toml in crates_dir.rglob("Cargo.toml"):
+        try:
+            text = cargo_toml.read_text()
+            if "package.metadata.plugin" not in text:
+                continue
+            in_section = False
+            for line in text.splitlines():
+                if "package.metadata.plugin" in line:
+                    in_section = True
+                    continue
+                if in_section and line.startswith("["):
+                    break
+                if in_section and line.startswith("id = "):
+                    if line.split('"')[1] == plugin_id:
+                        target_crate_dir = cargo_toml.parent
+                        break
+        except (IndexError, OSError):
+            continue
 
-    # Find crate directory
-    crate_dir = get_plugin_crate(args.plugin_name)
+    if not target_crate_dir:
+        return []
+
+    # Walk up to the top-level crate family (first dir inside crates/)
+    family_dir = target_crate_dir
+    while family_dir.parent != crates_dir and family_dir.parent != family_dir:
+        family_dir = family_dir.parent
+
+    # Find all plugins under the family directory
+    plugin_ids: list[str] = []
+    for cargo_toml in family_dir.rglob("Cargo.toml"):
+        try:
+            text = cargo_toml.read_text()
+            if "package.metadata.plugin" not in text:
+                continue
+            in_section = False
+            for line in text.splitlines():
+                if "package.metadata.plugin" in line:
+                    in_section = True
+                    continue
+                if in_section and line.startswith("["):
+                    break
+                if in_section and line.startswith("id = "):
+                    found_id = line.split('"')[1]
+                    if found_id != plugin_id:
+                        plugin_ids.append(found_id)
+                    break
+        except (IndexError, OSError):
+            continue
+
+    return sorted(set(plugin_ids))
+
+
+def release_single_plugin(plugin_name: str, registry: str, no_push: bool, bump: str):
+    """Release a single plugin: bump, lint, build, publish."""
+    crate_dir = get_plugin_crate(plugin_name)
     if not crate_dir:
-        error(f"Unknown plugin: {args.plugin_name}. Check plugin ID.")
+        error(f"Unknown plugin: {plugin_name}. Check plugin ID.")
 
     crate_path = PROJECT_ROOT / crate_dir
     if not crate_path.is_dir():
         error(f"Plugin crate not found: {crate_dir}")
 
     # Handle version bump
-    if args.bump:
+    if bump:
         cargo_toml = crate_path / "Cargo.toml"
         if not cargo_toml.is_file():
             error(f"Cargo.toml not found in {crate_dir}")
@@ -461,8 +507,8 @@ def main():
                 current_version = line.split('"')[1]
                 break
 
-        new_version = bump_version(current_version, args.bump)
-        info(f"Bumping version: {current_version} -> {new_version} ({args.bump})")
+        new_version = bump_version(current_version, bump)
+        info(f"Bumping version: {current_version} -> {new_version} ({bump})")
         update_plugin_version(cargo_toml, current_version, new_version)
 
     # Lint plugin before building
@@ -484,10 +530,10 @@ def main():
     dist_dir.mkdir(parents=True, exist_ok=True)
 
     print()
-    info(f"Building plugin: {args.plugin_name}")
+    info(f"Building plugin: {plugin_name}")
     print()
 
-    build = build_plugin(args.plugin_name, crate_dir, dist_dir)
+    build = build_plugin(plugin_name, crate_dir, dist_dir)
 
     print()
     info(f"Artifact: {build.archive}")
@@ -495,12 +541,52 @@ def main():
     print(f"  {size:,} bytes ({size // 1024}K)")
     print()
 
-    if not args.no_push:
+    if not no_push:
         publish_plugin(build, registry)
         print()
         success(f"Install with: adi plugin install {build.id}")
     else:
         info("Build complete. Use without --no-push to publish.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Release a single plugin to the ADI plugin registry.")
+    parser.add_argument("plugin_name", help="Plugin name/ID to release")
+    parser.add_argument("--no-push", action="store_true", help="Build only, skip publishing")
+    parser.add_argument("--local", action="store_true", help="Push to local registry")
+    parser.add_argument("--bump", default="", choices=["", "patch", "minor", "major"], help="Version bump type")
+    parser.add_argument("--related", action="store_true", help="Also release all related plugins in the same crate family")
+    args = parser.parse_args()
+
+    registry = REGISTRY_URL
+    if args.local:
+        registry = "http://adi.test/registry"
+
+    if args.related:
+        related = find_related_plugins(args.plugin_name)
+        all_plugins = [args.plugin_name] + related
+
+        print()
+        info(f"Releasing {args.plugin_name} + {len(related)} related plugin(s)")
+        for pid in all_plugins:
+            info(f"  - {pid}")
+        print()
+
+        failed: list[str] = []
+        for pid in all_plugins:
+            try:
+                release_single_plugin(pid, registry, args.no_push, args.bump)
+            except SystemExit:
+                warn(f"Failed to release: {pid}")
+                failed.append(pid)
+            print()
+
+        if failed:
+            error(f"Failed to release {len(failed)} plugin(s): {', '.join(failed)}")
+
+        success(f"Released {len(all_plugins)} plugin(s)")
+    else:
+        release_single_plugin(args.plugin_name, registry, args.no_push, args.bump)
 
 
 if __name__ == "__main__":

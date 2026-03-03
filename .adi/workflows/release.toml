@@ -12,6 +12,7 @@ prompt = "What to release?"
 options = [
     "cli - Build and release adi CLI to GitHub",
     "plugin - Build and publish a plugin to the registry",
+    "plugin-related - Build and publish plugin + all related plugins",
 ]
 default = "cli - Build and release adi CLI to GitHub"
 
@@ -122,6 +123,24 @@ case "$TARGET" in
                 python3 "$WORKFLOWS_DIR/_core/release_plugin.py" "$PLUGIN" --no-push $BUMP_FLAG
                 ;;
         esac
+        ;;
+    plugin-related)
+        PLUGIN="{{ plugin }}"
+        REGISTRY="{{ registry_target | split(' ') | first }}"
+        BUMP="{{ version_bump | split(' ') | first }}"
+
+        BUMP_FLAG=""
+        if [ "$BUMP" != "same" ]; then
+            BUMP_FLAG="--bump $BUMP"
+        fi
+
+        REGISTRY_FLAG=""
+        case "$REGISTRY" in
+            local) REGISTRY_FLAG="--local" ;;
+            dry-run) REGISTRY_FLAG="--no-push" ;;
+        esac
+
+        python3 "$WORKFLOWS_DIR/_core/release_plugin.py" "$PLUGIN" --related $BUMP_FLAG $REGISTRY_FLAG
         ;;
 esac
 """
