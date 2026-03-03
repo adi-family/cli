@@ -8,8 +8,6 @@ use tokio::sync::mpsc;
 /// All track() calls are non-blocking.
 #[derive(Clone)]
 pub struct AnalyticsClient {
-    http_client: reqwest::Client,
-    analytics_url: Arc<str>,
     sender: mpsc::UnboundedSender<EnrichedEvent>,
 }
 
@@ -33,8 +31,6 @@ impl AnalyticsClient {
         });
 
         Self {
-            http_client,
-            analytics_url,
             sender,
         }
     }

@@ -136,7 +136,6 @@ impl ToolConfigSet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::quota::QuotaPeriod;
 
     #[test]
     fn test_tool_config_builder() {

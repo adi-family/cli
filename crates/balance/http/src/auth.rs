@@ -20,7 +20,6 @@ pub struct Claims {
 #[derive(Debug, Clone)]
 pub struct AuthUser {
     pub id: Uuid,
-    pub email: String,
 }
 
 fn extract_token(parts: &Parts) -> Option<String> {
@@ -67,7 +66,6 @@ where
 
         Ok(AuthUser {
             id: token_data.claims.sub,
-            email: token_data.claims.email,
         })
     }
 }
