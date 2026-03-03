@@ -29,7 +29,6 @@ members = [
     # Indexer components (flat submodules)
     "crates/lib/lib-embed",
     "crates/indexer/core",
-    "crates/indexer/cli",
     "crates/indexer/http",
 
     # Tasks components
@@ -49,7 +48,6 @@ members = [
     # Auth components
     "crates/auth/core",
     "crates/auth/http",
-    "crates/auth/cli",
     "crates/auth/plugin",
 
     # Mux components
@@ -59,7 +57,6 @@ members = [
 
     # Knowledgebase components
     "crates/knowledgebase/core",
-    "crates/knowledgebase/cli",
 
     # Agent Loop components
     "crates/agent-loop/core",
@@ -124,7 +121,6 @@ members = [
     # Platform components
     "crates/platform/core",
     "crates/platform/http",
-    "crates/platform/cli",
     "crates/platform/plugin",
 
     # Tools
@@ -232,8 +228,6 @@ members = [
 
     # Balance
     "crates/balance/core",
-    "crates/balance/http",
-    "crates/balance/cli",
     "crates/balance/plugin",
 
     # Payment
@@ -244,7 +238,6 @@ members = [
     # Credentials
     "crates/credentials/core",
     "crates/credentials/http",
-    "crates/credentials/cli",
     "crates/credentials/plugin",
 
     # Shortcuts

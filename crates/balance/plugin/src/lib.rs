@@ -22,7 +22,7 @@ impl Plugin for BalancePlugin {
             version: env!("CARGO_PKG_VERSION").to_string(),
             plugin_type: PluginType::Extension,
             author: Some("ADI Team".to_string()),
-            description: Some("Balance HTTP server".to_string()),
+            description: Some("Balance service".to_string()),
             category: None,
         }
     }
@@ -43,34 +43,12 @@ impl Plugin for BalancePlugin {
 #[async_trait]
 impl CliCommands for BalancePlugin {
     async fn list_commands(&self) -> Vec<CliCommand> {
-        vec![CliCommand {
-            name: "start".to_string(),
-            description: "Start the Balance HTTP server (Ctrl+C to stop)".to_string(),
-            args: vec![],
-            has_subcommands: false,
-        }]
+        vec![]
     }
 
     async fn run_command(&self, ctx: &CliContext) -> PluginResult<CliResult> {
         let subcommand = ctx.subcommand.as_deref().unwrap_or("");
-
-        match subcommand {
-            "start" => {
-                let port: u16 = ctx
-                    .option::<u16>("port")
-                    .or_else(|| ctx.option::<String>("port").and_then(|s| s.parse().ok()))
-                    .or_else(|| ctx.args.first().and_then(|s| s.parse().ok()))
-                    .unwrap_or(8030);
-
-                if let Err(e) = balance_http::run_server(port) {
-                    return Ok(CliResult::error(format!("Balance server failed: {e}")));
-                }
-                Ok(CliResult::success("Balance server stopped"))
-            }
-            _ => Ok(CliResult::error(format!(
-                "Unknown command: {subcommand}\nUsage: adi run adi.balance start [--port PORT]"
-            ))),
-        }
+        Ok(CliResult::error(format!("Unknown command: {subcommand}")))
     }
 }
 

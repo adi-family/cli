@@ -60,9 +60,7 @@ cargo build --release
 ```
 
 ## Running
-```bash
-DATABASE_URL=postgres://... JWT_SECRET=... cargo run --bin balance-http
-```
+Balance HTTP server has been removed — payment functionality is now in `crates/payment/`.
 
 ## Integration Examples
 
