@@ -31,4 +31,4 @@ thiserror = "1.0"
 tracing = "0.1"
 
 # Signaling protocol
-lib-signaling-protocol = { path = "../../_lib/lib-signaling-protocol" }
+lib-signaling-protocol = { path = "../../signaling/protocol" }

@@ -108,7 +108,7 @@ members = [
     "crates/_lib/lib-json-tree",
     "crates/_lib/lib-terminal-grid",
     "crates/_lib/lib-iced-ui",
-    "crates/_lib/lib-signaling-protocol",
+    "crates/signaling/protocol",
     "crates/_lib/lib-tarminal-sync",
 
     # Analytics
