@@ -2,7 +2,6 @@ const DB_NAME = 'adi-app';
 const DB_VERSION = 1;
 const STORE_NAME = 'prefs';
 const PREFS_KEY = 'enabled-web-plugins';
-const LS_KEY = 'adi:enabled-web-plugins';
 
 const openDb = (): Promise<IDBDatabase> =>
   new Promise((resolve, reject) => {
@@ -60,17 +59,4 @@ export async function getEnabledWebPluginIds(): Promise<Set<string> | null> {
 /** Persists the enabled web plugin ID set to IndexedDB. */
 export async function setEnabledWebPluginIds(ids: Iterable<string>): Promise<void> {
   await idbPut(PREFS_KEY, [...ids]);
-}
-
-/** Migrate plugin prefs from localStorage to IndexedDB (one-time). */
-export async function migrateFromLocalStorage(): Promise<void> {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return;
-    const ids = JSON.parse(raw) as string[];
-    await idbPut(PREFS_KEY, ids);
-    localStorage.removeItem(LS_KEY);
-  } catch {
-    // Migration is best-effort
-  }
 }

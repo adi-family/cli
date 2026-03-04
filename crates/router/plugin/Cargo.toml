@@ -1,0 +1,33 @@
+[package]
+name = "router-plugin"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Client-side SPA router with navigation management"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lib-plugin-prelude = { path = "../../_lib/lib-plugin-prelude" }
+
+[package.metadata.plugin]
+id = "adi.router"
+name = "ADI Router"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "2.0.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.router.web"
+version = "1.0.0"
+description = "Client-side SPA router with navigation management"
+
+[package.metadata.plugin.web_ui]
+entry = "web.js"
+sandbox = false
+
+[package.metadata.plugin.tags]
+categories = ["web"]

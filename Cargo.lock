@@ -67,6 +67,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "actions-plugin"
+version = "0.1.0"
+dependencies = [
+ "lib-plugin-prelude",
+]
+
+[[package]]
 name = "adi-registry"
 version = "0.1.0"
 dependencies = [
@@ -3136,6 +3143,13 @@ name = "dconf_rs"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7046468a81e6a002061c01e6a7c83139daf91b11c30e66795b13217c2d885c8b"
+
+[[package]]
+name = "debug-screen-plugin"
+version = "0.1.0"
+dependencies = [
+ "lib-plugin-prelude",
+]
 
 [[package]]
 name = "der"
@@ -10193,6 +10207,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "router-plugin"
+version = "0.1.0"
+dependencies = [
+ "lib-plugin-prelude",
 ]
 
 [[package]]

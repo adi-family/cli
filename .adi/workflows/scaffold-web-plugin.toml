@@ -1,0 +1,25 @@
+# Scaffold a new web-only plugin (Rust stub + TypeScript/Lit web UI)
+
+[workflow]
+name = "scaffold-web-plugin"
+description = "Scaffold a new web-only plugin with Rust stub + TypeScript/Lit web UI"
+
+[[inputs]]
+name = "name"
+type = "input"
+prompt = "Plugin name (kebab-case, e.g. 'my-tool')"
+validate = "^[a-z][a-z0-9-]*$"
+
+[[inputs]]
+name = "description"
+type = "input"
+prompt = "Short description"
+default = "ADI web plugin"
+
+[[steps]]
+name = "Scaffold web plugin"
+run = """
+python3 "$WORKFLOWS_DIR/_core/scaffold_web_plugin.py" \
+  --name "{{ name }}" \
+  --description "{{ description }}"
+"""
