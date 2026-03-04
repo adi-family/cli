@@ -9,6 +9,10 @@ import { PluginCore } from './plugin-core';
 import { RegistryHub } from './registry-hub';
 import { getEnabledWebPluginIds } from '../plugin-prefs';
 
+export interface Context {
+  db: DbConnection;
+}
+
 export class App {
   private static _instance: App | null = null;
 
@@ -27,10 +31,6 @@ export class App {
     this.bus = bus;
     this.db = db;
     this.core = core;
-  }
-
-  get router() {
-    return this.core.get('app.router')!;
   }
 
   static get instance(): App | null {
@@ -57,11 +57,10 @@ export class App {
 
   @trace('init')
   async init() {
+    this.core.registerPluginById('adi.slots');
     this.core.registerPluginById('adi.signaling');
     this.core.registerPluginById('adi.router');
     this.core.registerPluginById('adi.actions');
-    this.core.registerPluginById('adi.debug-screen');
-
     await this.registerEnabledPlugins();
   }
 

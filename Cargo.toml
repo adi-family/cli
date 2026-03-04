@@ -172,6 +172,8 @@ members = [
     "crates/debug-screen/plugin",
     "crates/actions/plugin",
     "crates/router/plugin",
+    "crates/command-palette/plugin",
+    "crates/slots/plugin",
     "crates/knowledgebase/plugin",
     "crates/agent-loop/plugin",
     "crates/linter/plugin",
