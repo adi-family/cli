@@ -451,7 +451,8 @@ pub fn type_to_typescript(type_ref: &TypeRef) -> String {
             "boolean" => "boolean".to_string(),
             "utcDateTime" | "offsetDateTime" | "plainDate" | "plainTime" => "string".to_string(),
             "bytes" => "Uint8Array".to_string(),
-            "void" | "null" => "void".to_string(),
+            "void" => "void".to_string(),
+            "null" => "null".to_string(),
             _ => "unknown".to_string(),
         },
         TypeRef::Named(name) => {

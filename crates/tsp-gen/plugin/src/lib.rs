@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::time::Duration;
 use typespec_api::{
-    codegen::{protocol::RustProtocolConfig, Generator, Language, Side},
+    codegen::{protocol::RustProtocolConfig, ts_eventbus::EventBusConfig, Generator, Language, Side},
     parse, TypeSpecFile,
 };
 
@@ -139,6 +139,9 @@ struct GenerateOptions {
     protocol_tag: String,
     protocol_rename: String,
     protocol_enum_name: String,
+    eventbus_module: String,
+    eventbus_interface: String,
+    eventbus_rename: String,
 }
 
 fn cmd_generate(args: &[String]) -> CmdResult {
@@ -162,6 +165,9 @@ fn parse_generate_args(args: &[&str]) -> Result<GenerateOptions, String> {
     let mut protocol_tag = String::from("type");
     let mut protocol_rename = String::from("snake_case");
     let mut protocol_enum_name = String::from("SignalingMessage");
+    let mut eventbus_module = String::from("@adi-family/sdk-plugin/types");
+    let mut eventbus_interface = String::from("EventRegistry");
+    let mut eventbus_rename = String::from("kebab-case");
 
     let mut i = 0;
     while i < args.len() {
@@ -215,6 +221,27 @@ fn parse_generate_args(args: &[&str]) -> Result<GenerateOptions, String> {
                 protocol_enum_name = args[i + 1].to_string();
                 i += 2;
             }
+            "--eventbus-module" => {
+                if i + 1 >= args.len() {
+                    return Err("Missing value for --eventbus-module".to_string());
+                }
+                eventbus_module = args[i + 1].to_string();
+                i += 2;
+            }
+            "--eventbus-interface" => {
+                if i + 1 >= args.len() {
+                    return Err("Missing value for --eventbus-interface".to_string());
+                }
+                eventbus_interface = args[i + 1].to_string();
+                i += 2;
+            }
+            "--eventbus-rename" => {
+                if i + 1 >= args.len() {
+                    return Err("Missing value for --eventbus-rename".to_string());
+                }
+                eventbus_rename = args[i + 1].to_string();
+                i += 2;
+            }
             "-w" | "--watch" => {
                 watch = true;
                 i += 1;
@@ -247,6 +274,9 @@ fn parse_generate_args(args: &[&str]) -> Result<GenerateOptions, String> {
         protocol_tag,
         protocol_rename,
         protocol_enum_name,
+        eventbus_module,
+        eventbus_interface,
+        eventbus_rename,
     })
 }
 
@@ -386,8 +416,8 @@ fn do_generate(opts: &GenerateOptions) -> CmdResult {
         }
     }
 
-    // Generate code — protocol side skips language subdirectory
-    let output_subdir = if opts.side == Side::Protocol {
+    // Generate code — protocol and eventbus sides skip language subdirectory
+    let output_subdir = if matches!(opts.side, Side::Protocol | Side::EventBus) {
         opts.output_dir.clone()
     } else {
         opts.output_dir.join(match opts.language {
@@ -405,6 +435,14 @@ fn do_generate(opts: &GenerateOptions) -> CmdResult {
             tag: opts.protocol_tag.clone(),
             rename: opts.protocol_rename.clone(),
             enum_name: opts.protocol_enum_name.clone(),
+        });
+    }
+
+    if opts.side == Side::EventBus {
+        generator = generator.with_eventbus_config(EventBusConfig {
+            module_path: opts.eventbus_module.clone(),
+            interface_name: opts.eventbus_interface.clone(),
+            rename: opts.eventbus_rename.clone(),
         });
     }
 
@@ -449,7 +487,7 @@ Generate Options:
   <input...>                     Input TypeSpec file(s)
   -l, --language <lang>          Target language (required)
   -o, --output <dir>             Output directory (default: generated)
-  -s, --side <side>              client, server, both, types, adi, protocol
+  -s, --side <side>              client, server, both, types, adi, protocol, eventbus
   -p, --package <name>           Package name (default: api)
   -w, --watch                    Watch input files and regenerate on changes
 
@@ -458,6 +496,11 @@ Protocol Options (for -s protocol):
   --protocol-rename <strategy>   Rename strategy: snake_case, camelCase, PascalCase (default: snake_case)
   --protocol-enum-name <name>    Generated enum/union type name (default: SignalingMessage)
 
+EventBus Options (for -s eventbus):
+  --eventbus-module <path>       Module path for augmentation (default: @adi-family/sdk-plugin/types)
+  --eventbus-interface <name>    Interface name to augment (default: EventRegistry)
+  --eventbus-rename <strategy>   Event name strategy: kebab-case, snake_case, camelCase (default: kebab-case)
+
 Examples:
   adi tsp-gen generate api.tsp -l python
   adi tsp-gen generate *.tsp -l typescript -o src/generated -s client
@@ -465,7 +508,8 @@ Examples:
   adi tsp-gen generate spec.tsp -l openapi
   adi tsp-gen generate api.tsp -l typescript -o ./out --watch
   adi tsp-gen generate signaling.tsp -l typescript -s protocol --protocol-enum-name SignalingMessage
-  adi tsp-gen generate signaling.tsp -l rust -s protocol --protocol-tag type"#;
+  adi tsp-gen generate signaling.tsp -l rust -s protocol --protocol-tag type
+  adi tsp-gen generate signaling.tsp -l typescript -s eventbus --eventbus-module "@app/types" --eventbus-interface EventRegistry"#;
     Ok(help.to_string())
 }
 
@@ -492,8 +536,9 @@ fn parse_side(s: &str) -> Result<Side, String> {
         "types" => Ok(Side::Types),
         "adi" | "adi-service" => Ok(Side::AdiService),
         "protocol" | "proto" => Ok(Side::Protocol),
+        "eventbus" | "bus" => Ok(Side::EventBus),
         _ => Err(format!(
-            "Unknown side: {}. Use: client, server, both, types, adi, or protocol",
+            "Unknown side: {}. Use: client, server, both, types, adi, protocol, or eventbus",
             s
         )),
     }

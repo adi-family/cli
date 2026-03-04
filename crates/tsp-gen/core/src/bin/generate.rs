@@ -15,6 +15,7 @@ use typespec_api::{
     codegen::{
         protocol::RustProtocolConfig,
         rust::{PathStyle, RustAdiServiceConfig, RustServerConfig, StateWrapper},
+        ts_eventbus::EventBusConfig,
         Generator, Language, Side,
     },
     parse, TypeSpecFile,
@@ -90,6 +91,18 @@ struct Cli {
     /// Enum name for the generated protocol message type
     #[arg(long, default_value = "SignalingMessage")]
     protocol_enum_name: String,
+
+    /// Module path for EventBus augmentation (e.g., "@adi-family/sdk-plugin/types")
+    #[arg(long, default_value = "@adi-family/sdk-plugin/types")]
+    eventbus_module: String,
+
+    /// Interface name to augment for EventBus (e.g., "EventRegistry")
+    #[arg(long, default_value = "EventRegistry")]
+    eventbus_interface: String,
+
+    /// Event name rename strategy for EventBus (e.g., "kebab-case")
+    #[arg(long, default_value = "kebab-case")]
+    eventbus_rename: String,
 }
 
 /// Recursively resolve imports from a TypeSpec file
@@ -194,13 +207,17 @@ fn do_generate(cli: &Cli) -> Result<Vec<String>> {
         }
     }
 
-    // Generate code
-    let output_dir = cli.output.join(match cli.language {
-        Language::Python => "python",
-        Language::TypeScript => "typescript",
-        Language::Rust => "rust",
-        Language::OpenApi => "openapi",
-    });
+    // Generate code — protocol and eventbus skip language subdirectory
+    let output_dir = if matches!(cli.side, Side::Protocol | Side::EventBus) {
+        cli.output.clone()
+    } else {
+        cli.output.join(match cli.language {
+            Language::Python => "python",
+            Language::TypeScript => "typescript",
+            Language::Rust => "rust",
+            Language::OpenApi => "openapi",
+        })
+    };
 
     let path_style = match cli.path_style.as_str() {
         "brace" => PathStyle::Brace,
@@ -222,6 +239,16 @@ fn do_generate(cli: &Cli) -> Result<Vec<String>> {
     // Pass types crate if specified
     if let Some(ref tc) = cli.types_crate {
         generator = generator.with_types_crate(tc.clone());
+    }
+
+    // Build EventBus config if needed
+    if cli.side == Side::EventBus {
+        let eventbus_config = EventBusConfig {
+            module_path: cli.eventbus_module.clone(),
+            interface_name: cli.eventbus_interface.clone(),
+            rename: cli.eventbus_rename.clone(),
+        };
+        generator = generator.with_eventbus_config(eventbus_config);
     }
 
     // Build Protocol config if needed

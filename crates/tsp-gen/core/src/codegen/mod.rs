@@ -6,6 +6,7 @@ pub mod openapi;
 pub mod protocol;
 pub mod python;
 pub mod rust;
+pub mod ts_eventbus;
 pub mod ts_protocol;
 pub mod typescript;
 
@@ -104,6 +105,9 @@ pub enum Side {
     /// Generate WebSocket protocol messages, types, and handler traits
     #[cfg_attr(feature = "cli", value(name = "protocol", alias = "proto"))]
     Protocol,
+    /// Generate EventBus types and module augmentation from @bus interfaces
+    #[cfg_attr(feature = "cli", value(name = "eventbus", alias = "bus"))]
+    EventBus,
 }
 
 pub struct Generator<'a> {
@@ -113,6 +117,7 @@ pub struct Generator<'a> {
     rust_server_config: rust::RustServerConfig,
     rust_adi_config: Option<rust::RustAdiServiceConfig>,
     rust_protocol_config: Option<protocol::RustProtocolConfig>,
+    eventbus_config: Option<ts_eventbus::EventBusConfig>,
     types_crate: Option<String>,
 }
 
@@ -125,6 +130,7 @@ impl<'a> Generator<'a> {
             rust_server_config: rust::RustServerConfig::default(),
             rust_adi_config: None,
             rust_protocol_config: None,
+            eventbus_config: None,
             types_crate: None,
         }
     }
@@ -144,6 +150,11 @@ impl<'a> Generator<'a> {
         self
     }
 
+    pub fn with_eventbus_config(mut self, config: ts_eventbus::EventBusConfig) -> Self {
+        self.eventbus_config = Some(config);
+        self
+    }
+
     pub fn with_types_crate(mut self, types_crate: String) -> Self {
         self.types_crate = Some(types_crate);
         self
@@ -151,6 +162,31 @@ impl<'a> Generator<'a> {
 
     pub fn generate(&self, language: Language, side: Side) -> Result<Vec<String>, CodegenError> {
         let mut generated = Vec::new();
+
+        // EventBus generation is TypeScript-only
+        if side == Side::EventBus {
+            let config = self.eventbus_config.as_ref().ok_or_else(|| {
+                CodegenError::Generation(
+                    "EventBus generation requires --eventbus-module and --eventbus-interface flags"
+                        .to_string(),
+                )
+            })?;
+
+            return match language {
+                Language::TypeScript => {
+                    generated.extend(ts_eventbus::generate(
+                        self.file,
+                        self.output_dir,
+                        self.package_name,
+                        config,
+                    )?);
+                    Ok(generated)
+                }
+                _ => Err(CodegenError::Generation(format!(
+                    "EventBus generation not supported for {language:?}"
+                ))),
+            };
+        }
 
         // Protocol generation is self-contained per language
         if side == Side::Protocol {
