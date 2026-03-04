@@ -190,4 +190,5 @@ Available workflows in `.adi/workflows/`. Run with `adi wf <name>` or directly v
 - [`rust-small-crates`](docs/code-style/rust-small-crates.md): Benefits:
 - [`rust-yagni`](docs/code-style/rust-yagni.md): -
 - [`translations`](docs/code-style/translations.md): Use Mozilla Fluent (.ftl) for all user-facing strings.
+- [`typespec`](docs/code-style/typespec.md): `.tsp` as single source of truth for wire protocol types (Rust + TypeScript).
 
