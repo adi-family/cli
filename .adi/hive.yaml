@@ -188,6 +188,13 @@ services:
       pre-up:
         - type: script
           run: python3 .adi/workflows/_core/patch.py plugin adi.signaling
+        - type: script
+          run: >-
+            adi tsp-gen generate
+            crates/lib/lib-signaling-protocol/signaling.tsp
+            -l typescript -s protocol
+            --protocol-tag type --protocol-rename snake_case --protocol-enum-name SignalingMessage
+            -o apps/app/src/app/generated/signaling
     runner:
       type: script
       script:
@@ -225,8 +232,6 @@ services:
       pre-up:
         - type: script
           run: python3 .adi/workflows/_core/patch.py plugin adi.auth
-        - type: script
-          run: cargo run -p auth-cli --release -- run
     runner:
       type: script
       script:
@@ -325,6 +330,15 @@ services:
     restart: on-failure
 
   app:
+    hooks:
+      pre-up:
+        - type: script
+          run: >-
+            adi tsp-gen generate
+            crates/lib/lib-signaling-protocol/signaling.tsp
+            -l typescript -s protocol
+            --protocol-tag type --protocol-rename snake_case --protocol-enum-name SignalingMessage
+            -o apps/app/src/app/generated/signaling
     runner:
       type: script
       script:
@@ -424,40 +438,6 @@ services:
   # ---------------------------------------------------------------------------
   # Optional Services
   # ---------------------------------------------------------------------------
-
-  balance:
-    hooks:
-      pre-up:
-        - type: script
-          run: python3 .adi/workflows/_core/patch.py plugin adi.balance
-    runner:
-      type: script
-      script:
-        run: adi run adi.balance start --port 8030
-    rollout:
-      type: recreate
-      recreate:
-        ports:
-          http: 8030
-    proxy:
-      - host: adi.test
-        path: /api/balance
-        strip_prefix: true
-    healthcheck:
-      type: http
-      http:
-        port: '{{runtime.port.http}}'
-        path: /health
-    environment:
-      static:
-        PORT: '8030'
-        DATABASE_URL: 'postgres://adi:adi@localhost:8027/adi_balance'
-        JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
-        ANALYTICS_URL: 'http://localhost:8022'
-    depends_on:
-      - postgres
-      - analytics-ingestion
-    restart: on-failure
 
   credentials:
     hooks:
