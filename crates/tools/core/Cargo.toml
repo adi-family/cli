@@ -22,10 +22,10 @@ walkdir = "2.5"
 regex = "1"
 
 # Plugin discovery (optional, for scanning ADI plugins)
-lib-plugin-manifest = { path = "../../lib/lib-plugin-manifest", optional = true }
+lib-plugin-manifest = { path = "../../_lib/lib-plugin-manifest", optional = true }
 
 # Embedding (optional, for semantic search)
-lib-embed = { path = "../../lib/lib-embed", optional = true }
+lib-embed = { path = "../../_lib/lib-embed", optional = true }
 
 [features]
 default = ["plugin-discovery"]

@@ -10,8 +10,8 @@ authors = ["ADI Team"]
 crate-type = ["cdylib"]
 
 [dependencies]
-lib-plugin-prelude = { path = "../../lib/lib-plugin-prelude" }
-lib-console-output = { path = "../../lib/lib-console-output" }
+lib-plugin-prelude = { path = "../../_lib/lib-plugin-prelude" }
+lib-console-output = { path = "../../_lib/lib-console-output" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

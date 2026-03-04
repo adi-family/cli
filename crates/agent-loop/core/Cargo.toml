@@ -19,12 +19,12 @@ futures = "0.3"
 glob = "0.3"
 regex = "1"
 rusqlite = { version = "0.31", features = ["bundled"] }
-lib-migrations = { path = "../../lib/lib-migrations" }
-lib-env-parse = { path = "../../lib/lib-env-parse" }
-lib-client-anthropic = { path = "../../lib/lib-client/anthropic" }
-lib-client-openai = { path = "../../lib/lib-client/openai" }
-lib-client-openrouter = { path = "../../lib/lib-client/openrouter" }
-lib-client-ollama = { path = "../../lib/lib-client/ollama" }
+lib-migrations = { path = "../../_lib/lib-migrations" }
+lib-env-parse = { path = "../../_lib/lib-env-parse" }
+lib-client-anthropic = { path = "../../_lib/lib-client/anthropic" }
+lib-client-openai = { path = "../../_lib/lib-client/openai" }
+lib-client-openrouter = { path = "../../_lib/lib-client/openrouter" }
+lib-client-ollama = { path = "../../_lib/lib-client/ollama" }
 jsonschema = "0.26"
 toml = "0.8"
 

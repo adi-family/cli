@@ -39,7 +39,7 @@ HTTP services without CLI plugin.
 | `executor` | core,http | Core library for Docker-based task execution — types, orchestration, Docker client, output handlers, job store |
 
 ## Libraries
-Shared libraries in `crates/lib/`.
+Shared libraries in `crates/_lib/`.
 
 | Library | Purpose |
 |---------|---------|
@@ -164,7 +164,7 @@ Available workflows in `.adi/workflows/`. Run with `adi wf <name>` or directly v
     mcp/      # MCP server (bin, optional)
   ```
 - **Dependencies flow:** `cli` → `core` ← `http` (both depend on core)
-- **Libraries** go in `crates/lib/lib-<name>/`
+- **Libraries** go in `crates/_lib/lib-<name>/`
 - **Standalone plugins** use `crates/<name>-plugin/` pattern
 - **Tools** use `crates/tool-<name>/` pattern
 

@@ -22,7 +22,7 @@ analytics-core = { path = "../core" }
 analytics-client = { path = "../client" }
 
 # Plugin ABI
-lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+lib-plugin-abi-v3 = { path = "../../_lib/lib-plugin-abi-v3" }
 async-trait = "0.1"
 
 # Web framework
@@ -48,10 +48,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dotenvy = "0.15"
 
 # HTTP utilities
-lib-http-common = { path = "../../lib/lib-http-common" }
+lib-http-common = { path = "../../_lib/lib-http-common" }
 
 # Environment
-lib-env-parse = { path = "../../lib/lib-env-parse" }
+lib-env-parse = { path = "../../_lib/lib-env-parse" }
 
 # Error handling
 anyhow = "1.0"

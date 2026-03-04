@@ -56,7 +56,7 @@ for entry in "${PLUGINS[@]}"; do
     fi
 
     # Replace lib-plugin-abi with lib-plugin-abi-v3
-    sed -i.bak 's|lib-plugin-abi = { path = ".*" }|lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }|' Cargo.toml
+    sed -i.bak 's|lib-plugin-abi = { path = ".*" }|lib-plugin-abi-v3 = { path = "../../_lib/lib-plugin-abi-v3" }|' Cargo.toml
 
     # Remove abi_stable
     sed -i.bak '/^abi_stable/d' Cargo.toml

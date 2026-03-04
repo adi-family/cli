@@ -10,8 +10,8 @@ description = "ADI Knowledgebase plugin providing tools for knowledge graph and 
 crate-type = ["cdylib"]
 
 [dependencies]
-lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
-lib-plugin-host = { path = "../../lib/lib-plugin-host" }
+lib-plugin-abi-v3 = { path = "../../_lib/lib-plugin-abi-v3" }
+lib-plugin-host = { path = "../../_lib/lib-plugin-host" }
 knowledgebase-core = { path = "../core" }
 async-trait = "0.1"
 serde = { workspace = true, features = ["derive"] }

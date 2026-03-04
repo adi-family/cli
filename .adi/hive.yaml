@@ -191,7 +191,7 @@ services:
         - type: script
           run: >-
             adi tsp-gen generate
-            crates/lib/lib-signaling-protocol/signaling.tsp
+            crates/_lib/lib-signaling-protocol/signaling.tsp
             -l typescript -s protocol
             --protocol-tag type --protocol-rename snake_case --protocol-enum-name SignalingMessage
             -o apps/app/src/app/generated/signaling
@@ -335,7 +335,7 @@ services:
         - type: script
           run: >-
             adi tsp-gen generate
-            crates/lib/lib-signaling-protocol/signaling.tsp
+            crates/_lib/lib-signaling-protocol/signaling.tsp
             -l typescript -s protocol
             --protocol-tag type --protocol-rename snake_case --protocol-enum-name SignalingMessage
             -o apps/app/src/app/generated/signaling

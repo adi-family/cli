@@ -10,7 +10,7 @@ description = "ADI plugin: HTTP request fan-out multiplexer"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-lib-plugin-prelude = { path = "../../lib/lib-plugin-prelude" }
+lib-plugin-prelude = { path = "../../_lib/lib-plugin-prelude" }
 
 [package.metadata.plugin]
 id = "adi.mux"

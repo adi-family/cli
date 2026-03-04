@@ -10,8 +10,8 @@ authors = ["ADI Team"]
 crate-type = ["cdylib"]
 
 [dependencies]
-lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
-lib-console-output = { path = "../../lib/lib-console-output" }
+lib-plugin-abi-v3 = { path = "../../_lib/lib-plugin-abi-v3" }
+lib-console-output = { path = "../../_lib/lib-console-output" }
 flags-core = { path = "../core" }
 async-trait = "0.1"
 tokio = { version = "1.0", features = ["full"] }

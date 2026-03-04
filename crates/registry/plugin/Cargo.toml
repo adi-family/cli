@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Plugin ABI
-lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+lib-plugin-abi-v3 = { path = "../../_lib/lib-plugin-abi-v3" }
 
 # Registry storage
 plugin-registry-core = { workspace = true }

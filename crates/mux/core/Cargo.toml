@@ -16,6 +16,6 @@ futures.workspace = true
 reqwest = { workspace = true, features = ["json", "native-tls-vendored"] }
 dirs.workspace = true
 tracing.workspace = true
-lib-env-parse = { path = "../../lib/lib-env-parse" }
+lib-env-parse = { path = "../../_lib/lib-env-parse" }
 bytes = "1"
 http = { workspace = true }

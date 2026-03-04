@@ -10,8 +10,8 @@ name = "website"
 path = "src/main.rs"
 
 [dependencies]
-lib-i18n-core = { path = "../lib/lib-i18n-core" }
-lib-env-parse = { path = "../lib/lib-env-parse" }
+lib-i18n-core = { path = "../_lib/lib-i18n-core" }
+lib-env-parse = { path = "../_lib/lib-env-parse" }
 
 axum = { workspace = true, features = ["macros"] }
 tokio = { workspace = true }

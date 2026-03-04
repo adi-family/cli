@@ -64,7 +64,7 @@ def find_backend_crates(user_facing: list[str]) -> list[str]:
 
 
 def find_libraries() -> list[str]:
-    """List directories in crates/lib/."""
+    """List directories in crates/_lib/."""
     lib_dir = CRATES_DIR / "lib"
     if not lib_dir.is_dir():
         return []
@@ -204,7 +204,7 @@ def generate() -> str:
     )
     sections.append(
         "## Libraries\n"
-        "Shared libraries in `crates/lib/`.\n"
+        "Shared libraries in `crates/_lib/`.\n"
         "\n"
         "| Library | Purpose |\n"
         "|---------|---------|\n"

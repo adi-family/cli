@@ -22,7 +22,7 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.19", features = ["serde", "v4"] }
 
 # Environment
-lib-env-parse = { path = "../../lib/lib-env-parse" }
+lib-env-parse = { path = "../../_lib/lib-env-parse" }
 
 # Logging
 tracing = "0.1"

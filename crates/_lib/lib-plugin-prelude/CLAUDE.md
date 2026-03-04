@@ -28,7 +28,7 @@ plugin_create_cli                       # still valid, keep if present
 
 **Cargo.toml:**
 ```toml
-lib-plugin-prelude = { path = "../../lib/lib-plugin-prelude" }
+lib-plugin-prelude = { path = "../../_lib/lib-plugin-prelude" }
 
 [package.metadata.plugin.compatibility]
 api_version = 3

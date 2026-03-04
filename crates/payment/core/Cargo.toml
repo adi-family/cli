@@ -27,10 +27,10 @@ async-trait = "0.1"
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "json"] }
 
 # Environment
-lib-env-parse = { path = "../../lib/lib-env-parse" }
+lib-env-parse = { path = "../../_lib/lib-env-parse" }
 
 # HTTP utilities
-lib-http-common = { path = "../../lib/lib-http-common" }
+lib-http-common = { path = "../../_lib/lib-http-common" }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }

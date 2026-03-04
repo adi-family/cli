@@ -10,7 +10,7 @@ authors = ["ADI Team"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-lib-plugin-abi-v3 = { path = "../../lib/lib-plugin-abi-v3" }
+lib-plugin-abi-v3 = { path = "../../_lib/lib-plugin-abi-v3" }
 payment-core = { path = "../core" }
 async-trait = "0.1"
 anyhow = "1"

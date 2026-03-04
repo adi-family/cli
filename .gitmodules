@@ -1,32 +1,32 @@
 [submodule "crates/adi-cli"]
 	path = crates/cli
 	url = https://github.com/adi-family/adi-cli.git
-[submodule "crates/lib/lib-embed"]
-	path = crates/lib/lib-embed
+[submodule "crates/_lib/lib-embed"]
+	path = crates/_lib/lib-embed
 	url = https://github.com/adi-family/lib-embed.git
-[submodule "crates/lib/lib-animation"]
-	path = crates/lib/lib-animation
+[submodule "crates/_lib/lib-animation"]
+	path = crates/_lib/lib-animation
 	url = https://github.com/adi-family/lib-animation.git
-[submodule "crates/lib/lib-syntax-highlight"]
-	path = crates/lib/lib-syntax-highlight
+[submodule "crates/_lib/lib-syntax-highlight"]
+	path = crates/_lib/lib-syntax-highlight
 	url = https://github.com/adi-family/lib-syntax-highlight.git
-[submodule "crates/lib/lib-json-tree"]
-	path = crates/lib/lib-json-tree
+[submodule "crates/_lib/lib-json-tree"]
+	path = crates/_lib/lib-json-tree
 	url = https://github.com/adi-family/lib-json-tree.git
-[submodule "crates/lib/lib-terminal-theme"]
-	path = crates/lib/lib-terminal-theme
+[submodule "crates/_lib/lib-terminal-theme"]
+	path = crates/_lib/lib-terminal-theme
 	url = https://github.com/adi-family/lib-terminal-theme.git
-[submodule "crates/lib/lib-terminal-grid"]
-	path = crates/lib/lib-terminal-grid
+[submodule "crates/_lib/lib-terminal-grid"]
+	path = crates/_lib/lib-terminal-grid
 	url = https://github.com/adi-family/lib-terminal-grid.git
-[submodule "crates/lib/lib-iced-ui"]
-	path = crates/lib/lib-iced-ui
+[submodule "crates/_lib/lib-iced-ui"]
+	path = crates/_lib/lib-iced-ui
 	url = https://github.com/adi-family/lib-iced-ui.git
-[submodule "crates/lib/lib-cli-common"]
-	path = crates/lib/lib-cli-common
+[submodule "crates/_lib/lib-cli-common"]
+	path = crates/_lib/lib-cli-common
 	url = https://github.com/adi-family/lib-cli-common.git
-[submodule "crates/lib/lib-migrations"]
-	path = crates/lib/lib-migrations
+[submodule "crates/_lib/lib-migrations"]
+	path = crates/_lib/lib-migrations
 	url = https://github.com/adi-family/lib-migrations.git
 [submodule "crates/adi-agent-loop/core"]
 	path = crates/agent-loop/core
@@ -34,14 +34,14 @@
 [submodule "crates/adi-agent-loop/plugin"]
 	path = crates/agent-loop/plugin
 	url = https://github.com/adi-family/adi-agent-loop-plugin.git
-[submodule "crates/lib/lib-plugin-host"]
-	path = crates/lib/lib-plugin-host
+[submodule "crates/_lib/lib-plugin-host"]
+	path = crates/_lib/lib-plugin-host
 	url = https://github.com/adi-family/lib-plugin-host.git
-[submodule "crates/lib/lib-plugin-manifest"]
-	path = crates/lib/lib-plugin-manifest
+[submodule "crates/_lib/lib-plugin-manifest"]
+	path = crates/_lib/lib-plugin-manifest
 	url = https://github.com/adi-family/lib-plugin-manifest.git
-[submodule "crates/lib/lib-plugin-verify"]
-	path = crates/lib/lib-plugin-verify
+[submodule "crates/_lib/lib-plugin-verify"]
+	path = crates/_lib/lib-plugin-verify
 	url = https://github.com/adi-family/lib-plugin-verify.git
 [submodule "crates/signaling"]
 	path = crates/signaling
@@ -52,11 +52,11 @@
 [submodule "crates/cocoon"]
 	path = crates/cocoon
 	url = git@github.com:adi-family/cocoon.git
-[submodule "crates/lib/lib-misc-color"]
-	path = crates/lib/lib-misc-color
+[submodule "crates/_lib/lib-misc-color"]
+	path = crates/_lib/lib-misc-color
 	url = https://github.com/adi-family/lib-misc-color.git
-[submodule "crates/lib/lib-indexer-lang-abi"]
-	path = crates/lib/lib-indexer-lang-abi
+[submodule "crates/_lib/lib-indexer-lang-abi"]
+	path = crates/_lib/lib-indexer-lang-abi
 	url = https://github.com/adi-family/lib-indexer-lang-abi.git
 [submodule "crates/adi-lang"]
 	path = crates/indexer/lang
@@ -73,8 +73,8 @@
 [submodule "crates/adi-platform-api"]
 	path = crates/platform
 	url = https://github.com/adi-family/adi-platform-api.git
-[submodule "crates/lib/lib-tarminal-sync"]
-	path = crates/lib/lib-tarminal-sync
+[submodule "crates/_lib/lib-tarminal-sync"]
+	path = crates/_lib/lib-tarminal-sync
 	url = git@github.com:adi-family/lib-tarminal-sync.git
 [submodule "crates/hive"]
 	path = crates/hive
@@ -115,9 +115,9 @@
 [submodule "crates/llm-proxy"]
 	path = crates/llm-proxy
 	url = https://github.com/adi-family/adi-llm-proxy.git
-[submodule "crates/lib/lib-migrations-core"]
-	path = crates/lib/lib-migrations-core
+[submodule "crates/_lib/lib-migrations-core"]
+	path = crates/_lib/lib-migrations-core
 	url = https://github.com/adi-family/lib-migrations-core.git
-[submodule "crates/lib/lib-migrations-sql"]
-	path = crates/lib/lib-migrations-sql
+[submodule "crates/_lib/lib-migrations-sql"]
+	path = crates/_lib/lib-migrations-sql
 	url = https://github.com/adi-family/lib-migrations-sql.git
