@@ -20,7 +20,7 @@ members = [
     "crates/lib/lib-daemon-core",
     "crates/lib/lib-http-common",
     "crates/lib/lib-migrations",
-    "crates/lib/lib-typespec-api",
+    "crates/tsp-gen/core",
     "crates/lib/lib-task-store",
     "crates/lib/lib-i18n-core",
     # Removed: lib-plugin-abi-orchestration (migrated to lib-plugin-abi-v3)
@@ -175,7 +175,7 @@ members = [
     "crates/workflow/plugin",
     "crates/hive/plugin",
     "crates/llm-extract-plugin",
-    "crates/lib/lib-typespec-api/plugin",
+    "crates/tsp-gen/plugin",
     "crates/cocoon",
     "crates/registry/plugin",
 

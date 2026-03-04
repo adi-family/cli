@@ -76,9 +76,6 @@
 [submodule "crates/lib/lib-tarminal-sync"]
 	path = crates/lib/lib-tarminal-sync
 	url = git@github.com:adi-family/lib-tarminal-sync.git
-[submodule "crates/lib/lib-typespec-api"]
-	path = crates/lib/lib-typespec-api
-	url = https://github.com/adi-family/lib-typespec-api.git
 [submodule "crates/hive"]
 	path = crates/hive
 	url = https://github.com/adi-family/hive.git
@@ -106,9 +103,6 @@
 [submodule "crates/adi-linter"]
 	path = crates/linter
 	url = https://github.com/adi-family/adi-linter.git
-[submodule "crates/adi-balance-api"]
-	path = crates/balance
-	url = https://github.com/adi-family/adi-balance-api.git
 [submodule "crates/adi-credentials-api"]
 	path = crates/credentials
 	url = https://github.com/adi-family/adi-credentials-api.git
