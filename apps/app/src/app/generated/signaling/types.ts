@@ -29,3 +29,10 @@ export interface DeviceInfo {
   tags: Record<string, string>;
   online: boolean;
 }
+
+export interface CocoonKind {
+  id: string;
+  runner_type: string;
+  runner_config: unknown;
+  image: string;
+}

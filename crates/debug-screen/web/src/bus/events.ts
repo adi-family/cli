@@ -4,11 +4,10 @@
  */
 
 import type { AdiDebugScreenRegisterSectionEvent } from './types';
-import { AdiDebugScreenBusKey } from './types';
 
 declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
     // ── adi.debug-screen ──
-    [AdiDebugScreenBusKey.RegisterSection]: AdiDebugScreenRegisterSectionEvent;
+    'adi.debug-screen:register-section': AdiDebugScreenRegisterSectionEvent;
   }
 }

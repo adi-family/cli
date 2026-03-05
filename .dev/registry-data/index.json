@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1772743421,
+  "updatedAt": 1772746119,
   "packages": [],
   "plugins": [
     {
@@ -92,7 +92,8 @@
       "name": "ADI Signaling",
       "description": "ADI Signaling plugin — CLI commands for device pairing and signaling server",
       "pluginTypes": [
-        "extension"
+        "extension",
+        "web"
       ],
       "packageId": null,
       "latestVersion": "0.1.0",

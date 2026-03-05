@@ -4,15 +4,14 @@
  */
 
 import type { CommandExecuteEvent, CommandPaletteOpenEvent, CommandRegisterEvent } from './types';
-import { CommandBusKey, CommandPaletteBusKey } from './types';
 
 declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
     // ── command ──
-    [CommandBusKey.Register]: CommandRegisterEvent;
-    [CommandBusKey.Execute]: CommandExecuteEvent;
+    'command:register': CommandRegisterEvent;
+    'command:execute': CommandExecuteEvent;
 
     // ── command-palette ──
-    [CommandPaletteBusKey.Open]: CommandPaletteOpenEvent;
+    'command-palette:open': CommandPaletteOpenEvent;
   }
 }

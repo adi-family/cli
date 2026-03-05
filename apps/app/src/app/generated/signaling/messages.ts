@@ -3,7 +3,7 @@
  * DO NOT EDIT.
  */
 
-import type { AuthOption, AuthRequirement, ConnectionInfo, DeviceInfo } from './types';
+import type { AuthOption, AuthRequirement, CocoonKind, ConnectionInfo, DeviceInfo } from './types';
 
 export type SignalingMessage =
   // ── auth ──
@@ -33,6 +33,14 @@ export type SignalingMessage =
 
   // ── sync ──
   | { type: 'sync_data'; payload: unknown }
+
+  // ── hive ──
+  | { type: 'hive_register'; hive_id: string; version: string; cocoon_kinds: CocoonKind[]; hive_id_signature: string }
+  | { type: 'hive_register_response'; hive_id: string }
+  | { type: 'hive_spawn_cocoon'; request_id: string; setup_token: string; name?: string; kind: string }
+  | { type: 'hive_terminate_cocoon'; request_id: string; container_id: string }
+  | { type: 'hive_spawn_cocoon_result'; request_id: string; success: boolean; device_id?: string; container_id?: string; error?: string }
+  | { type: 'hive_terminate_cocoon_result'; request_id: string; success: boolean; error?: string }
 
   // ── system ──
   | { type: 'system_error'; message: string };

@@ -228,27 +228,12 @@ fn generate_events(
     let mut type_imports: BTreeSet<String> = events.iter().map(|e| e.payload_type.clone()).collect();
     type_imports.extend(extra_imports);
 
-    // Collect BusKey enum imports
-    let bus_key_imports: BTreeSet<String> = events
-        .iter()
-        .map(|e| format!("{}BusKey", e.bus_pascal))
-        .collect();
-
-    if !type_imports.is_empty() || !bus_key_imports.is_empty() {
-        if !type_imports.is_empty() {
-            writeln!(
-                out,
-                "import type {{ {} }} from './types';",
-                type_imports.into_iter().collect::<Vec<_>>().join(", ")
-            )?;
-        }
-        if !bus_key_imports.is_empty() {
-            writeln!(
-                out,
-                "import {{ {} }} from './types';",
-                bus_key_imports.into_iter().collect::<Vec<_>>().join(", ")
-            )?;
-        }
+    if !type_imports.is_empty() {
+        writeln!(
+            out,
+            "import type {{ {} }} from './types';",
+            type_imports.into_iter().collect::<Vec<_>>().join(", ")
+        )?;
         writeln!(out)?;
     }
 
@@ -266,8 +251,8 @@ fn generate_events(
         }
         writeln!(
             out,
-            "    [{}BusKey.{}]: {};",
-            event.bus_pascal, event.op_pascal, event.payload_type
+            "    '{}': {};",
+            event.event_name, event.payload_type
         )?;
     }
 
@@ -489,9 +474,9 @@ interface AuthBus {
         let events = std::fs::read_to_string(dir.path().join("events.ts")).unwrap();
         assert!(events.contains("declare module '@adi-family/sdk-plugin/types'"));
         assert!(events.contains("interface EventRegistry {"));
-        assert!(events.contains("[SignalingBusKey.State]: SignalingStateEvent;"));
-        assert!(events.contains("[SignalingBusKey.AuthOk]: SignalingAuthOkEvent;"));
-        assert!(events.contains("[AuthBusKey.StateChanged]: AuthStateChangedEvent;"));
+        assert!(events.contains("'signaling:state': SignalingStateEvent;"));
+        assert!(events.contains("'signaling:auth-ok': SignalingAuthOkEvent;"));
+        assert!(events.contains("'auth:state-changed': AuthStateChangedEvent;"));
         assert!(events.contains("// ── signaling ──"));
         assert!(events.contains("// ── auth ──"));
     }

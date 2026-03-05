@@ -158,7 +158,7 @@ def package_json(name: str) -> str:
         '  "private": true,\n'
         '  "type": "module",\n'
         '  "scripts": {\n'
-        '    "generate:events": "tsp-gen ../bus.tsp -l typescript -s eventbus --eventbus-module @adi-family/sdk-plugin/types --eventbus-interface EventRegistry --eventbus-rename kebab-case -o src/generated/bus",\n'
+        '    "generate:events": "adi tsp-gen generate ../bus.tsp -l typescript -s eventbus --eventbus-module @adi-family/sdk-plugin/types --eventbus-interface EventRegistry --eventbus-rename kebab-case -o src/generated/bus",\n'
         '    "generate": "npm run generate:events",\n'
         '    "build": "npm run generate && vite build",\n'
         '    "typecheck": "tsc --noEmit",\n'

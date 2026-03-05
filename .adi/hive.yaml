@@ -268,40 +268,6 @@ services:
       - postgres
     restart: on-failure
 
-  platform:
-    hooks:
-      pre-up:
-        - type: script
-          run: python3 .adi/workflows/_core/patch.py plugin adi.platform
-    runner:
-      type: script
-      script:
-        run: adi run adi.platform start --port 8015
-    rollout:
-      type: recreate
-      recreate:
-        ports:
-          http: 8015
-    proxy:
-      - host: adi.test
-        path: /api/platform
-        strip_prefix: true
-    healthcheck:
-      type: http
-      http:
-        port: '{{runtime.port.http}}'
-        path: /health
-    environment:
-      static:
-        PORT: '8015'
-        DATABASE_URL: 'postgres://adi:adi@localhost:8027/adi_platform'
-        JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
-        PUBLIC_BASE_URL: ${env.PUBLIC_BASE_URL:-http://adi.test}
-        CORS_ORIGIN: 'http://adi.test'
-    depends_on:
-      - postgres
-    restart: on-failure
-
   # ---------------------------------------------------------------------------
   # Web Frontends
   # ---------------------------------------------------------------------------

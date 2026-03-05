@@ -5,6 +5,8 @@
 
 import { PLUGIN_ID } from './config';
 
+import './bus';
+export * from './bus';
 export * from './config';
 
 import type { ActionsPlugin } from './plugin';
