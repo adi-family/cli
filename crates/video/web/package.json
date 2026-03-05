@@ -2,8 +2,14 @@
   "name": "@adi/video-web-plugin",
   "version": "0.1.0",
   "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
-    "build": "vite build",
+    "generate": "cargo check -p video-plugin",
+    "build": "npm run generate && vite build",
     "typecheck": "tsc --noEmit",
     "dev": "vite build --watch"
   },

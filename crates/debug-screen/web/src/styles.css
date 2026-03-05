@@ -1,0 +1,56 @@
+/* ─── Debug Page ─── */
+
+.dp-layout {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.dp-sidebar {
+  width: 14rem;
+  flex-shrink: 0;
+  border-right: 1px solid var(--adi-border);
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+.dp-sidebar-title {
+  color: var(--adi-text-muted);
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+}
+
+.dp-sidebar-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 1rem;
+  color: var(--adi-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  transition: background-color 150ms;
+}
+
+.dp-sidebar-item:hover {
+  background: var(--adi-surface-alt);
+}
+
+.dp-sidebar-item--active {
+  background: color-mix(in srgb, var(--adi-accent) 15%, transparent);
+  color: var(--adi-accent);
+}
+
+.dp-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.dp-empty {
+  color: var(--adi-text-muted);
+  text-align: center;
+  padding: 3rem 1rem;
+}

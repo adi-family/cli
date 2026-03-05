@@ -1,5 +1,19 @@
-import './styles.css';
-import './events.js';
-export { TasksPlugin, TasksPlugin as PluginShell } from './plugin.js';
-export { AdiTasksElement } from './component.js';
-export type { Task, TaskWithDependencies, TasksStats, TaskStatus, Connection } from './types.js';
+/**
+ * Auto-generated plugin entry from Cargo.toml.
+ * DO NOT EDIT.
+ */
+
+import { PLUGIN_ID } from './config';
+
+import './bus';
+export * from './bus';
+export * from './config';
+
+import type { TasksPlugin } from './plugin';
+export { TasksPlugin, TasksPlugin as PluginShell } from './plugin';
+
+declare module '@adi-family/sdk-plugin' {
+  interface PluginApiRegistry {
+    [PLUGIN_ID]: TasksPlugin['api'];
+  }
+}

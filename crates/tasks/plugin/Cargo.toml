@@ -17,6 +17,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["sync"] }
 
+[build-dependencies]
+lib-plugin-web-build = { path = "../../_lib/lib-plugin-web-build" }
+
 [package.metadata.plugin]
 id = "adi.tasks"
 name = "ADI Tasks"
@@ -38,6 +41,7 @@ description = "CLI commands for task management"
 [package.metadata.plugin.web_ui]
 entry = "web.js"
 sandbox = false
+plugin_class = "TasksPlugin"
 
 [package.metadata.plugin.tags]
 categories = ["tasks", "project-management", "workflow"]

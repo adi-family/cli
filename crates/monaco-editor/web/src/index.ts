@@ -1,5 +1,17 @@
-import './styles.css';
-import './events.js';
-export { MonacoEditorPlugin, MonacoEditorPlugin as PluginShell } from './plugin.js';
-export { AdiMonacoEditorElement } from './component.js';
-export type { EditorOptions, EditorOpenPayload, EditorContentPayload } from './types.js';
+/**
+ * Auto-generated plugin entry from Cargo.toml.
+ * DO NOT EDIT.
+ */
+
+import { PLUGIN_ID } from './config';
+
+export * from './config';
+
+import type { MonacoEditorPlugin } from './plugin';
+export { MonacoEditorPlugin, MonacoEditorPlugin as PluginShell } from './plugin';
+
+declare module '@adi-family/sdk-plugin' {
+  interface PluginApiRegistry {
+    [PLUGIN_ID]: MonacoEditorPlugin['api'];
+  }
+}

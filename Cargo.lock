@@ -71,6 +71,7 @@ name = "actions-plugin"
 version = "0.1.0"
 dependencies = [
  "lib-plugin-prelude",
+ "lib-plugin-web-build",
 ]
 
 [[package]]
@@ -820,6 +821,7 @@ version = "0.1.0"
 dependencies = [
  "auth-http",
  "lib-plugin-prelude",
+ "lib-plugin-web-build",
 ]
 
 [[package]]
@@ -3124,6 +3126,7 @@ name = "debug-screen-plugin"
 version = "0.1.0"
 dependencies = [
  "lib-plugin-prelude",
+ "lib-plugin-web-build",
 ]
 
 [[package]]
@@ -6271,6 +6274,7 @@ dependencies = [
  "knowledgebase-core",
  "lib-plugin-abi-v3",
  "lib-plugin-host",
+ "lib-plugin-web-build",
  "once_cell",
  "serde",
  "serde_json",
@@ -7589,6 +7593,7 @@ name = "monaco-editor-plugin"
 version = "0.1.0"
 dependencies = [
  "lib-plugin-prelude",
+ "lib-plugin-web-build",
 ]
 
 [[package]]
@@ -8741,6 +8746,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "lib-plugin-abi-v3",
+ "lib-plugin-web-build",
  "payment-core",
 ]
 
@@ -11035,6 +11041,7 @@ dependencies = [
  "futures",
  "lib-env-parse",
  "lib-plugin-prelude",
+ "lib-plugin-web-build",
  "lib-signaling-protocol",
  "serde_json",
  "signaling-core",
@@ -11818,6 +11825,7 @@ name = "tasks-plugin"
 version = "0.8.8"
 dependencies = [
  "lib-plugin-prelude",
+ "lib-plugin-web-build",
  "serde",
  "serde_json",
  "tasks-core",
@@ -13257,6 +13265,7 @@ name = "video-plugin"
 version = "0.1.0"
 dependencies = [
  "lib-plugin-prelude",
+ "lib-plugin-web-build",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
