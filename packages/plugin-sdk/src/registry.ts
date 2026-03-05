@@ -21,7 +21,7 @@ export function _resetRegistry(): void {
 }
 
 function getApp(bus: EventBus): AppContext {
-  if (!sharedApp) sharedApp = new AppContext(bus);
+  if (!sharedApp) sharedApp = new AppContext(bus, { envSource: import.meta.env });
   return sharedApp;
 }
 
