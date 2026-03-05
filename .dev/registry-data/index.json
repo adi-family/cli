@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1772735808,
+  "updatedAt": 1772742009,
   "packages": [],
   "plugins": [
     {
@@ -77,6 +77,33 @@
       "id": "adi.slots",
       "name": "ADI Slots",
       "description": "Content slots for cross-plugin UI extension points",
+      "pluginTypes": [
+        "extension",
+        "web"
+      ],
+      "packageId": null,
+      "latestVersion": "0.1.0",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    },
+    {
+      "id": "adi.signaling",
+      "name": "ADI Signaling",
+      "description": "ADI Signaling plugin — CLI commands for device pairing and signaling server",
+      "pluginTypes": [
+        "extension"
+      ],
+      "packageId": null,
+      "latestVersion": "0.1.0",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    },
+    {
+      "id": "adi.debug-screen",
+      "name": "ADI Debug Screen",
+      "description": "Debug screen and operations log",
       "pluginTypes": [
         "extension",
         "web"

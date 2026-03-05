@@ -5,7 +5,7 @@
 
 export interface AdiDebugScreenRegisterSectionEvent {
   pluginId: string;
-  element: string;
+  init: unknown;
   label: string;
 }
 

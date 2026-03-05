@@ -3,5 +3,5 @@
 
 @bus("adi.debug-screen")
 interface DebugPageBus {
-    @event registerSection(pluginId: string, element: string, label: string): void;
+    @event registerSection(pluginId: string, init: unknown, label: string): void;
 }

@@ -16,7 +16,7 @@ export interface AdiRouterChangedEvent {
 export interface AdiRouterRegisterRouteEvent {
   pluginId: string;
   path: string;
-  element: string;
+  init: unknown;
   label?: string;
 }
 

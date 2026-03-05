@@ -71,9 +71,9 @@ export class EventBus {
     this.log.trace({ event, consumer, msg: 'subscribed' });
     if (ch.queue.length > 0) {
       const now = Date.now();
-      const flushed = ch.queue.splice(0).filter(e => now - e.timestamp < QUEUE_TTL_MS);
-      this.log.debug({ event, consumer, count: flushed.length, msg: 'flushing queue' });
-      for (const { payload } of flushed) {
+      ch.queue = ch.queue.filter(e => now - e.timestamp < QUEUE_TTL_MS);
+      this.log.debug({ event, consumer, count: ch.queue.length, msg: 'replaying queue' });
+      for (const { payload } of ch.queue) {
         handler(payload as EventRegistry[K]);
       }
     }

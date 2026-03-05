@@ -35,15 +35,15 @@ export class DebugScreenPlugin extends AdiPlugin {
 
     this.bus.emit(
       AdiRouterBusKey.RegisterRoute,
-      { pluginId: PLUGIN_ID, path: '', element: 'adi-debug-page', label: 'Debug' },
+      { pluginId: PLUGIN_ID, path: '', init: () => this.el!, label: 'Debug' },
       PLUGIN_ID,
     );
 
     this.bus.on(
       AdiDebugScreenBusKey.RegisterSection,
-      ({ pluginId, element, label }: AdiDebugScreenRegisterSectionEvent) => {
+      ({ pluginId, init, label }: AdiDebugScreenRegisterSectionEvent) => {
         if (this.sections.some((s) => s.pluginId === pluginId)) return;
-        this.sections = [...this.sections, { pluginId, element, label }];
+        this.sections = [...this.sections, { pluginId, init: init as () => HTMLElement, label }];
         this.syncElement();
       },
       PLUGIN_ID,

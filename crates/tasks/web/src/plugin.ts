@@ -46,7 +46,7 @@ export class TasksPlugin extends AdiPlugin {
       customElements.define('adi-tasks', AdiTasksElement);
     }
 
-    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', element: 'adi-tasks', label: 'Tasks' }, this.id);
+    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', init: () => document.createElement('adi-tasks'), label: 'Tasks' }, this.id);
     this.bus.emit('nav:add', { id: this.id, label: 'Tasks', path: `/${this.id}` }, this.id);
 
     this.bus.on('tasks:list', async ({ status }) => {

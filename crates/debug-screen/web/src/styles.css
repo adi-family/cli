@@ -54,3 +54,28 @@
   text-align: center;
   padding: 3rem 1rem;
 }
+
+/* ─── Debug Routes Table ─── */
+
+.dr-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dr-th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--adi-text-muted);
+  padding: 0.375rem 0.75rem;
+  border-bottom: 1px solid var(--adi-border);
+}
+
+.dr-td {
+  padding: 0.375rem 0.75rem;
+  border-bottom: 1px solid var(--adi-border);
+  color: var(--adi-text);
+}
+
+.dr-row:hover {
+  background: var(--adi-surface-alt);
+}

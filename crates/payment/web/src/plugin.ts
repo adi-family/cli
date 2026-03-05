@@ -20,7 +20,7 @@ export class PaymentPlugin extends AdiPlugin {
       customElements.define('adi-payment', AdiPaymentElement);
     }
 
-    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', element: 'adi-payment', label: 'Payment' }, this.id);
+    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', init: () => document.createElement('adi-payment'), label: 'Payment' }, this.id);
     this.bus.emit('nav:add', { id: this.id, label: 'Payment', path: `/${this.id}` }, this.id);
 
     this.bus.on('payment:balance', async () => {

@@ -8,19 +8,57 @@ description = "Release all specified plugins to local registry"
 [[steps]]
 name = "Release all plugins locally"
 run = """
-PLUGINS="adi.router adi.command-palette adi.slots adi.auth"
+ALL_PLUGINS="adi.router adi.command-palette adi.slots adi.auth adi.signaling adi.debug-screen"
+
+FILTER="${1:-}"
+if [ -n "$FILTER" ]; then
+    PLUGINS=""
+    for P in $ALL_PLUGINS; do
+        case "$P" in *"$FILTER"*) PLUGINS="$PLUGINS $P" ;; esac
+    done
+    PLUGINS=$(echo "$PLUGINS" | xargs)
+    if [ -z "$PLUGINS" ]; then
+        error "No plugins matched filter '$FILTER'"
+    fi
+    info "Filtered plugins: $PLUGINS"
+else
+    PLUGINS="$ALL_PLUGINS"
+fi
 
 FAILED=""
+PIDS=""
+TMPDIR_LOGS=$(mktemp -d)
+
 for PLUGIN in $PLUGINS; do
     info "Releasing $PLUGIN to local registry..."
-    if python3 -u "$WORKFLOWS_DIR/_core/release_plugin.py" "$PLUGIN" --local; then
+    (
+        if python3 -u "$WORKFLOWS_DIR/_core/release_plugin.py" "$PLUGIN" --local \
+            > "$TMPDIR_LOGS/$PLUGIN.log" 2>&1; then
+            echo "OK" > "$TMPDIR_LOGS/$PLUGIN.status"
+        else
+            echo "FAIL" > "$TMPDIR_LOGS/$PLUGIN.status"
+        fi
+    ) &
+    PIDS="$PIDS $!"
+done
+
+for PID in $PIDS; do
+    wait "$PID"
+done
+
+for PLUGIN in $PLUGINS; do
+    echo ""
+    STATUS=$(cat "$TMPDIR_LOGS/$PLUGIN.status" 2>/dev/null)
+    if [ "$STATUS" = "OK" ]; then
         success "$PLUGIN released"
     else
         warn "$PLUGIN failed"
+        cat "$TMPDIR_LOGS/$PLUGIN.log"
         FAILED="$FAILED $PLUGIN"
     fi
-    echo ""
 done
+
+rm -rf "$TMPDIR_LOGS"
 
 if [ -n "$FAILED" ]; then
     error "Failed plugins:$FAILED"

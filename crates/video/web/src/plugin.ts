@@ -29,7 +29,7 @@ export class VideoPlugin extends AdiPlugin {
       customElements.define('adi-video', AdiVideoElement);
     }
 
-    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', element: 'adi-video', label: 'Video' }, this.id);
+    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', init: () => document.createElement('adi-video'), label: 'Video' }, this.id);
     this.bus.emit('nav:add', { id: this.id, label: 'Video', path: `/${this.id}` }, this.id);
 
     this.bus.on('video:render', async ({ compositionId: _, format, width, height, fps, durationInFrames }) => {

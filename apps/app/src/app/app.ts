@@ -61,15 +61,17 @@ export class App {
     this.core.registerPluginById('adi.router');
     this.core.registerPluginById('adi.command-palette');
     this.core.registerPluginById('adi.auth');
+    this.core.registerPluginById('adi.debug-screen');
+    this.core.registerPluginById('adi.signaling');
 
     //this.core.registerPluginById('adi.signaling');
     //this.core.registerPluginById('adi.actions');
     await this.registerEnabledPlugins();
+    this.allPlugins = await this.core.fetchPlugins();
   }
 
   @trace('starting')
   async start(): Promise<void> {
-    this.allPlugins = await this.core.fetchPlugins();
     window.dispatchEvent(new Event('app-ready'));
   }
 

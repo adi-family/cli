@@ -15,7 +15,7 @@ export class MonacoEditorPlugin extends AdiPlugin {
       customElements.define('adi-monaco-editor', AdiMonacoEditorElement);
     }
 
-    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', element: 'adi-monaco-editor', label: 'Editor' });
+    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', init: () => document.createElement('adi-monaco-editor'), label: 'Editor' });
     this.bus.emit('nav:add', { id: this.id, label: 'Editor', path: `/${this.id}` });
 
     this.bus.on('editor:open', ({ content, options }) => {

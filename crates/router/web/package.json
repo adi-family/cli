@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@adi/command-palette-web-plugin": "file:../../command-palette/web",
+    "@adi/debug-screen-web-plugin": "file:../../debug-screen/web",
     "@adi/slots-web-plugin": "file:../../slots/web",
     "@adi-family/sdk-plugin": "file:../../../packages/plugin-sdk",
     "lit": "^3.3.1"

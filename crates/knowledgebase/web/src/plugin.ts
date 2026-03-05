@@ -33,7 +33,7 @@ export class KnowledgebasePlugin extends AdiPlugin {
       {
         pluginId: PLUGIN_ID,
         path: '',
-        element: 'adi-knowledgebase',
+        init: () => document.createElement('adi-knowledgebase'),
         label: 'Knowledgebase',
       },
       PLUGIN_ID,

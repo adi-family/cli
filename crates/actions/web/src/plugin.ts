@@ -28,7 +28,7 @@ export class ActionsPlugin extends AdiPlugin {
       customElements.define('adi-actions', AdiActionsElement);
     }
 
-    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: PLUGIN_ID, path: '', element: 'adi-actions', label: 'Actions' }, PLUGIN_ID);
+    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: PLUGIN_ID, path: '', init: () => document.createElement('adi-actions'), label: 'Actions' }, PLUGIN_ID);
     this.bus.emit('nav:add', { id: PLUGIN_ID, label: 'Actions', path: `/${PLUGIN_ID}` }, PLUGIN_ID);
 
     this.bus.on('actions:register-kind', ({ plugin, kind, mode }) => {

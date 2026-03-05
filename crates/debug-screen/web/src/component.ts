@@ -4,7 +4,7 @@ import { customElement, state } from 'lit/decorators.js';
 
 export interface DebugSection {
   pluginId: string;
-  element: string;
+  init: () => HTMLElement;
   label: string;
 }
 
@@ -55,7 +55,7 @@ export class AdiDebugPageElement extends LitElement {
   private renderSection(section: DebugSection) {
     let el = this.elementCache.get(section.pluginId);
     if (!el) {
-      el = document.createElement(section.element);
+      el = section.init();
       this.elementCache.set(section.pluginId, el);
     }
     return html`${el}`;

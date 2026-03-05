@@ -2,15 +2,17 @@ import { LitElement, html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { AdiPlugin } from '@adi-family/sdk-plugin';
 import { CommandBusKey } from '@adi/command-palette-web-plugin/bus';
+import { AdiDebugScreenBusKey } from '@adi/debug-screen-web-plugin/bus';
 import { SlotsBusKey } from '@adi/slots-web-plugin/bus';
 import { AdiRouterBusKey } from './bus';
 import { PLUGIN_ID, PLUGIN_VERSION } from './config';
+import type { AdiRouterDebugElement } from './debug-section';
 
 // ── Route matching ──────────────────────────────────────
 
 interface Route {
   path: string;
-  element: string;
+  init: () => HTMLElement;
 }
 
 function buildFullPath(pluginId: string, path: string): string {
@@ -71,7 +73,7 @@ export class RouterOutlet extends LitElement {
 
     let el = this.elementCache.get(active.path);
     if (!el) {
-      el = document.createElement(active.element);
+      el = active.init();
       this.elementCache.set(active.path, el);
     }
 
@@ -90,6 +92,7 @@ export class RouterPlugin extends AdiPlugin {
   private routes: Route[] = [];
   private routePaths = new Map<string, string>();
   private routerOutlet: RouterOutlet | null = null;
+  private debugEl: AdiRouterDebugElement | null = null;
 
   get api() {
     return this;
@@ -98,6 +101,7 @@ export class RouterPlugin extends AdiPlugin {
   private readonly onPopState = () => {
     sharedPath = window.location.pathname;
     notifyOutlets();
+    this.syncDebug();
     this.bus.emit(
       AdiRouterBusKey.Changed,
       { path: sharedPath, params: {} },
@@ -105,23 +109,44 @@ export class RouterPlugin extends AdiPlugin {
     );
   };
 
-  override onRegister(): void {
+  override async onRegister(): Promise<void> {
     this.routerOutlet = document.createElement('router-outlet') as RouterOutlet;
     this.bus.emit(
       SlotsBusKey.Place,
-      { slot: 'maincontent', elementRef: this.routerOutlet, priority: 0, pluginId: PLUGIN_ID },
+      {
+        slot: 'maincontent',
+        elementRef: this.routerOutlet,
+        priority: 0,
+        pluginId: PLUGIN_ID,
+      },
+      PLUGIN_ID,
+    );
+
+    await import('./debug-section.js');
+    this.bus.emit(
+      AdiDebugScreenBusKey.RegisterSection,
+      {
+        pluginId: PLUGIN_ID,
+        init: () => {
+          this.debugEl = document.createElement('adi-router-debug') as AdiRouterDebugElement;
+          this.syncDebug();
+          return this.debugEl;
+        },
+        label: 'Router',
+      },
       PLUGIN_ID,
     );
 
     this.bus.on(
       AdiRouterBusKey.RegisterRoute,
-      ({ pluginId, path, element, label }) => {
+      ({ pluginId, path, init, label }) => {
         const fullPath = buildFullPath(pluginId, path);
         if (this.routes.some((r) => r.path === fullPath)) return;
 
-        this.routes = [...this.routes, { path: fullPath, element }];
+        this.routes = [...this.routes, { path: fullPath, init: init as () => HTMLElement }];
         sharedRoutes = [...this.routes];
         notifyOutlets();
+        this.syncDebug();
 
         const commandId = `${GOTO_PREFIX}${pluginId}`;
         this.routePaths.set(commandId, fullPath);
@@ -156,13 +181,28 @@ export class RouterPlugin extends AdiPlugin {
     );
 
     window.addEventListener('popstate', this.onPopState);
+
+    if (sharedPath !== '/') {
+      this.bus.emit(
+        AdiRouterBusKey.Changed,
+        { path: sharedPath, params: {} },
+        PLUGIN_ID,
+      );
+    }
   }
 
   navigate(path: string): void {
     history.pushState(null, '', path);
     sharedPath = path;
     notifyOutlets();
+    this.syncDebug();
     this.bus.emit(AdiRouterBusKey.Changed, { path, params: {} }, PLUGIN_ID);
+  }
+
+  private syncDebug(): void {
+    if (!this.debugEl) return;
+    this.debugEl.routes = this.routes.map((r) => ({ path: r.path }));
+    this.debugEl.currentPath = sharedPath;
   }
 
   override onUnregister(): void {
