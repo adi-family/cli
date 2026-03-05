@@ -1,17 +1,8 @@
-import path from "node:path";
 import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [tailwindcss()],
-  resolve: {
-    alias: {
-      "@adi/command-palette-web-plugin/bus": path.resolve(
-        __dirname,
-        "../../command-palette/web/src/bus/index.ts",
-      ),
-    },
-  },
   build: {
     lib: {
       entry: "src/index.ts",
@@ -19,7 +10,7 @@ export default defineConfig({
       fileName: () => "web.js",
     },
     rollupOptions: {
-      external: ["@adi-family/sdk-plugin"],
+      external: ["@adi-family/sdk-plugin", /^lit(\/.*)?$/],
       output: {
         inlineDynamicImports: true,
         assetFileNames: "style[extname]",

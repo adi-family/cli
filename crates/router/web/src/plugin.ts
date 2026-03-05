@@ -1,5 +1,5 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { CommandBusKey } from '@adi/command-palette-web-plugin';
+import { CommandBusKey } from '@adi/command-palette-web-plugin/bus';
 import { AdiRouterBusKey, AdiRouterRegisterRouteEvent } from './bus';
 import { PLUGIN_ID, PLUGIN_VERSION } from './config';
 
