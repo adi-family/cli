@@ -1,0 +1,30 @@
+# Release all web plugins to local registry
+# Usage: adi wf release-locally-all
+
+[workflow]
+name = "release-locally-all"
+description = "Release all specified plugins to local registry"
+
+[[steps]]
+name = "Release all plugins locally"
+run = """
+PLUGINS="adi.router adi.command-palette adi.slots"
+
+FAILED=""
+for PLUGIN in $PLUGINS; do
+    info "Releasing $PLUGIN to local registry..."
+    if python3 -u "$WORKFLOWS_DIR/_core/release_plugin.py" "$PLUGIN" --local; then
+        success "$PLUGIN released"
+    else
+        warn "$PLUGIN failed"
+        FAILED="$FAILED $PLUGIN"
+    fi
+    echo ""
+done
+
+if [ -n "$FAILED" ]; then
+    error "Failed plugins:$FAILED"
+fi
+
+success "All plugins released locally"
+"""

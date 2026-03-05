@@ -9,8 +9,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.parse
 from pathlib import Path
+
+# Force unbuffered stdout so output appears immediately in piped contexts
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
 
 SCRIPT_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", SCRIPT_DIR.parent.parent))
@@ -26,19 +31,19 @@ NC = "\033[0m"
 
 
 def info(msg: str):
-    print(f"{CYAN}info{NC} {msg}")
+    print(f"{CYAN}info{NC} {msg}", flush=True)
 
 
 def success(msg: str):
-    print(f"{GREEN}done{NC} {msg}")
+    print(f"{GREEN}done{NC} {msg}", flush=True)
 
 
 def warn(msg: str):
-    print(f"{YELLOW}warn{NC} {msg}")
+    print(f"{YELLOW}warn{NC} {msg}", flush=True)
 
 
 def error(msg: str):
-    print(f"{RED}error{NC} {msg}", file=sys.stderr)
+    print(f"{RED}error{NC} {msg}", file=sys.stderr, flush=True)
     sys.exit(1)
 
 
@@ -46,7 +51,9 @@ def check_command(cmd: str) -> bool:
     return shutil.which(cmd) is not None
 
 
-def run_cmd(args: list[str], cwd: Path | None = None, capture: bool = True) -> subprocess.CompletedProcess:
+def run_cmd(args: list[str], cwd: Path | None = None, capture: bool = True, stream: bool = False) -> subprocess.CompletedProcess:
+    if stream:
+        return subprocess.run(args, cwd=cwd, text=True)
     return subprocess.run(args, cwd=cwd, capture_output=capture, text=True)
 
 
@@ -250,7 +257,7 @@ class PluginBuild:
         self.style_css: Path | None = None
 
 
-def build_plugin(plugin_name: str, crate_dir: str, dist_dir: Path) -> PluginBuild:
+def build_plugin(plugin_name: str, crate_dir: str, dist_dir: Path, release: bool = True) -> PluginBuild:
     """Build a plugin and return metadata."""
     build = PluginBuild()
 
@@ -259,6 +266,7 @@ def build_plugin(plugin_name: str, crate_dir: str, dist_dir: Path) -> PluginBuil
         error(f"Cargo.toml not found in {crate_dir}")
 
     # Generate plugin.toml from Cargo.toml metadata
+    info("Generating plugin manifest...")
     manifest_gen = ensure_manifest_gen()
     generated_toml = Path(tempfile.mktemp(suffix=".toml", prefix="plugin-"))
     result = run_cmd([str(manifest_gen), "--cargo-toml", str(cargo_toml), "--output", str(generated_toml)])
@@ -304,15 +312,24 @@ def build_plugin(plugin_name: str, crate_dir: str, dist_dir: Path) -> PluginBuil
         build_dir = PROJECT_ROOT / crate_dir
         target_dir = build_dir / "target"
 
-    result = run_cmd(["cargo", "build", "--release", "-p", package_name, "--lib"], cwd=build_dir)
+    cargo_args = ["cargo", "build", "-p", package_name, "--lib"]
+    if release:
+        cargo_args.insert(2, "--release")
+    stream = not release
+    info(f"Running: {' '.join(cargo_args)}")
+    t0 = time.time()
+    result = run_cmd(cargo_args, cwd=build_dir, stream=stream)
+    elapsed = time.time() - t0
     if result.returncode != 0:
-        error(f"Build failed:\n{result.stderr}")
+        error(f"Build failed" + (f":\n{result.stderr}" if result.stderr else ""))
+    info(f"Cargo build took {elapsed:.1f}s")
 
     # Find the built library
     build.platform = get_platform()
     lib_ext = get_lib_extension(build.platform)
     lib_name = f"lib{package_name.replace('-', '_')}"
-    lib_path = target_dir / "release" / f"{lib_name}.{lib_ext}"
+    profile_dir = "release" if release else "debug"
+    lib_path = target_dir / profile_dir / f"{lib_name}.{lib_ext}"
 
     if not lib_path.is_file():
         error(f"Library not found: {lib_path}")
@@ -331,8 +348,10 @@ def build_plugin(plugin_name: str, crate_dir: str, dist_dir: Path) -> PluginBuil
         info(f"Building web UI from {web_dir}...")
         if not check_command("npm"):
             error("npm not found. Install Node.js: https://nodejs.org")
-        run_cmd(["npm", "install", "--silent"], cwd=web_dir)
-        run_cmd(["npm", "run", "build"], cwd=web_dir)
+        t0 = time.time()
+        run_cmd(["npm", "install", "--silent"], cwd=web_dir, stream=stream)
+        run_cmd(["npm", "run", "build"], cwd=web_dir, stream=stream)
+        info(f"Web UI build took {time.time() - t0:.1f}s")
         web_js = web_dir / "dist" / "web.js"
         if web_js.is_file():
             build.web_js = web_js
@@ -401,12 +420,11 @@ def publish_plugin(build: PluginBuild, registry: str):
 
     if http_code in ("200", "201"):
         success(f"Published {build.id} v{build.version}")
-        # Try pretty-print JSON
-        jq = run_cmd(["jq", "."], cwd=None)
-        if jq.returncode == 0:
-            print(body)
-        else:
-            print(body)
+        if body and check_command("jq"):
+            jq_result = subprocess.run(["jq", "."], input=body, capture_output=True, text=True)
+            print(jq_result.stdout if jq_result.returncode == 0 else body, flush=True)
+        elif body:
+            print(body, flush=True)
     else:
         error(f"Failed to publish (HTTP {http_code}): {body}")
 
@@ -485,9 +503,12 @@ def find_related_plugins(plugin_id: str) -> list[str]:
     return sorted(set(plugin_ids))
 
 
-def release_single_plugin(plugin_name: str, registry: str, no_push: bool, bump: str):
+def release_single_plugin(plugin_name: str, registry: str, no_push: bool, bump: str, local: bool = False):
     """Release a single plugin: bump, lint, build, publish."""
+    info(f"Looking up crate for {plugin_name}...")
+    t0 = time.time()
     crate_dir = get_plugin_crate(plugin_name)
+    info(f"Crate lookup took {time.time() - t0:.1f}s")
     if not crate_dir:
         error(f"Unknown plugin: {plugin_name}. Check plugin ID.")
 
@@ -511,14 +532,15 @@ def release_single_plugin(plugin_name: str, registry: str, no_push: bool, bump: 
         info(f"Bumping version: {current_version} -> {new_version} ({bump})")
         update_plugin_version(cargo_toml, current_version, new_version)
 
-    # Lint plugin before building
-    info("Linting plugin...")
-    lint_script = WORKFLOWS_DIR / "lint-plugin.sh"
-    if lint_script.is_file():
-        result = run_cmd([str(lint_script), str(crate_path)])
-        if result.returncode != 0:
-            error("Plugin lint failed. Fix errors before publishing.")
-    success("Lint passed")
+    # Lint plugin before building (skip for local releases)
+    if not local:
+        info("Linting plugin...")
+        lint_script = WORKFLOWS_DIR / "lint-plugin.sh"
+        if lint_script.is_file():
+            result = run_cmd([str(lint_script), str(crate_path)])
+            if result.returncode != 0:
+                error("Plugin lint failed. Fix errors before publishing.")
+        success("Lint passed")
 
     # Check prerequisites
     for cmd in ("cargo", "curl", "jq"):
@@ -533,7 +555,7 @@ def release_single_plugin(plugin_name: str, registry: str, no_push: bool, bump: 
     info(f"Building plugin: {plugin_name}")
     print()
 
-    build = build_plugin(plugin_name, crate_dir, dist_dir)
+    build = build_plugin(plugin_name, crate_dir, dist_dir, release=not local)
 
     print()
     info(f"Artifact: {build.archive}")
@@ -575,7 +597,7 @@ def main():
         failed: list[str] = []
         for pid in all_plugins:
             try:
-                release_single_plugin(pid, registry, args.no_push, args.bump)
+                release_single_plugin(pid, registry, args.no_push, args.bump, local=args.local)
             except SystemExit:
                 warn(f"Failed to release: {pid}")
                 failed.append(pid)
@@ -586,7 +608,7 @@ def main():
 
         success(f"Released {len(all_plugins)} plugin(s)")
     else:
-        release_single_plugin(args.plugin_name, registry, args.no_push, args.bump)
+        release_single_plugin(args.plugin_name, registry, args.no_push, args.bump, local=args.local)
 
 
 if __name__ == "__main__":
