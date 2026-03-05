@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-/// Shimmer placeholder skeleton. Sizing via ADID AX system (--l, --t, --r).
+/// Shimmer placeholder skeleton.
 @customElement("adi-loading-skeleton")
 export class AdiLoadingSkeleton extends LitElement {
   @property({ type: String }) label = "";
@@ -13,20 +13,20 @@ export class AdiLoadingSkeleton extends LitElement {
     // Card: 9.375 x 6.25 --l units
     return html`
       <div style="
-        width: calc(var(--l) * 9.375);
-        height: calc(var(--l) * 6.25);
+        width: calc(1rem * 9.375);
+        height: calc(1rem * 6.25);
         background: var(--adi-surface);
-        border-radius: var(--r);
+        border-radius: 0.75rem;
         overflow: hidden;
         position: relative;
       " class="skeleton-shimmer">
-        <div style="padding:calc(var(--l) * 0.75);display:flex;flex-direction:column;gap:calc(var(--l) * 0.5);height:100%;box-sizing:border-box;">
-          <div style="display:flex;gap:calc(var(--l) * 0.625);align-items:center;">
-            <div style="width:calc(var(--l) * 1.5);height:calc(var(--l) * 1.5);border-radius:50%;background:var(--adi-surface-alt);flex-shrink:0;"></div>
-            <div style="height:calc(var(--t) * 0.75);background:var(--adi-surface-alt);border-radius:calc(var(--r) * 0.5);flex:1;"></div>
+        <div style="padding:calc(1rem * 0.75);display:flex;flex-direction:column;gap:calc(1rem * 0.5);height:100%;box-sizing:border-box;">
+          <div style="display:flex;gap:calc(1rem * 0.625);align-items:center;">
+            <div style="width:calc(1rem * 1.5);height:calc(1rem * 1.5);border-radius:50%;background:var(--adi-surface-alt);flex-shrink:0;"></div>
+            <div style="height:calc(1rem * 0.75);background:var(--adi-surface-alt);border-radius:calc(0.75rem * 0.5);flex:1;"></div>
           </div>
-          <div style="height:calc(var(--t) * 0.5);background:var(--adi-surface-alt);border-radius:calc(var(--r) * 0.5);width:80%;"></div>
-          <div style="height:calc(var(--t) * 0.5);background:var(--adi-surface-alt);border-radius:calc(var(--r) * 0.5);width:60%;"></div>
+          <div style="height:calc(1rem * 0.5);background:var(--adi-surface-alt);border-radius:calc(0.75rem * 0.5);width:80%;"></div>
+          <div style="height:calc(1rem * 0.5);background:var(--adi-surface-alt);border-radius:calc(0.75rem * 0.5);width:60%;"></div>
         </div>
       </div>
     `;
@@ -36,17 +36,17 @@ export class AdiLoadingSkeleton extends LitElement {
     // Text: 9.375 --l wide, three lines
     return html`
       <div style="
-        width: calc(var(--l) * 9.375);
+        width: calc(1rem * 9.375);
         display: flex;
         flex-direction: column;
-        gap: calc(var(--l) * 0.5);
+        gap: calc(1rem * 0.5);
         position: relative;
         overflow: hidden;
-        border-radius: var(--r);
+        border-radius: 0.75rem;
       " class="skeleton-shimmer">
-        <div style="height:calc(var(--t) * 0.625);background:var(--adi-surface-alt);border-radius:calc(var(--r) * 0.5);width:100%;"></div>
-        <div style="height:calc(var(--t) * 0.625);background:var(--adi-surface-alt);border-radius:calc(var(--r) * 0.5);width:90%;"></div>
-        <div style="height:calc(var(--t) * 0.625);background:var(--adi-surface-alt);border-radius:calc(var(--r) * 0.5);width:70%;"></div>
+        <div style="height:calc(1rem * 0.625);background:var(--adi-surface-alt);border-radius:calc(0.75rem * 0.5);width:100%;"></div>
+        <div style="height:calc(1rem * 0.625);background:var(--adi-surface-alt);border-radius:calc(0.75rem * 0.5);width:90%;"></div>
+        <div style="height:calc(1rem * 0.625);background:var(--adi-surface-alt);border-radius:calc(0.75rem * 0.5);width:70%;"></div>
       </div>
     `;
   }
@@ -55,8 +55,8 @@ export class AdiLoadingSkeleton extends LitElement {
     // Avatar: 4 * --l diameter
     return html`
       <div style="
-        width: calc(var(--l) * 4);
-        height: calc(var(--l) * 4);
+        width: calc(1rem * 4);
+        height: calc(1rem * 4);
         border-radius: 50%;
         background: var(--adi-surface);
         display: flex;
@@ -79,9 +79,9 @@ export class AdiLoadingSkeleton extends LitElement {
     }
 
     return html`
-      <div style="display:flex;flex-direction:column;align-items:center;gap:calc(var(--l) * 0.75);">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:calc(1rem * 0.75);">
         ${content}
-        ${this.label ? html`<span style="font-size:calc(var(--t) * 0.875);color:var(--adi-text-muted);">${this.label}</span>` : ""}
+        ${this.label ? html`<span style="font-size:calc(1rem * 0.875);color:var(--adi-text-muted);">${this.label}</span>` : ""}
       </div>
     `;
   }

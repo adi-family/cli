@@ -1,9 +1,11 @@
 import type { EventBus } from './bus.js';
 import type { PluginDescriptor } from './types.js';
+import { AppContext } from './app-context.js';
 import { AdiPlugin } from './plugin.js';
 
 const registry = new Map<string, AdiPlugin>();
 const descriptors = new Map<string, PluginDescriptor>();
+let sharedApp: AppContext | undefined;
 
 export function registerPlugin(plugin: AdiPlugin): void {
   registry.set(plugin.id, plugin);
@@ -13,8 +15,14 @@ export function registerPlugin(plugin: AdiPlugin): void {
 export function _resetRegistry(): void {
   registry.clear();
   descriptors.clear();
+  sharedApp = undefined;
   swMessageController?.abort();
   swMessageController = undefined;
+}
+
+function getApp(bus: EventBus): AppContext {
+  if (!sharedApp) sharedApp = new AppContext(bus);
+  return sharedApp;
 }
 
 export interface LoadPluginsOptions {
@@ -63,8 +71,9 @@ export async function loadPlugins(
     }
   }
 
+  const app = getApp(bus);
   for (const plugin of order) {
-    const result = await initWithTimeout(plugin, bus, timeout);
+    const result = await initWithTimeout(plugin, app, timeout);
     if (result === 'ok') loaded.push(plugin.id);
     else if (result === 'timeout') {
       console.error(`[plugin] '${plugin.id}' timed out during onRegister (>${timeout}ms)`);
@@ -88,7 +97,7 @@ export interface UpgradePluginOptions {
 
 export async function initInternalPlugin(bus: EventBus, plugin: AdiPlugin): Promise<void> {
   registerPlugin(plugin);
-  await plugin._init(bus);
+  await plugin._init(getApp(bus));
 }
 
 export async function upgradePlugin(
@@ -115,7 +124,7 @@ export async function upgradePlugin(
     const newPlugin = registry.get(id);
     if (!newPlugin) throw new Error(`Plugin ${id} did not call registerPlugin()`);
 
-    const result = await initWithTimeout(newPlugin, bus, timeout);
+    const result = await initWithTimeout(newPlugin, getApp(bus), timeout);
     if (result === 'timeout') {
       throw new Error(`Plugin ${id} timed out during upgrade`);
     } else if (typeof result === 'object') {
@@ -200,13 +209,13 @@ type InitResult = 'ok' | 'timeout' | { error: unknown };
 
 async function initWithTimeout(
   plugin: AdiPlugin,
-  bus: EventBus,
+  app: AppContext,
   timeoutMs: number
 ): Promise<InitResult> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve('timeout'), timeoutMs);
     plugin
-      ._init(bus)
+      ._init(app)
       .then(() => { clearTimeout(timer); resolve('ok'); })
       .catch((err: unknown) => { clearTimeout(timer); resolve({ error: err }); });
   });

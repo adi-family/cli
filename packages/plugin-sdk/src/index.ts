@@ -5,15 +5,18 @@ export type {
   EventMeta,
   BusMiddleware,
   EventHandler,
+  PluginApiRegistry,
   PluginRegistry,
   PluginDescriptor,
 } from './types.js';
 
 export { EventBus } from './bus.js';
+export { AppContext } from './app-context.js';
 export { Logger } from './logger.js';
 export type { LogLevel, DebugInfoProvider } from './logger.js';
 export { trace } from './log-decorator.js';
 export { AdiPlugin } from './plugin.js';
+export { env } from './env.js';
 export { HttpPluginRegistry } from './registry-http.js';
 export type { RegistryHealth } from './registry-http.js';
 export {

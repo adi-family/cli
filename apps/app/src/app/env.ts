@@ -1,13 +1,3 @@
-const DEFAULT_REGISTRIES = (
-  (import.meta.env.VITE_DEFAULT_REGISTRY_URLS as string) ?? ''
-)
-  .split(',')
-  .filter(Boolean);
+import { env } from '@adi-family/sdk-plugin';
 
-const DEFAULT_SIGNALING_SERVERS = (
-  (import.meta.env.VITE_SIGNALING_URL as string) ?? ''
-)
-  .split(',')
-  .filter(Boolean);
-
-export { DEFAULT_REGISTRIES, DEFAULT_SIGNALING_SERVERS };
+export const DEFAULT_REGISTRIES = env('DEFAULT_REGISTRY_URLS');

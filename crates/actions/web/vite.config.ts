@@ -1,8 +1,6 @@
 import { defineConfig } from "vite";
-import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [tailwindcss()],
   build: {
     lib: {
       entry: "src/index.ts",
@@ -10,6 +8,7 @@ export default defineConfig({
       fileName: () => "web.js",
     },
     rollupOptions: {
+      external: ["@adi-family/sdk-plugin"],
       output: {
         inlineDynamicImports: true,
         assetFileNames: "style[extname]",

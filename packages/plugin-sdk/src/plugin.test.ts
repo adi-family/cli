@@ -2,6 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { AdiPlugin } from './plugin.js';
 import { EventBus } from './bus.js';
+import { AppContext } from './app-context.js';
 
 class MinimalPlugin extends AdiPlugin {
   readonly id = 'minimal';
@@ -26,6 +27,10 @@ class HooksPlugin extends AdiPlugin {
   }
 }
 
+function makeApp(): AppContext {
+  return new AppContext(EventBus.init());
+}
+
 describe('AdiPlugin', () => {
   it('has empty dependencies by default', () => {
     expect(new MinimalPlugin().dependencies).toEqual([]);
@@ -35,48 +40,46 @@ describe('AdiPlugin', () => {
     expect(new HooksPlugin().dependencies).toEqual(['other']);
   });
 
-  it('_init() injects bus — this.bus is accessible in onRegister()', async () => {
-    const bus = EventBus.init();
-    const emitSpy = vi.spyOn(bus, 'emit');
+  it('_init() injects app — this.bus is accessible in onRegister()', async () => {
+    const app = makeApp();
+    const emitSpy = vi.spyOn(app.bus, 'emit');
     const plugin = new HooksPlugin();
-    await plugin._init(bus);
+    await plugin._init(app);
     // onRegister emits 'route:register' via this.bus — verify it went through
     expect(emitSpy).toHaveBeenCalledWith('route:register', { path: '/hooks', element: 'hooks-view' }, 'plugin:hooks');
   });
 
   it('_init() calls onRegister()', async () => {
-    const bus = EventBus.init();
     const plugin = new HooksPlugin();
-    await plugin._init(bus);
+    await plugin._init(makeApp());
     expect(plugin.registerCalls).toEqual(['called']);
   });
 
   it('_init() emits register-finished after onRegister resolves', async () => {
-    const bus = EventBus.init();
+    const app = makeApp();
     const handler = vi.fn();
-    bus.on('register-finished', handler, 'test');
-    await new HooksPlugin()._init(bus);
+    app.bus.on('register-finished', handler, 'test');
+    await new HooksPlugin()._init(app);
     expect(handler).toHaveBeenCalledWith({ pluginId: 'hooks' });
   });
 
   it('_init() emits register-finished even without onRegister defined', async () => {
-    const bus = EventBus.init();
+    const app = makeApp();
     const handler = vi.fn();
-    bus.on('register-finished', handler, 'test');
-    await new MinimalPlugin()._init(bus);
+    app.bus.on('register-finished', handler, 'test');
+    await new MinimalPlugin()._init(app);
     expect(handler).toHaveBeenCalledWith({ pluginId: 'minimal' });
   });
 
   it('_destroy() calls onUnregister()', async () => {
-    const bus = EventBus.init();
     const plugin = new HooksPlugin();
-    await plugin._init(bus);
+    await plugin._init(makeApp());
     await plugin._destroy();
     expect(plugin.unregisterCalls).toEqual(['called']);
   });
 
   it('accessing bus before _init() throws a clear error', () => {
     const plugin = new HooksPlugin();
-    expect(() => (plugin as unknown as { bus: unknown }).bus).toThrow("accessed bus before _init()");
+    expect(() => (plugin as unknown as { bus: unknown }).bus).toThrow("accessed app before _init()");
   });
 });

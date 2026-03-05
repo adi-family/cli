@@ -58,9 +58,12 @@ export class App {
   @trace('init')
   async init() {
     this.core.registerPluginById('adi.slots');
-    this.core.registerPluginById('adi.signaling');
     this.core.registerPluginById('adi.router');
-    this.core.registerPluginById('adi.actions');
+    this.core.registerPluginById('adi.command-palette');
+    this.core.registerPluginById('adi.auth');
+
+    //this.core.registerPluginById('adi.signaling');
+    //this.core.registerPluginById('adi.actions');
     await this.registerEnabledPlugins();
   }
 

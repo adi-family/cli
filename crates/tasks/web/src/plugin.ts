@@ -1,4 +1,5 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
+import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
 import * as api from './api.js';
 import type { Connection, Task, TasksStats } from './types.js';
 import './events.js';
@@ -45,13 +46,8 @@ export class TasksPlugin extends AdiPlugin {
       customElements.define('adi-tasks', AdiTasksElement);
     }
 
-    this.bus.emit('route:register', { path: '/tasks', element: 'adi-tasks' }, 'tasks');
-    this.bus.emit('nav:add', { id: 'tasks', label: 'Tasks', path: '/tasks' }, 'tasks');
-
-    this.bus.emit('command:register', { id: 'tasks:open', label: 'Go to Tasks page' }, 'tasks');
-    this.bus.on('command:execute', ({ id }) => {
-      if (id === 'tasks:open') this.bus.emit('router:navigate', { path: '/tasks' }, 'tasks');
-    }, 'tasks');
+    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', element: 'adi-tasks', label: 'Tasks' }, this.id);
+    this.bus.emit('nav:add', { id: this.id, label: 'Tasks', path: `/${this.id}` }, this.id);
 
     this.bus.on('tasks:list', async ({ status }) => {
       try {

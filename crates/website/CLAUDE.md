@@ -2,7 +2,7 @@ website, axum, tera, tailwind, adid, i18n, ssr
 
 ## Stack
 - **Rust**: Axum web server with Tera templates (SSR)
-- **CSS**: Tailwind v4 + ADID design system (theme tokens, AX system, component snippets)
+- **CSS**: Tailwind v4 + ADID design system (theme tokens, Tailwind utilities, component snippets)
 - **i18n**: Mozilla Fluent (.ftl) via `lib-i18n-core`, embedded at compile time
 - **Binary**: Self-contained — templates, translations, and static assets baked into the binary
 
@@ -30,7 +30,7 @@ website, axum, tera, tailwind, adid, i18n, ssr
 - Use `@source "../templates/**/*.html"` for Tailwind class scanning
 - Tailwind utilities for layout: `flex`, `items-center`, `ml-auto`, `h-[90vh]`
 - ADID tokens via Tailwind: `bg-bg`, `bg-surface`, `text-text`, `text-text-muted`, `text-accent`, `border-border`, `font-heading`, `font-body`
-- AX system for spacing/sizing: `g-15`, `p-v-1`, `p-h-2`, `space-y-0_75`, `text-sm`, `text-lg`, `text-3xl`
+- Tailwind utilities for spacing/sizing: `gap-6`, `py-4`, `px-8`, `space-y-3`, `text-sm`, `text-lg`, `text-3xl`
 - ADID component classes: `btn btn-primary`, `pill-group`, `gradient-text`, `section-separator`, `container-content`
 
 ## Icons (Lucide)

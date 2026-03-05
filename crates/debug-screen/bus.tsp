@@ -9,7 +9,3 @@ interface CommandBus {
     @event execute(id: string): void;
 }
 
-@bus("router")
-interface RouterBus {
-    @event navigate(path: string, replace?: boolean): void;
-}

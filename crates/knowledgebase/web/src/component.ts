@@ -1,7 +1,6 @@
 import { LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
 import type { Node, Edge, SearchResult, NodeType, Connection } from './types.js';
-import { getBus, connections } from './context.js';
 import { renderNodeList } from './views/node-list.js';
 import { renderNodeDetail } from './views/node-detail.js';
 import { renderNodeForm } from './views/node-form.js';
@@ -24,7 +23,7 @@ export class AdiKnowledgebaseElement extends LitElement {
 
   override createRenderRoot() { return this; }
 
-  private get bus() { return getBus(); }
+  private get bus() { return window.sdk.bus; }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -99,7 +98,7 @@ export class AdiKnowledgebaseElement extends LitElement {
   }
 
   override render() {
-    const allConnections: Connection[] = [...connections.values()];
+    const allConnections: Connection[] = [...window.sdk.getConnections().values()];
 
     if (this.view === 'detail' && this.selectedNode) {
       return renderNodeDetail({

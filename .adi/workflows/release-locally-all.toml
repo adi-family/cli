@@ -8,7 +8,7 @@ description = "Release all specified plugins to local registry"
 [[steps]]
 name = "Release all plugins locally"
 run = """
-PLUGINS="adi.router adi.command-palette adi.slots"
+PLUGINS="adi.router adi.command-palette adi.slots adi.auth"
 
 FAILED=""
 for PLUGIN in $PLUGINS; do

@@ -19,7 +19,7 @@ interface SlotDefinition {
 
 export interface SlotEntry {
   slot: string;
-  element: string;
+  elementRef: HTMLElement;
   priority: number;
   pluginId: string;
 }
@@ -31,7 +31,6 @@ export class AdiSlotElement extends LitElement {
   @property({ type: String }) name = '';
   @state() private entries: SlotEntry[] = [];
 
-  private readonly elementCache = new Map<string, HTMLElement>();
   private unsubChanged?: () => void;
   private pluginRef?: SlotsPlugin;
 
@@ -65,24 +64,7 @@ export class AdiSlotElement extends LitElement {
 
   override render() {
     if (this.entries.length === 0) return nothing;
-
-    const activeKeys = new Set(
-      this.entries.map((e) => `${e.pluginId}:${e.element}`),
-    );
-
-    for (const [key] of this.elementCache) {
-      if (!activeKeys.has(key)) this.elementCache.delete(key);
-    }
-
-    return html`${this.entries.map((entry) => {
-      const key = `${entry.pluginId}:${entry.element}`;
-      let el = this.elementCache.get(key);
-      if (!el) {
-        el = document.createElement(entry.element);
-        this.elementCache.set(key, el);
-      }
-      return el;
-    })}`;
+    return html`${this.entries.map((entry) => entry.elementRef)}`;
   }
 
   private sync(): void {
@@ -126,7 +108,7 @@ export class SlotsPlugin extends AdiPlugin {
 
     this.bus.on(
       SlotsBusKey.Place,
-      ({ slot, element, priority, pluginId }: SlotsPlaceEvent) => {
+      ({ slot, elementRef, priority, pluginId }: SlotsPlaceEvent) => {
         if (!this.slots.has(slot)) {
           this.slots.set(slot, { id: slot, multiple: true });
         }
@@ -134,13 +116,13 @@ export class SlotsPlugin extends AdiPlugin {
         const slotDef = this.slots.get(slot)!;
         const current = this.entries.get(slot) ?? [];
 
-        if (current.some((e) => e.element === element && e.pluginId === pluginId)) {
+        if (current.some((e) => e.elementRef === elementRef && e.pluginId === pluginId)) {
           return;
         }
 
         const entry: SlotEntry = {
           slot,
-          element,
+          elementRef,
           priority: priority ?? 0,
           pluginId,
         };
@@ -157,11 +139,11 @@ export class SlotsPlugin extends AdiPlugin {
 
     this.bus.on(
       SlotsBusKey.Remove,
-      ({ slot, element }: SlotsRemoveEvent) => {
+      ({ slot, elementRef }: SlotsRemoveEvent) => {
         const current = this.entries.get(slot);
         if (!current) return;
 
-        const filtered = current.filter((e) => e.element !== element);
+        const filtered = current.filter((e) => e.elementRef !== elementRef);
         if (filtered.length === current.length) return;
 
         this.entries.set(slot, filtered);

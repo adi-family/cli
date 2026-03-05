@@ -25,7 +25,7 @@ export function renderNodeForm(props: NodeFormProps): TemplateResult {
   };
 
   return html`
-    <div class="space-y-0_75">
+    <div class="space-y-3">
       <button class="text-sm text-gray-400 hover:text-gray-200 transition-colors" @click=${onBack}>
         &larr; Back to search
       </button>
@@ -33,7 +33,7 @@ export function renderNodeForm(props: NodeFormProps): TemplateResult {
       <div class="bg-white/5 rounded-xl p-4">
         <h2 class="text-lg font-semibold text-gray-200 mb-4">Add Knowledge</h2>
 
-        <form @submit=${handleSubmit} class="space-y-1">
+        <form @submit=${handleSubmit} class="space-y-4">
           <div>
             <label class="block text-xs text-gray-400 uppercase tracking-wider mb-1">Connection</label>
             <select

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1772387260,
+  "updatedAt": 1772735808,
   "packages": [],
   "plugins": [
     {
@@ -35,6 +35,48 @@
       "id": "adi.video",
       "name": "ADI Video",
       "description": "ADI Video plugin providing CLI commands for video rendering",
+      "pluginTypes": [
+        "extension",
+        "web"
+      ],
+      "packageId": null,
+      "latestVersion": "0.1.0",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    },
+    {
+      "id": "adi.router",
+      "name": "ADI Router",
+      "description": "Client-side SPA router with navigation management",
+      "pluginTypes": [
+        "extension",
+        "web"
+      ],
+      "packageId": null,
+      "latestVersion": "0.1.0",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    },
+    {
+      "id": "adi.command-palette",
+      "name": "ADI Command Palette",
+      "description": "Command palette for quick command search and execution",
+      "pluginTypes": [
+        "extension",
+        "web"
+      ],
+      "packageId": null,
+      "latestVersion": "0.1.0",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    },
+    {
+      "id": "adi.slots",
+      "name": "ADI Slots",
+      "description": "Content slots for cross-plugin UI extension points",
       "pluginTypes": [
         "extension",
         "web"

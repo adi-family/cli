@@ -1,0 +1,277 @@
+//! Build-time codegen for ADI web plugins.
+//!
+//! Generates TypeScript files from Cargo.toml metadata and optional `.tsp` eventbus definitions:
+//! - `config.ts` — plugin constants (PLUGIN_ID, PLUGIN_NAME, PLUGIN_VERSION, PLUGIN_TYPE)
+//! - `index.ts` — entry point with re-exports and PluginApiRegistry augmentation
+//! - `bus/` — eventbus types from `.tsp` (if the file exists)
+//!
+//! # Example
+//! ```ignore
+//! // build.rs
+//! fn main() {
+//!     plugin_web_build::PluginWebBuild::new().run();
+//! }
+//! ```
+
+use std::fmt::Write;
+use std::path::{Path, PathBuf};
+
+use anyhow::{Context, Result};
+use convert_case::{Case, Casing};
+use typespec_api::codegen::ts_eventbus::EventBusConfig;
+use typespec_api::codegen::{Generator, Language, Side};
+
+/// Builder for plugin web codegen in `build.rs` scripts.
+pub struct PluginWebBuild {
+    tsp_path: PathBuf,
+    output_dir: PathBuf,
+    bus_subdir: String,
+    plugin_class: Option<String>,
+}
+
+impl PluginWebBuild {
+    pub fn new() -> Self {
+        Self {
+            tsp_path: PathBuf::from("../api.tsp"),
+            output_dir: PathBuf::from("../web/src"),
+            bus_subdir: "bus".into(),
+            plugin_class: None,
+        }
+    }
+
+    /// Override the `.tsp` file path (relative to plugin crate).
+    pub fn tsp_path(mut self, path: impl Into<PathBuf>) -> Self {
+        self.tsp_path = path.into();
+        self
+    }
+
+    /// Override the web source output directory (relative to plugin crate).
+    pub fn output_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+        self.output_dir = dir.into();
+        self
+    }
+
+    /// Override the eventbus subdirectory name within output_dir.
+    pub fn bus_subdir(mut self, name: impl Into<String>) -> Self {
+        self.bus_subdir = name.into();
+        self
+    }
+
+    /// Override the TypeScript plugin class name.
+    /// If not set, read from Cargo.toml `web_ui.plugin_class`,
+    /// or auto-derived from plugin name ("ADI Router" → "RouterPlugin").
+    pub fn plugin_class(mut self, name: impl Into<String>) -> Self {
+        self.plugin_class = Some(name.into());
+        self
+    }
+
+    /// Run generation. Panics on error (standard for build.rs).
+    pub fn run(self) {
+        if let Err(e) = self.run_inner() {
+            panic!("plugin web codegen failed: {e}");
+        }
+    }
+
+    fn run_inner(self) -> Result<()> {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| std::env::current_dir().expect("no current dir"));
+
+        println!("cargo:rerun-if-changed=build.rs");
+        println!("cargo:rerun-if-changed=Cargo.toml");
+
+        let cargo_path = manifest_dir.join("Cargo.toml");
+        let manifest_str = std::fs::read_to_string(&cargo_path)
+            .with_context(|| format!("read {}", cargo_path.display()))?;
+        let meta = PluginMeta::parse(&manifest_str)?;
+
+        let output_dir = manifest_dir.join(&self.output_dir);
+
+        let plugin_class = self
+            .plugin_class
+            .or(meta.plugin_class.clone())
+            .unwrap_or_else(|| derive_plugin_class(&meta.name));
+
+        // EventBus codegen (optional — only if .tsp exists)
+        let tsp_path = manifest_dir.join(&self.tsp_path);
+        let has_eventbus = tsp_path.exists();
+        if has_eventbus {
+            println!("cargo:rerun-if-changed={}", tsp_path.display());
+            generate_eventbus(&tsp_path, &output_dir.join(&self.bus_subdir), &meta)?;
+        }
+
+        // config.ts
+        write_if_changed(
+            &output_dir.join("config.ts"),
+            &generate_config_ts(&meta),
+        );
+
+        // index.ts
+        write_if_changed(
+            &output_dir.join("index.ts"),
+            &generate_index_ts(&plugin_class, has_eventbus, &self.bus_subdir),
+        );
+
+        Ok(())
+    }
+}
+
+impl Default for PluginWebBuild {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ── Cargo.toml metadata ────────────────────────────────────
+
+struct PluginMeta {
+    id: String,
+    name: String,
+    version: String,
+    plugin_type: String,
+    plugin_class: Option<String>,
+}
+
+impl PluginMeta {
+    fn parse(cargo_toml: &str) -> Result<Self> {
+        let table: toml::Value = toml::from_str(cargo_toml).context("parse Cargo.toml")?;
+
+        let pkg = table.get("package").context("missing [package]")?;
+
+        // Handle workspace-inherited version by falling back to CARGO_PKG_VERSION
+        let version = pkg
+            .get("version")
+            .and_then(|v| v.as_str())
+            .map(String::from)
+            .unwrap_or_else(|| {
+                std::env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.0.0".into())
+            });
+
+        let meta = pkg
+            .get("metadata")
+            .and_then(|m| m.get("plugin"))
+            .context("missing [package.metadata.plugin]")?;
+
+        let id = meta
+            .get("id")
+            .and_then(|v| v.as_str())
+            .context("missing metadata.plugin.id")?
+            .to_string();
+        let name = meta
+            .get("name")
+            .and_then(|v| v.as_str())
+            .context("missing metadata.plugin.name")?
+            .to_string();
+        let plugin_type = meta
+            .get("type")
+            .and_then(|v| v.as_str())
+            .context("missing metadata.plugin.type")?
+            .to_string();
+
+        let plugin_class = meta
+            .get("web_ui")
+            .and_then(|w| w.get("plugin_class"))
+            .and_then(|v| v.as_str())
+            .map(String::from);
+
+        Ok(Self {
+            id,
+            name,
+            version,
+            plugin_type,
+            plugin_class,
+        })
+    }
+}
+
+// ── Code generation ─────────────────────────────────────────
+
+fn generate_eventbus(tsp_path: &Path, bus_dir: &Path, meta: &PluginMeta) -> Result<()> {
+    let source =
+        std::fs::read_to_string(tsp_path).with_context(|| format!("read {}", tsp_path.display()))?;
+    let file =
+        typespec_api::parse(&source).with_context(|| format!("parse {}", tsp_path.display()))?;
+
+    let config = EventBusConfig {
+        module_path: "@adi-family/sdk-plugin/types".into(),
+        interface_name: "EventRegistry".into(),
+        rename: "kebab-case".into(),
+    };
+
+    let package_name = meta.id.rsplit('.').next().unwrap_or(&meta.id);
+
+    Generator::new(&file, bus_dir, package_name)
+        .with_eventbus_config(config)
+        .generate(Language::TypeScript, Side::EventBus)
+        .context("eventbus codegen failed")?;
+
+    Ok(())
+}
+
+fn generate_config_ts(meta: &PluginMeta) -> String {
+    let mut out = String::new();
+    writeln!(out, "/**").unwrap();
+    writeln!(out, " * Auto-generated plugin config from Cargo.toml.").unwrap();
+    writeln!(out, " * DO NOT EDIT.").unwrap();
+    writeln!(out, " */").unwrap();
+    writeln!(out).unwrap();
+    writeln!(out, "export const PLUGIN_ID = '{}';", meta.id).unwrap();
+    writeln!(out, "export const PLUGIN_NAME = '{}';", meta.name).unwrap();
+    writeln!(out, "export const PLUGIN_VERSION = '{}';", meta.version).unwrap();
+    writeln!(out, "export const PLUGIN_TYPE = '{}';", meta.plugin_type).unwrap();
+    out
+}
+
+fn generate_index_ts(plugin_class: &str, has_eventbus: bool, bus_subdir: &str) -> String {
+    let mut out = String::new();
+    writeln!(out, "/**").unwrap();
+    writeln!(out, " * Auto-generated plugin entry from Cargo.toml.").unwrap();
+    writeln!(out, " * DO NOT EDIT.").unwrap();
+    writeln!(out, " */").unwrap();
+    writeln!(out).unwrap();
+    writeln!(out, "import {{ PLUGIN_ID }} from './config';").unwrap();
+    writeln!(out).unwrap();
+
+    if has_eventbus {
+        writeln!(out, "import './{bus_subdir}';").unwrap();
+        writeln!(out, "export * from './{bus_subdir}';").unwrap();
+    }
+
+    writeln!(out, "export * from './config';").unwrap();
+    writeln!(out).unwrap();
+    writeln!(out, "import type {{ {plugin_class} }} from './plugin';").unwrap();
+    writeln!(
+        out,
+        "export {{ {plugin_class}, {plugin_class} as PluginShell }} from './plugin';"
+    )
+    .unwrap();
+    writeln!(out).unwrap();
+    writeln!(out, "declare module '@adi-family/sdk-plugin' {{").unwrap();
+    writeln!(out, "  interface PluginApiRegistry {{").unwrap();
+    writeln!(out, "    [PLUGIN_ID]: {plugin_class}['api'];").unwrap();
+    writeln!(out, "  }}").unwrap();
+    writeln!(out, "}}").unwrap();
+    out
+}
+
+/// Derive plugin class name from display name.
+/// "ADI Router" → "RouterPlugin", "ADI Debug Screen" → "DebugScreenPlugin"
+fn derive_plugin_class(name: &str) -> String {
+    let stripped = name.strip_prefix("ADI ").unwrap_or(name);
+    let pascal = stripped.to_case(Case::Pascal);
+    format!("{pascal}Plugin")
+}
+
+/// Write file only if content differs. Creates parent directories.
+pub fn write_if_changed(path: &Path, content: &str) {
+    let needs_write = match std::fs::read_to_string(path) {
+        Ok(existing) => existing != content,
+        Err(_) => true,
+    };
+    if needs_write {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).expect("create parent dirs");
+        }
+        std::fs::write(path, content).expect("write generated file");
+    }
+}

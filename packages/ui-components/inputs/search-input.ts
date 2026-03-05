@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 
-/// Search input with debounce. Sizing via ADID AX system (--l, --t, --r).
 @customElement("adi-search-input")
 export class AdiSearchInput extends LitElement {
   @property({ type: String }) value = "";
@@ -69,12 +68,12 @@ export class AdiSearchInput extends LitElement {
         <div style="position:relative;display:flex;align-items:center;width:100%;">
           <span style="
             position: absolute;
-            left: calc(var(--l) * 0.75);
+            left: calc(1rem * 0.75);
             color: var(--adi-text-muted);
             pointer-events: none;
             display: flex;
             align-items: center;
-            font-size: calc(var(--t) * 0.875);
+            font-size: calc(1rem * 0.875);
             transition: color 150ms;
           ">
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,9 +86,9 @@ export class AdiSearchInput extends LitElement {
               width: 100%;
               box-sizing: border-box;
               border: 1px solid var(--adi-border);
-              border-radius: var(--r);
-              padding: calc(var(--l) * 0.625) calc(var(--l) * 2.5) calc(var(--l) * 0.625) calc(var(--l) * 2.5);
-              font-size: calc(var(--t) * 0.875);
+              border-radius: 0.75rem;
+              padding: calc(1rem * 0.625) calc(1rem * 2.5) calc(1rem * 0.625) calc(1rem * 2.5);
+              font-size: calc(1rem * 0.875);
               font-family: inherit;
               background: color-mix(in srgb, var(--adi-text) 3%, transparent);
               color: var(--adi-text);
@@ -105,11 +104,11 @@ export class AdiSearchInput extends LitElement {
             autocomplete="off"
             spellcheck="false"
           />
-          <div style="position:absolute;right:calc(var(--l) * 0.5);display:flex;align-items:center;gap:calc(var(--l) * 0.25);">
+          <div style="position:absolute;right:calc(1rem * 0.5);display:flex;align-items:center;gap:calc(1rem * 0.25);">
             ${this.loading
               ? html`<span style="
-                  width: calc(var(--t) * 0.875);
-                  height: calc(var(--t) * 0.875);
+                  width: calc(1rem * 0.875);
+                  height: calc(1rem * 0.875);
                   border: 2px solid color-mix(in srgb, var(--adi-accent) 30%, transparent);
                   border-top-color: var(--adi-accent);
                   border-radius: 50%;
@@ -123,11 +122,11 @@ export class AdiSearchInput extends LitElement {
                         border: none;
                         color: var(--adi-text-muted);
                         cursor: pointer;
-                        padding: calc(var(--l) * 0.25);
+                        padding: calc(1rem * 0.25);
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        border-radius: calc(var(--r) * 0.5);
+                        border-radius: calc(0.75rem * 0.5);
                         transition: color 150ms, background 150ms;
                       "
                       @click=${this.handleClear}
@@ -140,7 +139,7 @@ export class AdiSearchInput extends LitElement {
                     </button>
                   `
                 : !this.value && !this.disabled
-                  ? html`<span style="font-size:calc(var(--t) * 0.625);color:var(--adi-text-muted);background:color-mix(in srgb, var(--adi-text) 5%, transparent);padding:calc(var(--l) * 0.125) calc(var(--l) * 0.375);border-radius:calc(var(--r) * 0.5);font-family:monospace;border:1px solid var(--adi-border);">/</span>`
+                  ? html`<span style="font-size:calc(1rem * 0.625);color:var(--adi-text-muted);background:color-mix(in srgb, var(--adi-text) 5%, transparent);padding:calc(1rem * 0.125) calc(1rem * 0.375);border-radius:calc(0.75rem * 0.5);font-family:monospace;border:1px solid var(--adi-border);">/</span>`
                   : ""
             }
           </div>

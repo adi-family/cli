@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-/// Checkbox with indeterminate support. Sizing via ADID AX system (--l, --t, --r).
+/// Checkbox with indeterminate support.
 @customElement("adi-checkbox-input")
 export class AdiCheckboxInput extends LitElement {
   @property({ type: Boolean }) checked = false;
@@ -29,14 +29,14 @@ export class AdiCheckboxInput extends LitElement {
   render() {
     const isActive = this.indeterminate || this.checked;
     // Box: 1.125 * --l square
-    const boxSize = "calc(var(--l) * 1.125)";
+    const boxSize = "calc(1rem * 1.125)";
 
     return html`
       <label
         style="
           display: inline-flex;
           align-items: center;
-          gap: calc(var(--l) * 0.5);
+          gap: calc(1rem * 0.5);
           cursor: pointer;
           position: relative;
           ${this.disabled ? "opacity: 0.5; cursor: not-allowed;" : ""}
@@ -57,7 +57,7 @@ export class AdiCheckboxInput extends LitElement {
           width: ${boxSize};
           height: ${boxSize};
           border: 1px solid ${isActive ? "var(--adi-accent)" : "color-mix(in srgb, var(--adi-text) 20%, transparent)"};
-          border-radius: max(2px, calc(var(--r) * 0.25));
+          border-radius: max(2px, calc(0.75rem * 0.25));
           background: ${isActive ? "var(--adi-accent)" : "color-mix(in srgb, var(--adi-text) 3%, transparent)"};
           display: flex;
           align-items: center;
@@ -86,7 +86,7 @@ export class AdiCheckboxInput extends LitElement {
             }
           </span>
         </div>
-        ${this.label ? html`<span style="color:var(--adi-text-muted);user-select:none;font-size:calc(var(--t) * 0.875);transition:color 150ms;">${this.label}</span>` : ""}
+        ${this.label ? html`<span style="color:var(--adi-text-muted);user-select:none;font-size:calc(1rem * 0.875);transition:color 150ms;">${this.label}</span>` : ""}
       </label>
     `;
   }

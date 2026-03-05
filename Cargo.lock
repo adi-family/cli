@@ -1756,39 +1756,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "browser-debug-core"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "futures",
- "hex",
- "hmac",
- "lib-signaling-protocol",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 1.0.69",
- "tokio",
- "tokio-tungstenite 0.24.0",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "browser-debug-plugin"
-version = "3.0.0"
-dependencies = [
- "async-trait",
- "browser-debug-core",
- "lib-plugin-abi-v3",
- "once_cell",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "bstr"
 version = "1.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12281,12 +12248,10 @@ checksum = "edc5f74e248dc973e0dbb7b74c7e0d6fcc301c694ff50049504004ef4d0cdcd9"
 dependencies = [
  "futures-util",
  "log",
- "native-tls",
  "rustls 0.23.37",
  "rustls-native-certs 0.8.3",
  "rustls-pki-types",
  "tokio",
- "tokio-native-tls",
  "tokio-rustls 0.26.4",
  "tungstenite 0.24.0",
 ]
@@ -12906,7 +12871,6 @@ dependencies = [
  "http 1.4.0",
  "httparse",
  "log",
- "native-tls",
  "rand 0.8.5",
  "rustls 0.23.37",
  "rustls-pki-types",

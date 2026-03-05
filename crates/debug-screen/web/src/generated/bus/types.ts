@@ -12,8 +12,3 @@ export interface CommandRegisterEvent {
 export interface CommandExecuteEvent {
   id: string;
 }
-
-export interface RouterNavigateEvent {
-  path: string;
-  replace?: boolean;
-}

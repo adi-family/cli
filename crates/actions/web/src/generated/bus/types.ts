@@ -37,22 +37,11 @@ export interface ActionsDismissedEvent {
   kind: string;
 }
 
-export interface RouteRegisterEvent {
-  path: string;
-  element: string;
-  label?: string;
-}
-
 export interface NavAddEvent {
   id: string;
   label: string;
   path: string;
   icon?: string;
-}
-
-export interface RouterNavigateEvent {
-  path: string;
-  replace?: boolean;
 }
 
 export interface CommandRegisterEvent {

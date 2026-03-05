@@ -94,9 +94,6 @@
 [submodule "crates/adi-tools"]
 	path = crates/tools
 	url = https://github.com/adi-family/adi-tools.git
-[submodule "crates/adi-browser-debug"]
-	path = crates/browser-debug
-	url = https://github.com/adi-family/adi-browser-debug.git
 [submodule "crates/adi-workflow"]
 	path = crates/workflow
 	url = https://github.com/adi-family/adi-workflow.git

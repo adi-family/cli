@@ -1,6 +1,6 @@
 import type { Task, TaskStatus, TasksStats, TaskWithDependencies } from './types.js';
 
-declare module '@adi-family/sdk-plugin' {
+declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
     'tasks:list':    { status?: TaskStatus };
     'tasks:search':  { query: string; limit?: number };

@@ -7,7 +7,6 @@ export interface ButtonGroupOption {
   disabled?: boolean;
 }
 
-/// Segmented radio-group button. Sizing via ADID AX system.
 @customElement("adi-button-group")
 export class AdiButtonGroup extends LitElement {
   @property({ type: String }) value = "";
@@ -122,7 +121,7 @@ export class AdiButtonGroup extends LitElement {
         role="radiogroup"
         style="
           display: inline-flex;
-          border-radius: var(--r);
+          border-radius: 0.75rem;
           overflow: hidden;
           border: 1px solid var(--adi-border);
           ${this.disabled ? "opacity: 0.5; pointer-events: none;" : ""}
@@ -136,8 +135,8 @@ export class AdiButtonGroup extends LitElement {
                 background: color-mix(in srgb, var(--adi-text) 3%, transparent);
                 color: var(--adi-text-muted);
                 font-weight: 500;
-                font-size: calc(var(--t) * 0.875);
-                padding: calc(var(--l) * 0.75) calc(var(--l) * 1.75);
+                font-size: calc(1rem * 0.875);
+                padding: calc(1rem * 0.75) calc(1rem * 1.75);
                 cursor: pointer;
                 transition: background-color 150ms, color 150ms;
                 position: relative;

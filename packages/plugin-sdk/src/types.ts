@@ -1,5 +1,7 @@
 export interface EventRegistry {}
 
+export interface PluginApiRegistry {}
+
 export type EventHandler<K extends keyof EventRegistry> = (
   payload: EventRegistry[K]
 ) => void;

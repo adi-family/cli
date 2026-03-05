@@ -1,3 +1,19 @@
-import './generated/bus';
-export { RouterPlugin, RouterPlugin as PluginShell } from './plugin.js';
-export type { RouteRegisterEvent, NavAddEvent, RouterNavigateEvent, RouterChangedEvent, CommandRegisterEvent, CommandExecuteEvent } from './generated/bus';
+/**
+ * Auto-generated plugin entry from Cargo.toml.
+ * DO NOT EDIT.
+ */
+
+import { PLUGIN_ID } from './config';
+
+import './bus';
+export * from './bus';
+export * from './config';
+
+import type { RouterPlugin } from './plugin';
+export { RouterPlugin, RouterPlugin as PluginShell } from './plugin';
+
+declare module '@adi-family/sdk-plugin' {
+  interface PluginApiRegistry {
+    [PLUGIN_ID]: RouterPlugin['api'];
+  }
+}

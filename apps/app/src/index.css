@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "../../../packages/theme/generated/adi-theme.css";
-@import "../../../packages/css/ax.css";
+@import "../../../packages/css/index.css";
+
+@source "../../../crates/*/web/src/**/*.{ts,css}";
+@source "../../../packages/ui-components/**/*.ts";
 
 @theme {
   --color-bg: var(--adi-bg);

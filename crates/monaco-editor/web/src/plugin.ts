@@ -1,4 +1,5 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
+import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
 import { setupWorkers } from './workers.js';
 import './events.js';
 
@@ -14,18 +15,11 @@ export class MonacoEditorPlugin extends AdiPlugin {
       customElements.define('adi-monaco-editor', AdiMonacoEditorElement);
     }
 
-    this.bus.emit('route:register', { path: '/editor', element: 'adi-monaco-editor' });
-    this.bus.emit('nav:add', { id: 'editor', label: 'Editor', path: '/editor' });
-
-    this.bus.emit('command:register', { id: 'editor:open-page', label: 'Go to Editor' });
-    this.bus.on('command:execute', ({ id }) => {
-      if (id === 'editor:open-page') {
-        this.bus.emit('router:navigate', { path: '/editor' });
-      }
-    });
+    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', element: 'adi-monaco-editor', label: 'Editor' });
+    this.bus.emit('nav:add', { id: this.id, label: 'Editor', path: `/${this.id}` });
 
     this.bus.on('editor:open', ({ content, options }) => {
-      this.bus.emit('router:navigate', { path: '/editor' });
+      this.bus.emit(AdiRouterBusKey.Navigate, { path: `/${this.id}` });
 
       // Defer content setting to allow the component to mount
       requestAnimationFrame(() => {

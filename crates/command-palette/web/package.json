@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@adi-family/sdk-plugin": "file:../../../packages/plugin-sdk",
+    "@adi/slots-web-plugin": "file:../../slots/web",
     "lit": "^3.3.2"
   },
   "devDependencies": {

@@ -1,4 +1,5 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
+import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
 import * as api from './api.js';
 import type { Connection } from './types.js';
 import './events.js';
@@ -19,13 +20,8 @@ export class PaymentPlugin extends AdiPlugin {
       customElements.define('adi-payment', AdiPaymentElement);
     }
 
-    this.bus.emit('route:register', { path: '/payment', element: 'adi-payment' }, 'payment');
-    this.bus.emit('nav:add', { id: 'payment', label: 'Payment', path: '/payment' }, 'payment');
-
-    this.bus.emit('command:register', { id: 'payment:open', label: 'Go to Payment page' }, 'payment');
-    this.bus.on('command:execute', ({ id }) => {
-      if (id === 'payment:open') this.bus.emit('router:navigate', { path: '/payment' }, 'payment');
-    }, 'payment');
+    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', element: 'adi-payment', label: 'Payment' }, this.id);
+    this.bus.emit('nav:add', { id: this.id, label: 'Payment', path: `/${this.id}` }, this.id);
 
     this.bus.on('payment:balance', async () => {
       try {

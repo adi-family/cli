@@ -101,7 +101,7 @@ fn execute_command(
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             if let Ok(line) = line {
-                debug(&format!("  {}", line));
+                info(&format!("  {}", line));
             }
         }
     }

@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@adi/router-web-plugin": "file:../../crates/router/web",
     "@adi-family/sdk-plugin": "file:../../packages/plugin-sdk",
     "@adi-family/video-sdk": "file:../../packages/video-sdk",
     "html2canvas": "^1.4.1",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
+    "@types/node": "^25.3.3",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "vite": "npm:rolldown-vite@7.2.5"

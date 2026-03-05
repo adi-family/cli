@@ -1,40 +1,11 @@
-ui-components, lit, web-components, adid, ax-system, shared-library
+ui-components, lit, web-components, adid, shared-library
 
 - Shared Lit 3.x web component library published as `@adi-family/sdk-ui-components`
 - All components use **light DOM** (`createRenderRoot() { return this; }`)
-- Sizing via **ADID AX system** (`--l`, `--t`, `--r` CSS variables) -- no `size` prop
+- Uses fixed rem-based sizing
 - Colors via **`--adi-*` design tokens** -- works with theme or standalone tokens
 - Custom element tags prefixed with `adi-` to avoid collisions
 - No Tailwind dependency -- uses inline styles referencing CSS custom properties
-
-## ADID AX Sizing
-
-Components do NOT have `sm`/`md`/`lg` props. Instead, sizing is **inherited from context**:
-
-```html
-<!-- Default size -->
-<adi-primary-button label="Save"></adi-primary-button>
-
-<!-- Compact (0.75x spacing, 0.875x text) -->
-<div class="compact">
-  <adi-primary-button label="Save"></adi-primary-button>
-</div>
-
-<!-- Dense (0.5x spacing, 0.75x text) -->
-<nav class="dense">
-  <adi-ghost-button label="Back"></adi-ghost-button>
-</nav>
-
-<!-- Spacious (1.5x spacing, 1.125x text) -->
-<section class="spacious">
-  <adi-text-input placeholder="Enter name..."></adi-text-input>
-</section>
-```
-
-AX multipliers from `ax.css`:
-- **Padding**: buttons use `0.75 * --l` block / `1.75 * --l` inline; inputs use `0.625 * --l` / `0.875 * --l`
-- **Font size**: `calc(var(--t) * 0.875)` for body text
-- **Border radius**: `var(--r)` cascades from parent (`.r-sm`, `.r-lg`, etc.)
 
 ## Components
 
@@ -73,9 +44,7 @@ All text buttons extend `BaseButton` which provides async `onClick` with auto-lo
 
 ## Dependencies
 - Requires `lit` ^3.3.1
-- Requires ADID CSS variables (`--l`, `--t`, `--r`, `--adi-*`) from either:
-  - `packages/theme/generated/adi-theme.css` + `packages/css/ax.css` (full theme)
-  - `packages/css/tokens.css` + `packages/css/ax.css` (standalone)
+- Requires `--adi-*` CSS variables from `packages/theme/generated/adi-theme.css` or `packages/css/tokens.css`
 
 ## Consumption
 ```typescript

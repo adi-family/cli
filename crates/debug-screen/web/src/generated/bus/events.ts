@@ -3,15 +3,12 @@
  * DO NOT EDIT.
  */
 
-import type { CommandExecuteEvent, CommandRegisterEvent, RouterNavigateEvent } from './types';
+import type { CommandExecuteEvent, CommandRegisterEvent } from './types';
 
 declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
     // ── command ──
     'command:register': CommandRegisterEvent;
     'command:execute': CommandExecuteEvent;
-
-    // ── router ──
-    'router:navigate': RouterNavigateEvent;
   }
 }

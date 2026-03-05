@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 
-/// Text input field. Sizing via ADID AX system (--l, --t, --r).
 @customElement("adi-text-input")
 export class AdiTextInput extends LitElement {
   @property({ type: String }) value = "";
@@ -60,8 +59,8 @@ export class AdiTextInput extends LitElement {
     const borderColor = this.error ? "var(--adi-error)" : "var(--adi-border)";
 
     return html`
-      <div style="display:flex;flex-direction:column;gap:calc(var(--l) * 0.375);">
-        ${this.label ? html`<label style="font-size:calc(var(--t) * 0.75);font-weight:500;color:var(--adi-text-muted);text-transform:uppercase;letter-spacing:0.05em;">${this.label}</label>` : ""}
+      <div style="display:flex;flex-direction:column;gap:calc(1rem * 0.375);">
+        ${this.label ? html`<label style="font-size:calc(1rem * 0.75);font-weight:500;color:var(--adi-text-muted);text-transform:uppercase;letter-spacing:0.05em;">${this.label}</label>` : ""}
         <div style="position:relative;display:flex;align-items:center;">
           <input
             type=${this.type}
@@ -69,15 +68,15 @@ export class AdiTextInput extends LitElement {
               width: 100%;
               box-sizing: border-box;
               border: 1px solid ${borderColor};
-              border-radius: var(--r);
-              padding: calc(var(--l) * 0.625) calc(var(--l) * 0.875);
-              font-size: calc(var(--t) * 0.875);
+              border-radius: 0.75rem;
+              padding: calc(1rem * 0.625) calc(1rem * 0.875);
+              font-size: calc(1rem * 0.875);
               font-family: inherit;
               background: color-mix(in srgb, var(--adi-text) 3%, transparent);
               color: var(--adi-text);
               outline: none;
               transition: border-color 200ms, box-shadow 200ms, background 200ms;
-              ${showClear ? `padding-right: calc(var(--l) * 2.5);` : ""}
+              ${showClear ? `padding-right: calc(1rem * 2.5);` : ""}
               ${this.disabled ? "opacity: 0.5; cursor: not-allowed;" : ""}
             "
             .value=${this.value}
@@ -94,16 +93,16 @@ export class AdiTextInput extends LitElement {
                 <button
                   style="
                     position: absolute;
-                    right: calc(var(--l) * 0.5);
+                    right: calc(1rem * 0.5);
                     background: transparent;
                     border: none;
                     color: var(--adi-text-muted);
                     cursor: pointer;
-                    padding: calc(var(--l) * 0.25);
+                    padding: calc(1rem * 0.25);
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    border-radius: calc(var(--r) * 0.5);
+                    border-radius: calc(0.75rem * 0.5);
                     transition: color 150ms, background 150ms;
                   "
                   @click=${this.clearValue}
@@ -120,7 +119,7 @@ export class AdiTextInput extends LitElement {
         <div style="display:flex;justify-content:space-between;align-items:center;">
           ${this.error && this.errorMessage
             ? html`
-                <span id="error-msg" style="font-size:calc(var(--t) * 0.75);color:var(--adi-error);display:flex;align-items:center;gap:calc(var(--l) * 0.25);">
+                <span id="error-msg" style="font-size:calc(1rem * 0.75);color:var(--adi-error);display:flex;align-items:center;gap:calc(1rem * 0.25);">
                   <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                   </svg>
@@ -129,7 +128,7 @@ export class AdiTextInput extends LitElement {
               `
             : html`<span></span>`}
           ${this.maxLength
-            ? html`<span style="font-size:calc(var(--t) * 0.75);color:${this.getCharCountColor() || "var(--adi-text-muted)"};text-align:right;">${this.value.length}/${this.maxLength}</span>`
+            ? html`<span style="font-size:calc(1rem * 0.75);color:${this.getCharCountColor() || "var(--adi-text-muted)"};text-align:right;">${this.value.length}/${this.maxLength}</span>`
             : ""}
         </div>
       </div>

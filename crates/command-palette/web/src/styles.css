@@ -1,0 +1,74 @@
+/* ─── Command Palette ─── */
+
+.cp-search-bar {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--adi-border);
+}
+
+.cp-icon-muted {
+  color: var(--adi-text-muted);
+  flex-shrink: 0;
+}
+
+.cp-search-input {
+  flex: 1;
+  background: transparent;
+  color: var(--adi-text);
+  outline: none;
+}
+
+.cp-search-input::placeholder {
+  color: var(--adi-text-muted);
+}
+
+.cp-kbd {
+  color: var(--adi-text-muted);
+  background: var(--adi-surface-alt);
+  padding-inline: 0.375rem;
+  padding-block: 0.125rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--adi-border);
+  font-family: var(--adi-font-mono-body);
+  flex-shrink: 0;
+}
+
+.cp-list {
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.cp-empty {
+  text-align: center;
+  color: var(--adi-text-muted);
+}
+
+.cp-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  transition: background-color 150ms, color 150ms;
+  cursor: pointer;
+  color: var(--adi-text);
+  background: none;
+  border: none;
+  font: inherit;
+}
+
+.cp-item:hover {
+  background: var(--adi-surface-alt);
+}
+
+.cp-item--active {
+  background: color-mix(in srgb, var(--adi-accent) 15%, transparent);
+  color: var(--adi-accent);
+}
+
+.cp-footer {
+  border-top: 1px solid var(--adi-border);
+  display: flex;
+  align-items: center;
+  color: var(--adi-text-muted);
+}

@@ -1,4 +1,5 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
+import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
 import type { ActionCard, RenderFn, KindMode } from './types.js';
 import './generated/bus';
 
@@ -27,15 +28,8 @@ export class ActionsPlugin extends AdiPlugin {
       customElements.define('adi-actions', AdiActionsElement);
     }
 
-    this.bus.emit('route:register', { path: '/actions', element: 'adi-actions', label: 'Actions' }, PLUGIN_ID);
-    this.bus.emit('nav:add', { id: 'app.actions', label: 'Actions', path: '/actions' }, PLUGIN_ID);
-    this.bus.emit('command:register', { id: 'app:actions', label: 'Open Actions', shortcut: '⌘⇧A' }, PLUGIN_ID);
-
-    this.bus.on('command:execute', ({ id }) => {
-      if (id === 'app:actions') {
-        this.bus.emit('router:navigate', { path: '/actions' }, PLUGIN_ID);
-      }
-    }, PLUGIN_ID);
+    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: PLUGIN_ID, path: '', element: 'adi-actions', label: 'Actions' }, PLUGIN_ID);
+    this.bus.emit('nav:add', { id: PLUGIN_ID, label: 'Actions', path: `/${PLUGIN_ID}` }, PLUGIN_ID);
 
     this.bus.on('actions:register-kind', ({ plugin, kind, mode }) => {
       store.kindModes.set(kindKey(plugin, kind), mode as KindMode);

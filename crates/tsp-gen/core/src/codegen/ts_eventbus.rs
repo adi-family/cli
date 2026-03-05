@@ -6,7 +6,7 @@
 //! - `events.ts` — module augmentation for EventRegistry
 //! - `index.ts` — re-exports
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
 use std::fs;
 use std::path::Path;
@@ -33,9 +33,13 @@ pub struct EventBusConfig {
 struct BusEvent {
     /// Bus name from @bus("name") decorator
     bus_name: String,
-    /// PascalCase payload type name (e.g., "SignalingAuthOkEvent")
+    /// PascalCase bus prefix (e.g., "AdiRouter")
+    bus_pascal: String,
+    /// PascalCase operation name (e.g., "Navigate")
+    op_pascal: String,
+    /// PascalCase payload type name (e.g., "AdiRouterNavigateEvent")
     payload_type: String,
-    /// Wire event name (e.g., "signaling:auth-ok")
+    /// Wire event name (e.g., "adi.router:navigate")
     event_name: String,
     /// Flattened operation params as fields
     fields: Vec<EventField>,
@@ -101,7 +105,7 @@ fn collect_eventbus_data(
             None => continue,
         };
 
-        let bus_pascal = bus_name.to_case(Case::Pascal);
+        let bus_pascal = bus_name.replace('.', "-").to_case(Case::Pascal);
 
         for op in &iface.operations {
             let op_pascal = op.name.to_case(Case::Pascal);
@@ -111,6 +115,8 @@ fn collect_eventbus_data(
 
             events.push(BusEvent {
                 bus_name: bus_name.clone(),
+                bus_pascal: bus_pascal.clone(),
+                op_pascal,
                 payload_type,
                 event_name,
                 fields,
@@ -186,6 +192,20 @@ fn generate_types(
         writeln!(out, "}}")?;
     }
 
+    // BusKey enums — one per @bus, mapping PascalCase variants to wire keys
+    let mut buses: BTreeMap<&str, Vec<&BusEvent>> = BTreeMap::new();
+    for event in events {
+        buses.entry(&event.bus_pascal).or_default().push(event);
+    }
+    for (bus_pascal, bus_events) in &buses {
+        writeln!(out)?;
+        writeln!(out, "export enum {}BusKey {{", bus_pascal)?;
+        for event in bus_events {
+            writeln!(out, "  {} = '{}',", event.op_pascal, event.event_name)?;
+        }
+        writeln!(out, "}}")?;
+    }
+
     Ok(out)
 }
 
@@ -203,19 +223,32 @@ fn generate_events(
     writeln!(out, " */")?;
     writeln!(out)?;
 
-    // Import all payload types
-    let imports: Vec<&str> = events.iter().map(|e| e.payload_type.as_str()).collect();
-    if !imports.is_empty() {
-        // Also collect type imports referenced by payload fields
-        let extra_imports = collect_type_imports(events, file);
-        let mut all_imports: BTreeSet<String> = imports.iter().map(|s| s.to_string()).collect();
-        all_imports.extend(extra_imports);
+    // Collect type imports (payload interfaces + referenced model types)
+    let extra_imports = collect_type_imports(events, file);
+    let mut type_imports: BTreeSet<String> = events.iter().map(|e| e.payload_type.clone()).collect();
+    type_imports.extend(extra_imports);
 
-        writeln!(
-            out,
-            "import type {{ {} }} from './types';",
-            all_imports.into_iter().collect::<Vec<_>>().join(", ")
-        )?;
+    // Collect BusKey enum imports
+    let bus_key_imports: BTreeSet<String> = events
+        .iter()
+        .map(|e| format!("{}BusKey", e.bus_pascal))
+        .collect();
+
+    if !type_imports.is_empty() || !bus_key_imports.is_empty() {
+        if !type_imports.is_empty() {
+            writeln!(
+                out,
+                "import type {{ {} }} from './types';",
+                type_imports.into_iter().collect::<Vec<_>>().join(", ")
+            )?;
+        }
+        if !bus_key_imports.is_empty() {
+            writeln!(
+                out,
+                "import {{ {} }} from './types';",
+                bus_key_imports.into_iter().collect::<Vec<_>>().join(", ")
+            )?;
+        }
         writeln!(out)?;
     }
 
@@ -231,7 +264,11 @@ fn generate_events(
             writeln!(out, "    // ── {} ──", event.bus_name)?;
             current_bus.clone_from(&event.bus_name);
         }
-        writeln!(out, "    '{}': {};", event.event_name, event.payload_type)?;
+        writeln!(
+            out,
+            "    [{}BusKey.{}]: {};",
+            event.bus_pascal, event.op_pascal, event.payload_type
+        )?;
     }
 
     writeln!(out, "  }}")?;
@@ -452,9 +489,9 @@ interface AuthBus {
         let events = std::fs::read_to_string(dir.path().join("events.ts")).unwrap();
         assert!(events.contains("declare module '@adi-family/sdk-plugin/types'"));
         assert!(events.contains("interface EventRegistry {"));
-        assert!(events.contains("'signaling:state': SignalingStateEvent;"));
-        assert!(events.contains("'signaling:auth-ok': SignalingAuthOkEvent;"));
-        assert!(events.contains("'auth:state-changed': AuthStateChangedEvent;"));
+        assert!(events.contains("[SignalingBusKey.State]: SignalingStateEvent;"));
+        assert!(events.contains("[SignalingBusKey.AuthOk]: SignalingAuthOkEvent;"));
+        assert!(events.contains("[AuthBusKey.StateChanged]: AuthStateChangedEvent;"));
         assert!(events.contains("// ── signaling ──"));
         assert!(events.contains("// ── auth ──"));
     }

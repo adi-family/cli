@@ -6,9 +6,16 @@ import type {
 } from './types.js';
 import { Logger } from './logger.js';
 
+interface QueuedEvent {
+  payload: unknown;
+  timestamp: number;
+}
+
+const QUEUE_TTL_MS = 30_000;
+
 interface ChannelState {
   handlers: Map<EventHandler<never>, string>; // handler → consumer name
-  queue: unknown[];
+  queue: QueuedEvent[];
 }
 
 export class EventBus {
@@ -42,7 +49,7 @@ export class EventBus {
     for (const mw of this.middlewares) mw.before?.(name, payload, meta);
 
     if (ch.handlers.size === 0) {
-      ch.queue.push(payload);
+      ch.queue.push({ payload, timestamp: Date.now() });
       this.log.debug({ event: name, producer, msg: 'queued (no handlers)' });
       for (const mw of this.middlewares) mw.ignored?.(name, payload, meta);
     } else {
@@ -63,9 +70,10 @@ export class EventBus {
     ch.handlers.set(handler as EventHandler<never>, consumer);
     this.log.trace({ event, consumer, msg: 'subscribed' });
     if (ch.queue.length > 0) {
-      const flushed = ch.queue.splice(0);
+      const now = Date.now();
+      const flushed = ch.queue.splice(0).filter(e => now - e.timestamp < QUEUE_TTL_MS);
       this.log.debug({ event, consumer, count: flushed.length, msg: 'flushing queue' });
-      for (const payload of flushed) {
+      for (const { payload } of flushed) {
         handler(payload as EventRegistry[K]);
       }
     }

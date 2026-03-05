@@ -1,6 +1,6 @@
 import type { RenderJob } from './types.js';
 
-declare module '@adi-family/sdk-plugin' {
+declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
     'video:render':  { compositionId: string; format: string; width: number; height: number; fps: number; durationInFrames: number };
     'video:status':  { jobId: string };

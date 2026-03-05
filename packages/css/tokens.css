@@ -56,9 +56,9 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 
   /* AX axes */
-  --l: 1rem;
-  --t: 1rem;
-  --r: 12px;
+  --ax-l: 1rem;
+  --ax-t: 1rem;
+  --ax-r: 12px;
 
   /* ── Theme aliases (--adi-*) ── */
   /* Maps to the same values so CSS snippets work without the theme package */

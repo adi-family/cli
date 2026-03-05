@@ -1,4 +1,5 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
+import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
 import * as api from './api.js';
 import type { Connection, RenderJob } from './types.js';
 import { setBus, connections } from './context.js';
@@ -28,13 +29,8 @@ export class VideoPlugin extends AdiPlugin {
       customElements.define('adi-video', AdiVideoElement);
     }
 
-    this.bus.emit('route:register', { path: '/video', element: 'adi-video' }, 'video');
-    this.bus.emit('nav:add', { id: 'video', label: 'Video', path: '/video' }, 'video');
-
-    this.bus.emit('command:register', { id: 'video:open', label: 'Go to Video page' }, 'video');
-    this.bus.on('command:execute', ({ id }) => {
-      if (id === 'video:open') this.bus.emit('router:navigate', { path: '/video' }, 'video');
-    }, 'video');
+    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', element: 'adi-video', label: 'Video' }, this.id);
+    this.bus.emit('nav:add', { id: this.id, label: 'Video', path: `/${this.id}` }, this.id);
 
     this.bus.on('video:render', async ({ compositionId: _, format, width, height, fps, durationInFrames }) => {
       try {

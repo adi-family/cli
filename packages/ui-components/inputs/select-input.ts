@@ -7,7 +7,6 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
-/// Custom select dropdown. Sizing via ADID AX system (--l, --t, --r).
 @customElement("adi-select-input")
 export class AdiSelectInput extends LitElement {
   @property({ type: String }) value = "";
@@ -191,8 +190,8 @@ export class AdiSelectInput extends LitElement {
     const selectedLabel = this.getSelectedLabel();
 
     return html`
-      <div style="display:flex;flex-direction:column;gap:calc(var(--l) * 0.375);">
-        ${this.label ? html`<label id="select-label" style="font-size:calc(var(--t) * 0.75);font-weight:500;color:var(--adi-text-muted);text-transform:uppercase;letter-spacing:0.05em;">${this.label}</label>` : ""}
+      <div style="display:flex;flex-direction:column;gap:calc(1rem * 0.375);">
+        ${this.label ? html`<label id="select-label" style="font-size:calc(1rem * 0.75);font-weight:500;color:var(--adi-text-muted);text-transform:uppercase;letter-spacing:0.05em;">${this.label}</label>` : ""}
         <div style="position:relative;">
           <button
             class="adi-select-trigger"
@@ -200,9 +199,9 @@ export class AdiSelectInput extends LitElement {
               width: 100%;
               box-sizing: border-box;
               border: 1px solid ${this.isOpen ? "var(--adi-accent)" : "var(--adi-border)"};
-              border-radius: var(--r);
-              padding: calc(var(--l) * 0.625) calc(var(--l) * 0.875);
-              font-size: calc(var(--t) * 0.875);
+              border-radius: 0.75rem;
+              padding: calc(1rem * 0.625) calc(1rem * 0.875);
+              font-size: calc(1rem * 0.875);
               font-family: inherit;
               background: color-mix(in srgb, var(--adi-text) 3%, transparent);
               color: var(--adi-text);
@@ -237,28 +236,28 @@ export class AdiSelectInput extends LitElement {
                   role="listbox"
                   style="
                     position: absolute;
-                    top: calc(100% + calc(var(--l) * 0.25));
+                    top: calc(100% + calc(1rem * 0.25));
                     left: 0;
                     right: 0;
                     background: var(--adi-surface);
                     border: 1px solid var(--adi-border);
-                    border-radius: var(--r);
-                    max-height: calc(var(--l) * 12.5);
+                    border-radius: 0.75rem;
+                    max-height: calc(1rem * 12.5);
                     overflow-y: auto;
                     z-index: 100;
                     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
                   "
                 >
                   ${this.options.length === 0
-                    ? html`<div style="padding:calc(var(--l) * 0.75) var(--l);color:var(--adi-text-muted);font-size:calc(var(--t) * 0.875);text-align:center;">No options available</div>`
+                    ? html`<div style="padding:calc(1rem * 0.75) 1rem;color:var(--adi-text-muted);font-size:calc(1rem * 0.875);text-align:center;">No options available</div>`
                     : this.options.map(
                         (option, index) => html`
                           <div
                             style="
-                              padding: calc(var(--l) * 0.5) var(--l);
+                              padding: calc(1rem * 0.5) 1rem;
                               cursor: pointer;
                               transition: background-color 100ms;
-                              font-size: calc(var(--t) * 0.875);
+                              font-size: calc(1rem * 0.875);
                               display: flex;
                               align-items: center;
                               justify-content: space-between;

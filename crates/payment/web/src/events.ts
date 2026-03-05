@@ -1,6 +1,6 @@
 import type { BalanceResponse, BalanceTransactionResponse } from './types.js';
 
-declare module '@adi-family/sdk-plugin' {
+declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
     'payment:balance':         Record<string, never>;
     'payment:can-charge-more': Record<string, never>;

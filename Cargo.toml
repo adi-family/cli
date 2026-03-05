@@ -183,10 +183,6 @@ members = [
     "crates/tsp-gen/plugin",
     "crates/cocoon",
     "crates/registry/plugin",
-
-    # Browser Debug components
-    "crates/browser-debug/core",
-    "crates/browser-debug/plugin",
     # Workflow translation plugins
     "crates/workflow/langs/en",
     "crates/workflow/langs/uk",

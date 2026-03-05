@@ -63,6 +63,30 @@ describe('EventBus — FIFO queue', () => {
   });
 });
 
+describe('EventBus — queue TTL', () => {
+  it('drops queued events older than 30s on flush', () => {
+    vi.useFakeTimers();
+    const bus = EventBus.init();
+    bus.emit('test:ping', { value: 1 }, 'test');
+    vi.advanceTimersByTime(31_000);
+    const handler = vi.fn();
+    bus.on('test:ping', handler, 'test');
+    expect(handler).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('keeps queued events within 30s TTL', () => {
+    vi.useFakeTimers();
+    const bus = EventBus.init();
+    bus.emit('test:ping', { value: 1 }, 'test');
+    vi.advanceTimersByTime(29_000);
+    const handler = vi.fn();
+    bus.on('test:ping', handler, 'test');
+    expect(handler).toHaveBeenCalledWith({ value: 1 });
+    vi.useRealTimers();
+  });
+});
+
 describe('EventBus — once', () => {
   it('handler called only once', () => {
     const bus = EventBus.init();

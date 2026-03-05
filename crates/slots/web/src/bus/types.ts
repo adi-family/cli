@@ -10,14 +10,14 @@ export interface SlotsDefineEvent {
 
 export interface SlotsPlaceEvent {
   slot: string;
-  element: string;
+  elementRef: unknown;
   priority?: number;
   pluginId: string;
 }
 
 export interface SlotsRemoveEvent {
   slot: string;
-  element: string;
+  elementRef: unknown;
 }
 
 export interface SlotsRemoveAllEvent {

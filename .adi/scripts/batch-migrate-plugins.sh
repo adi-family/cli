@@ -9,8 +9,6 @@ PLUGINS=(
     "../audio/plugin:AudioPlugin:ADI Audio"
     "crates/linter/plugin:LinterPlugin:ADI Linter"
     "crates/coolify/plugin:CoolifyPlugin:ADI Coolify"
-    "crates/browser-debug/plugin:BrowserDebugPlugin:Browser Debug"
-
     # Language plugins
     "crates/indexer/lang/go/plugin:GoLangPlugin:Go Language Support"
     "crates/indexer/lang/python/plugin:PythonLangPlugin:Python Language Support"

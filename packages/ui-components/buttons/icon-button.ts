@@ -2,7 +2,6 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { AsyncClickHandler } from "./base-button.js";
 
-/// Square icon-only button with variant support. Sizing via ADID AX system.
 @customElement("adi-icon-button")
 export class AdiIconButton extends LitElement {
   @property({ type: String }) icon = "";
@@ -60,11 +59,11 @@ export class AdiIconButton extends LitElement {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: calc(var(--l) * 2.5);
-          height: calc(var(--l) * 2.5);
-          font-size: var(--t);
+          width: calc(1rem * 2.5);
+          height: calc(1rem * 2.5);
+          font-size: 1rem;
           border: none;
-          border-radius: var(--r);
+          border-radius: 0.75rem;
           cursor: pointer;
           transition: background-color 200ms, color 200ms, transform 200ms;
           ${this.getVariantStyles()}

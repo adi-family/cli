@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 
-/// Multi-line textarea. Sizing via ADID AX system (--l, --t, --r).
 @customElement("adi-textarea-input")
 export class AdiTextareaInput extends LitElement {
   @property({ type: String }) value = "";
@@ -67,23 +66,23 @@ export class AdiTextareaInput extends LitElement {
     const borderColor = this.error ? "var(--adi-error)" : "var(--adi-border)";
 
     return html`
-      <div style="display:flex;flex-direction:column;gap:calc(var(--l) * 0.375);">
-        ${this.label ? html`<label style="font-size:calc(var(--t) * 0.75);font-weight:500;color:var(--adi-text-muted);text-transform:uppercase;letter-spacing:0.05em;">${this.label}</label>` : ""}
+      <div style="display:flex;flex-direction:column;gap:calc(1rem * 0.375);">
+        ${this.label ? html`<label style="font-size:calc(1rem * 0.75);font-weight:500;color:var(--adi-text-muted);text-transform:uppercase;letter-spacing:0.05em;">${this.label}</label>` : ""}
         <div style="position:relative;">
           <textarea
             style="
               width: 100%;
               box-sizing: border-box;
               border: 1px solid ${borderColor};
-              border-radius: var(--r);
-              padding: calc(var(--l) * 0.625) calc(var(--l) * 0.875);
-              font-size: calc(var(--t) * 0.875);
+              border-radius: 0.75rem;
+              padding: calc(1rem * 0.625) calc(1rem * 0.875);
+              font-size: calc(1rem * 0.875);
               font-family: inherit;
               background: color-mix(in srgb, var(--adi-text) 3%, transparent);
               color: var(--adi-text);
               outline: none;
               transition: border-color 200ms, box-shadow 200ms, background 200ms;
-              min-height: calc(var(--l) * 5);
+              min-height: calc(1rem * 5);
               ${this.autoResize ? "resize: none; overflow: hidden;" : "resize: vertical;"}
               ${this.disabled ? "opacity: 0.5; cursor: not-allowed; resize: none;" : ""}
             "
@@ -102,17 +101,17 @@ export class AdiTextareaInput extends LitElement {
           <div>
             ${this.error && this.errorMessage
               ? html`
-                  <span id="error-msg" style="font-size:calc(var(--t) * 0.75);color:var(--adi-error);display:flex;align-items:center;gap:calc(var(--l) * 0.25);">
+                  <span id="error-msg" style="font-size:calc(1rem * 0.75);color:var(--adi-error);display:flex;align-items:center;gap:calc(1rem * 0.25);">
                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     ${this.errorMessage}
                   </span>
                 `
-              : html`<span style="font-size:calc(var(--t) * 0.625);color:var(--adi-text-muted);">Cmd+Enter to submit</span>`}
+              : html`<span style="font-size:calc(1rem * 0.625);color:var(--adi-text-muted);">Cmd+Enter to submit</span>`}
           </div>
           ${this.maxLength
-            ? html`<span style="font-size:calc(var(--t) * 0.75);color:${this.getCharCountColor() || "var(--adi-text-muted)"};text-align:right;">${this.value.length}/${this.maxLength}</span>`
+            ? html`<span style="font-size:calc(1rem * 0.75);color:${this.getCharCountColor() || "var(--adi-text-muted)"};text-align:right;">${this.value.length}/${this.maxLength}</span>`
             : ""}
         </div>
       </div>

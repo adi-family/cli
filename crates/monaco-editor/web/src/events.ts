@@ -5,7 +5,7 @@ import type {
   EditorSetThemePayload,
 } from './types.js';
 
-declare module '@adi-family/sdk-plugin' {
+declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
     'editor:open': EditorOpenPayload;
     'editor:get-content': Record<string, never>;

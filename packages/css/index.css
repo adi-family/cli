@@ -1,7 +1,6 @@
 /* ─── ADI CSS Components ─── */
 /* Import individually or use this barrel file for everything */
 
-@import "./ax.css";
 @import "./base.css";
 @import "./animations.css";
 @import "./glass.css";

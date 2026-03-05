@@ -26,7 +26,7 @@ export function renderNodeDetail(props: NodeDetailProps): TemplateResult {
   const conf = node.confidence[0];
 
   return html`
-    <div class="space-y-1">
+    <div class="space-y-4">
       <button class="text-sm text-gray-400 hover:text-gray-200 transition-colors" @click=${onBack}>
         &larr; Back to search
       </button>
@@ -61,7 +61,7 @@ export function renderNodeDetail(props: NodeDetailProps): TemplateResult {
           ? html`
               <div>
                 <h4 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Edges (${edges.length})</h4>
-                <div class="space-y-0_25">
+                <div class="space-y-1">
                   ${edges.map(edgeRow)}
                 </div>
               </div>

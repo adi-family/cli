@@ -71,7 +71,7 @@ export function renderNodeList(props: NodeListProps): TemplateResult {
     : props.results;
 
   return html`
-    <div class="space-y-0_75">
+    <div class="space-y-3">
       <div class="flex items-center justify-between mb-2">
         <h2 class="text-lg font-semibold text-gray-200">Knowledge</h2>
         <button
@@ -104,7 +104,7 @@ export function renderNodeList(props: NodeListProps): TemplateResult {
           : filtered.length === 0
             ? html`<div class="text-center py-8 text-gray-500 text-sm">${props.searchQuery ? 'No results found' : 'Search for knowledge or add new entries'}</div>`
             : html`
-                <div class="space-y-0_5">
+                <div class="space-y-2">
                   ${filtered.map((sr) => resultRow(sr, props.onSelectNode))}
                 </div>
               `}

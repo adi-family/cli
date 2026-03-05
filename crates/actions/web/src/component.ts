@@ -64,7 +64,7 @@ export class AdiActionsElement extends LitElement {
     });
 
     return html`
-      <div class="min-h-screen bg-bg p-6 space-y-1">
+      <div class="min-h-screen bg-bg p-6 space-y-4">
         <div class="mb-2">
           <h1 class="text-xl font-semibold text-text">Actions</h1>
           <p class="text-sm text-text-muted">
