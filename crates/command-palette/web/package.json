@@ -1,18 +1,19 @@
 {
-  "name": "@adi/router-web-plugin",
+  "name": "@adi/command-palette-web-plugin",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
-    "generate": "cargo check -p router-plugin",
+    "generate": "cargo check -p command-palette-plugin",
     "build": "npm run generate && vite build",
     "typecheck": "tsc --noEmit",
     "dev": "vite build --watch"
   },
   "dependencies": {
-    "@adi/command-palette-web-plugin": "file:../../command-palette/web",
     "@adi-family/sdk-plugin": "file:../../../packages/plugin-sdk",
-    "lit": "^3.3.1"
+    "lit": "^3.3.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.0",
