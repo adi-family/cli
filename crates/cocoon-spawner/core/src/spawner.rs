@@ -54,7 +54,7 @@ pub async fn handle_spawn(
         })
         .await;
 
-    SignalingMessage::SpawnCocoonResult {
+    SignalingMessage::HiveSpawnCocoonResult {
         request_id,
         success: true,
         device_id: None,
@@ -73,7 +73,7 @@ pub async fn handle_terminate(
     let cocoon = match state.find_by_container_id(container_id).await {
         Some(c) => c,
         None => {
-            return SignalingMessage::TerminateCocoonResult {
+            return SignalingMessage::HiveTerminateCocoonResult {
                 request_id,
                 success: false,
                 error: Some(format!("container not found: {container_id}")),
@@ -82,7 +82,7 @@ pub async fn handle_terminate(
     };
 
     if let Err(e) = docker.terminate_cocoon(&cocoon.container_name).await {
-        return SignalingMessage::TerminateCocoonResult {
+        return SignalingMessage::HiveTerminateCocoonResult {
             request_id,
             success: false,
             error: Some(e.to_string()),
@@ -92,7 +92,7 @@ pub async fn handle_terminate(
     state.remove_cocoon(&cocoon.container_name).await;
     state.release_token(&cocoon.setup_token).await;
 
-    SignalingMessage::TerminateCocoonResult {
+    SignalingMessage::HiveTerminateCocoonResult {
         request_id,
         success: true,
         error: None,
@@ -120,7 +120,7 @@ pub async fn health_check_loop(docker: CocoonDocker, state: SpawnerState, interv
 
 fn spawn_error(request_id: String, error: String) -> SignalingMessage {
     tracing::error!("spawn failed: {error}");
-    SignalingMessage::SpawnCocoonResult {
+    SignalingMessage::HiveSpawnCocoonResult {
         request_id,
         success: false,
         device_id: None,

@@ -76,7 +76,7 @@ async fn connect_and_run(
 
     // Send RegisterHive
     let signature = hmac_sign(&config.hive_id, &config.hive_secret);
-    let register_msg = SignalingMessage::RegisterHive {
+    let register_msg = SignalingMessage::HiveRegister {
         hive_id: config.hive_id.clone(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         cocoon_kinds: config.cocoon_kinds(),
@@ -128,7 +128,7 @@ async fn wait_for_registration(
 ) -> anyhow::Result<String> {
     while let Some(msg) = stream.next().await {
         if let Ok(Message::Text(text)) = msg {
-            if let Ok(SignalingMessage::HiveRegistered { hive_id }) =
+            if let Ok(SignalingMessage::HiveRegisterResponse { hive_id }) =
                 serde_json::from_str::<SignalingMessage>(&text)
             {
                 return Ok(hive_id);
@@ -157,7 +157,7 @@ async fn handle_message<S>(
     };
 
     let response = match msg {
-        SignalingMessage::SpawnCocoon {
+        SignalingMessage::HiveSpawnCocoon {
             request_id,
             setup_token,
             name,
@@ -166,7 +166,7 @@ async fn handle_message<S>(
             tracing::info!("spawn request: kind={kind} request_id={request_id}");
             Some(spawner::handle_spawn(request_id, setup_token, name, &kind, config, docker, state).await)
         }
-        SignalingMessage::TerminateCocoon {
+        SignalingMessage::HiveTerminateCocoon {
             request_id,
             container_id,
         } => {

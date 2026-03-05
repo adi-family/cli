@@ -6,6 +6,8 @@ exclude = [
     "crates/llm-uzu-plugin",
     # Submodule parent dirs with placeholder Cargo.toml
     "crates/hive",
+    # Temporarily excluded — missing signaling protocol types (WebRTC)
+    "crates/_lib/lib-webrtc-manager",
 ]
 members = [
     # CLI manager (submodule)
@@ -24,7 +26,6 @@ members = [
     "crates/_lib/lib-task-store",
     "crates/_lib/lib-i18n-core",
     # Removed: lib-plugin-abi-orchestration (migrated to lib-plugin-abi-v3)
-    "crates/_lib/lib-webrtc-manager",
 
     # Indexer components (flat submodules)
     "crates/_lib/lib-embed",
@@ -115,11 +116,6 @@ members = [
     "crates/analytics/core",
     "crates/analytics/client",
     "crates/analytics/plugin",
-
-    # Platform components
-    "crates/platform/core",
-    "crates/platform/http",
-    "crates/platform/plugin",
 
     # Tools
     # API clients
@@ -265,7 +261,6 @@ flags-core = { path = "crates/flags/core" }
 linter-core = { path = "crates/linter/core" }
 llm-proxy-core = { path = "crates/llm-proxy/core" }
 hive-core = { path = "crates/hive/core" }
-platform-core = { path = "crates/platform/core" }
 tools-core = { path = "crates/tools/core" }
 payment-core = { path = "crates/payment/core" }
 credentials-core = { path = "crates/credentials/core" }

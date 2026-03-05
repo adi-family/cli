@@ -273,7 +273,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "lib-env-parse",
- "lib-migrations-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lib-migrations-core",
  "lib-migrations-sql 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
@@ -6898,20 +6898,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "lib-migrations-core"
-version = "0.1.0"
-source = "git+https://github.com/adi-family/lib-migrations-core.git#cf2fdcca764eb1978f4c99991feaa96ca94efedf"
-dependencies = [
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "lib-migrations-sql"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb759712cc2eccf23174ec3b2554fc49c38c20e48726fcd4a2b5ce45a977add1"
 dependencies = [
- "lib-migrations-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lib-migrations-core",
  "rusqlite",
  "thiserror 2.0.18",
 ]
@@ -6921,7 +6913,7 @@ name = "lib-migrations-sql"
 version = "0.1.0"
 source = "git+https://github.com/adi-family/lib-migrations-sql.git#9f9c3f071f72c3f55a1776890dd14766a61cface"
 dependencies = [
- "lib-migrations-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lib-migrations-core",
  "rusqlite",
  "thiserror 2.0.18",
 ]
@@ -7104,22 +7096,6 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "lib-webrtc-manager"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "futures",
- "lib-env-parse",
- "lib-signaling-protocol",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "webrtc",
 ]
 
 [[package]]
@@ -8970,69 +8946,6 @@ name = "pkg-config"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
-
-[[package]]
-name = "platform-core"
-version = "0.2.0"
-dependencies = [
- "analytics-client",
- "anyhow",
- "axum 0.8.8",
- "chrono",
- "hex",
- "jsonwebtoken",
- "lib-env-parse",
- "lib-migrations-core 0.1.0 (git+https://github.com/adi-family/lib-migrations-core.git)",
- "lib-migrations-sql 0.1.0 (git+https://github.com/adi-family/lib-migrations-sql.git)",
- "lib-signaling-protocol",
- "rand 0.9.2",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror 2.0.18",
- "tokio-test",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "platform-http"
-version = "0.2.0"
-dependencies = [
- "analytics-client",
- "anyhow",
- "axum 0.8.8",
- "chrono",
- "dotenvy",
- "futures",
- "jsonwebtoken",
- "lib-env-parse",
- "lib-http-common",
- "lib-signaling-protocol",
- "lib-webrtc-manager",
- "platform-core",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror 2.0.18",
- "tokio",
- "tokio-tungstenite 0.24.0",
- "tower 0.5.3",
- "tower-http 0.6.8",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "platform-plugin"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "lib-plugin-abi-v3",
- "platform-http",
-]
 
 [[package]]
 name = "plotters"
