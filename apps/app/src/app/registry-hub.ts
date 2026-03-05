@@ -42,8 +42,16 @@ export class RegistryHub {
     return this.registries;
   }
 
+  allServers(): ReadonlyMap<string, RegistryServer> {
+    return this.servers;
+  }
+
   getServer(url: string): RegistryServer | undefined {
     return this.servers.get(url);
+  }
+
+  isProtected(url: string): boolean {
+    return this.protectedUrls.has(url);
   }
 
   @trace('adding registry')

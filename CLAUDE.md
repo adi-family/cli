@@ -396,4 +396,5 @@ signaling:
 - [`rust-small-crates`](docs/code-style/rust-small-crates.md): Benefits:
 - [`rust-yagni`](docs/code-style/rust-yagni.md): -
 - [`translations`](docs/code-style/translations.md): Use Mozilla Fluent (.ftl) for all user-facing strings.
+- [`web-debug-section`](docs/code-style/web-debug-section.md): Register debug sections via AdiDebugScreenBusKey.RegisterSection.
 

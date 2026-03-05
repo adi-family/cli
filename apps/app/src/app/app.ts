@@ -4,9 +4,11 @@ import {
   trace,
   type PluginDescriptor,
 } from '@adi-family/sdk-plugin';
+import { AdiDebugScreenBusKey } from '@adi/debug-screen-web-plugin/bus';
 import { DbConnection } from './db-connection';
 import { PluginCore } from './plugin-core';
 import { RegistryHub } from './registry-hub';
+import { createRegistryHubDebugSync } from './registry-hub-debug';
 import { getEnabledWebPluginIds } from '../plugin-prefs';
 
 export interface Context {
@@ -22,15 +24,17 @@ export class App {
   readonly bus: EventBus;
   readonly db: DbConnection;
   readonly core: PluginCore;
+  private readonly registryHub: RegistryHub;
 
   allPlugins: PluginDescriptor[] = [];
   debug: { loaded: string[]; failed: string[]; timedOut: string[] } | null =
     null;
 
-  private constructor(bus: EventBus, db: DbConnection, core: PluginCore) {
+  private constructor(bus: EventBus, db: DbConnection, core: PluginCore, registryHub: RegistryHub) {
     this.bus = bus;
     this.db = db;
     this.core = core;
+    this.registryHub = registryHub;
   }
 
   static get instance(): App | null {
@@ -49,7 +53,7 @@ export class App {
     const registryHub = RegistryHub.init();
     await registryHub.start({ db });
     const core = new PluginCore(bus, registryHub);
-    const app = new App(bus, db, core);
+    const app = new App(bus, db, core, registryHub);
     App._instance = app;
     await app.init();
     return app;
@@ -68,6 +72,20 @@ export class App {
     //this.core.registerPluginById('adi.actions');
     await this.registerEnabledPlugins();
     this.allPlugins = await this.core.fetchPlugins();
+    this.registerRegistryHubDebug();
+  }
+
+  private registerRegistryHubDebug(): void {
+    const debugSync = createRegistryHubDebugSync(this.registryHub);
+    this.bus.emit(
+      AdiDebugScreenBusKey.RegisterSection,
+      {
+        pluginId: 'app.registry-hub',
+        init: debugSync.init,
+        label: 'Registry Hub',
+      },
+      'app',
+    );
   }
 
   @trace('starting')
