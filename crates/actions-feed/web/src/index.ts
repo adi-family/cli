@@ -9,11 +9,11 @@ import './bus';
 export * from './bus';
 export * from './config';
 
-import type { ActionsPlugin } from './plugin';
-export { ActionsPlugin, ActionsPlugin as PluginShell } from './plugin';
+import type { ActionsFeedPlugin } from './plugin';
+export { ActionsFeedPlugin, ActionsFeedPlugin as PluginShell } from './plugin';
 
 declare module '@adi-family/sdk-plugin' {
   interface PluginApiRegistry {
-    [PLUGIN_ID]: ActionsPlugin['api'];
+    [PLUGIN_ID]: ActionsFeedPlugin['api'];
   }
 }

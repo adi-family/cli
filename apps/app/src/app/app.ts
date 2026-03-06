@@ -73,9 +73,8 @@ export class App {
     this.core.registerPluginById('adi.debug-screen');
     this.core.registerPluginById('adi.signaling');
     this.core.registerPluginById('adi.cocoon');
+    this.core.registerPluginById('adi.actions-feed');
 
-    //this.core.registerPluginById('adi.signaling');
-    //this.core.registerPluginById('adi.actions');
     await this.registerEnabledPlugins();
     this.allPlugins = await this.core.fetchPlugins();
     this.registerRegistryHubDebug();

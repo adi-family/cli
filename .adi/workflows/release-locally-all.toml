@@ -8,7 +8,7 @@ description = "Release all specified plugins to local registry"
 [[steps]]
 name = "Release all plugins locally"
 run = """
-ALL_PLUGINS="adi.router adi.command-palette adi.slots adi.auth adi.signaling adi.debug-screen adi.cocoon"
+ALL_PLUGINS="adi.router adi.command-palette adi.slots adi.auth adi.signaling adi.debug-screen adi.cocoon adi.actions-feed"
 
 FILTER="${1:-}"
 if [ -n "$FILTER" ]; then

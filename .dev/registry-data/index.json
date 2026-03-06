@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1772814478,
+  "updatedAt": 1772820285,
   "packages": [],
   "plugins": [
     {
@@ -125,6 +125,20 @@
       ],
       "packageId": null,
       "latestVersion": "0.2.7",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    },
+    {
+      "id": "adi.actions-feed",
+      "name": "ADI Actions Feed",
+      "description": "Action feed system for cross-plugin notifications",
+      "pluginTypes": [
+        "extension",
+        "web"
+      ],
+      "packageId": null,
+      "latestVersion": "0.1.0",
       "downloads": 0,
       "author": "ADI Team",
       "tags": []

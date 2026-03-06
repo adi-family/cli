@@ -67,7 +67,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "actions-plugin"
+name = "actions-feed-plugin"
 version = "0.1.0"
 dependencies = [
  "lib-plugin-prelude",

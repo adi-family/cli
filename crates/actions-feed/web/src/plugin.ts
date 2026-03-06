@@ -1,9 +1,10 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
+import { SlotsBusKey } from '@adi/slots-web-plugin/bus';
+import { ActionsBusKey } from './bus';
 import type { ActionCard, RenderFn, KindMode } from './types.js';
 import './generated/bus';
 
-const PLUGIN_ID = 'app.actions';
+const PLUGIN_ID = 'adi.actions-feed';
 const kindKey = (plugin: string, kind: string) => `${plugin}::${kind}`;
 
 const store = {
@@ -18,24 +19,32 @@ const store = {
 
 export { store as actionStore };
 
-export class ActionsPlugin extends AdiPlugin {
+export class ActionsFeedPlugin extends AdiPlugin {
   readonly id = PLUGIN_ID;
   readonly version = '0.1.0';
 
   override async onRegister(): Promise<void> {
-    const { AdiActionsElement } = await import('./component.js');
-    if (!customElements.get('adi-actions')) {
-      customElements.define('adi-actions', AdiActionsElement);
+    const { AdiActionsFeedElement } = await import('./component.js');
+    if (!customElements.get('adi-actions-feed')) {
+      customElements.define('adi-actions-feed', AdiActionsFeedElement);
     }
 
-    this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: PLUGIN_ID, path: '', init: () => document.createElement('adi-actions'), label: 'Actions' }, PLUGIN_ID);
-    this.bus.emit('nav:add', { id: PLUGIN_ID, label: 'Actions', path: `/${PLUGIN_ID}` }, PLUGIN_ID);
+    this.bus.emit(SlotsBusKey.Place, {
+      slot: 'right',
+      elementRef: document.createElement('adi-actions-feed'),
+      priority: 0,
+      pluginId: PLUGIN_ID,
+    }, PLUGIN_ID);
 
-    this.bus.on('actions:register-kind', ({ plugin, kind, mode }) => {
+    this.bus.on(ActionsBusKey.RegisterKind, ({ plugin, kind, mode }) => {
       store.kindModes.set(kindKey(plugin, kind), mode as KindMode);
     }, PLUGIN_ID);
 
-    this.bus.on('actions:push', ({ id, plugin, kind, data, priority }) => {
+    this.bus.on(ActionsBusKey.RegisterRenderer, ({ plugin, kind, render }) => {
+      store.renderers.set(kindKey(plugin, kind), render as RenderFn);
+    }, PLUGIN_ID);
+
+    this.bus.on(ActionsBusKey.Push, ({ id, plugin, kind, data, priority }) => {
       const key = kindKey(plugin, kind);
       const mode = store.kindModes.get(key);
 
@@ -48,7 +57,7 @@ export class ActionsPlugin extends AdiPlugin {
             (a) => !(a.plugin === plugin && a.kind === kind && a.id !== id),
           );
           for (const d of dismissed) {
-            this.bus.emit('actions:dismissed', { id: d.id, plugin: d.plugin, kind: d.kind }, PLUGIN_ID);
+            this.bus.emit(ActionsBusKey.Dismissed, { id: d.id, plugin: d.plugin, kind: d.kind }, PLUGIN_ID);
           }
         }
       }
@@ -61,11 +70,11 @@ export class ActionsPlugin extends AdiPlugin {
       store.notify();
     }, PLUGIN_ID);
 
-    this.bus.on('actions:dismiss', ({ id }) => {
+    this.bus.on(ActionsBusKey.Dismiss, ({ id }) => {
       const card = store.actions.find((a) => a.id === id);
       if (!card) return;
       store.actions = store.actions.filter((a) => a.id !== id);
-      this.bus.emit('actions:dismissed', { id: card.id, plugin: card.plugin, kind: card.kind }, PLUGIN_ID);
+      this.bus.emit(ActionsBusKey.Dismissed, { id: card.id, plugin: card.plugin, kind: card.kind }, PLUGIN_ID);
       store.notify();
     }, PLUGIN_ID);
   }

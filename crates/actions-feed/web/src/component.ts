@@ -4,7 +4,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import type { ActionCard } from './types.js';
 import { actionStore } from './plugin.js';
 
-export class AdiActionsElement extends LitElement {
+export class AdiActionsFeedElement extends LitElement {
   @state() private actions: ActionCard[] = [];
 
   private unsub: (() => void) | null = null;
@@ -28,7 +28,7 @@ export class AdiActionsElement extends LitElement {
   }
 
   #dismiss(id: string): void {
-    window.sdk.bus.emit('actions:dismiss', { id }, 'actions-loop');
+    window.sdk.bus.emit('actions:dismiss', { id }, 'actions-feed');
   }
 
   #renderCard(card: ActionCard) {
@@ -64,17 +64,17 @@ export class AdiActionsElement extends LitElement {
     });
 
     return html`
-      <div class="min-h-screen bg-bg p-6 space-y-4">
-        <div class="mb-2">
-          <h1 class="text-xl font-semibold text-text">Actions</h1>
-          <p class="text-sm text-text-muted">
-            ${this.actions.length} pending action${this.actions.length !== 1 ? 's' : ''}
+      <div class="h-full bg-bg p-4 space-y-3 overflow-y-auto border-l border-border w-72">
+        <div class="mb-1">
+          <h2 class="text-sm font-semibold text-text">Actions</h2>
+          <p class="text-xs text-text-muted">
+            ${this.actions.length} pending
           </p>
         </div>
 
         ${sorted.length > 0
           ? html`<div class="flex flex-col gap-2">${sorted.map((card) => this.#renderCard(card))}</div>`
-          : html`<div class="flex items-center justify-center py-24 text-text-muted text-sm">No pending actions.</div>`}
+          : html`<div class="flex items-center justify-center py-12 text-text-muted text-xs">No pending actions.</div>`}
       </div>
     `;
   }

@@ -49,10 +49,20 @@ export class AppRoot extends LitElement {
 
   override render() {
     return html`
-      <div class="flex min-h-screen">
-        <main class="flex-1 min-w-0">
-          <adi-slot name="maincontent"></adi-slot>
-        </main>
+      <div class="flex flex-col min-h-screen">
+        <adi-slot name="top"></adi-slot>
+
+        <div class="flex flex-1 min-h-0">
+          <adi-slot name="left"></adi-slot>
+
+          <main class="flex-1 min-w-0">
+            <adi-slot name="center"></adi-slot>
+          </main>
+
+          <adi-slot name="right"></adi-slot>
+        </div>
+
+        <adi-slot name="bottom"></adi-slot>
       </div>
 
       <adi-slot name="overlays"></adi-slot>

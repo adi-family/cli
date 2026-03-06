@@ -1,18 +1,18 @@
 use lib_plugin_prelude::*;
 
-pub struct ActionsPlugin;
+pub struct ActionsFeedPlugin;
 
 #[async_trait]
-impl Plugin for ActionsPlugin {
+impl Plugin for ActionsFeedPlugin {
     fn metadata(&self) -> PluginMetadata {
         PluginMetadata::new(
-            "adi.actions",
-            "Actions",
+            "adi.actions-feed",
+            "Actions Feed",
             env!("CARGO_PKG_VERSION"),
         )
         .with_type(PluginType::Core)
         .with_author("ADI Team")
-        .with_description("Action card system for cross-plugin notifications")
+        .with_description("Action feed system for cross-plugin notifications")
     }
 
     async fn init(&mut self, _ctx: &PluginContext) -> Result<()> {
@@ -30,5 +30,5 @@ impl Plugin for ActionsPlugin {
 
 #[no_mangle]
 pub fn plugin_create() -> Box<dyn Plugin> {
-    Box::new(ActionsPlugin)
+    Box::new(ActionsFeedPlugin)
 }

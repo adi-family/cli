@@ -114,7 +114,7 @@ export class RouterPlugin extends AdiPlugin {
     this.bus.emit(
       SlotsBusKey.Place,
       {
-        slot: 'maincontent',
+        slot: 'center',
         elementRef: this.routerOutlet,
         priority: 0,
         pluginId: PLUGIN_ID,

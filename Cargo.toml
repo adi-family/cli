@@ -166,7 +166,7 @@ members = [
     "crates/tasks/plugin",
     "crates/monaco-editor/plugin",
     "crates/debug-screen/plugin",
-    "crates/actions/plugin",
+    "crates/actions-feed/plugin",
     "crates/router/plugin",
     "crates/command-palette/plugin",
     "crates/slots/plugin",
