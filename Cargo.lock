@@ -2342,7 +2342,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cocoon"
+name = "cocoon-core"
 version = "0.2.7"
 dependencies = [
  "anyhow",
@@ -2357,8 +2357,6 @@ dependencies = [
  "lib-console-output",
  "lib-daemon-client",
  "lib-env-parse",
- "lib-plugin-abi-v3",
- "lib-plugin-prelude",
  "lib-signaling-protocol",
  "once_cell",
  "portable-pty",
@@ -2379,6 +2377,25 @@ dependencies = [
  "uuid",
  "walkdir",
  "webrtc",
+]
+
+[[package]]
+name = "cocoon-plugin"
+version = "0.2.7"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cocoon-core",
+ "lib-console-output",
+ "lib-daemon-client",
+ "lib-env-parse",
+ "lib-plugin-abi-v3",
+ "lib-plugin-prelude",
+ "once_cell",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
 ]
 
 [[package]]
