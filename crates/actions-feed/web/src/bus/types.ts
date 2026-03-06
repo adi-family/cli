@@ -19,6 +19,12 @@ export interface ActionsRegisterKindEvent {
   mode: ActionKindMode;
 }
 
+export interface ActionsRegisterRendererEvent {
+  plugin: string;
+  kind: string;
+  render: unknown;
+}
+
 export interface ActionsPushEvent {
   id: string;
   plugin: string;
@@ -56,6 +62,7 @@ export interface CommandExecuteEvent {
 
 export enum ActionsBusKey {
   RegisterKind = 'actions:register-kind',
+  RegisterRenderer = 'actions:register-renderer',
   Push = 'actions:push',
   Dismiss = 'actions:dismiss',
   Dismissed = 'actions:dismissed',
