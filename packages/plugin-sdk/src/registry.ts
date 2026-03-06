@@ -1,14 +1,23 @@
 import type { EventBus } from './bus.js';
 import type { PluginDescriptor } from './types.js';
-import { AppContext } from './app-context.js';
+import { AppContext, type AppContextOptions } from './app-context.js';
 import { AdiPlugin } from './plugin.js';
 
 const registry = new Map<string, AdiPlugin>();
 const descriptors = new Map<string, PluginDescriptor>();
 let sharedApp: AppContext | undefined;
+let appOptions: AppContextOptions = {};
 
 export function registerPlugin(plugin: AdiPlugin): void {
   registry.set(plugin.id, plugin);
+}
+
+/** Configure AppContext options before plugins are loaded. */
+export function configureApp(options: AppContextOptions): void {
+  if (sharedApp) {
+    throw new Error('configureApp() must be called before any plugins are loaded.');
+  }
+  appOptions = { ...appOptions, ...options };
 }
 
 /** @internal Test helper. */
@@ -16,12 +25,13 @@ export function _resetRegistry(): void {
   registry.clear();
   descriptors.clear();
   sharedApp = undefined;
+  appOptions = {};
   swMessageController?.abort();
   swMessageController = undefined;
 }
 
 function getApp(bus: EventBus): AppContext {
-  if (!sharedApp) sharedApp = new AppContext(bus, { envSource: import.meta.env });
+  if (!sharedApp) sharedApp = new AppContext(bus, { envSource: import.meta.env, ...appOptions });
   return sharedApp;
 }
 

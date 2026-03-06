@@ -12,6 +12,7 @@ export type {
 
 export { EventBus } from './bus.js';
 export { AppContext } from './app-context.js';
+export type { PluginStorage, StorageFactory } from './storage.js';
 export { Logger } from './logger.js';
 export type { LogLevel, DebugInfoProvider } from './logger.js';
 export { trace } from './log-decorator.js';
@@ -21,6 +22,7 @@ export { HttpPluginRegistry } from './registry-http.js';
 export type { RegistryHealth } from './registry-http.js';
 export {
   registerPlugin,
+  configureApp,
   initInternalPlugin,
   loadPlugins,
   upgradePlugin,

@@ -1,8 +1,10 @@
 import type { EventBus } from './bus.js';
 import type { PluginApiRegistry } from './types.js';
+import type { PluginStorage, StorageFactory } from './storage.js';
 
 export interface AppContextOptions {
   envSource?: Record<string, string | undefined>;
+  storageFactory?: StorageFactory;
 }
 
 /** Shared context passed to every plugin — provides event bus and typed API access. */
@@ -10,10 +12,13 @@ export class AppContext {
   readonly bus: EventBus;
   private readonly apis = new Map<string, unknown>();
   private readonly envSource: Record<string, string | undefined>;
+  private readonly storageFactory?: StorageFactory;
+  private readonly storageInstances = new Map<string, PluginStorage>();
 
   constructor(bus: EventBus, options: AppContextOptions = {}) {
     this.bus = bus;
     this.envSource = options.envSource ?? {};
+    this.storageFactory = options.storageFactory;
   }
 
   /** Read a comma-separated env variable by key (without the VITE_ prefix). */
@@ -28,6 +33,20 @@ export class AppContext {
       throw new Error(`API '${String(id)}' is not registered. Ensure the plugin is loaded and calls app.provide().`);
     }
     return instance as PluginApiRegistry[K];
+  }
+
+  /** Per-plugin key-value storage backed by the app's storage implementation. */
+  storage(pluginId: string): PluginStorage {
+    const cached = this.storageInstances.get(pluginId);
+    if (cached) return cached;
+
+    if (!this.storageFactory) {
+      throw new Error('Storage is not configured. Provide a storageFactory in AppContextOptions.');
+    }
+
+    const instance = this.storageFactory(pluginId);
+    this.storageInstances.set(pluginId, instance);
+    return instance;
   }
 
   /** @internal Auto-provide from plugin._init(). */

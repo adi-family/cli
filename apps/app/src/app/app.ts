@@ -2,11 +2,13 @@ import {
   EventBus,
   Logger,
   trace,
+  configureApp,
   type PluginDescriptor,
 } from '@adi-family/sdk-plugin';
 import { AdiDebugScreenBusKey } from '@adi/debug-screen-web-plugin/bus';
 import { DbConnection } from './db-connection';
 import { PluginCore } from './plugin-core';
+import { pluginStorageFactory } from './plugin-storage';
 import { RegistryHub } from './registry-hub';
 import { createRegistryHubDebugSync } from './registry-hub-debug';
 import { getEnabledWebPluginIds } from '../plugin-prefs';
@@ -53,6 +55,7 @@ export class App {
 
   static async init(): Promise<App> {
     const bus = EventBus.init();
+    configureApp({ storageFactory: pluginStorageFactory });
     const db = DbConnection.init();
     db.registerStore('prefs');
     const registryHub = RegistryHub.init();

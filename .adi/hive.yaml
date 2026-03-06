@@ -31,6 +31,7 @@ defaults:
 # -----------------------------------------------------------------------------
 # Hosts:
 #   - adi.test              (local development)
+#   - mailpit.adi.test      (local mail UI)
 
 proxy:
   bind:
@@ -180,6 +181,34 @@ services:
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
+  # Infrastructure: Mail (Local Development)
+  # ---------------------------------------------------------------------------
+
+  mailpit:
+    runner:
+      type: docker
+      docker:
+        image: axllent/mailpit:latest
+        container_name: adi-mailpit
+        ports:
+          - '8060:1025'
+          - '8061:8025'
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8061
+          smtp: 8060
+    proxy:
+      - host: mailpit.adi.test
+        path: /
+    healthcheck:
+      type: tcp
+      tcp:
+        port: '{{runtime.port.smtp}}'
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
   # Core Services
   # ---------------------------------------------------------------------------
 
@@ -256,16 +285,17 @@ services:
         DATABASE_URL: 'postgres://adi:adi@localhost:8027/adi_auth'
         JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
         ADMIN_EMAILS: ${env.ADMIN_EMAILS:-}
-        SMTP_HOST: ${env.SMTP_HOST:-}
-        SMTP_PORT: ${env.SMTP_PORT:-}
+        SMTP_HOST: ${env.SMTP_HOST:-localhost}
+        SMTP_PORT: ${env.SMTP_PORT:-8060}
         SMTP_USERNAME: ${env.SMTP_USERNAME:-}
         SMTP_PASSWORD: ${env.SMTP_PASSWORD:-}
-        SMTP_FROM_EMAIL: ${env.SMTP_FROM_EMAIL:-}
-        SMTP_FROM_NAME: ${env.SMTP_FROM_NAME:-}
-        SMTP_TLS: ${env.SMTP_TLS:-}
+        SMTP_FROM_EMAIL: ${env.SMTP_FROM_EMAIL:-noreply@adi.test}
+        SMTP_FROM_NAME: ${env.SMTP_FROM_NAME:-ADI Noreply}
+        SMTP_TLS: ${env.SMTP_TLS:-false}
         UNSAFE_PRINT_EMAIL_CODE_IN_CONSOLE: ${env.UNSAFE_PRINT_EMAIL_CODE_IN_CONSOLE:-true}
     depends_on:
       - postgres
+      - mailpit
     restart: on-failure
 
   # ---------------------------------------------------------------------------
