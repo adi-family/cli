@@ -394,7 +394,7 @@ def build_plugin(plugin_name: str, crate_dir: str, dist_dir: Path, release: bool
     return build
 
 
-def publish_plugin(build: PluginBuild, registry: str):
+def publish_plugin(build: PluginBuild, registry: str, max_retries: int = 5):
     """Publish plugin archive to registry."""
     info(f"Publishing {build.id} v{build.version} for {build.platform}...")
     info(f"Registry: {registry}")
@@ -407,16 +407,29 @@ def publish_plugin(build: PluginBuild, registry: str):
     })
     url = f"{registry}/v1/publish/plugins/{build.id}/{build.version}/{build.platform}?{params}"
 
-    result = run_cmd([
-        "curl", "-s", "-w", "\n%{http_code}", "--max-time", "300",
-        "-X", "POST", url,
-        "-H", "Content-Type: application/gzip",
-        "--data-binary", f"@{build.archive}",
-    ])
+    http_code = "0"
+    body = ""
+    for attempt in range(1, max_retries + 1):
+        result = run_cmd([
+            "curl", "-s", "-w", "\n%{http_code}", "--max-time", "300",
+            "-X", "POST", url,
+            "-H", "Content-Type: application/gzip",
+            "--data-binary", f"@{build.archive}",
+        ])
 
-    lines = result.stdout.strip().splitlines()
-    http_code = lines[-1] if lines else "0"
-    body = "\n".join(lines[:-1])
+        lines = result.stdout.strip().splitlines()
+        http_code = lines[-1] if lines else "0"
+        body = "\n".join(lines[:-1])
+
+        if http_code in ("200", "201"):
+            break
+
+        if http_code in ("000", "0") and attempt < max_retries:
+            warn(f"Connection failed (attempt {attempt}/{max_retries}), retrying in {attempt * 2}s...")
+            time.sleep(attempt * 2)
+            continue
+
+        break
 
     if http_code in ("200", "201"):
         success(f"Published {build.id} v{build.version}")
@@ -432,14 +445,22 @@ def publish_plugin(build: PluginBuild, registry: str):
     if build.style_css and build.style_css.is_file():
         info("Uploading style.css...")
         css_url = f"{registry}/v1/publish/plugins/{build.id}/{build.version}/style"
-        css_result = run_cmd([
-            "curl", "-s", "-w", "\n%{http_code}", "--max-time", "60",
-            "-X", "POST", css_url,
-            "-H", "Content-Type: text/css",
-            "--data-binary", f"@{build.style_css}",
-        ])
-        css_lines = css_result.stdout.strip().splitlines()
-        css_code = css_lines[-1] if css_lines else "0"
+        css_code = "0"
+        for attempt in range(1, max_retries + 1):
+            css_result = run_cmd([
+                "curl", "-s", "-w", "\n%{http_code}", "--max-time", "60",
+                "-X", "POST", css_url,
+                "-H", "Content-Type: text/css",
+                "--data-binary", f"@{build.style_css}",
+            ])
+            css_lines = css_result.stdout.strip().splitlines()
+            css_code = css_lines[-1] if css_lines else "0"
+            if css_code in ("200", "201"):
+                break
+            if css_code in ("000", "0") and attempt < max_retries:
+                time.sleep(attempt * 2)
+                continue
+            break
         if css_code in ("200", "201"):
             success("Uploaded style.css")
         else:

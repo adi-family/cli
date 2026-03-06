@@ -30,7 +30,12 @@ export class App {
   debug: { loaded: string[]; failed: string[]; timedOut: string[] } | null =
     null;
 
-  private constructor(bus: EventBus, db: DbConnection, core: PluginCore, registryHub: RegistryHub) {
+  private constructor(
+    bus: EventBus,
+    db: DbConnection,
+    core: PluginCore,
+    registryHub: RegistryHub,
+  ) {
     this.bus = bus;
     this.db = db;
     this.core = core;
@@ -67,6 +72,7 @@ export class App {
     this.core.registerPluginById('adi.auth');
     this.core.registerPluginById('adi.debug-screen');
     this.core.registerPluginById('adi.signaling');
+    this.core.registerPluginById('adi.cocoon');
 
     //this.core.registerPluginById('adi.signaling');
     //this.core.registerPluginById('adi.actions');
