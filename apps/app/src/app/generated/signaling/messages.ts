@@ -10,10 +10,10 @@ export type SignalingMessage =
   | { type: 'auth_hello'; auth_kind: string; auth_domain: string; auth_requirement: AuthRequirement; auth_options: AuthOption[] }
   | { type: 'auth_authenticate'; access_token: string }
   | { type: 'auth_authenticate_response'; user_id: string }
-  | { type: 'auth_hello_authed'; user_id: string; connection_info: ConnectionInfo }
+  | { type: 'auth_hello_authed'; user_id: string; connection_info: ConnectionInfo; devices: DeviceInfo[] }
 
   // ── device ──
-  | { type: 'device_register'; secret: string; device_id?: string; version: string; tags?: Record<string, string> }
+  | { type: 'device_register'; secret: string; device_id?: string; version: string; tags?: Record<string, string>; device_type?: string; device_config?: unknown }
   | { type: 'device_register_response'; device_id: string; tags?: Record<string, string> }
   | { type: 'device_deregister'; device_id: string; reason?: string }
   | { type: 'device_deregister_response'; device_id: string }
@@ -21,8 +21,11 @@ export type SignalingMessage =
   | { type: 'device_peer_disconnected'; peer_id: string }
   | { type: 'device_update_tags'; tags: Record<string, string> }
   | { type: 'device_update_tags_response'; device_id: string; tags: Record<string, string> }
+  | { type: 'device_update_device'; tags?: Record<string, string>; device_config?: unknown }
+  | { type: 'device_update_device_response'; device_id: string; tags: Record<string, string>; device_config?: unknown }
   | { type: 'device_query_devices'; tag_filter: Record<string, string> }
   | { type: 'device_query_devices_response'; devices: DeviceInfo[] }
+  | { type: 'device_device_list_updated'; devices: DeviceInfo[] }
 
   // ── pairing ──
   | { type: 'pairing_create_code' }

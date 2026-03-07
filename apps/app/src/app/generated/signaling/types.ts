@@ -28,6 +28,8 @@ export interface DeviceInfo {
   device_id: string;
   tags: Record<string, string>;
   online: boolean;
+  device_type?: string;
+  device_config?: unknown;
 }
 
 export interface CocoonKind {
