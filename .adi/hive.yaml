@@ -248,6 +248,11 @@ services:
         HIVE_SECRETS: ${env.HIVE_SECRETS:-}
         AUTH_DOMAIN: ${env.AUTH_DOMAIN:-http://adi.test/api/auth}
         ALLOW_MANUAL_REGISTRATION: 'true'
+        WEBRTC_ICE_SERVERS: 'stun:stun.l.google.com:19302,turn:adi.test:8039'
+        WEBRTC_TURN_USERNAME: 'adi'
+        WEBRTC_TURN_CREDENTIAL: 'adi'
+    depends_on:
+      - coturn
     restart: on-failure
     # Expose signaling URL for other services
     expose:
@@ -486,8 +491,12 @@ services:
         COCOON_SPAWNER_SECRET: ${env.COCOON_SPAWNER_SECRET:-}
         COCOON_SPAWNER_KINDS: ${env.COCOON_SPAWNER_KINDS:-ubuntu}
         COCOON_SPAWNER_MAX_CONCURRENT: ${env.COCOON_SPAWNER_MAX_CONCURRENT:-10}
+        WEBRTC_ICE_SERVERS: 'stun:stun.l.google.com:19302,turn:host.docker.internal:8039'
+        WEBRTC_TURN_USERNAME: 'adi'
+        WEBRTC_TURN_CREDENTIAL: 'adi'
     depends_on:
       - signaling
+      - coturn
     restart: on-failure
 
   registry:

@@ -179,6 +179,7 @@ members = [
     "crates/tsp-gen/plugin",
     "crates/cocoon/core",
     "crates/cocoon/plugin",
+    "crates/cocoon-control-center/plugin",
     "crates/registry/plugin",
     # Workflow translation plugins
     "crates/workflow/langs/en",

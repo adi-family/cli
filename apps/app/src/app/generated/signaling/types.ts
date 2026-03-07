@@ -20,8 +20,15 @@ export enum AuthOption {
   Anonymous = "anonymous",
 }
 
+export interface IceServer {
+  urls: string[];
+  username?: string;
+  credential?: string;
+}
+
 export interface ConnectionInfo {
   manual_allowed: boolean;
+  ice_servers?: IceServer[];
 }
 
 export interface DeviceInfo {

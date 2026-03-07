@@ -59,7 +59,7 @@ impl CocoonDocker {
         &self,
         name: &str,
         kind_config: &KindConfig,
-        signaling_url: &str,
+        config: &crate::config::SpawnerConfig,
         setup_token: &str,
     ) -> Result<String> {
         self.pull_image_if_needed(&kind_config.image).await?;
@@ -76,10 +76,20 @@ impl CocoonDocker {
             )
             .await;
 
-        let env = vec![
-            format!("SIGNALING_SERVER_URL={signaling_url}"),
+        let mut env = vec![
+            format!("SIGNALING_SERVER_URL={}", config.signaling_url),
             format!("COCOON_SETUP_TOKEN={setup_token}"),
         ];
+
+        if let Some(ice) = &config.webrtc_ice_servers {
+            env.push(format!("WEBRTC_ICE_SERVERS={ice}"));
+        }
+        if let Some(user) = &config.webrtc_turn_username {
+            env.push(format!("WEBRTC_TURN_USERNAME={user}"));
+        }
+        if let Some(cred) = &config.webrtc_turn_credential {
+            env.push(format!("WEBRTC_TURN_CREDENTIAL={cred}"));
+        }
 
         let mut host_config = HostConfig {
             binds: Some(vec![format!("{name}:/cocoon")]),
@@ -98,7 +108,7 @@ impl CocoonDocker {
         }
 
         // Handle .local domains with --add-host
-        if signaling_url.contains(".local") {
+        if config.signaling_url.contains(".local") {
             host_config.extra_hosts = Some(vec!["host.docker.internal:host-gateway".to_string()]);
         }
 

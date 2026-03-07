@@ -77,6 +77,7 @@ export class App {
     this.core.registerPluginById('adi.signaling');
     this.core.registerPluginById('adi.cocoon');
     this.core.registerPluginById('adi.actions-feed');
+    this.core.registerPluginById('adi.cocoon-control-center');
 
     await this.registerEnabledPlugins();
     this.allPlugins = await this.core.fetchPlugins();

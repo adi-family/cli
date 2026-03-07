@@ -34,7 +34,7 @@ pub async fn handle_spawn(
         .spawn_cocoon(
             &container_name,
             kind_config,
-            &config.signaling_url,
+            config,
             &setup_token,
         )
         .await

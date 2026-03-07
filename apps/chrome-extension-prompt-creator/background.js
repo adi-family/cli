@@ -63,6 +63,10 @@ function formatArg(arg) {
   return arg.value != null ? String(arg.value) : (arg.description || arg.type);
 }
 
+// ========== Preserve Logs ==========
+
+let preserveLogs = false;
+
 // ========== Per-tab log buffer ==========
 
 const MAX_BUFFER = 500;
@@ -80,6 +84,7 @@ function bufferEntry(tabId, entry) {
 const MAX_NET_BUFFER = 300;
 const tabNetLogs = new Map(); // tabId -> entry[]
 const pendingNetRequests = new Map(); // "tabId:requestId" -> partial entry
+const tabWsSockets = new Map(); // "tabId:requestId" -> { url }
 
 const SKIP_NET_HOSTS = ["api.anthropic.com"];
 
@@ -113,8 +118,8 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
   // New target attached (navigation, iframe, worker) — enable domains on the new session
   if (method === "Target.attachedToTarget") {
     const session = { ...source, sessionId: params.sessionId };
-    // Top-level page navigation = fresh history
-    if (params.targetInfo?.type === "page" && source.tabId) {
+    // Top-level page navigation = fresh history (unless preserved)
+    if (params.targetInfo?.type === "page" && source.tabId && !preserveLogs) {
       tabLogs.delete(source.tabId);
       tabNetLogs.delete(source.tabId);
       clearPendingForTab(source.tabId);
@@ -185,6 +190,56 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
     return;
   }
 
+  // WebSocket events
+  if (method === "Network.webSocketCreated") {
+    const { requestId, url } = params;
+    if (!shouldCaptureNetRequest(url)) return;
+    const key = `${tabId}:${requestId}`;
+    tabWsSockets.set(key, { url });
+    const entry = {
+      method: "WS", url, type: "WebSocket", status: 101, statusText: "Switching Protocols",
+      mimeType: "", duration: null, postData: null, error: null, wsDirection: "open",
+      wsPayload: null,
+    };
+    bufferNetEntry(tabId, entry);
+    chrome.tabs.sendMessage(tabId, { action: "networkEntry", entry }).catch(() => {});
+    return;
+  }
+  if (method === "Network.webSocketFrameSent" || method === "Network.webSocketFrameReceived") {
+    const { requestId, response } = params;
+    const key = `${tabId}:${requestId}`;
+    const ws = tabWsSockets.get(key);
+    if (!ws) return;
+    const direction = method === "Network.webSocketFrameSent" ? "sent" : "recv";
+    const payload = response?.payloadData || "";
+    const entry = {
+      method: "WS", url: ws.url, type: "WebSocket",
+      status: direction === "sent" ? "▲" : "▼",
+      statusText: "", mimeType: response?.opcode === 2 ? "binary" : "text",
+      duration: null, postData: null, error: null,
+      wsDirection: direction,
+      wsPayload: payload.length > 500 ? payload.substring(0, 500) + "..." : payload,
+    };
+    bufferNetEntry(tabId, entry);
+    chrome.tabs.sendMessage(tabId, { action: "networkEntry", entry }).catch(() => {});
+    return;
+  }
+  if (method === "Network.webSocketClosed") {
+    const { requestId } = params;
+    const key = `${tabId}:${requestId}`;
+    const ws = tabWsSockets.get(key);
+    if (!ws) return;
+    tabWsSockets.delete(key);
+    const entry = {
+      method: "WS", url: ws.url, type: "WebSocket", status: 0, statusText: "Closed",
+      mimeType: "", duration: null, postData: null, error: null, wsDirection: "close",
+      wsPayload: null,
+    };
+    bufferNetEntry(tabId, entry);
+    chrome.tabs.sendMessage(tabId, { action: "networkEntry", entry }).catch(() => {});
+    return;
+  }
+
   let entry = null;
   if (method === "Runtime.consoleAPICalled") {
     const text = (params.args || []).map(formatArg).join(" ");
@@ -216,6 +271,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   if (msg.action === "clearNetworkHistory" && sender.tab?.id) {
     tabNetLogs.delete(sender.tab.id);
+  }
+  if (msg.action === "setPreserveLogs") {
+    preserveLogs = !!msg.value;
+  }
+  if (msg.action === "getPreserveLogs") {
+    sendResponse({ value: preserveLogs });
   }
 });
 

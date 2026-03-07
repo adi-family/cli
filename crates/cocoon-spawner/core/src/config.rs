@@ -13,6 +13,9 @@ env_vars! {
     SetupTokens => "COCOON_SPAWNER_TOKENS",
     ReconnectDelaySecs => "COCOON_SPAWNER_RECONNECT_DELAY_SECS",
     HealthCheckIntervalSecs => "COCOON_SPAWNER_HEALTH_CHECK_INTERVAL_SECS",
+    WebrtcIceServers => "WEBRTC_ICE_SERVERS",
+    WebrtcTurnUsername => "WEBRTC_TURN_USERNAME",
+    WebrtcTurnCredential => "WEBRTC_TURN_CREDENTIAL",
 }
 
 const DEFAULT_REGISTRY: &str = "docker-registry.the-ihor.com/cocoon";
@@ -37,6 +40,9 @@ pub struct SpawnerConfig {
     pub setup_tokens: Vec<String>,
     pub reconnect_delay: Duration,
     pub health_check_interval: Duration,
+    pub webrtc_ice_servers: Option<String>,
+    pub webrtc_turn_username: Option<String>,
+    pub webrtc_turn_credential: Option<String>,
 }
 
 impl SpawnerConfig {
@@ -69,6 +75,10 @@ impl SpawnerConfig {
             .parse::<u64>()
             .map_err(|e| SpawnerError::Config(format!("invalid COCOON_SPAWNER_HEALTH_CHECK_INTERVAL_SECS: {e}")))?;
 
+        let webrtc_ice_servers = env_opt(EnvVar::WebrtcIceServers.as_str());
+        let webrtc_turn_username = env_opt(EnvVar::WebrtcTurnUsername.as_str());
+        let webrtc_turn_credential = env_opt(EnvVar::WebrtcTurnCredential.as_str());
+
         Ok(Self {
             signaling_url,
             hive_id,
@@ -78,6 +88,9 @@ impl SpawnerConfig {
             setup_tokens,
             reconnect_delay: Duration::from_secs(reconnect_delay_secs),
             health_check_interval: Duration::from_secs(health_check_secs),
+            webrtc_ice_servers,
+            webrtc_turn_username,
+            webrtc_turn_credential,
         })
     }
 

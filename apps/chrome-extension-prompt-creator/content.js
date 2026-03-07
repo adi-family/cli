@@ -464,6 +464,18 @@
         height: 1px; background: ${T.border}; margin: 14px 0;
       }
 
+      /* ===== Preserve Logs ===== */
+      .preserve-row {
+        display: flex; align-items: center; gap: 6px;
+        padding: 6px 14px;
+        font-size: 11px; color: ${T.textMuted};
+      }
+      .preserve-row input[type="checkbox"] {
+        accent-color: ${T.accent};
+        width: 13px; height: 13px; cursor: pointer;
+      }
+      .preserve-row label { cursor: pointer; user-select: none; }
+
       /* ===== Console Panel ===== */
       .console-log {
         font-family: ${T.fontMono};
@@ -557,6 +569,17 @@
         font-size: 9px; flex-shrink: 0; color: ${T.textMuted};
         width: 40px; text-align: right;
       }
+
+      /* WebSocket entries */
+      .network-entry.ws-open { color: ${T.accent}; }
+      .network-entry.ws-sent { color: ${T.success}; }
+      .network-entry.ws-recv { color: #5bbcf5; }
+      .network-entry.ws-close { color: ${T.textMuted}; }
+      .ws-payload {
+        display: block; font-size: 10px; color: ${T.textMuted};
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        max-width: 100%; padding-left: 38px;
+      }
     </style>
 
     <div class="sidebar">
@@ -632,6 +655,12 @@
         </div>
       </div>
 
+      <!-- Preserve Logs -->
+      <div class="preserve-row">
+        <input type="checkbox" id="preserveLogsCheck" />
+        <label for="preserveLogsCheck">Preserve logs across navigation</label>
+      </div>
+
       <!-- Console Panel -->
       <div class="divider"></div>
       <details id="consoleDetails">
@@ -692,6 +721,16 @@
   apiKeyInput.addEventListener("input", () => {
     chrome.storage.local.set({ anthropicApiKey: apiKeyInput.value.trim() });
     updateGenerateBtn();
+  });
+
+  // Preserve logs checkbox
+  const preserveLogsCheck = $("#preserveLogsCheck");
+  chrome.runtime.sendMessage({ action: "getPreserveLogs" }, (response) => {
+    if (chrome.runtime.lastError) return;
+    preserveLogsCheck.checked = !!response?.value;
+  });
+  preserveLogsCheck.addEventListener("change", () => {
+    chrome.runtime.sendMessage({ action: "setPreserveLogs", value: preserveLogsCheck.checked });
   });
 
   taskInput.addEventListener("input", updateGenerateBtn);
@@ -801,6 +840,9 @@ Output ONLY the structured context block.`;
           } else {
             line += `${e.status}`;
             if (e.duration != null) line += ` (${e.duration}ms)`;
+          }
+          if (e.wsPayload) {
+            line += `\n  payload: ${e.wsPayload}`;
           }
           lines.push(line);
         });
@@ -1056,6 +1098,14 @@ ${contextParts.join("\n\n")}`;
     return "success";
   }
 
+  function getWsClass(entry) {
+    if (entry.wsDirection === "open") return "ws-open";
+    if (entry.wsDirection === "sent") return "ws-sent";
+    if (entry.wsDirection === "recv") return "ws-recv";
+    if (entry.wsDirection === "close") return "ws-close";
+    return "";
+  }
+
   function appendNetworkEntry(entry) {
     networkEntries.push(entry);
     const logEl = $("#networkLog");
@@ -1064,12 +1114,17 @@ ${contextParts.join("\n\n")}`;
     const empty = logEl.querySelector(".network-log-empty");
     if (empty) empty.remove();
 
+    const isWs = entry.type === "WebSocket";
     const div = document.createElement("div");
-    div.className = `network-entry ${getStatusClass(entry.status, entry.error)}`;
+    div.className = `network-entry ${isWs ? getWsClass(entry) : getStatusClass(entry.status, entry.error)}`;
 
     const statusSpan = document.createElement("span");
     statusSpan.className = "network-status";
-    statusSpan.textContent = entry.error ? "ERR" : (entry.status || "---");
+    if (isWs) {
+      statusSpan.textContent = entry.wsDirection === "open" ? "101" : entry.wsDirection === "close" ? "CLO" : entry.status;
+    } else {
+      statusSpan.textContent = entry.error ? "ERR" : (entry.status || "---");
+    }
 
     const methodSpan = document.createElement("span");
     methodSpan.className = "network-method";
@@ -1093,6 +1148,17 @@ ${contextParts.join("\n\n")}`;
     div.appendChild(urlSpan);
     div.appendChild(typeSpan);
     div.appendChild(durationSpan);
+
+    // Show WS frame payload on a second line
+    if (isWs && entry.wsPayload) {
+      const payloadDiv = document.createElement("span");
+      payloadDiv.className = "ws-payload";
+      payloadDiv.textContent = entry.wsPayload;
+      payloadDiv.title = entry.wsPayload;
+      div.style.flexWrap = "wrap";
+      div.appendChild(payloadDiv);
+    }
+
     logEl.appendChild(div);
     logEl.scrollTop = logEl.scrollHeight;
 

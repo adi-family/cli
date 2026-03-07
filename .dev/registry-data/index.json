@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1772838014,
+  "updatedAt": 1772908750,
   "packages": [],
   "plugins": [
     {
@@ -133,6 +133,20 @@
       "id": "adi.actions-feed",
       "name": "ADI Actions Feed",
       "description": "Action feed system for cross-plugin notifications",
+      "pluginTypes": [
+        "extension",
+        "web"
+      ],
+      "packageId": null,
+      "latestVersion": "0.1.0",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    },
+    {
+      "id": "adi.cocoon-control-center",
+      "name": "Cocoon Control Center",
+      "description": "ADI plugin: Cocoon Control Center - terminal UI for remote cocoon management",
       "pluginTypes": [
         "extension",
         "web"
