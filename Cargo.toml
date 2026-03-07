@@ -228,7 +228,6 @@ members = [
 
     # Credentials
     "crates/credentials/core",
-    "crates/credentials/http",
     "crates/credentials/plugin",
 
     # Shortcuts

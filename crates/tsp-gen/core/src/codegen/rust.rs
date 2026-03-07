@@ -786,6 +786,13 @@ fn resolve_op_params(
                 rust_type: type_to_rust(&param.type_ref, param.optional, scalars),
                 kind: ParamKind::Query,
             });
+        } else {
+            // Undecorated params (e.g. from @channel/@request interfaces) — treat as body/inline
+            params.push(ResolvedParam {
+                name: param.name.clone(),
+                rust_type: type_to_rust(&param.type_ref, param.optional, scalars),
+                kind: ParamKind::Body,
+            });
         }
     }
 
@@ -1560,9 +1567,10 @@ fn generate_adi_service(
                 write!(out, ", query: {}", struct_name)?;
             }
 
-            // Body param
+            // Body/inline params (each as a named argument)
             for p in resolved.iter().filter(|p| matches!(p.kind, ParamKind::Body)) {
-                write!(out, ", body: {}", p.rust_type)?;
+                let name = p.name.to_case(Case::Snake);
+                write!(out, ", {}: {}", name, p.rust_type)?;
             }
 
             let return_type = match &resp.body_type {
@@ -1741,10 +1749,6 @@ fn generate_adi_service(
                 .iter()
                 .filter(|p| matches!(p.kind, ParamKind::Query))
                 .collect();
-            let body_param = resolved
-                .iter()
-                .find(|p| matches!(p.kind, ParamKind::Body));
-
             writeln!(out, "            \"{}\" => {{", fn_name)?;
 
             // Deserialize path params from params object
@@ -1768,13 +1772,15 @@ fn generate_adi_service(
                 )?;
             }
 
-            // Deserialize body param
-            if let Some(bp) = body_param {
-                writeln!(
-                    out,
-                    "                let body: {} = serde_json::from_value(params.clone()).map_err(|e| AdiServiceError::invalid_params(e.to_string()))?;",
-                    bp.rust_type
-                )?;
+            // Deserialize body/inline params individually from params object
+            let body_params: Vec<_> = resolved
+                .iter()
+                .filter(|p| matches!(p.kind, ParamKind::Body))
+                .collect();
+            for p in &body_params {
+                let snake = p.name.to_case(Case::Snake);
+                let deser = json_deserialize_expr(&p.rust_type, &snake);
+                writeln!(out, "                let {} = {};", snake, deser)?;
             }
 
             // Build call args
@@ -1794,11 +1800,12 @@ fn generate_adi_service(
                 write!(out, "query")?;
                 first = false;
             }
-            if body_param.is_some() {
+            for p in &body_params {
                 if !first {
                     write!(out, ", ")?;
                 }
-                write!(out, "body")?;
+                write!(out, "{}", p.name.to_case(Case::Snake))?;
+                first = false;
             }
             writeln!(out, ").await?;")?;
 
@@ -1960,10 +1967,6 @@ fn generate_adi_service(
                     .iter()
                     .filter(|p| matches!(p.kind, ParamKind::Query))
                     .collect();
-                let body_param = resolved
-                    .iter()
-                    .find(|p| matches!(p.kind, ParamKind::Body));
-
                 writeln!(out, "            \"{}\" => {{", fn_name)?;
 
                 for p in &path_params {
@@ -1985,12 +1988,14 @@ fn generate_adi_service(
                     )?;
                 }
 
-                if let Some(bp) = body_param {
-                    writeln!(
-                        out,
-                        "                let body: {} = serde_json::from_value(params.clone()).map_err(|e| AdiServiceError::invalid_params(e.to_string()))?;",
-                        bp.rust_type
-                    )?;
+                let body_params: Vec<_> = resolved
+                    .iter()
+                    .filter(|p| matches!(p.kind, ParamKind::Body))
+                    .collect();
+                for p in &body_params {
+                    let snake = p.name.to_case(Case::Snake);
+                    let deser = json_deserialize_expr(&p.rust_type, &snake);
+                    writeln!(out, "                let {} = {};", snake, deser)?;
                 }
 
                 write!(out, "                let result = self.handler.{}(", fn_name)?;
@@ -2009,11 +2014,12 @@ fn generate_adi_service(
                     write!(out, "query")?;
                     first = false;
                 }
-                if body_param.is_some() {
+                for p in &body_params {
                     if !first {
                         write!(out, ", ")?;
                     }
-                    write!(out, "body")?;
+                    write!(out, "{}", p.name.to_case(Case::Snake))?;
+                    first = false;
                 }
                 writeln!(out, ").await?;")?;
 

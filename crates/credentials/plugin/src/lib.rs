@@ -22,7 +22,7 @@ impl Plugin for CredentialsPlugin {
             version: env!("CARGO_PKG_VERSION").to_string(),
             plugin_type: PluginType::Extension,
             author: Some("ADI Team".to_string()),
-            description: Some("Credentials HTTP server".to_string()),
+            description: Some("Credentials management".to_string()),
             category: None,
         }
     }
@@ -43,32 +43,15 @@ impl Plugin for CredentialsPlugin {
 #[async_trait]
 impl CliCommands for CredentialsPlugin {
     async fn list_commands(&self) -> Vec<CliCommand> {
-        vec![CliCommand {
-            name: "start".to_string(),
-            description: "Start the Credentials HTTP server (Ctrl+C to stop)".to_string(),
-            args: vec![],
-            has_subcommands: false,
-        }]
+        vec![]
     }
 
     async fn run_command(&self, ctx: &CliContext) -> PluginResult<CliResult> {
         let subcommand = ctx.subcommand.as_deref().unwrap_or("");
 
         match subcommand {
-            "start" => {
-                let port: u16 = ctx
-                    .option::<u16>("port")
-                    .or_else(|| ctx.option::<String>("port").and_then(|s| s.parse().ok()))
-                    .or_else(|| ctx.args.first().and_then(|s| s.parse().ok()))
-                    .unwrap_or(8033);
-
-                if let Err(e) = credentials_http::run_server(port) {
-                    return Ok(CliResult::error(format!("Credentials server failed: {e}")));
-                }
-                Ok(CliResult::success("Credentials server stopped"))
-            }
-            _ => Ok(CliResult::error(format!(
-                "Unknown command: {subcommand}\nUsage: adi run adi.credentials start [--port PORT]"
+            cmd => Ok(CliResult::error(format!(
+                "Unknown command: {cmd}\nUsage: adi run adi.credentials <command>"
             ))),
         }
     }
