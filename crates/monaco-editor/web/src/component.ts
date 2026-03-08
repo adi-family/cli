@@ -21,9 +21,7 @@ export class AdiMonacoEditorElement extends LitElement {
     return this;
   }
 
-  private get bus() {
-    return window.sdk.bus;
-  }
+  bus!: import('@adi-family/sdk-plugin').EventBus;
 
   override render() {
     return html`<div id="monaco-container" style="width:100%;height:100%;min-height:300px;"></div>`;

@@ -1,4 +1,5 @@
-import type { Connection, RenderJob } from './types.js';
+import type { Connection } from '@adi-family/cocoon-plugin-interface';
+import type { RenderJob } from './types.js';
 
 const SVC = 'video';
 

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@adi/router-web-plugin": "file:../../router/web",
+    "@adi-family/cocoon-plugin-interface": "file:../../../packages/cocoon-plugin-interface",
     "@adi-family/sdk-plugin": "^0.2.0",
     "@adi-family/video-sdk": "file:../../../packages/video-sdk",
     "lit": "^3.3.1"

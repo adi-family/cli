@@ -1,9 +1,11 @@
 import { LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
-import type { Node, Edge, SearchResult, NodeType, Connection } from './types.js';
+import type { Connection } from '@adi-family/cocoon-plugin-interface';
+import type { Node, Edge, SearchResult, NodeType } from './types.js';
 import { renderNodeList } from './views/node-list.js';
 import { renderNodeDetail } from './views/node-detail.js';
 import { renderNodeForm } from './views/node-form.js';
+import { cocoon } from './cocoon.js';
 
 type View = 'list' | 'detail' | 'add';
 
@@ -23,7 +25,7 @@ export class AdiKnowledgebaseElement extends LitElement {
 
   override createRenderRoot() { return this; }
 
-  private get bus() { return window.sdk.bus; }
+  private get bus() { return cocoon.bus; }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -98,7 +100,7 @@ export class AdiKnowledgebaseElement extends LitElement {
   }
 
   override render() {
-    const allConnections: Connection[] = [...window.sdk.getConnections().values()];
+    const allConnections: Connection[] = cocoon.allConnections();
 
     if (this.view === 'detail' && this.selectedNode) {
       return renderNodeDetail({

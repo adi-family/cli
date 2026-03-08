@@ -1,4 +1,5 @@
-import type { Connection, Node, Edge, SearchResult, ConflictPair } from './types.js';
+import type { Connection } from '@adi-family/cocoon-plugin-interface';
+import type { Node, Edge, SearchResult, ConflictPair } from './types.js';
 
 const SVC = 'kb';
 

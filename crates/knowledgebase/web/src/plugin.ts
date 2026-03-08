@@ -2,27 +2,18 @@ import { AdiPlugin } from '@adi-family/sdk-plugin';
 import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
 import { AdiKnowledgebaseBusKey } from './generated/bus/index.js';
 import * as api from './api.js';
-import type { Connection, Node, SearchResult, ConflictPair } from './types.js';
+import { cocoon } from './cocoon.js';
+import type { Node, SearchResult, ConflictPair } from './types.js';
 
 const PLUGIN_ID = 'adi.knowledgebase';
-
-function connectionsWithKb(): Connection[] {
-  return [...window.sdk.getConnections().values()].filter((c) =>
-    c.services.includes('kb'),
-  );
-}
-
-function getConnection(cocoonId: string): Connection {
-  const c = window.sdk.getConnections().get(cocoonId);
-  if (!c) throw new Error(`Connection '${cocoonId}' not found`);
-  return c;
-}
 
 export class KnowledgebasePlugin extends AdiPlugin {
   readonly id = PLUGIN_ID;
   readonly version = '0.1.0';
 
   override async onRegister(): Promise<void> {
+    cocoon.init(this.bus);
+
     const { AdiKnowledgebaseElement } = await import('./component.js');
     if (!customElements.get('adi-knowledgebase')) {
       customElements.define('adi-knowledgebase', AdiKnowledgebaseElement);
@@ -48,7 +39,7 @@ export class KnowledgebasePlugin extends AdiPlugin {
       AdiKnowledgebaseBusKey.Query,
       async ({ q, limit }) => {
         try {
-          const conns = connectionsWithKb();
+          const conns = cocoon.connectionsWithService('kb');
           const results = await Promise.allSettled(
             conns.map((c) => api.query(c, q, limit)),
           );
@@ -78,7 +69,7 @@ export class KnowledgebasePlugin extends AdiPlugin {
       'kb:add',
       async ({ cocoonId, user_said, derived_knowledge, node_type }) => {
         try {
-          const raw = await api.addNode(getConnection(cocoonId), {
+          const raw = await api.addNode(cocoon.getConnection(cocoonId), {
             user_said,
             derived_knowledge,
             node_type,
@@ -99,7 +90,7 @@ export class KnowledgebasePlugin extends AdiPlugin {
       'kb:get',
       async ({ id, cocoonId }) => {
         try {
-          const raw = await api.getNode(getConnection(cocoonId), id);
+          const raw = await api.getNode(cocoon.getConnection(cocoonId), id);
           this.bus.emit(
             'kb:node-changed',
             { node: { ...raw, cocoonId }, edges: [] },
@@ -116,7 +107,7 @@ export class KnowledgebasePlugin extends AdiPlugin {
       'kb:delete',
       async ({ id, cocoonId }) => {
         try {
-          await api.deleteNode(getConnection(cocoonId), id);
+          await api.deleteNode(cocoon.getConnection(cocoonId), id);
           this.bus.emit('kb:node-deleted', { id, cocoonId }, PLUGIN_ID);
         } catch (err) {
           console.error('[KnowledgebasePlugin] kb:delete error:', err);
@@ -129,8 +120,8 @@ export class KnowledgebasePlugin extends AdiPlugin {
       'kb:approve',
       async ({ id, cocoonId }) => {
         try {
-          await api.approveNode(getConnection(cocoonId), id);
-          const raw = await api.getNode(getConnection(cocoonId), id);
+          await api.approveNode(cocoon.getConnection(cocoonId), id);
+          const raw = await api.getNode(cocoon.getConnection(cocoonId), id);
           this.bus.emit(
             'kb:node-changed',
             { node: { ...raw, cocoonId }, edges: [] },
@@ -147,7 +138,7 @@ export class KnowledgebasePlugin extends AdiPlugin {
       'kb:conflicts',
       async () => {
         try {
-          const conns = connectionsWithKb();
+          const conns = cocoon.connectionsWithService('kb');
           const results = await Promise.allSettled(
             conns.map((c) => api.getConflicts(c)),
           );
@@ -172,7 +163,7 @@ export class KnowledgebasePlugin extends AdiPlugin {
       'kb:orphans',
       async () => {
         try {
-          const conns = connectionsWithKb();
+          const conns = cocoon.connectionsWithService('kb');
           const results = await Promise.allSettled(
             conns.map((c) => api.getOrphans(c)),
           );
@@ -194,13 +185,13 @@ export class KnowledgebasePlugin extends AdiPlugin {
       'kb:link',
       async ({ cocoonId, from_id, to_id, edge_type, weight }) => {
         try {
-          const edge = await api.addEdge(getConnection(cocoonId), {
+          const edge = await api.addEdge(cocoon.getConnection(cocoonId), {
             from_id,
             to_id,
             edge_type,
             weight,
           });
-          const raw = await api.getNode(getConnection(cocoonId), from_id);
+          const raw = await api.getNode(cocoon.getConnection(cocoonId), from_id);
           this.bus.emit(
             'kb:node-changed',
             { node: { ...raw, cocoonId }, edges: [edge] },

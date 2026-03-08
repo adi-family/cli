@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1772908750,
+  "updatedAt": 1772976424,
   "packages": [],
   "plugins": [
     {
@@ -147,6 +147,20 @@
       "id": "adi.cocoon-control-center",
       "name": "Cocoon Control Center",
       "description": "ADI plugin: Cocoon Control Center - terminal UI for remote cocoon management",
+      "pluginTypes": [
+        "extension",
+        "web"
+      ],
+      "packageId": null,
+      "latestVersion": "0.1.0",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    },
+    {
+      "id": "adi.credentials",
+      "name": "Credentials",
+      "description": "ADI plugin: Credentials",
       "pluginTypes": [
         "extension",
         "web"

@@ -1,19 +1,9 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
 import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
 import * as api from './api.js';
-import type { Connection, Task, TasksStats } from './types.js';
+import { cocoon } from './cocoon.js';
+import type { Task, TasksStats } from './types.js';
 import './events.js';
-
-function connectionsWithTasks(): Connection[] {
-  return [...window.sdk.getConnections().values()]
-    .filter(c => c.services.includes('tasks'));
-}
-
-function getConnection(cocoonId: string): Connection {
-  const c = window.sdk.getConnections().get(cocoonId);
-  if (!c) throw new Error(`Connection '${cocoonId}' not found`);
-  return c;
-}
 
 function emptyStats(): TasksStats {
   return {
@@ -41,6 +31,8 @@ export class TasksPlugin extends AdiPlugin {
   readonly version = '0.1.0';
 
   async onRegister(): Promise<void> {
+    cocoon.init(this.bus);
+
     const { AdiTasksElement } = await import('./component.js');
     if (!customElements.get('adi-tasks')) {
       customElements.define('adi-tasks', AdiTasksElement);
@@ -51,7 +43,7 @@ export class TasksPlugin extends AdiPlugin {
 
     this.bus.on('tasks:list', async ({ status }) => {
       try {
-        const conns = connectionsWithTasks();
+        const conns = cocoon.connectionsWithService('tasks');
         const [taskResults, statsResults] = await Promise.all([
           Promise.allSettled(conns.map(c => api.listTasks(c, { status }))),
           Promise.allSettled(conns.map(c => api.getStats(c))),
@@ -74,7 +66,7 @@ export class TasksPlugin extends AdiPlugin {
 
     this.bus.on('tasks:search', async ({ query, limit }) => {
       try {
-        const conns = connectionsWithTasks();
+        const conns = cocoon.connectionsWithService('tasks');
         const results = await Promise.allSettled(conns.map(c => api.searchTasks(c, query, limit)));
         const tasks: Task[] = results.flatMap((r, i) =>
           r.status === 'fulfilled'
@@ -90,7 +82,7 @@ export class TasksPlugin extends AdiPlugin {
 
     this.bus.on('tasks:stats', async () => {
       try {
-        const conns = connectionsWithTasks();
+        const conns = cocoon.connectionsWithService('tasks');
         const results = await Promise.allSettled(conns.map(c => api.getStats(c)));
         const stats = results.reduce<TasksStats>(
           (acc, r) => r.status === 'fulfilled' ? mergeStats(acc, r.value) : acc,
@@ -105,7 +97,7 @@ export class TasksPlugin extends AdiPlugin {
 
     this.bus.on('tasks:get', async ({ task_id, cocoonId }) => {
       try {
-        const raw = await api.getTask(getConnection(cocoonId), task_id);
+        const raw = await api.getTask(cocoon.getConnection(cocoonId), task_id);
         this.bus.emit('tasks:detail-changed', {
           task: {
             task: { ...raw.task, cocoonId },
@@ -120,7 +112,7 @@ export class TasksPlugin extends AdiPlugin {
 
     this.bus.on('tasks:create', async ({ cocoonId, title, description, depends_on }) => {
       try {
-        const raw = await api.createTask(getConnection(cocoonId), { title, description, depends_on });
+        const raw = await api.createTask(cocoon.getConnection(cocoonId), { title, description, depends_on });
         this.bus.emit('tasks:task-mutated', { task: { ...raw, cocoonId } }, 'tasks');
       } catch (err) {
         console.error('[TasksPlugin] tasks:create error:', err);
@@ -129,7 +121,7 @@ export class TasksPlugin extends AdiPlugin {
 
     this.bus.on('tasks:update', async ({ cocoonId, task_id, title, description, status }) => {
       try {
-        const raw = await api.updateTask(getConnection(cocoonId), { task_id, title, description, status });
+        const raw = await api.updateTask(cocoon.getConnection(cocoonId), { task_id, title, description, status });
         this.bus.emit('tasks:task-mutated', { task: { ...raw, cocoonId } }, 'tasks');
       } catch (err) {
         console.error('[TasksPlugin] tasks:update error:', err);
@@ -138,7 +130,7 @@ export class TasksPlugin extends AdiPlugin {
 
     this.bus.on('tasks:delete', async ({ cocoonId, task_id }) => {
       try {
-        await api.deleteTask(getConnection(cocoonId), task_id);
+        await api.deleteTask(cocoon.getConnection(cocoonId), task_id);
         this.bus.emit('tasks:task-deleted', { task_id, cocoonId }, 'tasks');
       } catch (err) {
         console.error('[TasksPlugin] tasks:delete error:', err);

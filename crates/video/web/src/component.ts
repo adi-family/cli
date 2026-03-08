@@ -1,7 +1,7 @@
 import { LitElement, html, nothing } from 'lit';
 import { state } from 'lit/decorators.js';
 import type { RenderJob, CompositionEntry } from './types.js';
-import { getBus } from './context.js';
+import { cocoon } from './cocoon.js';
 import './events.js';
 import { DEMO_COMPOSITIONS } from './compositions/demo.js';
 
@@ -55,7 +55,7 @@ export class AdiVideoElement extends LitElement {
     this.pollingJobId = null;
   }
 
-  private get bus() { return getBus(); }
+  private get bus() { return cocoon.bus; }
 
   private get selected(): CompositionEntry | undefined {
     return this.compositions.find(c => c.id === this.selectedId);

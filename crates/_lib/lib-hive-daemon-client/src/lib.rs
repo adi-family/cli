@@ -360,6 +360,26 @@ impl DaemonClient {
         self.request(req).await
     }
 
+    /// Send a request without waiting for the response.
+    pub async fn send_fire_and_forget(&self, req: DaemonRequest) -> Result<()> {
+        self.ensure_connected().await?;
+
+        let mut inner = self.inner.lock().await;
+        let writer = inner
+            .writer
+            .as_mut()
+            .ok_or_else(|| anyhow!("Not connected to daemon"))?;
+
+        let json = serde_json::to_string(&req).with_context(|| "Failed to serialize request")?;
+        debug!("Sending fire-and-forget request: {}", json);
+
+        writer.write_all(json.as_bytes()).await?;
+        writer.write_all(b"\n").await?;
+        writer.flush().await?;
+
+        Ok(())
+    }
+
     /// Send a request and wait for response
     pub async fn request(&self, req: DaemonRequest) -> Result<DaemonResponse> {
         self.ensure_connected().await?;

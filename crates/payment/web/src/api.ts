@@ -1,5 +1,5 @@
+import type { Connection } from '@adi-family/cocoon-plugin-interface';
 import type {
-  Connection,
   BalanceResponse,
   CanChargeMoreResponse,
   BalanceTransactionResponse,

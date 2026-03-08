@@ -1,5 +1,5 @@
 import { html, type TemplateResult } from 'lit';
-import type { Connection } from '../types.js';
+import type { Connection } from '@adi-family/cocoon-plugin-interface';
 
 interface NodeFormProps {
   connections: Connection[];

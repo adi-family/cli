@@ -8,6 +8,7 @@ const PLUGIN_ID = 'adi.actions-feed';
 const kindKey = (plugin: string, kind: string) => `${plugin}::${kind}`;
 
 const store = {
+  bus: null as import('@adi-family/sdk-plugin').EventBus | null,
   actions: [] as ActionCard[],
   renderers: new Map<string, RenderFn>(),
   kindModes: new Map<string, KindMode>(),
@@ -24,6 +25,7 @@ export class ActionsFeedPlugin extends AdiPlugin {
   readonly version = '0.1.0';
 
   override async onRegister(): Promise<void> {
+    store.bus = this.bus;
     const { AdiActionsFeedElement } = await import('./component.js');
     if (!customElements.get('adi-actions-feed')) {
       customElements.define('adi-actions-feed', AdiActionsFeedElement);

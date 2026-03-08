@@ -42,11 +42,3 @@ export interface ConflictPair {
   node_b: Node;
 }
 
-export interface Connection {
-  id: string;
-  services: string[];
-  request<T>(service: string, method: string, params?: unknown): Promise<T>;
-  stream<T>(service: string, method: string, params?: unknown): AsyncGenerator<T>;
-  httpProxy(service: string, path: string, init?: RequestInit): Promise<Response>;
-  httpDirect(url: string, init?: RequestInit): Promise<Response>;
-}

@@ -1,9 +1,4 @@
-use lib_plugin_abi_v3::{
-    async_trait,
-    cli::{CliCommand, CliCommands, CliContext, CliResult},
-    Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult,
-    SERVICE_CLI_COMMANDS,
-};
+use lib_plugin_prelude::*;
 
 pub struct CredentialsPlugin;
 
@@ -13,25 +8,26 @@ impl CredentialsPlugin {
     }
 }
 
+impl Default for CredentialsPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait]
 impl Plugin for CredentialsPlugin {
     fn metadata(&self) -> PluginMetadata {
-        PluginMetadata {
-            id: "adi.credentials".to_string(),
-            name: "Credentials".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            plugin_type: PluginType::Extension,
-            author: Some("ADI Team".to_string()),
-            description: Some("Credentials management".to_string()),
-            category: None,
-        }
+        PluginMetadata::new("adi.credentials", "Credentials", env!("CARGO_PKG_VERSION"))
+            .with_type(PluginType::Extension)
+            .with_author("ADI Team")
+            .with_description("Secure credentials management")
     }
 
-    async fn init(&mut self, _ctx: &PluginContext) -> PluginResult<()> {
+    async fn init(&mut self, _ctx: &PluginContext) -> Result<()> {
         Ok(())
     }
 
-    async fn shutdown(&self) -> PluginResult<()> {
+    async fn shutdown(&self) -> Result<()> {
         Ok(())
     }
 
@@ -46,13 +42,10 @@ impl CliCommands for CredentialsPlugin {
         vec![]
     }
 
-    async fn run_command(&self, ctx: &CliContext) -> PluginResult<CliResult> {
-        let subcommand = ctx.subcommand.as_deref().unwrap_or("");
-
-        match subcommand {
-            cmd => Ok(CliResult::error(format!(
-                "Unknown command: {cmd}\nUsage: adi run adi.credentials <command>"
-            ))),
+    async fn run_command(&self, ctx: &CliContext) -> Result<CliResult> {
+        match ctx.subcommand.as_deref() {
+            Some(cmd) => Ok(CliResult::error(format!("Unknown command: {cmd}"))),
+            None => Ok(CliResult::success("Credentials plugin (web UI only)".to_string())),
         }
     }
 }

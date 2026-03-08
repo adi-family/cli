@@ -1,4 +1,5 @@
-import type { Connection, Task, TaskWithDependencies, TasksStats } from './types.js';
+import type { Connection } from '@adi-family/cocoon-plugin-interface';
+import type { Task, TaskWithDependencies, TasksStats } from './types.js';
 
 const SVC = 'tasks';
 

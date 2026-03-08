@@ -1,15 +1,7 @@
 import { LitElement, html } from 'lit';
 import { state } from 'lit/decorators.js';
 import type { BalanceResponse, BalanceTransactionResponse } from './types.js';
-
-declare global {
-  interface Window {
-    sdk: {
-      bus: import('@adi-family/sdk-plugin').EventBus;
-      getConnections(): Map<string, import('./types.js').Connection>;
-    };
-  }
-}
+import { cocoon } from './cocoon.js';
 
 export class AdiPaymentElement extends LitElement {
   @state() private balance: BalanceResponse | null = null;
@@ -22,7 +14,7 @@ export class AdiPaymentElement extends LitElement {
 
   override createRenderRoot() { return this; }
 
-  private get bus() { return window.sdk.bus; }
+  private get bus() { return cocoon.bus; }
 
   override connectedCallback() {
     super.connectedCallback();

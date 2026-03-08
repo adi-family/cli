@@ -1,0 +1,40 @@
+{
+  "name": "@adi-family/cocoon-plugin-interface",
+  "version": "0.1.0",
+  "description": "Cocoon connection management for ADI web plugins",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "!dist/**/*.test.js",
+    "!dist/**/*.test.d.ts",
+    "!dist/**/*.test.d.ts.map",
+    "!dist/**/*.test.js.map"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "@adi-family/sdk-plugin": ">=0.2.0"
+  },
+  "dependencies": {
+    "@adi/signaling-web-plugin": "file:../../crates/signaling/web"
+  },
+  "devDependencies": {
+    "@adi-family/sdk-plugin": "file:../plugin-sdk",
+    "typescript": "~5.9.3"
+  },
+  "keywords": ["cocoon", "plugin", "connection", "adi"]
+}

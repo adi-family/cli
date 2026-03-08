@@ -1,13 +1,14 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
 import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
+import type { Connection } from '@adi-family/cocoon-plugin-interface';
 import * as api from './api.js';
-import type { Connection } from './types.js';
+import { cocoon } from './cocoon.js';
 import './events.js';
 
 const pickConnection = (): Connection => {
-  const connections = [...window.sdk.getConnections().values()];
-  if (connections.length === 0) throw new Error('No connection available');
-  return connections[0]!;
+  const conns = cocoon.allConnections();
+  if (conns.length === 0) throw new Error('No connection available');
+  return conns[0]!;
 };
 
 export class PaymentPlugin extends AdiPlugin {
@@ -15,6 +16,8 @@ export class PaymentPlugin extends AdiPlugin {
   readonly version = '0.1.0';
 
   async onRegister(): Promise<void> {
+    cocoon.init(this.bus);
+
     const { AdiPaymentElement } = await import('./component.js');
     if (!customElements.get('adi-payment')) {
       customElements.define('adi-payment', AdiPaymentElement);

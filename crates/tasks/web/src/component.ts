@@ -1,18 +1,11 @@
 import { LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
-import type { Task, TasksStats, TaskWithDependencies, TaskStatus, Connection } from './types.js';
+import type { Connection } from '@adi-family/cocoon-plugin-interface';
+import type { Task, TasksStats, TaskWithDependencies, TaskStatus } from './types.js';
 import { renderTaskList } from './views/task-list.js';
 import { renderTaskDetail } from './views/task-detail.js';
 import { renderTaskForm } from './views/task-form.js';
-
-declare global {
-  interface Window {
-    sdk: {
-      bus: import('@adi-family/sdk-plugin').EventBus;
-      getConnections(): Map<string, Connection>;
-    };
-  }
-}
+import { cocoon } from './cocoon.js';
 
 type View = 'list' | 'detail' | 'create';
 
@@ -72,7 +65,7 @@ export class AdiTasksElement extends LitElement {
     this.unsubs = [];
   }
 
-  private get bus() { return window.sdk.bus; }
+  private get bus() { return cocoon.bus; }
 
   private loadData(): void {
     this.loading = true;
@@ -118,7 +111,7 @@ export class AdiTasksElement extends LitElement {
   }
 
   override render() {
-    const connections: Connection[] = [...window.sdk.getConnections().values()];
+    const conns: Connection[] = cocoon.allConnections();
 
     if (this.view === 'detail' && this.selectedTask) {
       return renderTaskDetail({
@@ -135,7 +128,7 @@ export class AdiTasksElement extends LitElement {
 
     if (this.view === 'create') {
       return renderTaskForm({
-        connections,
+        connections: conns,
         submitting: this.submitting,
         onBack: () => { this.view = 'list'; },
         onCreate: (data) => this.handleCreate(data),
