@@ -29,13 +29,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "typescript": "~5.9.3",
-    "vitest": "^4.0.18"
+    "typescript": "~5.9.3"
   },
   "keywords": ["plugin", "sdk", "event-bus", "adi", "typed"]
 }

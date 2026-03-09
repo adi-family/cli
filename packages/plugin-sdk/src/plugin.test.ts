@@ -1,5 +1,5 @@
 // src/plugin.test.ts
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, spyOn, mock } from 'bun:test';
 import { AdiPlugin } from './plugin.js';
 import { EventBus } from './bus.js';
 import { AppContext } from './app-context.js';
@@ -42,7 +42,7 @@ describe('AdiPlugin', () => {
 
   it('_init() injects app — this.bus is accessible in onRegister()', async () => {
     const app = makeApp();
-    const emitSpy = vi.spyOn(app.bus, 'emit');
+    const emitSpy = spyOn(app.bus, 'emit');
     const plugin = new HooksPlugin();
     await plugin._init(app);
     // onRegister emits 'route:register' via this.bus — verify it went through
@@ -57,7 +57,7 @@ describe('AdiPlugin', () => {
 
   it('_init() emits register-finished after onRegister resolves', async () => {
     const app = makeApp();
-    const handler = vi.fn();
+    const handler = mock();
     app.bus.on('register-finished', handler, 'test');
     await new HooksPlugin()._init(app);
     expect(handler).toHaveBeenCalledWith({ pluginId: 'hooks' });
@@ -65,7 +65,7 @@ describe('AdiPlugin', () => {
 
   it('_init() emits register-finished even without onRegister defined', async () => {
     const app = makeApp();
-    const handler = vi.fn();
+    const handler = mock();
     app.bus.on('register-finished', handler, 'test');
     await new MinimalPlugin()._init(app);
     expect(handler).toHaveBeenCalledWith({ pluginId: 'minimal' });

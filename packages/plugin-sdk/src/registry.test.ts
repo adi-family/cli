@@ -1,6 +1,6 @@
 // src/registry.test.ts
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { registerPlugin, loadPlugins, _resetRegistry } from './registry.js';
+import { describe, it, expect, mock, spyOn, jest, beforeEach, afterEach } from 'bun:test';
+import { registerPlugin, loadPlugins, configureApp, initInternalPlugin, _resetRegistry } from './registry.js';
 import { AdiPlugin } from './plugin.js';
 import { EventBus } from './bus.js';
 import type { PluginDescriptor } from './types.js';
@@ -24,30 +24,28 @@ function makePlugin(id: string, version = '1.0.0', opts: PluginOpts = {}): AdiPl
 }
 
 /**
- * Set up fetch + URL mocks so fetchAndImport works in Node.
- * Each call to fetchAndImport pops the next data URL from the queue.
+ * Set up fetch + URL mocks so fetchAndImport works in bun test.
+ *
+ * Bun's import() with data/blob URLs has caching issues across test cases,
+ * so we register plugins directly as a side effect of URL.createObjectURL.
+ * The import() call will produce an empty module (no PluginShell), but the
+ * plugin is already registered by then.
  */
 function mockFetchChain(
   pluginDefs: Array<{ id: string; version?: string; requires?: string[] }>
 ): void {
-  const dataUrls = pluginDefs.map((def) => {
-    const code = [
-      `export class PluginShell {`,
-      `  id = '${def.id}';`,
-      `  version = '${def.version ?? '1.0.0'}';`,
-      `  dependencies = [];`,
-      `  requires = ${JSON.stringify(def.requires ?? [])};`,
-      `  _init() { return Promise.resolve(); }`,
-      `  _destroy() { return Promise.resolve(); }`,
-      `}`,
-    ].join('\n');
-    return `data:text/javascript,${encodeURIComponent(code)}`;
-  });
+  const plugins = pluginDefs.map((def) =>
+    makePlugin(def.id, def.version ?? '1.0.0', { requires: def.requires ?? [] })
+  );
 
   let idx = 0;
-  vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(new Blob([''])));
-  vi.spyOn(URL, 'createObjectURL').mockImplementation(() => dataUrls[idx++]);
-  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(new Blob([''])));
+  spyOn(URL, 'createObjectURL').mockImplementation(() => {
+    const plugin = plugins[idx++];
+    if (plugin) registerPlugin(plugin);
+    return `data:text/javascript,${encodeURIComponent('export default {};')}`;
+  });
+  spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 }
 
 beforeEach(() => {
@@ -55,7 +53,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  jest.restoreAllMocks();
 });
 
 describe('registerPlugin', () => {
@@ -63,7 +61,7 @@ describe('registerPlugin', () => {
     const plugin = makePlugin('tasks');
     registerPlugin(plugin);
     const bus = EventBus.init();
-    const handler = vi.fn();
+    const handler = mock();
     bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 1000 });
     expect(handler).toHaveBeenCalledWith(
@@ -93,7 +91,7 @@ describe('loadPlugins — ordering', () => {
     registerPlugin(makePlugin('a'));
     registerPlugin(makePlugin('b'));
     const bus = EventBus.init();
-    const handler = vi.fn();
+    const handler = mock();
     bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 1000 });
     expect(handler).toHaveBeenCalledWith(
@@ -106,7 +104,7 @@ describe('loadPlugins — timeout', () => {
   it('marks plugin as timedOut if onRegister never resolves', async () => {
     registerPlugin(makePlugin('hang', '1.0.0', { onRegister: () => new Promise(() => {}) }));
     const bus = EventBus.init();
-    const handler = vi.fn();
+    const handler = mock();
     bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 50 });
     expect(handler).toHaveBeenCalledWith(
@@ -120,7 +118,7 @@ describe('loadPlugins — cycle detection', () => {
     registerPlugin(makePlugin('a', '1.0.0', { deps: ['b'] }));
     registerPlugin(makePlugin('b', '1.0.0', { deps: ['a'] }));
     const bus = EventBus.init();
-    const handler = vi.fn();
+    const handler = mock();
     bus.on('loading-finished', handler, 'test');
     await loadPlugins(bus, [], { timeout: 1000 });
     const { failed } = handler.mock.calls[0][0] as { failed: string[] };
@@ -135,9 +133,9 @@ describe('loadPlugins — requires', () => {
     mockFetchChain([{ id: 'adi.auth' }]);
 
     const bus = EventBus.init();
-    const installed = vi.fn();
+    const installed = mock();
     bus.on('plugin:installed', installed, 'test');
-    const finished = vi.fn();
+    const finished = mock();
     bus.on('loading-finished', finished, 'test');
 
     const availablePlugins: PluginDescriptor[] = [{
@@ -179,9 +177,9 @@ describe('loadPlugins — requires', () => {
     ]);
 
     const bus = EventBus.init();
-    const installed = vi.fn();
+    const installed = mock();
     bus.on('plugin:installed', installed, 'test');
-    const finished = vi.fn();
+    const finished = mock();
     bus.on('loading-finished', finished, 'test');
 
     const availablePlugins: PluginDescriptor[] = [
@@ -205,10 +203,15 @@ describe('loadPlugins — requires', () => {
     registerPlugin(makePlugin('app', '1.0.0', { requires: ['auth'] }));
     registerPlugin(makePlugin('auth'));
 
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const fetchCalls: string[] = [];
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      fetchCalls.push(String(input));
+      return new Response('');
+    }) as typeof fetch;
 
     const bus = EventBus.init();
-    const installed = vi.fn();
+    const installed = mock();
     bus.on('plugin:installed', installed, 'test');
 
     const availablePlugins: PluginDescriptor[] = [{
@@ -218,8 +221,44 @@ describe('loadPlugins — requires', () => {
     }];
 
     await loadPlugins(bus, [], { timeout: 1000, availablePlugins });
+    globalThis.fetch = origFetch;
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(fetchCalls).toEqual([]);
     expect(installed).not.toHaveBeenCalled();
+  });
+});
+
+describe('configureApp', () => {
+  it('throws if called after plugins are loaded', async () => {
+    registerPlugin(makePlugin('a'));
+    await loadPlugins(EventBus.init(), [], { timeout: 1000 });
+    expect(() => configureApp({})).toThrow('must be called before');
+  });
+});
+
+describe('initInternalPlugin', () => {
+  it('registers and initializes the plugin', async () => {
+    const order: string[] = [];
+    const plugin = makePlugin('internal', '1.0.0', {
+      onRegister: async () => { order.push('registered'); },
+    });
+    const bus = EventBus.init();
+    await initInternalPlugin(bus, plugin);
+    expect(order).toEqual(['registered']);
+  });
+});
+
+describe('loadPlugins — onRegister error', () => {
+  it('marks plugin as failed when onRegister throws', async () => {
+    registerPlugin(makePlugin('bad', '1.0.0', {
+      onRegister: async () => { throw new Error('init boom'); },
+    }));
+    const bus = EventBus.init();
+    const handler = mock();
+    bus.on('loading-finished', handler, 'test');
+    await loadPlugins(bus, [], { timeout: 1000 });
+    const { failed, loaded } = handler.mock.calls[0][0] as { failed: string[]; loaded: string[] };
+    expect(failed).toContain('bad');
+    expect(loaded).not.toContain('bad');
   });
 });
