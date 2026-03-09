@@ -1,21 +1,3 @@
-//! WebRTC session management library
-//!
-//! Provides WebRTC peer connection management for low-latency, direct
-//! communication between peers. Extracted from cocoon for reuse in Hive and Platform API.
-//!
-//! ## Configuration
-//!
-//! ICE servers can be configured via environment variables:
-//!
-//! - `WEBRTC_ICE_SERVERS`: Comma-separated list of STUN/TURN server URLs
-//!   Example: `stun:stun.l.google.com:19302,turn:turn.example.com:3478`
-//!
-//! - `WEBRTC_TURN_USERNAME`: Username for TURN server authentication
-//!
-//! - `WEBRTC_TURN_CREDENTIAL`: Credential/password for TURN server authentication
-//!
-//! If no ICE servers are configured, defaults to Google's public STUN server.
-
 use lib_signaling_protocol::SignalingMessage;
 use lib_env_parse::{env_vars, env_opt};
 
@@ -40,12 +22,6 @@ use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 
-/// Build ICE server configuration from environment variables
-///
-/// Environment variables:
-/// - `WEBRTC_ICE_SERVERS`: Comma-separated list of STUN/TURN URLs
-/// - `WEBRTC_TURN_USERNAME`: Username for TURN authentication
-/// - `WEBRTC_TURN_CREDENTIAL`: Credential for TURN authentication
 fn build_ice_servers() -> Vec<RTCIceServer> {
     let ice_servers_env = env_opt(EnvVar::WebrtcIceServers.as_str());
     let turn_username = env_opt(EnvVar::WebrtcTurnUsername.as_str());
@@ -57,21 +33,14 @@ fn build_ice_servers() -> Vec<RTCIceServer> {
         .unwrap_or_default();
 
     if urls.is_empty() {
-        // Default to Google's public STUN server
-        tracing::info!("No WEBRTC_ICE_SERVERS configured, using default Google STUN server");
-        return vec![RTCIceServer {
-            urls: vec!["stun:stun.l.google.com:19302".to_string()],
-            ..Default::default()
-        }];
+        return vec![];
     }
 
-    // Separate STUN and TURN servers
     let stun_urls: Vec<String> = urls.iter().filter(|u| u.starts_with("stun:")).cloned().collect();
     let turn_urls: Vec<String> = urls.iter().filter(|u| u.starts_with("turn:") || u.starts_with("turns:")).cloned().collect();
 
     let mut ice_servers = Vec::new();
 
-    // Add STUN servers (no auth needed)
     if !stun_urls.is_empty() {
         tracing::info!("Configured {} STUN server(s): {:?}", stun_urls.len(), stun_urls);
         ice_servers.push(RTCIceServer {
@@ -80,7 +49,6 @@ fn build_ice_servers() -> Vec<RTCIceServer> {
         });
     }
 
-    // Add TURN servers (with auth if provided)
     if !turn_urls.is_empty() {
         let has_credentials = turn_username.is_some() && turn_credential.is_some();
         tracing::info!(
@@ -98,19 +66,9 @@ fn build_ice_servers() -> Vec<RTCIceServer> {
         });
     }
 
-    // If we somehow ended up with an empty list, add default STUN
-    if ice_servers.is_empty() {
-        tracing::warn!("No valid ICE servers found, falling back to default Google STUN");
-        ice_servers.push(RTCIceServer {
-            urls: vec!["stun:stun.l.google.com:19302".to_string()],
-            ..Default::default()
-        });
-    }
-
     ice_servers
 }
 
-/// WebRTC session state
 pub struct WebRtcSession {
     pub session_id: String,
     pub peer_connection: Arc<RTCPeerConnection>,
@@ -118,16 +76,13 @@ pub struct WebRtcSession {
     pub state: String,
 }
 
-/// WebRTC session manager
 pub struct WebRtcManager {
     sessions: Arc<Mutex<HashMap<String, WebRtcSession>>>,
     signaling_tx: mpsc::UnboundedSender<SignalingMessage>,
-    /// Timeout for closing peer connections (default: 5 seconds)
     close_timeout: std::time::Duration,
 }
 
 impl WebRtcManager {
-    /// Create a new WebRTC manager
     pub fn new(signaling_tx: mpsc::UnboundedSender<SignalingMessage>) -> Self {
         Self {
             sessions: Arc::new(Mutex::new(HashMap::new())),
@@ -136,7 +91,6 @@ impl WebRtcManager {
         }
     }
 
-    /// Create a new WebRTC manager with custom close timeout
     #[cfg(test)]
     pub fn with_close_timeout(
         signaling_tx: mpsc::UnboundedSender<SignalingMessage>,
@@ -149,7 +103,6 @@ impl WebRtcManager {
         }
     }
 
-    /// Create a new WebRTC peer connection for a session
     pub async fn create_session(&self, session_id: String) -> Result<(), String> {
         let ice_servers = build_ice_servers();
         let config = RTCConfiguration {
@@ -157,26 +110,21 @@ impl WebRtcManager {
             ..Default::default()
         };
 
-        // Create a MediaEngine
         let mut media_engine = MediaEngine::default();
 
-        // Create an interceptor registry
         let mut registry = Registry::new();
         registry = register_default_interceptors(registry, &mut media_engine)
             .map_err(|e| format!("Failed to register interceptors: {}", e))?;
 
-        // Create a SettingEngine and enable Detach mode for data channels
         let mut setting_engine = SettingEngine::default();
         setting_engine.detach_data_channels();
 
-        // Create the API
         let api = APIBuilder::new()
             .with_media_engine(media_engine)
             .with_interceptor_registry(registry)
             .with_setting_engine(setting_engine)
             .build();
 
-        // Create the peer connection
         let peer_connection = api
             .new_peer_connection(config)
             .await
@@ -184,7 +132,6 @@ impl WebRtcManager {
 
         let peer_connection = Arc::new(peer_connection);
 
-        // Set up ICE candidate handler
         let session_id_clone = session_id.clone();
         let signaling_tx_clone = self.signaling_tx.clone();
         peer_connection.on_ice_candidate(Box::new(move |candidate| {
@@ -194,7 +141,6 @@ impl WebRtcManager {
             Box::pin(async move {
                 if let Some(c) = candidate {
                     if let Ok(json) = c.to_json() {
-                        // Log ICE candidate type for debugging connectivity issues
                         let candidate_type = if json.candidate.contains("typ host") {
                             "host"
                         } else if json.candidate.contains("typ srflx") {
@@ -207,7 +153,7 @@ impl WebRtcManager {
                             "unknown"
                         };
                         tracing::debug!(
-                            "🧊 ICE candidate gathered for session {}: type={}, mid={:?}",
+                            "ICE candidate gathered for session {}: type={}, mid={:?}",
                             session_id,
                             candidate_type,
                             json.sdp_mid
@@ -221,39 +167,35 @@ impl WebRtcManager {
                         });
                     }
                 } else {
-                    // End of ICE gathering
-                    tracing::debug!("🧊 ICE gathering complete for session {}", session_id);
+                    tracing::debug!("ICE gathering complete for session {}", session_id);
                 }
             })
         }));
 
-        // Set up ICE gathering state handler for debugging
         let session_id_clone = session_id.clone();
         peer_connection.on_ice_gathering_state_change(Box::new(move |state| {
             let session_id = session_id_clone.clone();
             Box::pin(async move {
                 tracing::debug!(
-                    "🧊 ICE gathering state for session {}: {:?}",
+                    "ICE gathering state for session {}: {:?}",
                     session_id,
                     state
                 );
             })
         }));
 
-        // Set up ICE connection state handler for debugging
         let session_id_clone = session_id.clone();
         peer_connection.on_ice_connection_state_change(Box::new(move |state| {
             let session_id = session_id_clone.clone();
             Box::pin(async move {
                 tracing::info!(
-                    "🧊 ICE connection state for session {}: {:?}",
+                    "ICE connection state for session {}: {:?}",
                     session_id,
                     state
                 );
             })
         }));
 
-        // Set up connection state handler
         let session_id_clone = session_id.clone();
         let signaling_tx_clone = self.signaling_tx.clone();
         let sessions_clone = self.sessions.clone();
@@ -267,7 +209,7 @@ impl WebRtcManager {
 
                 match state {
                     RTCPeerConnectionState::Connected => {
-                        tracing::info!("✅ WebRTC session {} connected successfully!", session_id);
+                        tracing::info!("WebRTC session {} connected", session_id);
                         if let Some(session) = sessions.lock().await.get_mut(&session_id) {
                             session.state = "connected".to_string();
                         }
@@ -279,8 +221,7 @@ impl WebRtcManager {
                             RTCPeerConnectionState::Disconnected => "disconnected",
                             RTCPeerConnectionState::Failed => {
                                 tracing::warn!(
-                                    "❌ WebRTC session {} failed - this often indicates ICE connectivity issues. \
-                                    Check WEBRTC_ICE_SERVERS config and ensure TURN server is available for NAT traversal.",
+                                    "WebRTC session {} failed - check WEBRTC_ICE_SERVERS config",
                                     session_id
                                 );
                                 "failed"
@@ -301,7 +242,6 @@ impl WebRtcManager {
             })
         }));
 
-        // Set up data channel handler
         let session_id_clone = session_id.clone();
         let signaling_tx_clone = self.signaling_tx.clone();
         let sessions_clone = self.sessions.clone();
@@ -318,12 +258,10 @@ impl WebRtcManager {
                     dc_label
                 );
 
-                // Store the data channel
                 if let Some(session) = sessions.lock().await.get_mut(&session_id) {
                     session.data_channels.insert(dc_label.clone(), dc.clone());
                 }
 
-                // Set up message handler
                 let dc_label_clone = dc_label.clone();
                 let session_id_clone = session_id.clone();
                 let tx_clone = tx.clone();
@@ -339,7 +277,6 @@ impl WebRtcManager {
                             (base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &msg.data), true)
                         };
 
-                        // Forward all data channel messages through signaling
                         let _ = tx.send(SignalingMessage::WebRtcData {
                             session_id,
                             channel,
@@ -351,7 +288,6 @@ impl WebRtcManager {
             })
         }));
 
-        // Store the session
         let session = WebRtcSession {
             session_id: session_id.clone(),
             peer_connection,
@@ -364,32 +300,27 @@ impl WebRtcManager {
         Ok(())
     }
 
-    /// Handle an incoming SDP offer and create an answer
     pub async fn handle_offer(&self, session_id: &str, sdp: &str) -> Result<String, String> {
         let sessions = self.sessions.lock().await;
         let session = sessions
             .get(session_id)
             .ok_or_else(|| format!("Session {} not found", session_id))?;
 
-        // Parse the offer
         let offer = RTCSessionDescription::offer(sdp.to_string())
             .map_err(|e| format!("Failed to parse SDP offer: {}", e))?;
 
-        // Set remote description
         session
             .peer_connection
             .set_remote_description(offer)
             .await
             .map_err(|e| format!("Failed to set remote description: {}", e))?;
 
-        // Create answer
         let answer = session
             .peer_connection
             .create_answer(None)
             .await
             .map_err(|e| format!("Failed to create answer: {}", e))?;
 
-        // Set local description
         session
             .peer_connection
             .set_local_description(answer.clone())
@@ -399,7 +330,6 @@ impl WebRtcManager {
         Ok(answer.sdp)
     }
 
-    /// Add an ICE candidate from remote peer
     pub async fn add_ice_candidate(
         &self,
         session_id: &str,
@@ -407,7 +337,6 @@ impl WebRtcManager {
         sdp_mid: Option<&str>,
         sdp_mline_index: Option<u32>,
     ) -> Result<(), String> {
-        // Log remote ICE candidate for debugging
         let candidate_type = if candidate.contains("typ host") {
             "host"
         } else if candidate.contains("typ srflx") {
@@ -420,7 +349,7 @@ impl WebRtcManager {
             "unknown"
         };
         tracing::debug!(
-            "🧊 Remote ICE candidate received for session {}: type={}, mid={:?}",
+            "Remote ICE candidate for session {}: type={}, mid={:?}",
             session_id,
             candidate_type,
             sdp_mid
@@ -447,7 +376,6 @@ impl WebRtcManager {
         Ok(())
     }
 
-    /// Send data through a data channel
     pub async fn send_data(
         &self,
         session_id: &str,
@@ -479,14 +407,8 @@ impl WebRtcManager {
         Ok(())
     }
 
-    /// Close a session
-    ///
-    /// Uses a timeout for the peer connection close to prevent hanging
-    /// when the connection was never fully established.
     pub async fn close_session(&self, session_id: &str) -> Result<(), String> {
         if let Some(session) = self.sessions.lock().await.remove(session_id) {
-            // Use a timeout for close() as it can hang if the connection
-            // was never fully established (common in tests or rapid page refreshes)
             let close_result = tokio::time::timeout(
                 self.close_timeout,
                 session.peer_connection.close(),
@@ -504,17 +426,15 @@ impl WebRtcManager {
                 }
                 Err(_) => {
                     tracing::warn!(
-                        "Timeout closing peer connection for session {} (this is often normal)",
+                        "Timeout closing peer connection for session {}",
                         session_id
                     );
-                    // Don't return error - the session is already removed from the map
                 }
             }
         }
         Ok(())
     }
 
-    /// Get the list of active sessions
     pub async fn list_sessions(&self) -> Vec<String> {
         self.sessions
             .lock()
@@ -524,17 +444,14 @@ impl WebRtcManager {
             .collect()
     }
 
-    /// Get the number of active sessions
     pub async fn session_count(&self) -> usize {
         self.sessions.lock().await.len()
     }
 
-    /// Check if a session exists
     pub async fn session_exists(&self, session_id: &str) -> bool {
         self.sessions.lock().await.contains_key(session_id)
     }
 
-    /// Get session state
     pub async fn get_session_state(&self, session_id: &str) -> Option<String> {
         self.sessions
             .lock()
@@ -549,12 +466,8 @@ mod tests {
     use super::*;
     use tokio::sync::mpsc;
 
-    /// Helper to create a WebRtcManager for testing
-    /// Uses a short close timeout (100ms) to speed up tests
     fn create_test_manager() -> (WebRtcManager, mpsc::UnboundedReceiver<SignalingMessage>) {
         let (tx, rx) = mpsc::unbounded_channel();
-        // Use very short timeout for tests - close() will timeout but that's fine
-        // since we're just testing the session management logic
         let manager =
             WebRtcManager::with_close_timeout(tx, std::time::Duration::from_millis(100));
         (manager, rx)
@@ -575,7 +488,6 @@ mod tests {
     async fn test_create_multiple_sessions_sequentially() {
         let (manager, _rx) = create_test_manager();
 
-        // Create 5 sessions sequentially
         for i in 1..=5 {
             let session_id = format!("session-{}", i);
             let result = manager.create_session(session_id.clone()).await;
@@ -590,7 +502,6 @@ mod tests {
 
         assert_eq!(manager.session_count().await, 5);
 
-        // Verify all sessions exist
         let sessions = manager.list_sessions().await;
         for i in 1..=5 {
             assert!(
@@ -605,20 +516,17 @@ mod tests {
     async fn test_close_session_and_cleanup() {
         let (manager, _rx) = create_test_manager();
 
-        // Create a session
         manager
             .create_session("session-to-close".to_string())
             .await
             .expect("Failed to create session");
         assert!(manager.session_exists("session-to-close").await);
 
-        // Close it
         manager
             .close_session("session-to-close")
             .await
             .expect("Failed to close session");
 
-        // Verify it's removed
         assert!(!manager.session_exists("session-to-close").await);
         assert_eq!(manager.session_count().await, 0);
     }
@@ -627,21 +535,18 @@ mod tests {
     async fn test_recreate_session_after_close() {
         let (manager, _rx) = create_test_manager();
 
-        // Create initial session
         manager
             .create_session("recyclable-session".to_string())
             .await
             .expect("Failed to create initial session");
         assert!(manager.session_exists("recyclable-session").await);
 
-        // Close it
         manager
             .close_session("recyclable-session")
             .await
             .expect("Failed to close session");
         assert!(!manager.session_exists("recyclable-session").await);
 
-        // Recreate with same ID
         let result = manager
             .create_session("recyclable-session".to_string())
             .await;
