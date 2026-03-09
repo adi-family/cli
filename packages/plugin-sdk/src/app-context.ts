@@ -11,6 +11,7 @@ export interface AppContextOptions {
 export class AppContext {
   readonly bus: EventBus;
   private readonly apis = new Map<string, unknown>();
+  private readonly _registeredPlugins = new Set<string>();
   private readonly envSource: Record<string, string | undefined>;
   private readonly storageFactory?: StorageFactory;
   private readonly storageInstances = new Map<string, PluginStorage>();
@@ -47,6 +48,21 @@ export class AppContext {
     const instance = this.storageFactory(pluginId);
     this.storageInstances.set(pluginId, instance);
     return instance;
+  }
+
+  /** IDs of all plugins that have completed _init(). */
+  get registeredPlugins(): ReadonlySet<string> {
+    return this._registeredPlugins;
+  }
+
+  /** @internal Track a plugin as registered after _init(). */
+  _registerPlugin(id: string): void {
+    this._registeredPlugins.add(id);
+  }
+
+  /** @internal Remove a plugin from the registered set. */
+  _unregisterPlugin(id: string): void {
+    this._registeredPlugins.delete(id);
   }
 
   /** @internal Auto-provide from plugin._init(). */

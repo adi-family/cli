@@ -30,11 +30,13 @@ export abstract class AdiPlugin {
     const api = (this as Record<string, unknown>)['api'];
     if (api !== undefined) app._provide(this.id, api);
     await this.onRegister?.();
+    app._registerPlugin(this.id);
     app.bus.emit('register-finished', { pluginId: this.id }, `plugin:${this.id}`);
   }
 
   /** @internal SDK use only. */
   async _destroy(): Promise<void> {
     await this.onUnregister?.();
+    this.#app?._unregisterPlugin(this.id);
   }
 }

@@ -165,10 +165,8 @@ export class PluginsPlugin extends AdiPlugin {
 
   private collectLoadedWebPlugins(): void {
     this.loadedWebPlugins.clear();
-    // AppContext stores registered plugin APIs in an internal `apis` Map
-    const apis = (this.app as unknown as { apis: Map<string, unknown> }).apis;
-    if (apis) {
-      for (const id of apis.keys()) this.loadedWebPlugins.add(id);
+    for (const id of this.app.registeredPlugins) {
+      this.loadedWebPlugins.add(id);
     }
   }
 
