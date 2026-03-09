@@ -23,7 +23,7 @@ lib-plugin-web-build = { path = "../../_lib/lib-plugin-web-build" }
 [package.metadata.plugin]
 id = "adi.video"
 name = "ADI Video"
-type = "core"
+type = "core,extension"
 
 [package.metadata.plugin.compatibility]
 min_host_version = "2.0.0"

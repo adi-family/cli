@@ -25,7 +25,7 @@ lib-plugin-web-build = { path = "../../_lib/lib-plugin-web-build" }
 [package.metadata.plugin]
 id = "adi.knowledgebase"
 name = "ADI Knowledgebase"
-type = "core"
+type = "core,extension"
 
 [package.metadata.plugin.compatibility]
 min_host_version = "0.8.0"

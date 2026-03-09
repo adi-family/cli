@@ -27,7 +27,7 @@ const filterPlugins = (plugins: PluginItem[], filter: PluginFilter): PluginItem[
     case 'web':
       return plugins.filter(p => p.plugin.pluginTypes.some(t => t === 'web' || t === 'extension'));
     case 'cocoon':
-      return plugins.filter(p => p.plugin.pluginTypes.some(t => t !== 'web'));
+      return plugins.filter(p => p.plugin.pluginTypes.some(t => t !== 'web' && t !== 'extension'));
     case 'installed':
       return plugins.filter(p => p.webInstalled || p.cocoonStatuses.some(s => s.installed));
     default:

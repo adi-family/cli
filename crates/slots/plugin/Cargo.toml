@@ -18,7 +18,7 @@ lib-plugin-web-build = { path = "../../_lib/lib-plugin-web-build" }
 [package.metadata.plugin]
 id = "adi.slots"
 name = "ADI Slots"
-type = "core"
+type = "extension"
 
 [package.metadata.plugin.compatibility]
 min_host_version = "2.0.0"

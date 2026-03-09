@@ -30,7 +30,7 @@ export const renderPluginCard = (props: PluginCardProps): TemplateResult => {
   const { item, onInstallWeb, onInstallCocoon, onSelect } = props;
   const { plugin } = item;
   const hasWeb = plugin.pluginTypes.some(t => t === 'web' || t === 'extension');
-  const hasCocoon = plugin.pluginTypes.some(t => t !== 'web');
+  const hasCocoon = plugin.pluginTypes.some(t => t !== 'web' && t !== 'extension');
 
   return html`
     <div class="plugins-card cursor-pointer" @click=${onSelect}>

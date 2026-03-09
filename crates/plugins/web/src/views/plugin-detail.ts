@@ -34,6 +34,7 @@ export const renderPluginDetail = (props: PluginDetailProps): TemplateResult => 
   const { item, onBack, onInstallWeb, onInstallCocoon } = props;
   const { plugin } = item;
   const hasWeb = plugin.pluginTypes.some(t => t === 'web' || t === 'extension');
+  const hasCocoon = plugin.pluginTypes.some(t => t !== 'web' && t !== 'extension');
 
   return html`
     <div class="p-4 max-w-3xl mx-auto">
@@ -78,16 +79,12 @@ export const renderPluginDetail = (props: PluginDetailProps): TemplateResult => 
         </div>
       ` : nothing}
 
-      ${item.cocoonStatuses.length > 0 ? html`
+      ${hasCocoon ? html`
         <div class="plugins-card mt-3">
           <h2 class="text-sm font-semibold text-gray-300 mb-3">Cocoon Installations</h2>
-          ${item.cocoonStatuses.map(s => statusRow(s, onInstallCocoon))}
-        </div>
-      ` : nothing}
-
-      ${item.cocoonStatuses.length === 0 && !hasWeb ? html`
-        <div class="plugins-card mt-3">
-          <p class="text-sm text-gray-500 text-center py-4">No cocoons connected. Connect a cocoon to install this plugin.</p>
+          ${item.cocoonStatuses.length > 0
+            ? item.cocoonStatuses.map(s => statusRow(s, onInstallCocoon))
+            : html`<p class="text-sm text-gray-500 text-center py-4">No cocoons connected. Connect a cocoon to install this plugin.</p>`}
         </div>
       ` : nothing}
     </div>
