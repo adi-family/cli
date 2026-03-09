@@ -8,5 +8,6 @@
     "allowImportingTsExtensions": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false
-  }
+  },
+  "exclude": ["src/**/*.test.ts"]
 }

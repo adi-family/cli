@@ -1,6 +1,6 @@
 import { LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
-import type { Connection } from '@adi-family/cocoon-plugin-interface';
+import type { CocoonOption } from './views/credential-form.js';
 import type {
   Credential,
   CredentialAccessLog,
@@ -157,7 +157,11 @@ export class AdiCredentialsElement extends LitElement {
   }
 
   override render() {
-    const conns: Connection[] = cocoon.allConnections();
+    const credConns = new Set(cocoon.connectionsWithService('credentials').map(c => c.id));
+    const cocoons: CocoonOption[] = cocoon.cocoonDevices().map(d => ({
+      id: d.device_id,
+      installed: credConns.has(d.device_id),
+    }));
 
     if (this.view === 'detail' && this.selected) {
       return renderCredentialDetail({
@@ -180,7 +184,7 @@ export class AdiCredentialsElement extends LitElement {
 
     if (this.view === 'create' || this.view === 'edit') {
       return renderCredentialForm({
-        connections: conns,
+        cocoons,
         submitting: this.submitting,
         editing: this.view === 'edit' ? this.selected : null,
         onBack: () => { this.view = this.selected ? 'detail' : 'list'; this.submitting = false; },

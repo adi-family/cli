@@ -1,0 +1,17 @@
+{
+  "name": "adi-family-cli",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "crates/*/web",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "bun run --filter '*' test",
+    "build": "bun run --filter '@adi-family/sdk-plugin' build && bun run --filter '@adi-family/*' build",
+    "build:all": "bun run build && bun run --filter '*' build"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.10"
+  }
+}

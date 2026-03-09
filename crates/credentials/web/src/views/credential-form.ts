@@ -1,9 +1,14 @@
 import { html, nothing, type TemplateResult } from 'lit';
-import type { Connection, Credential, CredentialType } from '../types.js';
+import type { Credential, CredentialType } from '../types.js';
 import { ALL_TYPES, TYPE_LABELS } from './shared.js';
 
+export interface CocoonOption {
+  id: string;
+  installed: boolean;
+}
+
 interface CredentialFormProps {
-  connections: Connection[];
+  cocoons: CocoonOption[];
   submitting: boolean;
   editing: Credential | null;
   onBack(): void;
@@ -56,7 +61,7 @@ const dataFieldPair = () => html`
 `;
 
 export function renderCredentialForm(props: CredentialFormProps): TemplateResult {
-  const { connections, submitting, editing, onBack, onCreate, onUpdate } = props;
+  const { cocoons, submitting, editing, onBack, onCreate, onUpdate } = props;
   const isEdit = editing !== null;
 
   const handleSubmit = (e: Event) => {
@@ -128,8 +133,10 @@ export function renderCredentialForm(props: CredentialFormProps): TemplateResult
               ?disabled=${submitting}
               class="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-200 focus:outline-none focus:border-purple-500/50 disabled:opacity-50"
             >
-              ${connections.map(c => html`
-                <option value=${c.id} ?selected=${isEdit && c.id === editing?.cocoonId}>${c.id}</option>
+              ${cocoons.map((c: CocoonOption) => html`
+                <option value=${c.id} ?selected=${isEdit && c.id === editing?.cocoonId}>
+                  ${c.id} — ${c.installed ? 'already installed on cocoon' : 'will be installed on cocoon'}
+                </option>
               `)}
             </select>
           </div>

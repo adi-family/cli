@@ -11,13 +11,13 @@
   },
   "scripts": {
     "generate": "cargo check -p command-palette-plugin",
-    "build": "npm run generate && vite build",
+    "build": "bun run generate && vite build",
     "typecheck": "tsc --noEmit",
     "dev": "vite build --watch"
   },
   "dependencies": {
-    "@adi-family/sdk-plugin": "file:../../../packages/plugin-sdk",
-    "@adi/slots-web-plugin": "file:../../slots/web",
+    "@adi-family/sdk-plugin": "workspace:*",
+    "@adi/slots-web-plugin": "workspace:*",
     "lit": "^3.3.2"
   },
   "devDependencies": {

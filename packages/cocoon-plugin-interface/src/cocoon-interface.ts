@@ -1,13 +1,14 @@
 import type { EventBus } from '@adi-family/sdk-plugin';
-import type { Connection } from '@adi/signaling-web-plugin/bus';
+import type { Connection, DeviceInfo } from '@adi/signaling-web-plugin/bus';
+import { AdiSignalingBusKey } from '@adi/signaling-web-plugin/bus';
 import { CocoonBusKey } from './bus-keys.js';
 
 export class CocoonPluginInterface {
   private readonly connections = new Map<string, Connection>();
+  private readonly devices = new Map<string, DeviceInfo>();
   private readonly pluginId: string;
   private _bus: EventBus | undefined;
-  private unsubAdded: (() => void) | undefined;
-  private unsubRemoved: (() => void) | undefined;
+  private unsubs: Array<() => void> = [];
 
   private constructor(pluginId: string) {
     this.pluginId = pluginId;
@@ -20,19 +21,30 @@ export class CocoonPluginInterface {
   init(bus: EventBus): void {
     this._bus = bus;
 
-    this.unsubAdded = bus.on(CocoonBusKey.ConnectionAdded, ({ id, connection }) => {
-      this.connections.set(id, connection);
-    }, this.pluginId);
+    this.unsubs.push(
+      bus.on(CocoonBusKey.ConnectionAdded, ({ id, connection }) => {
+        this.connections.set(id, connection);
+      }, this.pluginId),
 
-    this.unsubRemoved = bus.on(CocoonBusKey.ConnectionRemoved, ({ id }) => {
-      this.connections.delete(id);
-    }, this.pluginId);
+      bus.on(CocoonBusKey.ConnectionRemoved, ({ id }) => {
+        this.connections.delete(id);
+      }, this.pluginId),
+
+      bus.on(AdiSignalingBusKey.Devices, ({ devices }) => {
+        this.devices.clear();
+        for (const d of devices) {
+          this.devices.set(d.device_id, d);
+        }
+      }, this.pluginId),
+    );
+
   }
 
   destroy(): void {
-    this.unsubAdded?.();
-    this.unsubRemoved?.();
+    this.unsubs.forEach(fn => fn());
+    this.unsubs = [];
     this.connections.clear();
+    this.devices.clear();
     this._bus = undefined;
   }
 
@@ -54,5 +66,13 @@ export class CocoonPluginInterface {
 
   allConnections(): Connection[] {
     return [...this.connections.values()];
+  }
+
+  allDevices(): DeviceInfo[] {
+    return [...this.devices.values()];
+  }
+
+  cocoonDevices(): DeviceInfo[] {
+    return this.allDevices().filter(d => d.device_type === 'cocoon');
   }
 }

@@ -12,8 +12,12 @@ function makeMockStorage(): PluginStorage {
   const store = new Map<string, unknown>();
   return {
     get: async (key) => store.get(key) as any,
-    set: async (key, value) => { store.set(key, value); },
-    delete: async (key) => { store.delete(key); },
+    set: async (key, value) => {
+      store.set(key, value);
+    },
+    delete: async (key) => {
+      store.delete(key);
+    },
     keys: async () => [...store.keys()],
   };
 }
@@ -45,25 +49,63 @@ describe('AppContext — api provide/retrieve', () => {
     const ctx = makeCtx();
     const api = { doStuff: () => 42 };
     ctx._provide('my-api', api);
-    expect(ctx.api('my-api' as any)).toBe(api);
+    expect(ctx.api('my-api' as never)).toBe(api);
   });
 
   it('throws when accessing unregistered API', () => {
     const ctx = makeCtx();
-    expect(() => ctx.api('missing' as any)).toThrow("API 'missing' is not registered");
+    expect(() => ctx.api('missing' as never)).toThrow(
+      "API 'missing' is not registered",
+    );
   });
 
   it('throws on duplicate provide', () => {
     const ctx = makeCtx();
     ctx._provide('dup', {});
-    expect(() => ctx._provide('dup', {})).toThrow("API 'dup' is already registered");
+    expect(() => ctx._provide('dup', {})).toThrow(
+      "API 'dup' is already registered",
+    );
+  });
+
+  it('apiReady resolves immediately when already provided', async () => {
+    const ctx = makeCtx();
+    const api = { value: 99 };
+    ctx._provide('ready', api);
+    const result = await (ctx as any).apiReady('ready');
+    expect(result).toBe(api);
+  });
+
+  it('apiReady waits for a late-provided API', async () => {
+    const ctx = makeCtx();
+    const api = { late: true };
+    const promise = (ctx as any).apiReady('deferred');
+
+    ctx._provide('deferred', api);
+
+    const result = await promise;
+    expect(result).toBe(api);
+  });
+
+  it('apiReady resolves multiple waiters', async () => {
+    const ctx = makeCtx();
+    const api = { shared: true };
+    const p1 = (ctx as any).apiReady('multi');
+    const p2 = (ctx as any).apiReady('multi');
+
+    ctx._provide('multi', api);
+
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1).toBe(api);
+    expect(r2).toBe(api);
   });
 
   it('unprovide removes the API', () => {
     const ctx = makeCtx();
     ctx._provide('temp', { x: 1 });
     ctx._unprovide('temp');
-    expect(() => ctx.api('temp' as any)).toThrow("API 'temp' is not registered");
+    expect(() => ctx.api('temp' as never)).toThrow(
+      "API 'temp' is not registered",
+    );
   });
 });
 

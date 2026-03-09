@@ -11,15 +11,15 @@
   },
   "scripts": {
     "generate": "cargo check -p router-plugin",
-    "build": "npm run generate && vite build",
+    "build": "bun run generate && vite build",
     "typecheck": "tsc --noEmit",
     "dev": "vite build --watch"
   },
   "dependencies": {
-    "@adi/command-palette-web-plugin": "file:../../command-palette/web",
-    "@adi/debug-screen-web-plugin": "file:../../debug-screen/web",
-    "@adi/slots-web-plugin": "file:../../slots/web",
-    "@adi-family/sdk-plugin": "file:../../../packages/plugin-sdk",
+    "@adi/command-palette-web-plugin": "workspace:*",
+    "@adi/debug-screen-web-plugin": "workspace:*",
+    "@adi/slots-web-plugin": "workspace:*",
+    "@adi-family/sdk-plugin": "workspace:*",
     "lit": "^3.3.1"
   },
   "devDependencies": {

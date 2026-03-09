@@ -9,6 +9,8 @@ export class CredentialsPlugin extends AdiPlugin {
   readonly id = 'adi.credentials';
   readonly version = '0.1.0';
 
+  get api() { return api; }
+
   async onRegister(): Promise<void> {
     cocoon.init(this.bus);
 

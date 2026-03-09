@@ -11,6 +11,7 @@ export interface AppContextOptions {
 export class AppContext {
   readonly bus: EventBus;
   private readonly apis = new Map<string, unknown>();
+  private readonly apiWaiters = new Map<string, Array<(api: unknown) => void>>();
   private readonly _registeredPlugins = new Set<string>();
   private readonly envSource: Record<string, string | undefined>;
   private readonly storageFactory?: StorageFactory;
@@ -27,13 +28,26 @@ export class AppContext {
     return (this.envSource[`VITE_${key}`] ?? '').split(',').filter(Boolean);
   }
 
-  /** Retrieve a typed plugin API by its registered key. */
+  /** Retrieve a typed plugin API by its registered key. Throws if not yet available. */
   api<K extends keyof PluginApiRegistry>(id: K): PluginApiRegistry[K] {
     const instance = this.apis.get(id as string);
     if (!instance) {
       throw new Error(`API '${String(id)}' is not registered. Ensure the plugin is loaded and calls app.provide().`);
     }
     return instance as PluginApiRegistry[K];
+  }
+
+  /** Retrieve a typed plugin API, waiting for it to become available if not yet registered. */
+  apiReady<K extends keyof PluginApiRegistry>(id: K): Promise<PluginApiRegistry[K]> {
+    const instance = this.apis.get(id as string);
+    if (instance) return Promise.resolve(instance as PluginApiRegistry[K]);
+
+    return new Promise<PluginApiRegistry[K]>((resolve) => {
+      const key = id as string;
+      const waiters = this.apiWaiters.get(key) ?? [];
+      waiters.push(resolve as (api: unknown) => void);
+      this.apiWaiters.set(key, waiters);
+    });
   }
 
   /** Per-plugin key-value storage backed by the app's storage implementation. */
@@ -71,6 +85,12 @@ export class AppContext {
       throw new Error(`API '${id}' is already registered.`);
     }
     this.apis.set(id, api);
+
+    const waiters = this.apiWaiters.get(id);
+    if (waiters) {
+      this.apiWaiters.delete(id);
+      for (const resolve of waiters) resolve(api);
+    }
   }
 
   /** @internal Remove a provided API (used during plugin unregister). */

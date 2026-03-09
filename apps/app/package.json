@@ -9,10 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@adi/debug-screen-web-plugin": "file:../../crates/debug-screen/web",
-    "@adi/router-web-plugin": "file:../../crates/router/web",
-    "@adi-family/sdk-plugin": "file:../../packages/plugin-sdk",
-    "@adi-family/video-sdk": "file:../../packages/video-sdk",
+    "@adi/debug-screen-web-plugin": "workspace:*",
+    "@adi/router-web-plugin": "workspace:*",
+    "@adi-family/sdk-plugin": "workspace:*",
+    "@adi-family/video-sdk": "workspace:*",
     "html2canvas": "^1.4.1",
     "lit": "^3.3.1"
   },

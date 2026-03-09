@@ -1,9 +1,10 @@
 export type {
   CredentialAccessLog,
-  CredentialType,
   DeleteResult,
   VerifyResult,
 } from './generated/types.js';
+
+export { CredentialType } from './generated/types.js';
 
 import type {
   Credential as GeneratedCredential,

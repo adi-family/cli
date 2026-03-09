@@ -11,12 +11,12 @@
   },
   "scripts": {
     "generate": "cargo check -p slots-plugin",
-    "build": "npm run generate && vite build",
+    "build": "bun run generate && vite build",
     "typecheck": "tsc --noEmit",
     "dev": "vite build --watch"
   },
   "dependencies": {
-    "@adi-family/sdk-plugin": "file:../../../packages/plugin-sdk",
+    "@adi-family/sdk-plugin": "workspace:*",
     "lit": "^3.3.2"
   },
   "devDependencies": {

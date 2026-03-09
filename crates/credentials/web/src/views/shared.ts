@@ -1,30 +1,30 @@
-import type { CredentialType } from '../types.js';
+import { CredentialType } from '../types.js';
 
 export const TYPE_COLORS: Record<CredentialType, string> = {
-  github_token: 'bg-gray-700/30 text-gray-200',
-  gitlab_token: 'bg-orange-500/20 text-orange-300',
-  api_key: 'bg-blue-500/20 text-blue-300',
-  oauth2: 'bg-purple-500/20 text-purple-300',
-  ssh_key: 'bg-green-500/20 text-green-300',
-  password: 'bg-yellow-500/20 text-yellow-300',
-  certificate: 'bg-cyan-500/20 text-cyan-300',
-  custom: 'bg-gray-500/20 text-gray-300',
+  [CredentialType.GithubToken]: 'bg-gray-700/30 text-gray-200',
+  [CredentialType.GitlabToken]: 'bg-orange-500/20 text-orange-300',
+  [CredentialType.ApiKey]: 'bg-blue-500/20 text-blue-300',
+  [CredentialType.Oauth2]: 'bg-purple-500/20 text-purple-300',
+  [CredentialType.SshKey]: 'bg-green-500/20 text-green-300',
+  [CredentialType.Password]: 'bg-yellow-500/20 text-yellow-300',
+  [CredentialType.Certificate]: 'bg-cyan-500/20 text-cyan-300',
+  [CredentialType.Custom]: 'bg-gray-500/20 text-gray-300',
 };
 
 export const TYPE_LABELS: Record<CredentialType, string> = {
-  github_token: 'GitHub Token',
-  gitlab_token: 'GitLab Token',
-  api_key: 'API Key',
-  oauth2: 'OAuth2',
-  ssh_key: 'SSH Key',
-  password: 'Password',
-  certificate: 'Certificate',
-  custom: 'Custom',
+  [CredentialType.GithubToken]: 'GitHub Token',
+  [CredentialType.GitlabToken]: 'GitLab Token',
+  [CredentialType.ApiKey]: 'API Key',
+  [CredentialType.Oauth2]: 'OAuth2',
+  [CredentialType.SshKey]: 'SSH Key',
+  [CredentialType.Password]: 'Password',
+  [CredentialType.Certificate]: 'Certificate',
+  [CredentialType.Custom]: 'Custom',
 };
 
 export const ALL_TYPES: CredentialType[] = [
-  'github_token', 'gitlab_token', 'api_key', 'oauth2',
-  'ssh_key', 'password', 'certificate', 'custom',
+  CredentialType.GithubToken, CredentialType.GitlabToken, CredentialType.ApiKey, CredentialType.Oauth2,
+  CredentialType.SshKey, CredentialType.Password, CredentialType.Certificate, CredentialType.Custom,
 ];
 
 export function formatDate(iso: string): string {
