@@ -27,6 +27,7 @@ export default defineConfig({
     },
   },
   build: {
+    outDir: "../../../dist/cocoon-control-center",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],

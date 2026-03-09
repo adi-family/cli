@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
+    outDir: "../../../dist/command-palette",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],

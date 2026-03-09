@@ -1,5 +1,7 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
 import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
+import { AdiSignalingBusKey, type DeviceInfo, type IceServer } from '@adi/signaling-web-plugin/bus';
+import type { Connection } from '@adi-family/cocoon-plugin-interface';
 import * as api from './api.js';
 import { cocoon } from './cocoon.js';
 import type { Credential } from './types.js';
@@ -9,7 +11,24 @@ export class CredentialsPlugin extends AdiPlugin {
   readonly id = 'adi.credentials';
   readonly version = '0.1.0';
 
+  private readonly devices = new Map<string, { info: DeviceInfo; signalingUrl: string }>();
+  private iceServers: IceServer[] | undefined;
+
   get api() { return api; }
+
+  /** Ensures cocoon client+connection exist for this device, returns the Connection. */
+  private ensureConnection(cocoonId: string): Connection {
+    try {
+      return cocoon.getConnection(cocoonId);
+    } catch {
+      const tracked = this.devices.get(cocoonId);
+      if (!tracked) throw new Error(`Device '${cocoonId}' not found`);
+      const cocoonApi = this.app.api('adi.cocoon');
+      const rtcConfig = this.iceServers ? { iceServers: this.iceServers } : undefined;
+      cocoonApi.createClient(cocoonId, tracked.signalingUrl, rtcConfig);
+      return cocoon.getConnection(cocoonId);
+    }
+  }
 
   async onRegister(): Promise<void> {
     cocoon.init(this.bus);
@@ -32,6 +51,18 @@ export class CredentialsPlugin extends AdiPlugin {
       path: `/${this.id}`,
     }, this.id);
 
+    this.bus.on(AdiSignalingBusKey.ConnectionInfo, ({ connectionInfo }) => {
+      this.iceServers = connectionInfo.ice_servers;
+    }, this.id);
+
+    this.bus.on(AdiSignalingBusKey.Devices, ({ url, devices }) => {
+      for (const d of devices) {
+        if (d.device_type === 'cocoon') {
+          this.devices.set(d.device_id, { info: d, signalingUrl: url });
+        }
+      }
+    }, this.id);
+
     this.bus.on('credentials:list', async ({ credential_type, provider }) => {
       try {
         const conns = cocoon.connectionsWithService('credentials');
@@ -52,7 +83,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:get', async ({ id, cocoonId }) => {
       try {
-        const cred = await api.getCredential(cocoon.getConnection(cocoonId), id);
+        const cred = await api.getCredential(this.ensureConnection(cocoonId), id);
         this.bus.emit('credentials:detail-changed', {
           credential: { ...cred, cocoonId },
         }, 'credentials');
@@ -63,7 +94,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:reveal', async ({ id, cocoonId }) => {
       try {
-        const cred = await api.getCredentialWithData(cocoon.getConnection(cocoonId), id);
+        const cred = await api.getCredentialWithData(this.ensureConnection(cocoonId), id);
         this.bus.emit('credentials:data-revealed', {
           credential: { ...cred, cocoonId },
         }, 'credentials');
@@ -74,7 +105,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:create', async ({ cocoonId, ...params }) => {
       try {
-        const cred = await api.createCredential(cocoon.getConnection(cocoonId), params);
+        const cred = await api.createCredential(this.ensureConnection(cocoonId), params);
         this.bus.emit('credentials:mutated', { credential: { ...cred, cocoonId } }, 'credentials');
       } catch (err) {
         console.error('[CredentialsPlugin] create error:', err);
@@ -83,7 +114,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:update', async ({ cocoonId, ...params }) => {
       try {
-        const cred = await api.updateCredential(cocoon.getConnection(cocoonId), params);
+        const cred = await api.updateCredential(this.ensureConnection(cocoonId), params);
         this.bus.emit('credentials:mutated', { credential: { ...cred, cocoonId } }, 'credentials');
       } catch (err) {
         console.error('[CredentialsPlugin] update error:', err);
@@ -92,7 +123,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:delete', async ({ id, cocoonId }) => {
       try {
-        await api.deleteCredential(cocoon.getConnection(cocoonId), id);
+        await api.deleteCredential(this.ensureConnection(cocoonId), id);
         this.bus.emit('credentials:deleted', { id, cocoonId }, 'credentials');
       } catch (err) {
         console.error('[CredentialsPlugin] delete error:', err);
@@ -101,7 +132,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:verify', async ({ id, cocoonId }) => {
       try {
-        const result = await api.verifyCredential(cocoon.getConnection(cocoonId), id);
+        const result = await api.verifyCredential(this.ensureConnection(cocoonId), id);
         this.bus.emit('credentials:verified', { id, result }, 'credentials');
       } catch (err) {
         console.error('[CredentialsPlugin] verify error:', err);
@@ -110,7 +141,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:logs', async ({ id, cocoonId }) => {
       try {
-        const logs = await api.getAccessLogs(cocoon.getConnection(cocoonId), id);
+        const logs = await api.getAccessLogs(this.ensureConnection(cocoonId), id);
         this.bus.emit('credentials:logs-changed', { id, logs }, 'credentials');
       } catch (err) {
         console.error('[CredentialsPlugin] logs error:', err);

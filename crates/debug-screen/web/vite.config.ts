@@ -11,6 +11,7 @@ export default defineConfig({
     },
   },
   build: {
+    outDir: "../../../dist/debug-screen",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],

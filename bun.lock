@@ -79,6 +79,7 @@
       "name": "@adi/cocoon-web-plugin",
       "version": "0.1.0",
       "dependencies": {
+        "@adi-family/cocoon-plugin-interface": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
         "@adi/auth-web-plugin": "workspace:*",
         "@adi/debug-screen-web-plugin": "workspace:*",
@@ -113,6 +114,7 @@
         "@adi-family/cocoon-plugin-interface": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
         "@adi/router-web-plugin": "workspace:*",
+        "@adi/signaling-web-plugin": "workspace:*",
         "lit": "^3.3.1",
       },
       "devDependencies": {

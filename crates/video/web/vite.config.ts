@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
+    outDir: "../../../dist/video",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],
