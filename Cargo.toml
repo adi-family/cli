@@ -230,6 +230,10 @@ members = [
     "crates/credentials/core",
     "crates/credentials/plugin",
 
+    # Plugins
+    "crates/plugins/core",
+    "crates/plugins/plugin",
+
     # Shortcuts
     "crates/shortcuts",
 

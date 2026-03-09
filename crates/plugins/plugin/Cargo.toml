@@ -1,0 +1,32 @@
+[package]
+name = "plugins-plugin"
+version = "0.1.0"
+edition = "2021"
+description = "ADI plugin: Plugins - browse and install plugins from the registry"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lib-plugin-prelude = { path = "../../_lib/lib-plugin-prelude" }
+
+[build-dependencies]
+lib-plugin-web-build = { path = "../../_lib/lib-plugin-web-build" }
+
+[package.metadata.plugin]
+id = "adi.plugins"
+name = "Plugins"
+type = "extension"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "2.0.0"
+
+[package.metadata.plugin.web_ui]
+entry = "web.js"
+sandbox = false
+plugin_class = "PluginsPlugin"
+
+[package.metadata.plugin.tags]
+categories = ["plugins", "registry", "management"]

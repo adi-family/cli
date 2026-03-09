@@ -1,0 +1,9 @@
+[package]
+name = "plugins-core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "BSL-1.0"
+description = "Core library for ADI Plugins UI - plugin registry browsing and installation"
+
+[dependencies]

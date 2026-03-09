@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1772976424,
+  "updatedAt": 1773078120,
   "packages": [],
   "plugins": [
     {
@@ -161,6 +161,20 @@
       "id": "adi.credentials",
       "name": "Credentials",
       "description": "ADI plugin: Credentials",
+      "pluginTypes": [
+        "extension",
+        "web"
+      ],
+      "packageId": null,
+      "latestVersion": "0.1.0",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    },
+    {
+      "id": "adi.plugins",
+      "name": "Plugins",
+      "description": "ADI plugin: Plugins - browse and install plugins from the registry",
       "pluginTypes": [
         "extension",
         "web"
