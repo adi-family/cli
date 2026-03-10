@@ -49,7 +49,7 @@ model DeleteResult {
   deleted: boolean;
 }
 
-@channel("credentials")
+@channel("adi.credentials")
 interface CredentialsService {
   @request
   list(credential_type?: CredentialType, provider?: string): Credential[];
