@@ -110,7 +110,7 @@
         "vite": "^7.3.1",
       },
     },
-    "crates/credentials/web": {
+    "plugins/adi.credentials/web": {
       "name": "@adi-family/plugin-credentials",
       "version": "0.1.0",
       "dependencies": {
@@ -345,7 +345,7 @@
 
     "@adi-family/plugin-command-palette": ["@adi-family/plugin-command-palette@workspace:crates/command-palette/web"],
 
-    "@adi-family/plugin-credentials": ["@adi-family/plugin-credentials@workspace:crates/credentials/web"],
+    "@adi-family/plugin-credentials": ["@adi-family/plugin-credentials@workspace:plugins/adi.credentials/web"],
 
     "@adi-family/plugin-debug-screen": ["@adi-family/plugin-debug-screen@workspace:crates/debug-screen/web"],
 

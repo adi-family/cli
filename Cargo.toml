@@ -227,8 +227,8 @@ members = [
     "crates/payment/plugin",
 
     # Credentials
-    "crates/credentials/core",
-    "crates/credentials/plugin",
+    "plugins/adi.credentials/core",
+    "plugins/adi.credentials/plugin",
 
     # Plugins
     "crates/plugins/core",
@@ -268,7 +268,7 @@ llm-proxy-core = { path = "crates/llm-proxy/core" }
 hive-core = { path = "crates/hive/core" }
 tools-core = { path = "crates/tools/core" }
 payment-core = { path = "crates/payment/core" }
-credentials-core = { path = "crates/credentials/core" }
+credentials-core = { path = "plugins/adi.credentials/core" }
 executor-core = { path = "crates/executor/core" }
 video-core = { path = "crates/video/core" }
 plugin-registry-core = { path = "crates/registry/core" }

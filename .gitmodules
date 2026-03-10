@@ -101,7 +101,7 @@
 	path = crates/linter
 	url = https://github.com/adi-family/adi-linter.git
 [submodule "crates/adi-credentials-api"]
-	path = crates/credentials
+	path = plugins/adi.credentials
 	url = https://github.com/adi-family/adi-credentials-api.git
 [submodule "crates/adi-embed-plugin"]
 	path = crates/embed-plugin
