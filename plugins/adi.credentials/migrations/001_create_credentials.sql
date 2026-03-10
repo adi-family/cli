@@ -1,8 +1,6 @@
 -- Credential types enum
 DO $$ BEGIN
     CREATE TYPE credential_type AS ENUM (
-        'github_token',
-        'gitlab_token',
         'api_key',
         'oauth2',
         'ssh_key',

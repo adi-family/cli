@@ -2,8 +2,6 @@
 scalar uuid extends string;
 
 enum CredentialType {
-  githubToken: "github_token",
-  gitlabToken: "gitlab_token",
   apiKey: "api_key",
   oauth2: "oauth2",
   sshKey: "ssh_key",

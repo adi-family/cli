@@ -7,8 +7,6 @@ use uuid::Uuid;
 #[sqlx(type_name = "credential_type", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialType {
-    GithubToken,
-    GitlabToken,
     ApiKey,
     Oauth2,
     SshKey,

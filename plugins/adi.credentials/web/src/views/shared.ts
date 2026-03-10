@@ -1,8 +1,6 @@
 import { CredentialType } from '../types.js';
 
 export const TYPE_COLORS: Record<CredentialType, string> = {
-  [CredentialType.GithubToken]: 'bg-gray-700/30 text-gray-200',
-  [CredentialType.GitlabToken]: 'bg-orange-500/20 text-orange-300',
   [CredentialType.ApiKey]: 'bg-blue-500/20 text-blue-300',
   [CredentialType.Oauth2]: 'bg-purple-500/20 text-purple-300',
   [CredentialType.SshKey]: 'bg-green-500/20 text-green-300',
@@ -12,8 +10,6 @@ export const TYPE_COLORS: Record<CredentialType, string> = {
 };
 
 export const TYPE_LABELS: Record<CredentialType, string> = {
-  [CredentialType.GithubToken]: 'GitHub Token',
-  [CredentialType.GitlabToken]: 'GitLab Token',
   [CredentialType.ApiKey]: 'API Key',
   [CredentialType.Oauth2]: 'OAuth2',
   [CredentialType.SshKey]: 'SSH Key',
@@ -23,8 +19,8 @@ export const TYPE_LABELS: Record<CredentialType, string> = {
 };
 
 export const ALL_TYPES: CredentialType[] = [
-  CredentialType.GithubToken, CredentialType.GitlabToken, CredentialType.ApiKey, CredentialType.Oauth2,
-  CredentialType.SshKey, CredentialType.Password, CredentialType.Certificate, CredentialType.Custom,
+  CredentialType.ApiKey, CredentialType.Oauth2, CredentialType.SshKey,
+  CredentialType.Password, CredentialType.Certificate, CredentialType.Custom,
 ];
 
 export function formatDate(iso: string): string {
