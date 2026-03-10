@@ -1,27 +1,21 @@
 import { CredentialType } from '../types.js';
 
-export const TYPE_COLORS: Record<CredentialType, string> = {
-  [CredentialType.ApiKey]: 'bg-blue-500/20 text-blue-300',
-  [CredentialType.Oauth2]: 'bg-purple-500/20 text-purple-300',
-  [CredentialType.SshKey]: 'bg-green-500/20 text-green-300',
-  [CredentialType.Password]: 'bg-yellow-500/20 text-yellow-300',
-  [CredentialType.Certificate]: 'bg-cyan-500/20 text-cyan-300',
-  [CredentialType.Custom]: 'bg-gray-500/20 text-gray-300',
+const TYPE_META: Record<CredentialType, { label: string; color: string }> = {
+  [CredentialType.ApiKey]:      { label: 'API Key',      color: 'bg-blue-500/20 text-blue-300' },
+  [CredentialType.Oauth2]:      { label: 'OAuth2',       color: 'bg-purple-500/20 text-purple-300' },
+  [CredentialType.SshKey]:      { label: 'SSH Key',      color: 'bg-green-500/20 text-green-300' },
+  [CredentialType.Password]:    { label: 'Password',     color: 'bg-yellow-500/20 text-yellow-300' },
+  [CredentialType.Certificate]: { label: 'Certificate',  color: 'bg-cyan-500/20 text-cyan-300' },
+  [CredentialType.Custom]:      { label: 'Custom',       color: 'bg-gray-500/20 text-gray-300' },
 };
 
-export const TYPE_LABELS: Record<CredentialType, string> = {
-  [CredentialType.ApiKey]: 'API Key',
-  [CredentialType.Oauth2]: 'OAuth2',
-  [CredentialType.SshKey]: 'SSH Key',
-  [CredentialType.Password]: 'Password',
-  [CredentialType.Certificate]: 'Certificate',
-  [CredentialType.Custom]: 'Custom',
-};
-
-export const ALL_TYPES: CredentialType[] = [
-  CredentialType.ApiKey, CredentialType.Oauth2, CredentialType.SshKey,
-  CredentialType.Password, CredentialType.Certificate, CredentialType.Custom,
-];
+export const ALL_TYPES = Object.keys(TYPE_META) as CredentialType[];
+export const TYPE_LABELS: Record<CredentialType, string> = Object.fromEntries(
+  ALL_TYPES.map(t => [t, TYPE_META[t].label]),
+) as Record<CredentialType, string>;
+export const TYPE_COLORS: Record<CredentialType, string> = Object.fromEntries(
+  ALL_TYPES.map(t => [t, TYPE_META[t].color]),
+) as Record<CredentialType, string>;
 
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleString();

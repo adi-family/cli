@@ -4,6 +4,7 @@
   "workspaces": [
     "packages/*",
     "crates/*/web",
+    "plugins/*/web",
     "apps/*"
   ],
   "scripts": {

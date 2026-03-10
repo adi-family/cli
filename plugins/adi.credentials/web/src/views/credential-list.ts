@@ -66,12 +66,23 @@ const credentialRow = (cred: Credential, onSelect: (c: Credential) => void) => {
   `;
 };
 
+const renderListContent = (filtered: Credential[], props: CredentialListProps): TemplateResult => {
+  if (props.error)
+    return html`<div class="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-300">${props.error}</div>`;
+  if (props.loading)
+    return html`<div class="text-center py-8 text-gray-500 text-sm">Loading...</div>`;
+  if (filtered.length === 0)
+    return html`<div class="text-center py-8 text-gray-500 text-sm">No credentials found</div>`;
+  return html`<div class="space-y-2">${filtered.map(c => credentialRow(c, props.onSelect))}</div>`;
+};
+
 export function renderCredentialList(props: CredentialListProps): TemplateResult {
-  const filtered = props.searchQuery.trim()
+  const query = props.searchQuery.trim().toLowerCase();
+  const filtered = query
     ? props.credentials.filter(c =>
-        c.name.toLowerCase().includes(props.searchQuery.toLowerCase()) ||
-        (c.description?.toLowerCase().includes(props.searchQuery.toLowerCase()) ?? false) ||
-        (c.provider?.toLowerCase().includes(props.searchQuery.toLowerCase()) ?? false)
+        c.name.toLowerCase().includes(query) ||
+        (c.description?.toLowerCase().includes(query) ?? false) ||
+        (c.provider?.toLowerCase().includes(query) ?? false)
       )
     : props.credentials;
 
@@ -97,13 +108,7 @@ export function renderCredentialList(props: CredentialListProps): TemplateResult
         />
       </div>
 
-      ${props.error
-        ? html`<div class="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-300">${props.error}</div>`
-        : props.loading
-          ? html`<div class="text-center py-8 text-gray-500 text-sm">Loading...</div>`
-          : filtered.length === 0
-            ? html`<div class="text-center py-8 text-gray-500 text-sm">No credentials found</div>`
-            : html`<div class="space-y-2">${filtered.map(c => credentialRow(c, props.onSelect))}</div>`}
+      ${renderListContent(filtered, props)}
     </div>
   `;
 }

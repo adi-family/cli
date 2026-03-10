@@ -7,11 +7,19 @@ export interface CocoonOption {
   installed: boolean;
 }
 
+export interface DataField {
+  key: string;
+  value: string;
+}
+
 interface CredentialFormProps {
   cocoons: CocoonOption[];
   submitting: boolean;
   editing: Credential | null;
+  dataFields: DataField[];
   onBack(): void;
+  onAddDataField(): void;
+  onDataFieldChange(index: number, field: 'key' | 'value', val: string): void;
   onCreate(data: {
     cocoonId: string;
     name: string;
@@ -32,36 +40,42 @@ interface CredentialFormProps {
   }): void;
 }
 
-const parseDataFields = (form: HTMLFormElement): Record<string, unknown> => {
-  const keys = form.querySelectorAll<HTMLInputElement>('[name="data_key"]');
-  const values = form.querySelectorAll<HTMLInputElement>('[name="data_value"]');
+const collectDataFields = (fields: DataField[]): Record<string, unknown> => {
   const result: Record<string, unknown> = {};
-  keys.forEach((keyEl, i) => {
-    const k = keyEl.value.trim();
-    if (k && values[i]) result[k] = values[i].value;
-  });
+  for (const { key, value } of fields) {
+    const k = key.trim();
+    if (k) result[k] = value;
+  }
   return result;
 };
 
-const dataFieldPair = () => html`
+const INPUT_CLASS = 'flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500/50 font-mono';
+
+const dataFieldPair = (
+  field: DataField,
+  index: number,
+  onChange: (index: number, field: 'key' | 'value', val: string) => void,
+) => html`
   <div class="flex gap-2 items-center data-pair">
     <input
       type="text"
-      name="data_key"
       placeholder="Key"
-      class="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500/50 font-mono"
+      .value=${field.key}
+      @input=${(e: InputEvent) => onChange(index, 'key', (e.target as HTMLInputElement).value)}
+      class=${INPUT_CLASS}
     />
     <input
       type="text"
-      name="data_value"
       placeholder="Value"
-      class="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500/50 font-mono"
+      .value=${field.value}
+      @input=${(e: InputEvent) => onChange(index, 'value', (e.target as HTMLInputElement).value)}
+      class=${INPUT_CLASS}
     />
   </div>
 `;
 
 export function renderCredentialForm(props: CredentialFormProps): TemplateResult {
-  const { cocoons, submitting, editing, onBack, onCreate, onUpdate } = props;
+  const { cocoons, submitting, editing, dataFields, onBack, onAddDataField, onDataFieldChange, onCreate, onUpdate } = props;
   const isEdit = editing !== null;
 
   const handleSubmit = (e: Event) => {
@@ -74,7 +88,7 @@ export function renderCredentialForm(props: CredentialFormProps): TemplateResult
     const description = (fd.get('description') as string ?? '').trim();
     const provider = (fd.get('provider') as string ?? '').trim();
     const expiresAt = (fd.get('expires_at') as string ?? '').trim();
-    const data = parseDataFields(form);
+    const data = collectDataFields(dataFields);
 
     if (isEdit) {
       onUpdate({
@@ -99,20 +113,6 @@ export function renderCredentialForm(props: CredentialFormProps): TemplateResult
         expires_at: expiresAt || undefined,
       });
     }
-  };
-
-  const addDataField = () => {
-    const container = document.querySelector('#data-fields');
-    if (!container) return;
-    const div = document.createElement('div');
-    div.innerHTML = `
-      <div class="flex gap-2 items-center data-pair">
-        <input type="text" name="data_key" placeholder="Key"
-          class="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500/50 font-mono" />
-        <input type="text" name="data_value" placeholder="Value"
-          class="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500/50 font-mono" />
-      </div>`;
-    container.appendChild(div.firstElementChild!);
   };
 
   return html`
@@ -208,11 +208,11 @@ export function renderCredentialForm(props: CredentialFormProps): TemplateResult
               <button
                 type="button"
                 class="text-xs text-purple-300 hover:text-purple-200 transition-colors"
-                @click=${addDataField}
+                @click=${onAddDataField}
               >+ Add field</button>
             </div>
-            <div id="data-fields" class="space-y-2">
-              ${dataFieldPair()}
+            <div class="space-y-2">
+              ${dataFields.map((f, i) => dataFieldPair(f, i, onDataFieldChange))}
             </div>
           </div>
 
