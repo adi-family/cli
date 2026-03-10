@@ -3,7 +3,6 @@
 use anyhow::{Context, Result};
 use chrono::Local;
 use clap::Parser;
-use convert_case::Casing;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashSet;
 use std::io::{self, Write};
@@ -68,16 +67,16 @@ struct Cli {
     #[arg(long)]
     types_crate: Option<String>,
 
-    /// Service ID for AdiService generation (e.g., "tasks")
-    #[arg(long)]
-    service_id: Option<String>,
+    /// Cocoon-core crate path for AdiService imports (e.g., "cocoon_core")
+    #[arg(long, default_value = "cocoon_core")]
+    cocoon_crate: String,
 
-    /// Human-readable service name for AdiService (e.g., "Task Management")
+    /// Human-readable service name for AdiService (e.g., "Credentials")
     #[arg(long)]
     service_name: Option<String>,
 
-    /// Service version for AdiService (e.g., "0.1.0")
-    #[arg(long, default_value = "0.1.0")]
+    /// Service version for AdiService. Empty = env!("CARGO_PKG_VERSION")
+    #[arg(long, default_value = "")]
     service_version: String,
 
     /// Serde tag field name for protocol generation (e.g., "type")
@@ -267,17 +266,13 @@ fn do_generate(cli: &Cli) -> Result<Vec<String>> {
             .types_crate
             .clone()
             .unwrap_or_else(|| format!("{}-types", cli.package));
-        let service_id = cli
-            .service_id
-            .clone()
-            .unwrap_or_else(|| cli.package.clone());
         let service_name = cli
             .service_name
             .clone()
-            .unwrap_or_else(|| cli.package.to_case(convert_case::Case::Title));
+            .unwrap_or_default();
         let adi_config = RustAdiServiceConfig {
             types_crate,
-            service_id,
+            cocoon_crate: cli.cocoon_crate.clone(),
             service_name,
             service_version: cli.service_version.clone(),
         };

@@ -7,9 +7,11 @@ import type { CommandExecuteEvent, CommandPaletteOpenEvent, CommandRegisterEvent
 
 declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
-    // ── adi.command-palette ──
-    'adi.command-palette:register': CommandRegisterEvent;
-    'adi.command-palette:execute': CommandExecuteEvent;
-    'adi.command-palette:open': CommandPaletteOpenEvent;
+    // ── command ──
+    'command:register': CommandRegisterEvent;
+    'command:execute': CommandExecuteEvent;
+
+    // ── command-palette ──
+    'command-palette:open': CommandPaletteOpenEvent;
   }
 }

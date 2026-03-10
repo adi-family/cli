@@ -2,5 +2,5 @@
  * Auto-generated from TypeSpec.
  */
 
-export * from './types';
-export * from './messages';
+export * from './models';
+export * from './enums';

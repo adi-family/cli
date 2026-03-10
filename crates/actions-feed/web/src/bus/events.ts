@@ -3,20 +3,22 @@
  * DO NOT EDIT.
  */
 
-import type { ActionsDismissEvent, ActionsDismissedEvent, ActionsPushEvent, ActionsRegisterKindEvent, ActionsRegisterRendererEvent, CommandExecuteEvent, CommandRegisterEvent, NavAddEvent } from './types';
+import type { ActionKindMode, ActionPriority, ActionsDismissEvent, ActionsDismissedEvent, ActionsPushEvent, ActionsRegisterKindEvent, ActionsRegisterRendererEvent, CommandExecuteEvent, CommandRegisterEvent, NavAddEvent } from './types';
 
 declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
-    // ── adi.actions-feed ──
-    'adi.actions-feed:register-kind': ActionsRegisterKindEvent;
-    'adi.actions-feed:register-renderer': ActionsRegisterRendererEvent;
-    'adi.actions-feed:push': ActionsPushEvent;
-    'adi.actions-feed:dismiss': ActionsDismissEvent;
-    'adi.actions-feed:dismissed': ActionsDismissedEvent;
-    'adi.actions-feed:nav-add': NavAddEvent;
+    // ── actions ──
+    'actions:register-kind': ActionsRegisterKindEvent;
+    'actions:register-renderer': ActionsRegisterRendererEvent;
+    'actions:push': ActionsPushEvent;
+    'actions:dismiss': ActionsDismissEvent;
+    'actions:dismissed': ActionsDismissedEvent;
 
-    // ── adi.command-palette ──
-    'adi.command-palette:register': CommandRegisterEvent;
-    'adi.command-palette:execute': CommandExecuteEvent;
+    // ── nav ──
+    'nav:add': NavAddEvent;
+
+    // ── command ──
+    'command:register': CommandRegisterEvent;
+    'command:execute': CommandExecuteEvent;
   }
 }

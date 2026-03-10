@@ -2,7 +2,7 @@ import { AdiPlugin } from '@adi-family/sdk-plugin';
 import { AdiRouterBusKey } from '@adi-family/plugin-router/bus';
 import { AdiSignalingBusKey, type DeviceInfo, type IceServer } from '@adi-family/plugin-signaling/bus';
 import type { Connection } from '@adi-family/cocoon-plugin-interface';
-import * as api from './api.js';
+import * as api from './generated/adi-client.js';
 import { cocoon } from './cocoon.js';
 import type { Credential } from './types.js';
 import './events.js';
@@ -67,7 +67,7 @@ export class CredentialsPlugin extends AdiPlugin {
       try {
         const conns = cocoon.connectionsWithPlugin('adi.credentials');
         const results = await Promise.allSettled(
-          conns.map(c => api.listCredentials(c, { credential_type, provider })),
+          conns.map(c => api.list(c, { credential_type, provider })),
         );
         const credentials: Credential[] = results.flatMap((r, i) =>
           r.status === 'fulfilled'
@@ -83,7 +83,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:get', async ({ id, cocoonId }) => {
       try {
-        const cred = await api.getCredential(this.ensureConnection(cocoonId), id);
+        const cred = await api.get(this.ensureConnection(cocoonId), id);
         this.bus.emit('credentials:detail-changed', {
           credential: { ...cred, cocoonId },
         }, 'credentials');
@@ -94,7 +94,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:reveal', async ({ id, cocoonId }) => {
       try {
-        const cred = await api.getCredentialWithData(this.ensureConnection(cocoonId), id);
+        const cred = await api.getWithData(this.ensureConnection(cocoonId), id);
         this.bus.emit('credentials:data-revealed', {
           credential: { ...cred, cocoonId },
         }, 'credentials');
@@ -105,7 +105,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:create', async ({ cocoonId, ...params }) => {
       try {
-        const cred = await api.createCredential(this.ensureConnection(cocoonId), params);
+        const cred = await api.create(this.ensureConnection(cocoonId), params);
         this.bus.emit('credentials:mutated', { credential: { ...cred, cocoonId } }, 'credentials');
       } catch (err) {
         console.error('[CredentialsPlugin] create error:', err);
@@ -114,7 +114,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:update', async ({ cocoonId, ...params }) => {
       try {
-        const cred = await api.updateCredential(this.ensureConnection(cocoonId), params);
+        const cred = await api.update(this.ensureConnection(cocoonId), params);
         this.bus.emit('credentials:mutated', { credential: { ...cred, cocoonId } }, 'credentials');
       } catch (err) {
         console.error('[CredentialsPlugin] update error:', err);
@@ -123,7 +123,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:delete', async ({ id, cocoonId }) => {
       try {
-        await api.deleteCredential(this.ensureConnection(cocoonId), id);
+        await api.delete(this.ensureConnection(cocoonId), id);
         this.bus.emit('credentials:deleted', { id, cocoonId }, 'credentials');
       } catch (err) {
         console.error('[CredentialsPlugin] delete error:', err);
@@ -132,7 +132,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:verify', async ({ id, cocoonId }) => {
       try {
-        const result = await api.verifyCredential(this.ensureConnection(cocoonId), id);
+        const result = await api.verify(this.ensureConnection(cocoonId), id);
         this.bus.emit('credentials:verified', { id, result }, 'credentials');
       } catch (err) {
         console.error('[CredentialsPlugin] verify error:', err);
@@ -141,7 +141,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:logs', async ({ id, cocoonId }) => {
       try {
-        const logs = await api.getAccessLogs(this.ensureConnection(cocoonId), id);
+        const logs = await api.accessLogs(this.ensureConnection(cocoonId), id);
         this.bus.emit('credentials:logs-changed', { id, logs }, 'credentials');
       } catch (err) {
         console.error('[CredentialsPlugin] logs error:', err);

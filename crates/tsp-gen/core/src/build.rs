@@ -34,6 +34,9 @@ pub struct Generate {
     server_config: RustServerConfig,
     adi_config: Option<RustAdiServiceConfig>,
     types_crate: Option<String>,
+    /// When set, concatenate all generated files into a single `{name}.rs` in OUT_DIR.
+    /// Enables `include!(concat!(env!("OUT_DIR"), "/{name}.rs"))` pattern.
+    out_dir_file: Option<String>,
 }
 
 impl Generate {
@@ -47,6 +50,7 @@ impl Generate {
             server_config: RustServerConfig::default(),
             adi_config: None,
             types_crate: None,
+            out_dir_file: None,
         }
     }
 
@@ -82,6 +86,15 @@ impl Generate {
 
     pub fn adi_config(mut self, config: RustAdiServiceConfig) -> Self {
         self.adi_config = Some(config);
+        self
+    }
+
+    /// Generate to `OUT_DIR/{name}.rs` as a single concatenated file.
+    ///
+    /// Use with `include!(concat!(env!("OUT_DIR"), "/{name}.rs"))` in `lib.rs`.
+    /// This keeps generated code out of the source tree entirely.
+    pub fn output_to_out_dir(mut self, name: &str) -> Self {
+        self.out_dir_file = Some(name.to_string());
         self
     }
 
@@ -157,18 +170,34 @@ impl Generate {
             .generate(self.language, self.side)
             .context("code generation failed")?;
 
-        // Resolve output dir relative to manifest
-        let output_dir = if self.output_dir.is_relative() {
-            manifest_dir.join(&self.output_dir)
+        if let Some(ref file_name) = self.out_dir_file {
+            // OUT_DIR mode: concatenate all generated files into a single file
+            let combined = collect_generated_files(&temp_output)?;
+            let out_path = out_dir.join(format!("{file_name}.rs"));
+
+            // Only write if content changed
+            let needs_write = match std::fs::read_to_string(&out_path) {
+                Ok(existing) => existing != combined,
+                Err(_) => true,
+            };
+            if needs_write {
+                std::fs::write(&out_path, &combined)
+                    .with_context(|| format!("failed to write {}", out_path.display()))?;
+                println!("cargo:warning=Regenerated {}", out_path.display());
+            }
         } else {
-            self.output_dir.clone()
-        };
+            // Normal mode: sync files to output directory
+            let output_dir = if self.output_dir.is_relative() {
+                manifest_dir.join(&self.output_dir)
+            } else {
+                self.output_dir.clone()
+            };
 
-        // Compare and write only changed files
-        std::fs::create_dir_all(&output_dir)
-            .with_context(|| format!("failed to create output dir: {}", output_dir.display()))?;
+            std::fs::create_dir_all(&output_dir)
+                .with_context(|| format!("failed to create output dir: {}", output_dir.display()))?;
 
-        sync_generated_files(&temp_output, &output_dir)?;
+            sync_generated_files(&temp_output, &output_dir)?;
+        }
 
         Ok(())
     }
@@ -221,6 +250,31 @@ fn resolve_imports(
     }
 
     Ok(combined)
+}
+
+/// Recursively collect all `.rs` files from a directory into a single concatenated string.
+fn collect_generated_files(dir: &Path) -> Result<String> {
+    let mut parts = Vec::new();
+    collect_files_recursive(dir, &mut parts)?;
+    parts.sort_by(|(a, _), (b, _)| a.cmp(b));
+    Ok(parts.into_iter().map(|(_, content)| content).collect::<Vec<_>>().join("\n\n"))
+}
+
+fn collect_files_recursive(dir: &Path, parts: &mut Vec<(PathBuf, String)>) -> Result<()> {
+    if !dir.exists() {
+        return Ok(());
+    }
+    for entry in std::fs::read_dir(dir).context("failed to read generated dir")? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            collect_files_recursive(&path, parts)?;
+        } else if path.extension().map(|e| e == "rs").unwrap_or(false) {
+            let content = std::fs::read_to_string(&path)?;
+            parts.push((path, content));
+        }
+    }
+    Ok(())
 }
 
 /// Recursively sync files from `src_dir` to `dst_dir`, only writing when content differs.

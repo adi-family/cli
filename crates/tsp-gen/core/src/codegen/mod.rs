@@ -6,6 +6,7 @@ pub mod openapi;
 pub mod protocol;
 pub mod python;
 pub mod rust;
+pub mod ts_adi;
 pub mod ts_eventbus;
 pub mod ts_protocol;
 pub mod typescript;
@@ -218,6 +219,35 @@ impl<'a> Generator<'a> {
                 }
                 _ => Err(CodegenError::Generation(format!(
                     "Protocol generation not supported for {language:?}"
+                ))),
+            };
+        }
+
+        // AdiService generation supports both Rust and TypeScript
+        if side == Side::AdiService {
+            return match language {
+                Language::Rust => {
+                    generated.extend(rust::generate_with_config(
+                        self.file,
+                        self.output_dir,
+                        self.package_name,
+                        side,
+                        &self.rust_server_config,
+                        self.types_crate.as_deref(),
+                        self.rust_adi_config.as_ref(),
+                    )?);
+                    Ok(generated)
+                }
+                Language::TypeScript => {
+                    generated.extend(ts_adi::generate(
+                        self.file,
+                        self.output_dir,
+                        self.package_name,
+                    )?);
+                    Ok(generated)
+                }
+                _ => Err(CodegenError::Generation(format!(
+                    "AdiService generation not supported for {language:?}"
                 ))),
             };
         }

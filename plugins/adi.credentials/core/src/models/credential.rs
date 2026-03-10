@@ -80,3 +80,15 @@ pub struct CredentialAccessLog {
     pub details: Option<serde_json::Value>,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VerifyResult {
+    pub valid: bool,
+    pub is_expired: bool,
+    pub expires_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DeleteResult {
+    pub deleted: bool,
+}

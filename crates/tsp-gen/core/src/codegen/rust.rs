@@ -46,14 +46,26 @@ pub struct RustServerConfig {
 /// Configuration for AdiService code generation
 #[derive(Debug, Clone)]
 pub struct RustAdiServiceConfig {
-    /// Crate name for the types package (e.g., "tasks-types")
+    /// Crate name for the types package (e.g., "tasks-types").
+    /// Empty string skips types import (types in same crate).
     pub types_crate: String,
-    /// Service ID for AdiService::service_id() (e.g., "tasks")
-    pub service_id: String,
-    /// Human-readable service name (e.g., "Task Management")
+    /// Cocoon-core crate path for imports (e.g., "cocoon_core" or "crate").
+    pub cocoon_crate: String,
+    /// Human-readable service name. Empty = use interface name from TypeSpec.
     pub service_name: String,
-    /// Service version
+    /// Service version. Empty = emit `env!("CARGO_PKG_VERSION")`.
     pub service_version: String,
+}
+
+impl Default for RustAdiServiceConfig {
+    fn default() -> Self {
+        Self {
+            types_crate: String::new(),
+            cocoon_crate: "cocoon_core".into(),
+            service_name: String::new(),
+            service_version: String::new(),
+        }
+    }
 }
 
 /// Context for tracking inline enums that need to be generated
@@ -1407,129 +1419,52 @@ fn generate_adi_service(
     models: &ModelMap<'_>,
     config: &RustAdiServiceConfig,
 ) -> Result<String, CodegenError> {
+    use super::protocol::get_channel_name;
+
+    let cocoon = &config.cocoon_crate;
     let types_crate_ident = config.types_crate.replace('-', "_");
 
     let mut out = String::new();
 
-    writeln!(out, "//! Auto-generated AdiService handlers from TypeSpec.")?;
-    writeln!(out, "//! DO NOT EDIT.")?;
-    writeln!(out, "//!")?;
-    writeln!(
-        out,
-        "//! Implement the handler trait and wrap with the generated AdiService struct."
-    )?;
+    writeln!(out, "// Auto-generated AdiService handlers from TypeSpec.")?;
+    writeln!(out, "// DO NOT EDIT.")?;
+    writeln!(out, "//")?;
+    writeln!(out, "// Implement the handler trait and wrap with the generated AdiService struct.")?;
     writeln!(out)?;
-    writeln!(out, "#![allow(unused_imports)]")?;
-    writeln!(out)?;
-    writeln!(out, "use {}::models::*;", types_crate_ident)?;
-    writeln!(out, "use {}::enums::*;", types_crate_ident)?;
+    if !types_crate_ident.is_empty() {
+        writeln!(out, "use {}::models::*;", types_crate_ident)?;
+        writeln!(out, "use {}::enums::*;", types_crate_ident)?;
+    }
+
+    writeln!(out, "use {}::{{AdiCallerContext, AdiHandleResult, AdiService, AdiServiceError}};", cocoon)?;
+    writeln!(out, "use {}::protocol::types::{{AdiMethodInfo, AdiPluginCapabilities}};", cocoon)?;
     writeln!(out, "use async_trait::async_trait;")?;
     writeln!(out, "use serde_json::Value as JsonValue;")?;
+    writeln!(out, "use bytes::Bytes;")?;
     writeln!(out)?;
 
-    // Re-export error/result types so consumers don't need cocoon dependency for the trait
-    writeln!(out, "/// Error type for AdiService handlers.")?;
-    writeln!(out, "#[derive(Debug, Clone)]")?;
-    writeln!(out, "pub struct AdiServiceError {{")?;
-    writeln!(out, "    pub code: String,")?;
-    writeln!(out, "    pub message: String,")?;
-    writeln!(out, "}}")?;
-    writeln!(out)?;
-    writeln!(out, "impl AdiServiceError {{")?;
-    writeln!(
-        out,
-        "    pub fn not_found(message: impl Into<String>) -> Self {{"
-    )?;
-    writeln!(
-        out,
-        r#"        Self {{ code: "not_found".to_string(), message: message.into() }}"#
-    )?;
-    writeln!(out, "    }}")?;
-    writeln!(
-        out,
-        "    pub fn invalid_params(message: impl Into<String>) -> Self {{"
-    )?;
-    writeln!(
-        out,
-        r#"        Self {{ code: "invalid_params".to_string(), message: message.into() }}"#
-    )?;
-    writeln!(out, "    }}")?;
-    writeln!(
-        out,
-        "    pub fn internal(message: impl Into<String>) -> Self {{"
-    )?;
-    writeln!(
-        out,
-        r#"        Self {{ code: "internal".to_string(), message: message.into() }}"#
-    )?;
-    writeln!(out, "    }}")?;
-    writeln!(
-        out,
-        "    pub fn method_not_found(method: &str) -> Self {{"
-    )?;
-    writeln!(
-        out,
-        r#"        Self {{ code: "method_not_found".to_string(), message: format!("Method '{{}}' not found", method) }}"#
-    )?;
-    writeln!(out, "    }}")?;
-    writeln!(out, "}}")?;
-    writeln!(out)?;
-
-    // AdiHandleResult
-    writeln!(out, "/// Result of handling an AdiService request.")?;
-    writeln!(out, "pub enum AdiHandleResult {{")?;
-    writeln!(out, "    Success(JsonValue),")?;
-    writeln!(out, "}}")?;
-    writeln!(out)?;
-
-    // AdiMethodInfo
-    writeln!(out, "/// Metadata about an AdiService method.")?;
-    writeln!(out, "#[derive(Debug, Clone, Default)]")?;
-    writeln!(out, "pub struct AdiMethodInfo {{")?;
-    writeln!(out, "    pub name: String,")?;
-    writeln!(out, "    pub description: String,")?;
-    writeln!(out, "    pub streaming: bool,")?;
-    writeln!(out, "    pub params_schema: Option<JsonValue>,")?;
-    writeln!(out, "    pub result_schema: Option<JsonValue>,")?;
-    writeln!(out, "    pub deprecated: bool,")?;
-    writeln!(out, "    pub deprecation_message: Option<String>,")?;
-    writeln!(out, "}}")?;
-    writeln!(out)?;
-
-    // AdiService trait (simplified version matching cocoon's)
-    writeln!(out, "/// Trait for AdiService implementations.")?;
-    writeln!(out, "#[async_trait]")?;
-    writeln!(out, "pub trait AdiServiceTrait: Send + Sync {{")?;
-    writeln!(out, "    fn service_id(&self) -> &str;")?;
-    writeln!(out, "    fn name(&self) -> &str;")?;
-    writeln!(out, "    fn version(&self) -> &str;")?;
-    writeln!(
-        out,
-        "    fn description(&self) -> Option<&str> {{ None }}"
-    )?;
-    writeln!(
-        out,
-        "    fn methods(&self) -> Vec<AdiMethodInfo>;"
-    )?;
-    writeln!(
-        out,
-        "    async fn handle(&self, method: &str, params: JsonValue) -> Result<AdiHandleResult, AdiServiceError>;"
-    )?;
-    writeln!(out, "}}")?;
-    writeln!(out)?;
-
-    // For each interface, generate a handler trait and AdiService wrapper
     for iface in file.interfaces() {
-        let trait_name = format!("{}AdiHandler", iface.name);
-        let wrapper_name = format!("{}Adi", iface.name);
+        let channel_name = match get_channel_name(&iface.decorators) {
+            Some(name) => name,
+            None => continue,
+        };
 
-        // --- Handler trait ---
+        let trait_name = format!("{}Handler", iface.name);
+        let wrapper_name = format!("{}Adi", iface.name);
+        let service_name = if config.service_name.is_empty() {
+            iface.name.clone()
+        } else {
+            config.service_name.clone()
+        };
+        let version_expr = if config.service_version.is_empty() {
+            "env!(\"CARGO_PKG_VERSION\")".to_string()
+        } else {
+            format!("\"{}\"", config.service_version)
+        };
+
+        // --- Handler trait (plugin author implements this) ---
         writeln!(out, "#[async_trait]")?;
-        writeln!(
-            out,
-            "pub trait {}: Send + Sync {{",
-            trait_name
-        )?;
+        writeln!(out, "pub trait {}: Send + Sync {{", trait_name)?;
 
         for op in &iface.operations {
             let fn_name = op.name.to_case(Case::Snake);
@@ -1544,21 +1479,17 @@ fn generate_adi_service(
                     is_streaming: false,
                 });
 
-            write!(out, "    async fn {}(&self", fn_name)?;
+            write!(out, "    async fn {}(&self, ctx: &AdiCallerContext", fn_name)?;
 
-            // Path params
             for p in resolved.iter().filter(|p| matches!(p.kind, ParamKind::Path)) {
-                let name = p.name.to_case(Case::Snake);
-                write!(out, ", {}: {}", name, p.rust_type)?;
+                write!(out, ", {}: {}", p.name.to_case(Case::Snake), p.rust_type)?;
             }
 
-            // Query params — collect into a struct or inline
             let query_params: Vec<_> = resolved
                 .iter()
                 .filter(|p| matches!(p.kind, ParamKind::Query))
                 .collect();
             if !query_params.is_empty() {
-                // Use the same query struct as server side
                 let struct_name = format!(
                     "{}{}Query",
                     iface.name,
@@ -1567,10 +1498,8 @@ fn generate_adi_service(
                 write!(out, ", query: {}", struct_name)?;
             }
 
-            // Body/inline params (each as a named argument)
             for p in resolved.iter().filter(|p| matches!(p.kind, ParamKind::Body)) {
-                let name = p.name.to_case(Case::Snake);
-                write!(out, ", {}: {}", name, p.rust_type)?;
+                write!(out, ", {}: {}", p.name.to_case(Case::Snake), p.rust_type)?;
             }
 
             let return_type = match &resp.body_type {
@@ -1578,17 +1507,13 @@ fn generate_adi_service(
                 _ => "()".to_string(),
             };
 
-            writeln!(
-                out,
-                ") -> Result<{}, AdiServiceError>;",
-                return_type
-            )?;
+            writeln!(out, ") -> Result<{}, AdiServiceError>;", return_type)?;
         }
 
         writeln!(out, "}}")?;
         writeln!(out)?;
 
-        // --- Query param structs (same as server) ---
+        // --- Query param structs ---
         let mut emitted_query_structs = std::collections::HashSet::new();
         for op in &iface.operations {
             let resolved = resolve_op_params(op, scalars, models);
@@ -1604,7 +1529,7 @@ fn generate_adi_service(
                 );
                 if emitted_query_structs.insert(struct_name.clone()) {
                     writeln!(out, "#[derive(Debug, serde::Deserialize, serde::Serialize)]")?;
-                    writeln!(out, "#[serde(rename_all = \"camelCase\")]")?;
+                    writeln!(out, "#[serde(rename_all = \"snake_case\")]")?;
                     writeln!(out, "pub struct {} {{", struct_name)?;
                     for p in &query_params {
                         let field_name = p.name.to_case(Case::Snake);
@@ -1621,62 +1546,28 @@ fn generate_adi_service(
             }
         }
 
-        // --- AdiService wrapper ---
-        writeln!(
-            out,
-            "/// AdiService wrapper for {} that dispatches to the handler trait.",
-            iface.name
-        )?;
-        writeln!(
-            out,
-            "pub struct {}<H: {}> {{",
-            wrapper_name, trait_name
-        )?;
+        // --- AdiService wrapper struct ---
+        writeln!(out, "/// AdiService wrapper for {} — dispatches to handler trait.", iface.name)?;
+        writeln!(out, "pub struct {}<H: {}> {{", wrapper_name, trait_name)?;
         writeln!(out, "    handler: H,")?;
         writeln!(out, "}}")?;
         writeln!(out)?;
 
-        writeln!(
-            out,
-            "impl<H: {}> {}<H> {{",
-            trait_name, wrapper_name
-        )?;
+        writeln!(out, "impl<H: {}> {}<H> {{", trait_name, wrapper_name)?;
         writeln!(out, "    pub fn new(handler: H) -> Self {{")?;
         writeln!(out, "        Self {{ handler }}")?;
         writeln!(out, "    }}")?;
         writeln!(out, "}}")?;
         writeln!(out)?;
 
-        // Implement AdiServiceTrait
+        // --- Implement cocoon-core's real AdiService trait ---
         writeln!(out, "#[async_trait]")?;
-        writeln!(
-            out,
-            "impl<H: {} + 'static> AdiServiceTrait for {}<H> {{",
-            trait_name, wrapper_name
-        )?;
+        writeln!(out, "impl<H: {} + 'static> AdiService for {}<H> {{", trait_name, wrapper_name)?;
 
-        // service_id
-        writeln!(
-            out,
-            "    fn service_id(&self) -> &str {{ \"{}\" }}",
-            config.service_id
-        )?;
+        writeln!(out, "    fn plugin_id(&self) -> &str {{ \"{}\" }}", channel_name)?;
+        writeln!(out, "    fn name(&self) -> &str {{ \"{}\" }}", service_name)?;
+        writeln!(out, "    fn version(&self) -> &str {{ {} }}", version_expr)?;
 
-        // name
-        writeln!(
-            out,
-            "    fn name(&self) -> &str {{ \"{}\" }}",
-            config.service_name
-        )?;
-
-        // version
-        writeln!(
-            out,
-            "    fn version(&self) -> &str {{ \"{}\" }}",
-            config.service_version
-        )?;
-
-        // methods — generate AdiMethodInfo for each operation
         writeln!(out, "    fn methods(&self) -> Vec<AdiMethodInfo> {{")?;
         writeln!(out, "        vec![")?;
 
@@ -1684,16 +1575,10 @@ fn generate_adi_service(
             let fn_name = op.name.to_case(Case::Snake);
             let description = get_description(&op.decorators).unwrap_or_default();
             let resolved = resolve_op_params(op, scalars, models);
-
-            // Build a simple params schema
             let has_params = !resolved.is_empty();
 
             writeln!(out, "            AdiMethodInfo {{")?;
-            writeln!(
-                out,
-                "                name: \"{}\".to_string(),",
-                fn_name
-            )?;
+            writeln!(out, "                name: \"{}\".to_string(),", fn_name)?;
             writeln!(
                 out,
                 "                description: \"{}\".to_string(),",
@@ -1702,7 +1587,6 @@ fn generate_adi_service(
             writeln!(out, "                streaming: false,")?;
 
             if has_params {
-                // Generate a JSON schema for params
                 writeln!(out, "                params_schema: Some(serde_json::json!({{")?;
                 writeln!(out, "                    \"type\": \"object\",")?;
                 writeln!(out, "                    \"properties\": {{")?;
@@ -1730,11 +1614,12 @@ fn generate_adi_service(
         writeln!(out, "    }}")?;
         writeln!(out)?;
 
-        // handle — match dispatch
+        // handle — match dispatch (with ctx)
         writeln!(
             out,
-            "    async fn handle(&self, method: &str, params: JsonValue) -> Result<AdiHandleResult, AdiServiceError> {{"
+            "    async fn handle(&self, ctx: &AdiCallerContext, method: &str, payload: Bytes) -> Result<AdiHandleResult, AdiServiceError> {{"
         )?;
+        writeln!(out, "        let params: JsonValue = if payload.is_empty() {{ JsonValue::Object(Default::default()) }} else {{ serde_json::from_slice(&payload).map_err(|e| AdiServiceError::invalid_params(e.to_string()))? }};")?;
         writeln!(out, "        match method {{")?;
 
         for op in &iface.operations {
@@ -1751,14 +1636,12 @@ fn generate_adi_service(
                 .collect();
             writeln!(out, "            \"{}\" => {{", fn_name)?;
 
-            // Deserialize path params from params object
             for p in &path_params {
                 let snake = p.name.to_case(Case::Snake);
                 let deser = json_deserialize_expr(&p.rust_type, &snake);
                 writeln!(out, "                let {} = {};", snake, deser)?;
             }
 
-            // Deserialize query params
             if !query_params.is_empty() {
                 let struct_name = format!(
                     "{}{}Query",
@@ -1772,7 +1655,6 @@ fn generate_adi_service(
                 )?;
             }
 
-            // Deserialize body/inline params individually from params object
             let body_params: Vec<_> = resolved
                 .iter()
                 .filter(|p| matches!(p.kind, ParamKind::Body))
@@ -1783,35 +1665,22 @@ fn generate_adi_service(
                 writeln!(out, "                let {} = {};", snake, deser)?;
             }
 
-            // Build call args
-            write!(out, "                let result = self.handler.{}(", fn_name)?;
-            let mut first = true;
+            // ctx is always first arg
+            write!(out, "                let result = self.handler.{}(ctx", fn_name)?;
             for p in &path_params {
-                if !first {
-                    write!(out, ", ")?;
-                }
-                write!(out, "{}", p.name.to_case(Case::Snake))?;
-                first = false;
+                write!(out, ", {}", p.name.to_case(Case::Snake))?;
             }
             if !query_params.is_empty() {
-                if !first {
-                    write!(out, ", ")?;
-                }
-                write!(out, "query")?;
-                first = false;
+                write!(out, ", query")?;
             }
             for p in &body_params {
-                if !first {
-                    write!(out, ", ")?;
-                }
-                write!(out, "{}", p.name.to_case(Case::Snake))?;
-                first = false;
+                write!(out, ", {}", p.name.to_case(Case::Snake))?;
             }
             writeln!(out, ").await?;")?;
 
             writeln!(
                 out,
-                "                Ok(AdiHandleResult::Success(serde_json::to_value(result).unwrap()))"
+                "                Ok(AdiHandleResult::Success(Bytes::from(serde_json::to_vec(&result).unwrap())))"
             )?;
             writeln!(out, "            }}")?;
         }
@@ -1827,223 +1696,8 @@ fn generate_adi_service(
         writeln!(out)?;
     }
 
-    // If multiple interfaces, generate a combined wrapper
-    let interfaces: Vec<_> = file.interfaces().collect();
-    if interfaces.len() > 1 {
-        let trait_bounds: Vec<String> = interfaces
-            .iter()
-            .map(|i| format!("{}AdiHandler", i.name))
-            .collect();
-        let combined_trait = format!("CombinedAdiHandler");
-
-        writeln!(
-            out,
-            "/// Combined handler trait for all interfaces."
-        )?;
-        writeln!(
-            out,
-            "pub trait {}: {} {{}}",
-            combined_trait,
-            trait_bounds.join(" + ")
-        )?;
-        writeln!(
-            out,
-            "impl<T: {}> {} for T {{}}",
-            trait_bounds.join(" + "),
-            combined_trait,
-        )?;
-        writeln!(out)?;
-
-        // Combined wrapper
-        writeln!(
-            out,
-            "/// Combined AdiService wrapper for all interfaces."
-        )?;
-        writeln!(
-            out,
-            "pub struct CombinedAdi<H: CombinedAdiHandler> {{"
-        )?;
-        writeln!(out, "    handler: H,")?;
-        writeln!(out, "}}")?;
-        writeln!(out)?;
-
-        writeln!(
-            out,
-            "impl<H: CombinedAdiHandler> CombinedAdi<H> {{"
-        )?;
-        writeln!(out, "    pub fn new(handler: H) -> Self {{")?;
-        writeln!(out, "        Self {{ handler }}")?;
-        writeln!(out, "    }}")?;
-        writeln!(out, "}}")?;
-        writeln!(out)?;
-
-        writeln!(out, "#[async_trait]")?;
-        writeln!(
-            out,
-            "impl<H: CombinedAdiHandler + 'static> AdiServiceTrait for CombinedAdi<H> {{"
-        )?;
-        writeln!(
-            out,
-            "    fn service_id(&self) -> &str {{ \"{}\" }}",
-            config.service_id
-        )?;
-        writeln!(
-            out,
-            "    fn name(&self) -> &str {{ \"{}\" }}",
-            config.service_name
-        )?;
-        writeln!(
-            out,
-            "    fn version(&self) -> &str {{ \"{}\" }}",
-            config.service_version
-        )?;
-
-        // Merge methods from all interfaces
-        writeln!(out, "    fn methods(&self) -> Vec<AdiMethodInfo> {{")?;
-        writeln!(out, "        let mut methods = Vec::new();")?;
-        for iface in &interfaces {
-            for op in &iface.operations {
-                let fn_name = op.name.to_case(Case::Snake);
-                let description = get_description(&op.decorators).unwrap_or_default();
-                let resolved = resolve_op_params(op, scalars, models);
-                let has_params = !resolved.is_empty();
-
-                writeln!(out, "        methods.push(AdiMethodInfo {{")?;
-                writeln!(
-                    out,
-                    "            name: \"{}\".to_string(),",
-                    fn_name
-                )?;
-                writeln!(
-                    out,
-                    "            description: \"{}\".to_string(),",
-                    description.replace('"', "\\\"")
-                )?;
-                writeln!(out, "            streaming: false,")?;
-                if has_params {
-                    writeln!(out, "            params_schema: Some(serde_json::json!({{")?;
-                    writeln!(out, "                \"type\": \"object\",")?;
-                    writeln!(out, "                \"properties\": {{")?;
-                    for p in &resolved {
-                        let json_type = rust_type_to_json_schema_type(&p.rust_type);
-                        writeln!(
-                            out,
-                            "                    \"{}\": {{ \"type\": \"{}\" }},",
-                            p.name.to_case(Case::Snake),
-                            json_type
-                        )?;
-                    }
-                    writeln!(out, "                }}")?;
-                    writeln!(out, "            }})),")?;
-                } else {
-                    writeln!(out, "            params_schema: None,")?;
-                }
-                writeln!(out, "            result_schema: None,")?;
-                writeln!(out, "            ..Default::default()")?;
-                writeln!(out, "        }});")?;
-            }
-        }
-        writeln!(out, "        methods")?;
-        writeln!(out, "    }}")?;
-        writeln!(out)?;
-
-        // Combined handle dispatch
-        writeln!(
-            out,
-            "    async fn handle(&self, method: &str, params: JsonValue) -> Result<AdiHandleResult, AdiServiceError> {{"
-        )?;
-        writeln!(out, "        match method {{")?;
-
-        for iface in &interfaces {
-            for op in &iface.operations {
-                let fn_name = op.name.to_case(Case::Snake);
-                let resolved = resolve_op_params(op, scalars, models);
-
-                let path_params: Vec<_> = resolved
-                    .iter()
-                    .filter(|p| matches!(p.kind, ParamKind::Path))
-                    .collect();
-                let query_params: Vec<_> = resolved
-                    .iter()
-                    .filter(|p| matches!(p.kind, ParamKind::Query))
-                    .collect();
-                writeln!(out, "            \"{}\" => {{", fn_name)?;
-
-                for p in &path_params {
-                    let snake = p.name.to_case(Case::Snake);
-                    let deser = json_deserialize_expr(&p.rust_type, &snake);
-                    writeln!(out, "                let {} = {};", snake, deser)?;
-                }
-
-                if !query_params.is_empty() {
-                    let struct_name = format!(
-                        "{}{}Query",
-                        iface.name,
-                        op.name.to_case(Case::Pascal)
-                    );
-                    writeln!(
-                        out,
-                        "                let query: {} = serde_json::from_value(params.clone()).map_err(|e| AdiServiceError::invalid_params(e.to_string()))?;",
-                        struct_name
-                    )?;
-                }
-
-                let body_params: Vec<_> = resolved
-                    .iter()
-                    .filter(|p| matches!(p.kind, ParamKind::Body))
-                    .collect();
-                for p in &body_params {
-                    let snake = p.name.to_case(Case::Snake);
-                    let deser = json_deserialize_expr(&p.rust_type, &snake);
-                    writeln!(out, "                let {} = {};", snake, deser)?;
-                }
-
-                write!(out, "                let result = self.handler.{}(", fn_name)?;
-                let mut first = true;
-                for p in &path_params {
-                    if !first {
-                        write!(out, ", ")?;
-                    }
-                    write!(out, "{}", p.name.to_case(Case::Snake))?;
-                    first = false;
-                }
-                if !query_params.is_empty() {
-                    if !first {
-                        write!(out, ", ")?;
-                    }
-                    write!(out, "query")?;
-                    first = false;
-                }
-                for p in &body_params {
-                    if !first {
-                        write!(out, ", ")?;
-                    }
-                    write!(out, "{}", p.name.to_case(Case::Snake))?;
-                    first = false;
-                }
-                writeln!(out, ").await?;")?;
-
-                writeln!(
-                    out,
-                    "                Ok(AdiHandleResult::Success(serde_json::to_value(result).unwrap()))"
-                )?;
-                writeln!(out, "            }}")?;
-            }
-        }
-
-        writeln!(
-            out,
-            "            _ => Err(AdiServiceError::method_not_found(method)),"
-        )?;
-        writeln!(out, "        }}")?;
-        writeln!(out, "    }}")?;
-        writeln!(out, "}}")?;
-        writeln!(out)?;
-    }
-
     Ok(out)
 }
-
 /// Map a Rust type string to a JSON Schema type string
 fn rust_type_to_json_schema_type(rust_type: &str) -> &str {
     match rust_type {

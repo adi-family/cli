@@ -92,12 +92,13 @@ impl PluginWebBuild {
             .or(meta.plugin_class.clone())
             .unwrap_or_else(|| derive_plugin_class(&meta.name));
 
-        // EventBus codegen (optional — only if .tsp exists)
+        // TSP codegen (optional — only if .tsp exists)
         let tsp_path = manifest_dir.join(&self.tsp_path);
         let has_eventbus = tsp_path.exists();
         if has_eventbus {
             println!("cargo:rerun-if-changed={}", tsp_path.display());
             generate_eventbus(&tsp_path, &output_dir.join(&self.bus_subdir), &meta)?;
+            generate_adi_client(&tsp_path, &output_dir.join("generated"), &meta)?;
         }
 
         // config.ts
@@ -204,6 +205,28 @@ fn generate_eventbus(tsp_path: &Path, bus_dir: &Path, meta: &PluginMeta) -> Resu
         .with_eventbus_config(config)
         .generate(Language::TypeScript, Side::EventBus)
         .context("eventbus codegen failed")?;
+
+    Ok(())
+}
+
+fn generate_adi_client(tsp_path: &Path, generated_dir: &Path, meta: &PluginMeta) -> Result<()> {
+    let source =
+        std::fs::read_to_string(tsp_path).with_context(|| format!("read {}", tsp_path.display()))?;
+    let file =
+        typespec_api::parse(&source).with_context(|| format!("parse {}", tsp_path.display()))?;
+
+    let package_name = meta.id.rsplit('.').next().unwrap_or(&meta.id);
+
+    let generated = Generator::new(&file, generated_dir, package_name)
+        .generate(Language::TypeScript, Side::AdiService)
+        .context("adi-client codegen failed")?;
+
+    // Also generate types alongside the client if not already present
+    if !generated.is_empty() {
+        Generator::new(&file, generated_dir, package_name)
+            .generate(Language::TypeScript, Side::Types)
+            .context("types codegen failed")?;
+    }
 
     Ok(())
 }

@@ -7,5 +7,3 @@ declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
   }
 }
-
-export {};
