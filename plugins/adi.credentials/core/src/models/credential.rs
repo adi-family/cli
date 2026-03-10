@@ -16,7 +16,6 @@ pub enum CredentialType {
 }
 
 #[derive(Debug, Clone, FromRow)]
-#[allow(dead_code)]
 pub struct CredentialRow {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -68,33 +67,6 @@ pub struct CredentialWithData {
     #[serde(flatten)]
     pub credential: Credential,
     pub data: serde_json::Value,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct CreateCredential {
-    pub name: String,
-    pub description: Option<String>,
-    pub credential_type: CredentialType,
-    pub data: serde_json::Value,
-    pub metadata: Option<serde_json::Value>,
-    pub provider: Option<String>,
-    pub expires_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct UpdateCredential {
-    pub name: Option<String>,
-    pub description: Option<String>,
-    pub data: Option<serde_json::Value>,
-    pub metadata: Option<serde_json::Value>,
-    pub provider: Option<String>,
-    pub expires_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct ListCredentialsQuery {
-    pub credential_type: Option<CredentialType>,
-    pub provider: Option<String>,
 }
 
 #[derive(Debug, Clone, FromRow, Serialize)]
