@@ -15,10 +15,10 @@
       "name": "app",
       "version": "0.0.0",
       "dependencies": {
+        "@adi-family/plugin-debug-screen": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
         "@adi-family/video-sdk": "workspace:*",
-        "@adi/debug-screen-web-plugin": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
         "html2canvas": "^1.4.1",
         "lit": "^3.3.2",
       },
@@ -31,11 +31,11 @@
       },
     },
     "crates/actions-feed/web": {
-      "name": "@adi/actions-feed-web-plugin",
+      "name": "@adi-family/plugin-actions-feed",
       "version": "0.1.0",
       "dependencies": {
+        "@adi-family/plugin-slots": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/slots-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -46,11 +46,11 @@
       },
     },
     "crates/auth/web": {
-      "name": "@adi/auth-web-plugin",
+      "name": "@adi-family/plugin-auth",
       "version": "0.1.0",
       "dependencies": {
+        "@adi-family/plugin-router": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -61,14 +61,14 @@
       },
     },
     "crates/cocoon-control-center/web": {
-      "name": "@adi/cocoon-control-center-web-plugin",
+      "name": "@adi-family/plugin-cocoon-control-center",
       "version": "0.1.0",
       "dependencies": {
+        "@adi-family/plugin-cocoon": "workspace:*",
+        "@adi-family/plugin-debug-screen": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
+        "@adi-family/plugin-signaling": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/cocoon-web-plugin": "workspace:*",
-        "@adi/debug-screen-web-plugin": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
-        "@adi/signaling-web-plugin": "workspace:*",
         "@xterm/addon-fit": "^0.10.0",
         "@xterm/xterm": "^5.5.0",
         "lit": "^3.3.2",
@@ -79,15 +79,15 @@
       },
     },
     "crates/cocoon/web": {
-      "name": "@adi/cocoon-web-plugin",
+      "name": "@adi-family/plugin-cocoon",
       "version": "0.1.0",
       "dependencies": {
         "@adi-family/cocoon-plugin-interface": "workspace:*",
+        "@adi-family/plugin-auth": "workspace:*",
+        "@adi-family/plugin-debug-screen": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
+        "@adi-family/plugin-signaling": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/auth-web-plugin": "workspace:*",
-        "@adi/debug-screen-web-plugin": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
-        "@adi/signaling-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -96,11 +96,11 @@
       },
     },
     "crates/command-palette/web": {
-      "name": "@adi/command-palette-web-plugin",
+      "name": "@adi-family/plugin-command-palette",
       "version": "0.1.0",
       "dependencies": {
+        "@adi-family/plugin-slots": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/slots-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -111,13 +111,13 @@
       },
     },
     "crates/credentials/web": {
-      "name": "@adi/credentials-web-plugin",
+      "name": "@adi-family/plugin-credentials",
       "version": "0.1.0",
       "dependencies": {
         "@adi-family/cocoon-plugin-interface": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
+        "@adi-family/plugin-signaling": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
-        "@adi/signaling-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -128,11 +128,11 @@
       },
     },
     "crates/debug-screen/web": {
-      "name": "@adi/debug-screen-web-plugin",
+      "name": "@adi-family/plugin-debug-screen",
       "version": "0.1.0",
       "dependencies": {
+        "@adi-family/plugin-router": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -143,12 +143,12 @@
       },
     },
     "crates/knowledgebase/web": {
-      "name": "@adi/knowledgebase-web-plugin",
+      "name": "@adi-family/plugin-knowledgebase",
       "version": "0.1.0",
       "dependencies": {
         "@adi-family/cocoon-plugin-interface": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -159,11 +159,11 @@
       },
     },
     "crates/monaco-editor/web": {
-      "name": "@adi/monaco-editor-web-plugin",
+      "name": "@adi-family/plugin-monaco-editor",
       "version": "0.1.0",
       "dependencies": {
+        "@adi-family/plugin-router": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
         "lit": "^3.3.2",
         "monaco-editor": "^0.52.2",
       },
@@ -175,12 +175,12 @@
       },
     },
     "crates/payment/web": {
-      "name": "@adi/payment-web-plugin",
+      "name": "@adi-family/plugin-payment",
       "version": "0.1.0",
       "dependencies": {
         "@adi-family/cocoon-plugin-interface": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -191,13 +191,13 @@
       },
     },
     "crates/plugins/web": {
-      "name": "@adi/plugins-web-plugin",
+      "name": "@adi-family/plugin-plugins",
       "version": "0.1.0",
       "dependencies": {
+        "@adi-family/plugin-cocoon": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
+        "@adi-family/plugin-signaling": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/cocoon-web-plugin": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
-        "@adi/signaling-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -208,13 +208,13 @@
       },
     },
     "crates/router/web": {
-      "name": "@adi/router-web-plugin",
+      "name": "@adi-family/plugin-router",
       "version": "0.1.0",
       "dependencies": {
+        "@adi-family/plugin-command-palette": "workspace:*",
+        "@adi-family/plugin-debug-screen": "workspace:*",
+        "@adi-family/plugin-slots": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/command-palette-web-plugin": "workspace:*",
-        "@adi/debug-screen-web-plugin": "workspace:*",
-        "@adi/slots-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -225,13 +225,13 @@
       },
     },
     "crates/signaling/web": {
-      "name": "@adi/signaling-web-plugin",
+      "name": "@adi-family/plugin-signaling",
       "version": "0.1.0",
       "dependencies": {
+        "@adi-family/plugin-actions-feed": "workspace:*",
+        "@adi-family/plugin-auth": "workspace:*",
+        "@adi-family/plugin-debug-screen": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/actions-feed-web-plugin": "workspace:*",
-        "@adi/auth-web-plugin": "workspace:*",
-        "@adi/debug-screen-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -240,7 +240,7 @@
       },
     },
     "crates/slots/web": {
-      "name": "@adi/slots-web-plugin",
+      "name": "@adi-family/plugin-slots",
       "version": "0.1.0",
       "dependencies": {
         "@adi-family/sdk-plugin": "workspace:*",
@@ -254,12 +254,12 @@
       },
     },
     "crates/tasks/web": {
-      "name": "@adi/tasks-web-plugin",
+      "name": "@adi-family/plugin-tasks",
       "version": "0.1.0",
       "dependencies": {
         "@adi-family/cocoon-plugin-interface": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -270,13 +270,13 @@
       },
     },
     "crates/video/web": {
-      "name": "@adi/video-web-plugin",
+      "name": "@adi-family/plugin-video",
       "version": "0.1.0",
       "dependencies": {
         "@adi-family/cocoon-plugin-interface": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
         "@adi-family/video-sdk": "workspace:*",
-        "@adi/router-web-plugin": "workspace:*",
         "lit": "^3.3.2",
       },
       "devDependencies": {
@@ -290,8 +290,8 @@
       "name": "@adi-family/cocoon-plugin-interface",
       "version": "0.1.0",
       "dependencies": {
+        "@adi-family/plugin-signaling": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
-        "@adi/signaling-web-plugin": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.3.10",
@@ -335,6 +335,38 @@
   "packages": {
     "@adi-family/cocoon-plugin-interface": ["@adi-family/cocoon-plugin-interface@workspace:packages/cocoon-plugin-interface"],
 
+    "@adi-family/plugin-actions-feed": ["@adi-family/plugin-actions-feed@workspace:crates/actions-feed/web"],
+
+    "@adi-family/plugin-auth": ["@adi-family/plugin-auth@workspace:crates/auth/web"],
+
+    "@adi-family/plugin-cocoon": ["@adi-family/plugin-cocoon@workspace:crates/cocoon/web"],
+
+    "@adi-family/plugin-cocoon-control-center": ["@adi-family/plugin-cocoon-control-center@workspace:crates/cocoon-control-center/web"],
+
+    "@adi-family/plugin-command-palette": ["@adi-family/plugin-command-palette@workspace:crates/command-palette/web"],
+
+    "@adi-family/plugin-credentials": ["@adi-family/plugin-credentials@workspace:crates/credentials/web"],
+
+    "@adi-family/plugin-debug-screen": ["@adi-family/plugin-debug-screen@workspace:crates/debug-screen/web"],
+
+    "@adi-family/plugin-knowledgebase": ["@adi-family/plugin-knowledgebase@workspace:crates/knowledgebase/web"],
+
+    "@adi-family/plugin-monaco-editor": ["@adi-family/plugin-monaco-editor@workspace:crates/monaco-editor/web"],
+
+    "@adi-family/plugin-payment": ["@adi-family/plugin-payment@workspace:crates/payment/web"],
+
+    "@adi-family/plugin-plugins": ["@adi-family/plugin-plugins@workspace:crates/plugins/web"],
+
+    "@adi-family/plugin-router": ["@adi-family/plugin-router@workspace:crates/router/web"],
+
+    "@adi-family/plugin-signaling": ["@adi-family/plugin-signaling@workspace:crates/signaling/web"],
+
+    "@adi-family/plugin-slots": ["@adi-family/plugin-slots@workspace:crates/slots/web"],
+
+    "@adi-family/plugin-tasks": ["@adi-family/plugin-tasks@workspace:crates/tasks/web"],
+
+    "@adi-family/plugin-video": ["@adi-family/plugin-video@workspace:crates/video/web"],
+
     "@adi-family/sdk-parts-css": ["@adi-family/sdk-parts-css@workspace:packages/css"],
 
     "@adi-family/sdk-plugin": ["@adi-family/sdk-plugin@workspace:packages/plugin-sdk"],
@@ -342,38 +374,6 @@
     "@adi-family/sdk-ui-components": ["@adi-family/sdk-ui-components@workspace:packages/ui-components"],
 
     "@adi-family/video-sdk": ["@adi-family/video-sdk@workspace:packages/video-sdk"],
-
-    "@adi/actions-feed-web-plugin": ["@adi/actions-feed-web-plugin@workspace:crates/actions-feed/web"],
-
-    "@adi/auth-web-plugin": ["@adi/auth-web-plugin@workspace:crates/auth/web"],
-
-    "@adi/cocoon-control-center-web-plugin": ["@adi/cocoon-control-center-web-plugin@workspace:crates/cocoon-control-center/web"],
-
-    "@adi/cocoon-web-plugin": ["@adi/cocoon-web-plugin@workspace:crates/cocoon/web"],
-
-    "@adi/command-palette-web-plugin": ["@adi/command-palette-web-plugin@workspace:crates/command-palette/web"],
-
-    "@adi/credentials-web-plugin": ["@adi/credentials-web-plugin@workspace:crates/credentials/web"],
-
-    "@adi/debug-screen-web-plugin": ["@adi/debug-screen-web-plugin@workspace:crates/debug-screen/web"],
-
-    "@adi/knowledgebase-web-plugin": ["@adi/knowledgebase-web-plugin@workspace:crates/knowledgebase/web"],
-
-    "@adi/monaco-editor-web-plugin": ["@adi/monaco-editor-web-plugin@workspace:crates/monaco-editor/web"],
-
-    "@adi/payment-web-plugin": ["@adi/payment-web-plugin@workspace:crates/payment/web"],
-
-    "@adi/plugins-web-plugin": ["@adi/plugins-web-plugin@workspace:crates/plugins/web"],
-
-    "@adi/router-web-plugin": ["@adi/router-web-plugin@workspace:crates/router/web"],
-
-    "@adi/signaling-web-plugin": ["@adi/signaling-web-plugin@workspace:crates/signaling/web"],
-
-    "@adi/slots-web-plugin": ["@adi/slots-web-plugin@workspace:crates/slots/web"],
-
-    "@adi/tasks-web-plugin": ["@adi/tasks-web-plugin@workspace:crates/tasks/web"],
-
-    "@adi/video-web-plugin": ["@adi/video-web-plugin@workspace:crates/video/web"],
 
     "@emnapi/core": ["@emnapi/core@1.8.1", "", { "dependencies": { "@emnapi/wasi-threads": "1.1.0", "tslib": "^2.4.0" } }, "sha512-AvT9QFpxK0Zd8J0jopedNm+w/2fIzvtPKPjqyw9jwvBaReTTqPBk9Hixaz7KbjimP+QNz605/XnjFcDAL2pqBg=="],
 

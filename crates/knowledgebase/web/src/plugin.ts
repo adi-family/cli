@@ -30,7 +30,7 @@ export class KnowledgebasePlugin extends AdiPlugin {
       PLUGIN_ID,
     );
     this.bus.emit(
-      'nav:add',
+      'adi.actions-feed:nav-add',
       { id: PLUGIN_ID, label: 'Knowledge', path: `/${PLUGIN_ID}` },
       PLUGIN_ID,
     );
@@ -39,7 +39,7 @@ export class KnowledgebasePlugin extends AdiPlugin {
       AdiKnowledgebaseBusKey.Query,
       async ({ q, limit }) => {
         try {
-          const conns = cocoon.connectionsWithService('kb');
+          const conns = cocoon.connectionsWithPlugin('adi.knowledgebase');
           const results = await Promise.allSettled(
             conns.map((c) => api.query(c, q, limit)),
           );
@@ -138,7 +138,7 @@ export class KnowledgebasePlugin extends AdiPlugin {
       'kb:conflicts',
       async () => {
         try {
-          const conns = cocoon.connectionsWithService('kb');
+          const conns = cocoon.connectionsWithPlugin('adi.knowledgebase');
           const results = await Promise.allSettled(
             conns.map((c) => api.getConflicts(c)),
           );
@@ -163,7 +163,7 @@ export class KnowledgebasePlugin extends AdiPlugin {
       'kb:orphans',
       async () => {
         try {
-          const conns = cocoon.connectionsWithService('kb');
+          const conns = cocoon.connectionsWithPlugin('adi.knowledgebase');
           const results = await Promise.allSettled(
             conns.map((c) => api.getOrphans(c)),
           );

@@ -28,7 +28,7 @@ export class AdiActionsFeedElement extends LitElement {
   }
 
   #dismiss(id: string): void {
-    actionStore.bus!.emit('actions:dismiss', { id }, 'actions-feed');
+    actionStore.bus!.emit('adi.actions-feed:dismiss', { id }, 'actions-feed');
   }
 
   #renderCard(card: ActionCard) {

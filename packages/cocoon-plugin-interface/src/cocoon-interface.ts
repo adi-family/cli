@@ -1,11 +1,12 @@
 import type { EventBus } from '@adi-family/sdk-plugin';
 import type { Connection, DeviceInfo } from '@adi-family/plugin-signaling/bus';
 import { AdiSignalingBusKey } from '@adi-family/plugin-signaling/bus';
-import { CocoonBusKey } from './bus-keys.js';
+import { CocoonBusKey, type ConnectionSettings } from './bus-keys.js';
 
 export class CocoonPluginInterface {
   private readonly connections = new Map<string, Connection>();
   private readonly devices = new Map<string, DeviceInfo>();
+  private readonly settings = new Map<string, ConnectionSettings>();
   private readonly pluginId: string;
   private _bus: EventBus | undefined;
   private unsubs: Array<() => void> = [];
@@ -36,6 +37,10 @@ export class CocoonPluginInterface {
           this.devices.set(d.device_id, d);
         }
       }, this.pluginId),
+
+      bus.on(CocoonBusKey.SettingsChanged, ({ id, settings }) => {
+        this.settings.set(id, settings);
+      }, this.pluginId),
     );
 
   }
@@ -45,6 +50,7 @@ export class CocoonPluginInterface {
     this.unsubs = [];
     this.connections.clear();
     this.devices.clear();
+    this.settings.clear();
     this._bus = undefined;
   }
 
@@ -59,9 +65,13 @@ export class CocoonPluginInterface {
     return c;
   }
 
-  connectionsWithService(serviceName: string): Connection[] {
+  getSettings(cocoonId: string): ConnectionSettings {
+    return this.settings.get(cocoonId) ?? {};
+  }
+
+  connectionsWithPlugin(pluginId: string): Connection[] {
     return [...this.connections.values()]
-      .filter(c => c.services.includes(serviceName));
+      .filter(c => c.plugins.includes(pluginId));
   }
 
   allConnections(): Connection[] {

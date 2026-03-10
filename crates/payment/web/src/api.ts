@@ -5,7 +5,7 @@ import type {
   BalanceTransactionResponse,
 } from './types.js';
 
-const SVC = 'payment';
+const SVC = 'adi.payment';
 
 const proxyGet = async <T>(c: Connection, path: string): Promise<T> => {
   const res = await c.httpProxy(SVC, path);

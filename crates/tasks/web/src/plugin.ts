@@ -39,11 +39,11 @@ export class TasksPlugin extends AdiPlugin {
     }
 
     this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', init: () => document.createElement('adi-tasks'), label: 'Tasks' }, this.id);
-    this.bus.emit('nav:add', { id: this.id, label: 'Tasks', path: `/${this.id}` }, this.id);
+    this.bus.emit('adi.actions-feed:nav-add', { id: this.id, label: 'Tasks', path: `/${this.id}` }, this.id);
 
     this.bus.on('tasks:list', async ({ status }) => {
       try {
-        const conns = cocoon.connectionsWithService('tasks');
+        const conns = cocoon.connectionsWithPlugin('adi.tasks');
         const [taskResults, statsResults] = await Promise.all([
           Promise.allSettled(conns.map(c => api.listTasks(c, { status }))),
           Promise.allSettled(conns.map(c => api.getStats(c))),
@@ -66,7 +66,7 @@ export class TasksPlugin extends AdiPlugin {
 
     this.bus.on('tasks:search', async ({ query, limit }) => {
       try {
-        const conns = cocoon.connectionsWithService('tasks');
+        const conns = cocoon.connectionsWithPlugin('adi.tasks');
         const results = await Promise.allSettled(conns.map(c => api.searchTasks(c, query, limit)));
         const tasks: Task[] = results.flatMap((r, i) =>
           r.status === 'fulfilled'
@@ -82,7 +82,7 @@ export class TasksPlugin extends AdiPlugin {
 
     this.bus.on('tasks:stats', async () => {
       try {
-        const conns = cocoon.connectionsWithService('tasks');
+        const conns = cocoon.connectionsWithPlugin('adi.tasks');
         const results = await Promise.allSettled(conns.map(c => api.getStats(c)));
         const stats = results.reduce<TasksStats>(
           (acc, r) => r.status === 'fulfilled' ? mergeStats(acc, r.value) : acc,

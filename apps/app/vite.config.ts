@@ -98,6 +98,11 @@ const litVendor = (): Plugin => {
 
 export default defineConfig({
   plugins: [tailwindcss(), sdkExternal(), litVendor()],
+  resolve: {
+    alias: {
+      '@adi-family/plugin-debug-screen/bus': resolve('../../crates/debug-screen/web/src/bus/index.ts'),
+    },
+  },
   server: {
     port: parseInt(requireEnv("PORT")),
     host: true,

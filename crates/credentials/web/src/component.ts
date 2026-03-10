@@ -157,7 +157,7 @@ export class AdiCredentialsElement extends LitElement {
   }
 
   override render() {
-    const credConns = new Set(cocoon.connectionsWithService('credentials').map(c => c.id));
+    const credConns = new Set(cocoon.connectionsWithPlugin('adi.credentials').map(c => c.id));
     const cocoons: CocoonOption[] = cocoon.cocoonDevices().map(d => ({
       id: d.device_id,
       installed: credConns.has(d.device_id),

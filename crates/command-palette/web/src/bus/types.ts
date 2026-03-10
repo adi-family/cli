@@ -18,10 +18,10 @@ export interface CommandPaletteOpenEvent {
 }
 
 export enum CommandBusKey {
-  Register = 'command:register',
-  Execute = 'command:execute',
+  Register = 'adi.command-palette:register',
+  Execute = 'adi.command-palette:execute',
 }
 
 export enum CommandPaletteBusKey {
-  Open = 'command-palette:open',
+  Open = 'adi.command-palette:open',
 }

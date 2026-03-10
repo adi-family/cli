@@ -1,7 +1,7 @@
 import type { Connection } from '@adi-family/cocoon-plugin-interface';
 import type { Node, Edge, SearchResult, ConflictPair } from './types.js';
 
-const SVC = 'kb';
+const SVC = 'adi.knowledgebase';
 
 export const query = (c: Connection, q: string, limit?: number) =>
   c.request<SearchResult[]>(SVC, 'query', { q, limit });

@@ -16,13 +16,13 @@ export enum ActionKindMode {
 export interface ActionsRegisterKindEvent {
   plugin: string;
   kind: string;
-  mode: ActionKindMode;
+  mode: `${ActionKindMode}`;
 }
 
 export interface ActionsRegisterRendererEvent {
   plugin: string;
   kind: string;
-  render: unknown;
+  render: (data: Record<string, unknown>, actionId: string) => string;
 }
 
 export interface ActionsPushEvent {
@@ -30,7 +30,7 @@ export interface ActionsPushEvent {
   plugin: string;
   kind: string;
   data: Record<string, unknown>;
-  priority?: ActionPriority;
+  priority?: `${ActionPriority}`;
 }
 
 export interface ActionsDismissEvent {
@@ -61,18 +61,18 @@ export interface CommandExecuteEvent {
 }
 
 export enum ActionsBusKey {
-  RegisterKind = 'actions:register-kind',
-  RegisterRenderer = 'actions:register-renderer',
-  Push = 'actions:push',
-  Dismiss = 'actions:dismiss',
-  Dismissed = 'actions:dismissed',
+  RegisterKind = 'adi.actions-feed:register-kind',
+  RegisterRenderer = 'adi.actions-feed:register-renderer',
+  Push = 'adi.actions-feed:push',
+  Dismiss = 'adi.actions-feed:dismiss',
+  Dismissed = 'adi.actions-feed:dismissed',
 }
 
 export enum CommandBusKey {
-  Register = 'command:register',
-  Execute = 'command:execute',
+  Register = 'adi.command-palette:register',
+  Execute = 'adi.command-palette:execute',
 }
 
 export enum NavBusKey {
-  Add = 'nav:add',
+  Add = 'adi.actions-feed:nav-add',
 }

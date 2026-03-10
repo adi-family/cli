@@ -19,7 +19,7 @@ class HooksPlugin extends AdiPlugin {
 
   async onRegister() {
     this.registerCalls.push('called');
-    this.bus.emit('route:register', { path: '/hooks', element: 'hooks-view' }, 'plugin:hooks');
+    this.bus.emit('app:theme-changed', { theme: 'dark', mode: 'dark' }, 'plugin:hooks');
   }
 
   async onUnregister() {
@@ -45,8 +45,7 @@ describe('AdiPlugin', () => {
     const emitSpy = spyOn(app.bus, 'emit');
     const plugin = new HooksPlugin();
     await plugin._init(app);
-    // onRegister emits 'route:register' via this.bus — verify it went through
-    expect(emitSpy).toHaveBeenCalledWith('route:register', { path: '/hooks', element: 'hooks-view' }, 'plugin:hooks');
+    expect(emitSpy).toHaveBeenCalledWith('app:theme-changed', { theme: 'dark', mode: 'dark' }, 'plugin:hooks');
   });
 
   it('_init() calls onRegister()', async () => {

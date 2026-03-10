@@ -18,11 +18,11 @@ export class VideoPlugin extends AdiPlugin {
     }
 
     this.bus.emit(AdiRouterBusKey.RegisterRoute, { pluginId: this.id, path: '', init: () => document.createElement('adi-video'), label: 'Video' }, this.id);
-    this.bus.emit('nav:add', { id: this.id, label: 'Video', path: `/${this.id}` }, this.id);
+    this.bus.emit('adi.actions-feed:nav-add', { id: this.id, label: 'Video', path: `/${this.id}` }, this.id);
 
     this.bus.on('video:render', async ({ compositionId: _, format, width, height, fps, durationInFrames }) => {
       try {
-        const conns = cocoon.connectionsWithService('video');
+        const conns = cocoon.connectionsWithPlugin('adi.video');
         if (conns.length === 0) throw new Error('No video service connected');
         const result = await api.startRender(conns[0]!, {
           width, height, fps, totalFrames: durationInFrames, format,
@@ -35,7 +35,7 @@ export class VideoPlugin extends AdiPlugin {
 
     this.bus.on('video:status', async ({ jobId }) => {
       try {
-        const conns = cocoon.connectionsWithService('video');
+        const conns = cocoon.connectionsWithPlugin('adi.video');
         if (conns.length === 0) throw new Error('No video service connected');
         const job = await api.getJobStatus(conns[0]!, jobId);
         this.bus.emit('video:status-changed', { job }, 'video');
@@ -46,7 +46,7 @@ export class VideoPlugin extends AdiPlugin {
 
     this.bus.on('video:jobs', async () => {
       try {
-        const conns = cocoon.connectionsWithService('video');
+        const conns = cocoon.connectionsWithPlugin('adi.video');
         const results = await Promise.allSettled(conns.map(c => api.listJobs(c)));
         const jobs: RenderJob[] = results.flatMap(r =>
           r.status === 'fulfilled' ? r.value : []

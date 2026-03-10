@@ -1,7 +1,7 @@
 import type { Connection } from '@adi-family/cocoon-plugin-interface';
 import type { Task, TaskWithDependencies, TasksStats } from './types.js';
 
-const SVC = 'tasks';
+const SVC = 'adi.tasks';
 
 export const listTasks = (c: Connection, params?: { status?: string }) =>
   c.request<Task[]>(SVC, 'list', params ?? {});

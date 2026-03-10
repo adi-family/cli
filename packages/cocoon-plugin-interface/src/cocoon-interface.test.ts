@@ -25,10 +25,10 @@ function makeBus(): EventBus {
   } as unknown as EventBus;
 }
 
-function makeConnection(id: string, services: string[] = []): Connection {
+function makeConnection(id: string, plugins: string[] = []): Connection {
   return {
     id,
-    services,
+    plugins,
     request: mock(),
     stream: mock(),
     httpProxy: mock(),
@@ -61,7 +61,7 @@ describe('CocoonPluginInterface — connections', () => {
     const iface = CocoonPluginInterface.create('p');
     iface.init(bus);
 
-    const conn = makeConnection('c1', ['svc-a']);
+    const conn = makeConnection('c1', ['adi.svc-a']);
     bus.emit(
       CocoonBusKey.ConnectionAdded,
       { id: 'c1', connection: conn },
@@ -99,14 +99,14 @@ describe('CocoonPluginInterface — connections', () => {
     expect(() => iface.getConnection('c1')).toThrow();
   });
 
-  it('filters connections by service name', () => {
+  it('filters connections by plugin id', () => {
     const bus = makeBus();
     const iface = CocoonPluginInterface.create('p');
     iface.init(bus);
 
-    const c1 = makeConnection('c1', ['editor', 'terminal']);
-    const c2 = makeConnection('c2', ['terminal']);
-    const c3 = makeConnection('c3', ['editor']);
+    const c1 = makeConnection('c1', ['adi.editor', 'adi.terminal']);
+    const c2 = makeConnection('c2', ['adi.terminal']);
+    const c3 = makeConnection('c3', ['adi.editor']);
     bus.emit(
       CocoonBusKey.ConnectionAdded,
       { id: 'c1', connection: c1 },
@@ -123,9 +123,9 @@ describe('CocoonPluginInterface — connections', () => {
       'test',
     );
 
-    expect(iface.connectionsWithService('terminal')).toEqual([c1, c2]);
-    expect(iface.connectionsWithService('editor')).toEqual([c1, c3]);
-    expect(iface.connectionsWithService('unknown')).toEqual([]);
+    expect(iface.connectionsWithPlugin('adi.terminal')).toEqual([c1, c2]);
+    expect(iface.connectionsWithPlugin('adi.editor')).toEqual([c1, c3]);
+    expect(iface.connectionsWithPlugin('unknown')).toEqual([]);
   });
 });
 

@@ -45,7 +45,7 @@ export class CredentialsPlugin extends AdiPlugin {
       label: 'Credentials',
     }, this.id);
 
-    this.bus.emit('nav:add', {
+    this.bus.emit('adi.actions-feed:nav-add', {
       id: this.id,
       label: 'Credentials',
       path: `/${this.id}`,
@@ -65,7 +65,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
     this.bus.on('credentials:list', async ({ credential_type, provider }) => {
       try {
-        const conns = cocoon.connectionsWithService('credentials');
+        const conns = cocoon.connectionsWithPlugin('adi.credentials');
         const results = await Promise.allSettled(
           conns.map(c => api.listCredentials(c, { credential_type, provider })),
         );

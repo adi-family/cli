@@ -1,7 +1,7 @@
 import type { Connection } from '@adi-family/cocoon-plugin-interface';
 import type { RenderJob } from './types.js';
 
-const SVC = 'video';
+const SVC = 'adi.video';
 
 export const startRender = (c: Connection, params: {
   width: number; height: number; fps: number;

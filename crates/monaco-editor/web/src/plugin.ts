@@ -25,7 +25,7 @@ export class MonacoEditorPlugin extends AdiPlugin {
       },
       label: 'Editor',
     });
-    this.bus.emit('nav:add', { id: this.id, label: 'Editor', path: `/${this.id}` });
+    this.bus.emit('adi.actions-feed:nav-add', { id: this.id, label: 'Editor', path: `/${this.id}` });
 
     this.bus.on('editor:open', ({ content, options }) => {
       this.bus.emit(AdiRouterBusKey.Navigate, { path: `/${this.id}` });

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1773090564,
+  "updatedAt": 1773158920,
   "packages": [],
   "plugins": [
     {
@@ -8,8 +8,7 @@
       "name": "Auth",
       "description": "ADI plugin: Auth HTTP server",
       "pluginTypes": [
-        "extension",
-        "web"
+        "extension"
       ],
       "packageId": null,
       "latestVersion": "0.1.0",
@@ -50,8 +49,7 @@
       "name": "ADI Router",
       "description": "Client-side SPA router with navigation management",
       "pluginTypes": [
-        "extension",
-        "web"
+        "extension"
       ],
       "packageId": null,
       "latestVersion": "0.1.0",
@@ -64,8 +62,7 @@
       "name": "ADI Command Palette",
       "description": "Command palette for quick command search and execution",
       "pluginTypes": [
-        "extension",
-        "web"
+        "extension"
       ],
       "packageId": null,
       "latestVersion": "0.1.0",
@@ -78,8 +75,7 @@
       "name": "ADI Slots",
       "description": "Content slots for cross-plugin UI extension points",
       "pluginTypes": [
-        "extension",
-        "web"
+        "extension"
       ],
       "packageId": null,
       "latestVersion": "0.1.0",
@@ -92,8 +88,7 @@
       "name": "ADI Signaling",
       "description": "ADI Signaling plugin — CLI commands for device pairing and signaling server",
       "pluginTypes": [
-        "extension",
-        "web"
+        "extension"
       ],
       "packageId": null,
       "latestVersion": "0.1.0",
@@ -106,8 +101,7 @@
       "name": "ADI Debug Screen",
       "description": "Debug screen and operations log",
       "pluginTypes": [
-        "extension",
-        "web"
+        "extension"
       ],
       "packageId": null,
       "latestVersion": "0.1.0",
@@ -120,8 +114,7 @@
       "name": "Cocoon",
       "description": "ADI Cocoon plugin - containerized worker for remote command execution",
       "pluginTypes": [
-        "extension",
-        "web"
+        "extension"
       ],
       "packageId": null,
       "latestVersion": "0.2.7",
@@ -134,8 +127,7 @@
       "name": "ADI Actions Feed",
       "description": "Action feed system for cross-plugin notifications",
       "pluginTypes": [
-        "extension",
-        "web"
+        "extension"
       ],
       "packageId": null,
       "latestVersion": "0.1.0",
@@ -148,8 +140,7 @@
       "name": "Cocoon Control Center",
       "description": "ADI plugin: Cocoon Control Center - terminal UI for remote cocoon management",
       "pluginTypes": [
-        "extension",
-        "web"
+        "extension"
       ],
       "packageId": null,
       "latestVersion": "0.1.0",
@@ -162,8 +153,7 @@
       "name": "Credentials",
       "description": "ADI plugin: Credentials",
       "pluginTypes": [
-        "extension",
-        "web"
+        "extension"
       ],
       "packageId": null,
       "latestVersion": "0.1.0",
@@ -176,8 +166,7 @@
       "name": "Plugins",
       "description": "ADI plugin: Plugins - browse and install plugins from the registry",
       "pluginTypes": [
-        "extension",
-        "web"
+        "extension"
       ],
       "packageId": null,
       "latestVersion": "0.1.0",

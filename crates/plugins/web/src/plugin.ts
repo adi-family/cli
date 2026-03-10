@@ -43,7 +43,7 @@ export class PluginsPlugin extends AdiPlugin {
       label: 'Plugins',
     }, this.id);
 
-    this.bus.emit('nav:add', {
+    this.bus.emit('adi.actions-feed:nav-add', {
       id: this.id,
       label: 'Plugins',
       path: `/${this.id}`,

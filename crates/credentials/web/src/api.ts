@@ -8,7 +8,7 @@ import type {
   VerifyResult,
 } from './types.js';
 
-const SVC = 'credentials';
+const SVC = 'adi.credentials';
 
 export const listCredentials = (c: Connection, params?: { credential_type?: CredentialType; provider?: string }) =>
   c.request<Credential[]>(SVC, 'list', params ?? {});
