@@ -1,6 +1,6 @@
 import type { EventBus } from '@adi-family/sdk-plugin';
-import type { Connection, DeviceInfo } from '@adi/signaling-web-plugin/bus';
-import { AdiSignalingBusKey } from '@adi/signaling-web-plugin/bus';
+import type { Connection, DeviceInfo } from '@adi-family/plugin-signaling/bus';
+import { AdiSignalingBusKey } from '@adi-family/plugin-signaling/bus';
 import { CocoonBusKey } from './bus-keys.js';
 
 export class CocoonPluginInterface {

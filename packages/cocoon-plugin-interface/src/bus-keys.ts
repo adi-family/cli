@@ -1,4 +1,4 @@
-import type { Connection, DeviceInfo } from '@adi/signaling-web-plugin/bus';
+import type { Connection, DeviceInfo } from '@adi-family/plugin-signaling/bus';
 
 export enum CocoonBusKey {
   ConnectionAdded = 'adi.cocoon:connection-added',

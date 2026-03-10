@@ -1,7 +1,7 @@
 import { LitElement, html, nothing } from 'lit';
 import { state } from 'lit/decorators.js';
 import type { AdiCocoonTerminalElement } from './terminal';
-import type { CocoonClient } from '@adi/cocoon-web-plugin';
+import type { CocoonClient } from '@adi-family/plugin-cocoon';
 
 export interface ControlCenterCocoon {
   deviceId: string;

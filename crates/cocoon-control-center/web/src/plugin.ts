@@ -1,9 +1,9 @@
-import '@adi/cocoon-web-plugin';
-import '@adi/signaling-web-plugin';
+import '@adi-family/plugin-cocoon';
+import '@adi-family/plugin-signaling';
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { AdiSignalingBusKey, type DeviceInfo, type IceServer } from '@adi/signaling-web-plugin/bus';
-import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
-import { AdiDebugScreenBusKey } from '@adi/debug-screen-web-plugin/bus';
+import { AdiSignalingBusKey, type DeviceInfo, type IceServer } from '@adi-family/plugin-signaling/bus';
+import { AdiRouterBusKey } from '@adi-family/plugin-router/bus';
+import { AdiDebugScreenBusKey } from '@adi-family/plugin-debug-screen/bus';
 import { PLUGIN_ID, PLUGIN_VERSION } from './config';
 import type { AdiCocoonControlCenterElement, ControlCenterCocoon } from './component';
 import type { AdiCocoonControlCenterDebugElement } from './debug-section';

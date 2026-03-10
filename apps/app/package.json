@@ -9,17 +9,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@adi/debug-screen-web-plugin": "workspace:*",
-    "@adi/router-web-plugin": "workspace:*",
+    "@adi-family/plugin-debug-screen": "workspace:*",
+    "@adi-family/plugin-router": "workspace:*",
     "@adi-family/sdk-plugin": "workspace:*",
     "@adi-family/video-sdk": "workspace:*",
     "html2canvas": "^1.4.1",
-    "lit": "^3.3.1"
+    "lit": "^3.3.2"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.1.18",
+    "@tailwindcss/vite": "^4.2.0",
     "@types/node": "^25.3.3",
-    "tailwindcss": "^4.1.18",
+    "tailwindcss": "^4.2.0",
     "typescript": "~5.9.3",
     "vite": "npm:rolldown-vite@7.2.5"
   },

@@ -1,2 +1,2 @@
 // No custom bus events for control center currently.
-// Uses events from @adi/cocoon-web-plugin/bus and @adi/signaling-web-plugin/bus.
+// Uses events from @adi-family/plugin-cocoon/bus and @adi-family/plugin-signaling/bus.

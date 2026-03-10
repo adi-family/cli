@@ -1,5 +1,5 @@
 {
-  "name": "@adi/slots-web-plugin",
+  "name": "@adi-family/plugin-slots",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -22,7 +22,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.0",
     "tailwindcss": "^4.2.0",
-    "typescript": "^5.7.0",
-    "vite": "^6.1.0"
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1"
   }
 }

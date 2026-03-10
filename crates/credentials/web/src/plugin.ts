@@ -1,6 +1,6 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
-import { AdiSignalingBusKey, type DeviceInfo, type IceServer } from '@adi/signaling-web-plugin/bus';
+import { AdiRouterBusKey } from '@adi-family/plugin-router/bus';
+import { AdiSignalingBusKey, type DeviceInfo, type IceServer } from '@adi-family/plugin-signaling/bus';
 import type { Connection } from '@adi-family/cocoon-plugin-interface';
 import * as api from './api.js';
 import { cocoon } from './cocoon.js';

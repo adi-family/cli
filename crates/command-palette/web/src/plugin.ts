@@ -4,7 +4,7 @@ import { customElement, state } from 'lit/decorators.js';
 import { AdiPlugin } from '@adi-family/sdk-plugin';
 import { CommandBusKey, CommandPaletteBusKey } from './bus';
 import type { CommandRegisterEvent } from './bus';
-import { SlotsBusKey } from '@adi/slots-web-plugin/bus';
+import { SlotsBusKey } from '@adi-family/plugin-slots/bus';
 import { PLUGIN_ID, PLUGIN_VERSION } from './config';
 
 interface Command {

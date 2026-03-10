@@ -1,9 +1,9 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { CommandBusKey } from '@adi/command-palette-web-plugin/bus';
-import { AdiDebugScreenBusKey } from '@adi/debug-screen-web-plugin/bus';
-import { SlotsBusKey } from '@adi/slots-web-plugin/bus';
+import { CommandBusKey } from '@adi-family/plugin-command-palette/bus';
+import { AdiDebugScreenBusKey } from '@adi-family/plugin-debug-screen/bus';
+import { SlotsBusKey } from '@adi-family/plugin-slots/bus';
 import { AdiRouterBusKey } from './bus';
 import { PLUGIN_ID, PLUGIN_VERSION } from './config';
 import type { AdiRouterDebugElement } from './debug-section';

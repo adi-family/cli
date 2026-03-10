@@ -1,5 +1,5 @@
 {
-  "name": "@adi/monaco-editor-web-plugin",
+  "name": "@adi-family/plugin-monaco-editor",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -15,15 +15,15 @@
     "dev": "vite build --watch"
   },
   "dependencies": {
-    "@adi/router-web-plugin": "workspace:*",
+    "@adi-family/plugin-router": "workspace:*",
     "@adi-family/sdk-plugin": "workspace:*",
-    "lit": "^3.3.1",
+    "lit": "^3.3.2",
     "monaco-editor": "^0.52.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.0",
     "tailwindcss": "^4.2.0",
-    "typescript": "^5.7.0",
-    "vite": "^6.1.0"
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1"
   }
 }

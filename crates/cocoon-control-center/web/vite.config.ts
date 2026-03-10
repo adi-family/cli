@@ -4,23 +4,23 @@ import { defineConfig } from "vite";
 export default defineConfig({
   resolve: {
     alias: {
-      "@adi/signaling-web-plugin/bus": path.resolve(
+      "@adi-family/plugin-signaling/bus": path.resolve(
         __dirname,
         "../../signaling/web/src/bus/index.ts",
       ),
-      "@adi/router-web-plugin/bus": path.resolve(
+      "@adi-family/plugin-router/bus": path.resolve(
         __dirname,
         "../../router/web/src/bus/index.ts",
       ),
-      "@adi/cocoon-web-plugin": path.resolve(
+      "@adi-family/plugin-cocoon": path.resolve(
         __dirname,
         "../../cocoon/web/src/index.ts",
       ),
-      "@adi/cocoon-web-plugin/bus": path.resolve(
+      "@adi-family/plugin-cocoon/bus": path.resolve(
         __dirname,
         "../../cocoon/web/src/bus/index.ts",
       ),
-      "@adi/debug-screen-web-plugin/bus": path.resolve(
+      "@adi-family/plugin-debug-screen/bus": path.resolve(
         __dirname,
         "../../debug-screen/web/src/bus/index.ts",
       ),

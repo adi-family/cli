@@ -1,6 +1,6 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { AdiRouterBusKey } from '@adi/router-web-plugin/bus';
-import type { AdiRouterChangedEvent } from '@adi/router-web-plugin/bus';
+import { AdiRouterBusKey } from '@adi-family/plugin-router/bus';
+import type { AdiRouterChangedEvent } from '@adi-family/plugin-router/bus';
 import { AdiDebugScreenBusKey } from './bus';
 import type { AdiDebugScreenRegisterSectionEvent } from './bus';
 import type { AdiDebugPageElement, DebugSection } from './component.js';

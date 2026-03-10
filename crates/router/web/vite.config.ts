@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   resolve: {
     alias: {
-      "@adi/command-palette-web-plugin/bus": path.resolve(
+      "@adi-family/plugin-command-palette/bus": path.resolve(
         __dirname,
         "../../command-palette/web/src/bus/index.ts",
       ),

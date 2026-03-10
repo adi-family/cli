@@ -30,7 +30,7 @@
   },
   "peerDependencies": {},
   "dependencies": {
-    "@adi/signaling-web-plugin": "workspace:*",
+    "@adi-family/plugin-signaling": "workspace:*",
     "@adi-family/sdk-plugin": "workspace:*"
   },
   "devDependencies": {

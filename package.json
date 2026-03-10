@@ -13,5 +13,8 @@
   },
   "devDependencies": {
     "@types/bun": "^1.3.10"
+  },
+  "dependencies": {
+    "vite": "^7.3.1"
   }
 }
