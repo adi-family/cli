@@ -2403,6 +2403,7 @@ dependencies = [
  "lib-env-parse",
  "lib-plugin-abi-v3",
  "lib-plugin-prelude",
+ "lib-plugin-web-build",
  "once_cell",
  "tokio",
  "tracing",

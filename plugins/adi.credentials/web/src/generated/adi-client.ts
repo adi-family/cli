@@ -3,7 +3,8 @@
  * DO NOT EDIT.
  */
 import type { Connection } from '@adi-family/cocoon-plugin-interface';
-import type { Credential, CredentialAccessLog, CredentialType, CredentialWithData, DeleteResult, VerifyResult } from './types.js';
+import type { Credential, CredentialAccessLog, CredentialWithData, VerifyResult } from './models.js';
+import { CredentialType } from './enums.js';
 
 const SVC = 'adi.credentials';
 
