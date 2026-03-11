@@ -1,5 +1,5 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { AdiRouterBusKey } from '@adi-family/plugin-router/bus';
+import { AdiRouterBusKey } from '@adi-family/plugin-router';
 import { setupWorkers } from './workers.js';
 import './events.js';
 

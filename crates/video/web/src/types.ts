@@ -1,17 +1,16 @@
-export interface RenderJob {
-  id: string;
-  phase: 'created' | 'capturing' | 'encoding' | 'done' | 'error';
-  progress: number;
-  error?: string;
-  framesReceived: number;
-  totalFrames: number;
-}
+/**
+ * Auto-generated plugin types.
+ * Import via: import '@adi-family/plugin-xxx'
+ * DO NOT EDIT.
+ */
 
-export interface CompositionEntry {
-  id: string;
-  label: string;
-  width: number;
-  height: number;
-  fps: number;
-  durationInFrames: number;
+import type { VideoPlugin } from './plugin';
+
+export type { VideoPlugin };
+export * from './config';
+
+declare module '@adi-family/sdk-plugin' {
+  interface PluginApiRegistry {
+    'adi.video': VideoPlugin['api'];
+  }
 }

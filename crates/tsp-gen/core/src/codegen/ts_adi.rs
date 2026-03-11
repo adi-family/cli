@@ -89,7 +89,7 @@ fn collect_channel_services(file: &TypeSpecFile, models: &ModelMap<'_>) -> Vec<C
                 continue;
             }
 
-            let fn_name = op.name.to_case(Case::Camel);
+            let fn_name = escape_js_reserved(&op.name.to_case(Case::Camel));
             let wire_name = op.name.to_case(Case::Snake);
             let return_type = op
                 .return_type
@@ -162,13 +162,20 @@ fn generate_adi_client(
     writeln!(out, " */")?;
     writeln!(out, "import type {{ Connection }} from '@adi-family/cocoon-plugin-interface';")?;
 
-    // Collect type imports from return types and params
-    let type_imports = collect_type_imports(services, file);
-    if !type_imports.is_empty() {
+    // Collect type imports from return types and params, split by source file
+    let (model_imports, enum_imports) = collect_type_imports_split(services, file);
+    if !model_imports.is_empty() {
         writeln!(
             out,
-            "import type {{ {} }} from './types.js';",
-            type_imports.into_iter().collect::<Vec<_>>().join(", ")
+            "import type {{ {} }} from './models.js';",
+            model_imports.into_iter().collect::<Vec<_>>().join(", ")
+        )?;
+    }
+    if !enum_imports.is_empty() {
+        writeln!(
+            out,
+            "import {{ {} }} from './enums.js';",
+            enum_imports.into_iter().collect::<Vec<_>>().join(", ")
         )?;
     }
 
@@ -265,38 +272,45 @@ fn write_operation(out: &mut String, op: &ServiceOperation) -> Result<(), Codege
     Ok(())
 }
 
-/// Collect type names that need to be imported from ./types.js.
-fn collect_type_imports(services: &[ChannelService], file: &TypeSpecFile) -> BTreeSet<String> {
-    let known_types: BTreeSet<String> = file
-        .models()
-        .map(|m| m.name.clone())
-        .chain(file.enums().map(|e| e.name.clone()))
-        .collect();
+/// Collect type names split into model imports and enum imports.
+fn collect_type_imports_split(
+    services: &[ChannelService],
+    file: &TypeSpecFile,
+) -> (BTreeSet<String>, BTreeSet<String>) {
+    let known_models: BTreeSet<String> = file.models().map(|m| m.name.clone()).collect();
+    let known_enums: BTreeSet<String> = file.enums().map(|e| e.name.clone()).collect();
+    let known_all: BTreeSet<String> = known_models.union(&known_enums).cloned().collect();
 
-    let mut imports = BTreeSet::new();
+    let mut all_imports = BTreeSet::new();
 
     for service in services {
         for op in &service.operations {
-            // Check return type
             if let Some(rt) = &file
                 .interfaces()
                 .find(|i| get_channel_name(&i.decorators).as_deref() == Some(&service.channel))
-                .and_then(|i| i.operations.iter().find(|o| o.name.to_case(Case::Camel) == op.fn_name))
+                .and_then(|i| {
+                    i.operations
+                        .iter()
+                        .find(|o| o.name.to_case(Case::Camel) == op.fn_name)
+                })
                 .and_then(|o| o.return_type.as_ref())
             {
-                collect_named_refs(rt, &known_types, &mut imports);
+                collect_named_refs(rt, &known_all, &mut all_imports);
             }
 
-            // Check param types
             for param in &op.params {
-                if known_types.contains(&param.ts_type) {
-                    imports.insert(param.ts_type.clone());
+                if known_all.contains(&param.ts_type) {
+                    all_imports.insert(param.ts_type.clone());
                 }
             }
         }
     }
 
-    imports
+    let model_imports: BTreeSet<String> =
+        all_imports.intersection(&known_models).cloned().collect();
+    let enum_imports: BTreeSet<String> = all_imports.intersection(&known_enums).cloned().collect();
+
+    (model_imports, enum_imports)
 }
 
 /// Recursively extract named type references.
@@ -324,6 +338,21 @@ fn collect_named_refs(type_ref: &TypeRef, known: &BTreeSet<String>, out: &mut BT
 
 fn has_decorator(decorators: &[Decorator], name: &str) -> bool {
     decorators.iter().any(|d| d.name == name)
+}
+
+/// Escape JavaScript/TypeScript reserved words by appending `_`.
+fn escape_js_reserved(name: &str) -> String {
+    match name {
+        "break" | "case" | "catch" | "class" | "const" | "continue" | "debugger" | "default"
+        | "delete" | "do" | "else" | "enum" | "export" | "extends" | "false" | "finally"
+        | "for" | "function" | "if" | "import" | "in" | "instanceof" | "new" | "null"
+        | "return" | "super" | "switch" | "this" | "throw" | "true" | "try" | "typeof"
+        | "var" | "void" | "while" | "with" | "yield" | "let" | "static" | "implements"
+        | "interface" | "package" | "private" | "protected" | "public" | "await" => {
+            format!("{name}_")
+        }
+        _ => name.to_string(),
+    }
 }
 
 fn type_ref_name(type_ref: &TypeRef) -> Option<String> {
@@ -378,8 +407,10 @@ interface CredentialsService {
         assert!(content.contains("Auto-generated ADI service client from TypeSpec."));
         assert!(content.contains("DO NOT EDIT."));
 
-        // Check imports
+        // Check imports — models and enums are imported from separate files
         assert!(content.contains("import type { Connection } from '@adi-family/cocoon-plugin-interface';"));
+        assert!(content.contains("from './models.js'"));
+        assert!(content.contains("from './enums.js'"));
         assert!(content.contains("Credential"));
         assert!(content.contains("CredentialType"));
         assert!(content.contains("DeleteResult"));
@@ -394,8 +425,8 @@ interface CredentialsService {
         assert!(content.contains("export const get = (c: Connection, id: string)"));
         // create: multiple required → params object
         assert!(content.contains("export const create = (c: Connection, params:"));
-        // delete: single required → positional
-        assert!(content.contains("export const delete = (c: Connection, id: string)"));
+        // delete: single required → positional, escaped reserved word
+        assert!(content.contains("export const delete_ = (c: Connection, id: string)"));
 
         // Check wire names are snake_case
         assert!(content.contains("'list'"));

@@ -2,9 +2,9 @@ import './styles.css';
 import { LitElement, html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { CommandBusKey, CommandPaletteBusKey } from './bus';
-import type { CommandRegisterEvent } from './bus';
-import { SlotsBusKey } from '@adi-family/plugin-slots/bus';
+import { CommandBusKey, CommandPaletteBusKey } from './generated/bus-types';
+import type { CommandRegisterEvent } from './generated/bus-types';
+import { SlotsBusKey } from '@adi-family/plugin-slots';
 import { PLUGIN_ID, PLUGIN_VERSION } from './config';
 
 interface Command {

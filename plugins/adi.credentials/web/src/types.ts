@@ -1,22 +1,17 @@
-export type {
-  CredentialAccessLog,
-  DeleteResult,
-  VerifyResult,
-} from './generated/types.js';
+/**
+ * Auto-generated plugin types.
+ * Import via: import '@adi-family/plugin-xxx'
+ * DO NOT EDIT.
+ */
 
-export { CredentialType } from './generated/types.js';
+import type { CredentialsPlugin } from './plugin';
 
-import type {
-  Credential as GeneratedCredential,
-  CredentialWithData as GeneratedCredentialWithData,
-} from './generated/types.js';
+export type { CredentialsPlugin };
+export * from './config';
+export * from './generated';
 
-/** Credential with the cocoonId injected by the plugin layer. */
-export interface Credential extends GeneratedCredential {
-  cocoonId: string;
-}
-
-/** CredentialWithData with the cocoonId injected by the plugin layer. */
-export interface CredentialWithData extends GeneratedCredentialWithData {
-  cocoonId: string;
+declare module '@adi-family/sdk-plugin' {
+  interface PluginApiRegistry {
+    'adi.credentials': CredentialsPlugin['api'];
+  }
 }

@@ -1,19 +1,10 @@
 /**
- * Auto-generated plugin entry from Cargo.toml.
+ * Auto-generated plugin build entry.
  * DO NOT EDIT.
  */
 
-import { PLUGIN_ID } from './config';
-
-import './bus';
-export * from './bus';
+import './generated';
+export * from './generated';
 export * from './config';
 
-import type { KnowledgebasePlugin } from './plugin';
 export { KnowledgebasePlugin, KnowledgebasePlugin as PluginShell } from './plugin';
-
-declare module '@adi-family/sdk-plugin' {
-  interface PluginApiRegistry {
-    [PLUGIN_ID]: KnowledgebasePlugin['api'];
-  }
-}

@@ -1,23 +1,16 @@
-export interface BalanceResponse {
-  subscription_credits: number;
-  extra_credits: number;
-  total_credits: number;
-  updated_at: string;
-}
+/**
+ * Auto-generated plugin types.
+ * Import via: import '@adi-family/plugin-xxx'
+ * DO NOT EDIT.
+ */
 
-export interface CanChargeMoreResponse {
-  allowed: boolean;
-}
+import type { PaymentPlugin } from './plugin';
 
-export interface BalanceTransactionResponse {
-  id: string;
-  payment_id: string | null;
-  transaction_type: string;
-  pool: string;
-  amount: number;
-  balance_before: number;
-  balance_after: number;
-  conversion_rate: number;
-  description: string | null;
-  created_at: string;
+export type { PaymentPlugin };
+export * from './config';
+
+declare module '@adi-family/sdk-plugin' {
+  interface PluginApiRegistry {
+    'adi.payment': PaymentPlugin['api'];
+  }
 }

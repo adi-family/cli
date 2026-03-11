@@ -63,7 +63,7 @@ SERVICE_CONFIGS: dict[str, ServiceConfig] = {
     "analytics-ingestion": ServiceConfig("crates/analytics-ingestion", ["analytics-ingestion"], None),
     "signaling-server": ServiceConfig("crates/signaling-server", ["signaling-server"], None),
     "flowmap-api": ServiceConfig("apps/flowmap-api", ["flowmap-api"], None),
-    "cocoon": ServiceConfig("crates/cocoon", ["cocoon"], "standalone"),
+    "cocoon": ServiceConfig("plugins/adi.cocoon", ["cocoon"], "standalone"),
     "llm-proxy": ServiceConfig("crates/llm-proxy/http", ["llm-proxy", "llm-proxy-migrate"], None),
 }
 

@@ -1,19 +1,23 @@
+import '@adi-family/plugin-cocoon';
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-
-declare module '@adi-family/sdk-plugin' {
-  interface PluginApiRegistry {
-    'adi.cocoon': {
-      createClient(cocoonId: string, signalingUrl: string, rtcConfig?: RTCConfiguration): unknown;
-    };
-  }
-}
-import { AdiRouterBusKey } from '@adi-family/plugin-router/bus';
-import { AdiSignalingBusKey, type DeviceInfo, type IceServer } from '@adi-family/plugin-signaling/bus';
+import { AdiRouterBusKey } from '@adi-family/plugin-router';
+import { NavBusKey } from '@adi-family/plugin-actions-feed';
+import { AdiSignalingBusKey, type DeviceInfo, type IceServer } from '@adi-family/plugin-signaling';
 import type { Connection } from '@adi-family/cocoon-plugin-interface';
 import * as api from './generated/adi-client.js';
 import { cocoon } from './cocoon.js';
-import type { Credential } from './types.js';
-import './events.js';
+import {
+  AdiCredentialsBusKey,
+  type AdiCredentialsListEvent,
+  type AdiCredentialsGetEvent,
+  type AdiCredentialsRevealEvent,
+  type AdiCredentialsCreateEvent,
+  type AdiCredentialsUpdateEvent,
+  type AdiCredentialsDeleteEvent,
+  type AdiCredentialsVerifyEvent,
+  type AdiCredentialsLogsEvent,
+} from './generated/bus-types.js';
+import './generated/bus-events.js';
 
 export class CredentialsPlugin extends AdiPlugin {
   readonly id = 'adi.credentials';
@@ -38,7 +42,7 @@ export class CredentialsPlugin extends AdiPlugin {
   }
 
   private onBus<P>(
-    event: string,
+    event: AdiCredentialsBusKey,
     handler: (params: P) => Promise<void>,
   ): void {
     this.bus.on(event, async (params: P) => {
@@ -46,7 +50,7 @@ export class CredentialsPlugin extends AdiPlugin {
         await handler(params);
       } catch (err) {
         console.error(`[CredentialsPlugin] ${event} error:`, err);
-        this.bus.emit('credentials:error', {
+        this.bus.emit(AdiCredentialsBusKey.Error, {
           message: err instanceof Error ? err.message : String(err),
           event,
         }, 'credentials');
@@ -69,7 +73,7 @@ export class CredentialsPlugin extends AdiPlugin {
       label: 'Credentials',
     }, this.id);
 
-    this.bus.emit('adi.actions-feed:nav-add', {
+    this.bus.emit(NavBusKey.Add, {
       id: this.id,
       label: 'Credentials',
       path: `/${this.id}`,
@@ -87,52 +91,52 @@ export class CredentialsPlugin extends AdiPlugin {
       }
     }, this.id);
 
-    this.onBus<{ credential_type?: any; provider?: string }>('credentials:list', async ({ credential_type, provider }) => {
+    this.onBus<AdiCredentialsListEvent>(AdiCredentialsBusKey.List, async ({ credential_type, provider }) => {
       const conns = cocoon.connectionsWithPlugin('adi.credentials');
       const results = await Promise.allSettled(
         conns.map(c => api.list(c, { credential_type, provider })),
       );
-      const credentials: Credential[] = results.flatMap((r, i) =>
+      const credentials = results.flatMap((r, i) =>
         r.status === 'fulfilled'
           ? r.value.map(cred => ({ ...cred, cocoonId: conns[i].id }))
           : [],
       );
-      this.bus.emit('credentials:list-changed', { credentials }, 'credentials');
+      this.bus.emit(AdiCredentialsBusKey.ListChanged, { credentials }, 'credentials');
     });
 
-    this.onBus<{ id: string; cocoonId: string }>('credentials:get', async ({ id, cocoonId }) => {
+    this.onBus<AdiCredentialsGetEvent>(AdiCredentialsBusKey.Get, async ({ id, cocoonId }) => {
       const cred = await api.get(this.ensureConnection(cocoonId), id);
-      this.bus.emit('credentials:detail-changed', { credential: { ...cred, cocoonId } }, 'credentials');
+      this.bus.emit(AdiCredentialsBusKey.DetailChanged, { credential: { ...cred, cocoonId } }, 'credentials');
     });
 
-    this.onBus<{ id: string; cocoonId: string }>('credentials:reveal', async ({ id, cocoonId }) => {
+    this.onBus<AdiCredentialsRevealEvent>(AdiCredentialsBusKey.Reveal, async ({ id, cocoonId }) => {
       const cred = await api.getWithData(this.ensureConnection(cocoonId), id);
-      this.bus.emit('credentials:data-revealed', { credential: { ...cred, cocoonId } }, 'credentials');
+      this.bus.emit(AdiCredentialsBusKey.DataRevealed, { credential: { ...cred, cocoonId } }, 'credentials');
     });
 
-    this.onBus<{ cocoonId: string; [key: string]: any }>('credentials:create', async ({ cocoonId, ...params }) => {
+    this.onBus<AdiCredentialsCreateEvent>(AdiCredentialsBusKey.Create, async ({ cocoonId, ...params }) => {
       const cred = await api.create(this.ensureConnection(cocoonId), params);
-      this.bus.emit('credentials:mutated', { credential: { ...cred, cocoonId } }, 'credentials');
+      this.bus.emit(AdiCredentialsBusKey.Mutated, { credential: { ...cred, cocoonId } }, 'credentials');
     });
 
-    this.onBus<{ cocoonId: string; [key: string]: any }>('credentials:update', async ({ cocoonId, ...params }) => {
+    this.onBus<AdiCredentialsUpdateEvent>(AdiCredentialsBusKey.Update, async ({ cocoonId, ...params }) => {
       const cred = await api.update(this.ensureConnection(cocoonId), params);
-      this.bus.emit('credentials:mutated', { credential: { ...cred, cocoonId } }, 'credentials');
+      this.bus.emit(AdiCredentialsBusKey.Mutated, { credential: { ...cred, cocoonId } }, 'credentials');
     });
 
-    this.onBus<{ id: string; cocoonId: string }>('credentials:delete', async ({ id, cocoonId }) => {
-      await api.delete(this.ensureConnection(cocoonId), id);
-      this.bus.emit('credentials:deleted', { id, cocoonId }, 'credentials');
+    this.onBus<AdiCredentialsDeleteEvent>(AdiCredentialsBusKey.Delete, async ({ id, cocoonId }) => {
+      await api.delete_(this.ensureConnection(cocoonId), id);
+      this.bus.emit(AdiCredentialsBusKey.Deleted, { id, cocoonId }, 'credentials');
     });
 
-    this.onBus<{ id: string; cocoonId: string }>('credentials:verify', async ({ id, cocoonId }) => {
+    this.onBus<AdiCredentialsVerifyEvent>(AdiCredentialsBusKey.Verify, async ({ id, cocoonId }) => {
       const result = await api.verify(this.ensureConnection(cocoonId), id);
-      this.bus.emit('credentials:verified', { id, result }, 'credentials');
+      this.bus.emit(AdiCredentialsBusKey.Verified, { id, result }, 'credentials');
     });
 
-    this.onBus<{ id: string; cocoonId: string }>('credentials:logs', async ({ id, cocoonId }) => {
+    this.onBus<AdiCredentialsLogsEvent>(AdiCredentialsBusKey.Logs, async ({ id, cocoonId }) => {
       const logs = await api.accessLogs(this.ensureConnection(cocoonId), id);
-      this.bus.emit('credentials:logs-changed', { id, logs }, 'credentials');
+      this.bus.emit(AdiCredentialsBusKey.LogsChanged, { id, logs }, 'credentials');
     });
   }
 }

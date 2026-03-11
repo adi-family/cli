@@ -1,6 +1,6 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { SlotsBusKey } from '@adi-family/plugin-slots/bus';
-import { ActionsBusKey } from './bus';
+import { SlotsBusKey } from '@adi-family/plugin-slots';
+import { ActionsBusKey } from './generated/bus-types';
 import type { ActionCard, RenderFn, KindMode } from './types.js';
 import './generated/bus';
 

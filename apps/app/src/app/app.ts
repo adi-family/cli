@@ -5,7 +5,7 @@ import {
   configureApp,
   type PluginDescriptor,
 } from '@adi-family/sdk-plugin';
-import { AdiDebugScreenBusKey } from '@adi-family/plugin-debug-screen/bus';
+import { AdiDebugScreenBusKey } from '@adi-family/plugin-debug-screen';
 import { DbConnection } from './db-connection';
 import { PluginCore } from './plugin-core';
 import { pluginStorageFactory } from './plugin-storage';

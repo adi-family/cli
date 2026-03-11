@@ -1,13 +1,13 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { SlotsBusKey } from './bus';
+import { SlotsBusKey } from './generated/bus-types';
 import type {
   SlotsDefineEvent,
   SlotsPlaceEvent,
   SlotsRemoveEvent,
   SlotsRemoveAllEvent,
-} from './bus';
+} from './generated/bus-types';
 import { PLUGIN_ID, PLUGIN_VERSION } from './config';
 
 // ── Types ────────────────────────────────────────────────

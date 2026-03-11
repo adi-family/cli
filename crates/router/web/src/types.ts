@@ -4,13 +4,14 @@
  * DO NOT EDIT.
  */
 
-import type { MonacoEditorPlugin } from './plugin';
+import type { RouterPlugin } from './plugin';
 
-export type { MonacoEditorPlugin };
+export type { RouterPlugin };
 export * from './config';
+export * from './generated';
 
 declare module '@adi-family/sdk-plugin' {
   interface PluginApiRegistry {
-    'adi.monaco-editor': MonacoEditorPlugin['api'];
+    'adi.router': RouterPlugin['api'];
   }
 }

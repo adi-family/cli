@@ -77,7 +77,7 @@ def get_plugins_dir() -> Path:
 
 # Legacy short-name -> crate directory fallback (same as release_plugin.py)
 LEGACY_PLUGIN_MAP = {
-    "cocoon": "crates/cocoon",
+    "cocoon": "plugins/adi.cocoon",
     "hive": "crates/hive/plugin",
     "agent-loop": "crates/agent-loop/plugin",
     "indexer": "crates/indexer/plugin",

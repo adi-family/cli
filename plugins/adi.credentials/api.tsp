@@ -49,6 +49,48 @@ model DeleteResult {
   deleted: boolean;
 }
 
+// ── EventBus: Credentials ─────────────────────────────────
+
+model CredentialRef {
+  id: uuid;
+  cocoonId: string;
+}
+
+model CredentialWithCocoon {
+  ...Credential;
+  cocoonId: string;
+}
+
+model CredentialWithDataAndCocoon {
+  ...CredentialWithData;
+  cocoonId: string;
+}
+
+@bus("adi.credentials")
+interface CredentialsBus {
+  // Commands (UI → plugin)
+  @event list(credential_type?: CredentialType, provider?: string): void;
+  @event get(id: uuid, cocoonId: string): void;
+  @event reveal(id: uuid, cocoonId: string): void;
+  @event create(cocoonId: string, name: string, credential_type: CredentialType, data: Record<unknown>, description?: string, provider?: string, expires_at?: utcDateTime): void;
+  @event update(cocoonId: string, id: uuid, name?: string, description?: string, data?: Record<unknown>, provider?: string, expires_at?: utcDateTime): void;
+  @event delete(id: uuid, cocoonId: string): void;
+  @event verify(id: uuid, cocoonId: string): void;
+  @event logs(id: uuid, cocoonId: string): void;
+
+  // Responses (plugin → UI)
+  @event listChanged(credentials: CredentialWithCocoon[]): void;
+  @event detailChanged(credential: CredentialWithCocoon): void;
+  @event dataRevealed(credential: CredentialWithDataAndCocoon): void;
+  @event mutated(credential: CredentialWithCocoon): void;
+  @event deleted(id: uuid, cocoonId: string): void;
+  @event verified(id: uuid, result: VerifyResult): void;
+  @event logsChanged(id: uuid, logs: CredentialAccessLog[]): void;
+  @event error(message: string, event: string): void;
+}
+
+// ── AdiService: Credentials ───────────────────────────────
+
 @channel("adi.credentials")
 interface CredentialsService {
   @request

@@ -2,9 +2,11 @@
 //!
 //! Generates TypeScript module augmentation and payload types from `@bus` interfaces.
 //! Reads `@bus("name")` decorator on interfaces and `@event` on operations to produce:
-//! - `types.ts` — shared models/enums + auto-generated payload interfaces
-//! - `events.ts` — module augmentation for EventRegistry
-//! - `index.ts` — re-exports
+//! - `bus-types.ts` — auto-generated payload interfaces + BusKey enums (no models/enums)
+//! - `bus-events.ts` — module augmentation for EventRegistry
+//!
+//! Models and enums are expected to be generated separately (via `Side::Types`)
+//! into sibling `models.ts`/`enums.ts` files in the same output directory.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
@@ -16,7 +18,7 @@ use convert_case::{Case, Casing};
 use crate::ast::{Decorator, OperationParam, TypeRef, TypeSpecFile};
 
 use super::typescript::type_to_typescript;
-use super::{build_model_map, build_scalar_map, resolve_properties, CodegenError, ModelMap, ScalarMap};
+use super::{build_model_map, CodegenError, ModelMap};
 
 /// Configuration for EventBus code generation.
 #[derive(Debug, Clone)]
@@ -55,13 +57,16 @@ struct EventField {
 }
 
 /// Generate TypeScript eventbus files from TypeSpec.
+///
+/// Outputs `bus-types.ts` (payload interfaces + BusKey enums) and `bus-events.ts`
+/// (module augmentation). Models and enums are NOT generated here — they must
+/// exist as sibling `models.ts`/`enums.ts` files (from `Side::Types`).
 pub fn generate(
     file: &TypeSpecFile,
     output_dir: &Path,
     _package_name: &str,
     config: &EventBusConfig,
 ) -> Result<Vec<String>, CodegenError> {
-    let scalars = build_scalar_map(file);
     let models = build_model_map(file);
 
     fs::create_dir_all(output_dir)?;
@@ -69,23 +74,17 @@ pub fn generate(
     let events = collect_eventbus_data(file, &models, config);
     let mut generated = Vec::new();
 
-    // types.ts — shared models/enums + auto-generated payload interfaces
-    let types_content = generate_types(file, &scalars, &models, &events)?;
-    let types_path = output_dir.join("types.ts");
+    // bus-types.ts — payload interfaces + BusKey enums (imports models/enums from siblings)
+    let types_content = generate_bus_types(file, &events)?;
+    let types_path = output_dir.join("bus-types.ts");
     fs::write(&types_path, &types_content)?;
     generated.push(types_path.display().to_string());
 
-    // events.ts — module augmentation
-    let events_content = generate_events(&events, config, file)?;
-    let events_path = output_dir.join("events.ts");
+    // bus-events.ts — module augmentation
+    let events_content = generate_bus_events(&events, config, file)?;
+    let events_path = output_dir.join("bus-events.ts");
     fs::write(&events_path, &events_content)?;
     generated.push(events_path.display().to_string());
-
-    // index.ts
-    let index_content = generate_index()?;
-    let index_path = output_dir.join("index.ts");
-    fs::write(&index_path, &index_content)?;
-    generated.push(index_path.display().to_string());
 
     Ok(generated)
 }
@@ -127,11 +126,12 @@ fn collect_eventbus_data(
     events
 }
 
-/// Generate types.ts with shared models/enums + payload interfaces.
-fn generate_types(
+/// Generate bus-types.ts with payload interfaces + BusKey enums.
+///
+/// Does NOT generate models or enums — those come from sibling `models.ts`/`enums.ts`.
+/// Imports referenced model/enum types from `./models` and `./enums`.
+fn generate_bus_types(
     file: &TypeSpecFile,
-    _scalars: &ScalarMap,
-    models: &ModelMap<'_>,
     events: &[BusEvent],
 ) -> Result<String, CodegenError> {
     let mut out = String::new();
@@ -141,43 +141,41 @@ fn generate_types(
     writeln!(out, " * DO NOT EDIT.")?;
     writeln!(out, " */")?;
 
-    // Enums first (payload types may reference them)
-    for enum_def in file.enums() {
-        writeln!(out)?;
-        writeln!(out, "export enum {} {{", enum_def.name)?;
-        for member in &enum_def.members {
-            let value = member
-                .value
-                .as_ref()
-                .map(|v| match v {
-                    crate::ast::Value::String(s) => s.clone(),
-                    _ => member.name.to_case(Case::Snake),
-                })
-                .unwrap_or_else(|| member.name.to_case(Case::Snake));
-            let variant = member.name.to_case(Case::Pascal);
-            writeln!(out, r#"  {} = "{}","#, variant, value)?;
+    // Collect which models and enums are referenced by event fields
+    let known_models: BTreeSet<String> = file.models().map(|m| m.name.clone()).collect();
+    let known_enums: BTreeSet<String> = file.enums().map(|e| e.name.clone()).collect();
+
+    let mut model_imports = BTreeSet::new();
+    let mut enum_imports = BTreeSet::new();
+
+    for event in events {
+        for field in &event.fields {
+            collect_named_refs_split(
+                &field.type_ref,
+                &known_models,
+                &known_enums,
+                &mut model_imports,
+                &mut enum_imports,
+            );
         }
-        writeln!(out, "}}")?;
     }
 
-    // Models (shared types referenced by events)
-    for model in file.models() {
+    if !model_imports.is_empty() {
         writeln!(out)?;
-        let type_params = if model.type_params.is_empty() {
-            String::new()
-        } else {
-            format!("<{}>", model.type_params.join(", "))
-        };
-        writeln!(out, "export interface {}{} {{", model.name, type_params)?;
+        writeln!(
+            out,
+            "import type {{ {} }} from './models';",
+            model_imports.into_iter().collect::<Vec<_>>().join(", ")
+        )?;
+    }
 
-        let all_properties = resolve_properties(model, models);
-        for prop in all_properties {
-            let ts_type = type_to_typescript(&prop.type_ref);
-            let optional = if prop.optional { "?" } else { "" };
-            writeln!(out, "  {}{}: {};", prop.name, optional, ts_type)?;
-        }
-
-        writeln!(out, "}}")?;
+    if !enum_imports.is_empty() {
+        writeln!(out)?;
+        writeln!(
+            out,
+            "import {{ {} }} from './enums';",
+            enum_imports.into_iter().collect::<Vec<_>>().join(", ")
+        )?;
     }
 
     // Auto-generated payload interfaces from @bus operations
@@ -209,8 +207,8 @@ fn generate_types(
     Ok(out)
 }
 
-/// Generate events.ts with module augmentation.
-fn generate_events(
+/// Generate bus-events.ts with module augmentation.
+fn generate_bus_events(
     events: &[BusEvent],
     config: &EventBusConfig,
     file: &TypeSpecFile,
@@ -223,19 +221,33 @@ fn generate_events(
     writeln!(out, " */")?;
     writeln!(out)?;
 
-    // Collect type imports (payload interfaces + referenced model types)
-    let extra_imports = collect_type_imports(events, file);
-    let mut type_imports: BTreeSet<String> = events.iter().map(|e| e.payload_type.clone()).collect();
-    type_imports.extend(extra_imports);
+    // Payload type imports come from bus-types
+    let payload_imports: BTreeSet<String> =
+        events.iter().map(|e| e.payload_type.clone()).collect();
 
-    if !type_imports.is_empty() {
+    // Model/enum imports referenced in the augmentation come from models/enums
+    let known_models: BTreeSet<String> = file.models().map(|m| m.name.clone()).collect();
+    let known_enums: BTreeSet<String> = file.enums().map(|e| e.name.clone()).collect();
+    let known_types: BTreeSet<String> = known_models.union(&known_enums).cloned().collect();
+
+    let mut model_refs = BTreeSet::new();
+    for event in events {
+        for field in &event.fields {
+            collect_named_refs(&field.type_ref, &known_types, &mut model_refs);
+        }
+    }
+
+    if !payload_imports.is_empty() {
         writeln!(
             out,
-            "import type {{ {} }} from './types';",
-            type_imports.into_iter().collect::<Vec<_>>().join(", ")
+            "import type {{ {} }} from './bus-types';",
+            payload_imports.into_iter().collect::<Vec<_>>().join(", ")
         )?;
-        writeln!(out)?;
     }
+
+    // Model/enum refs are already imported by bus-types, not needed here
+    // since the augmentation only references payload types
+    writeln!(out)?;
 
     writeln!(out, "declare module '{}' {{", config.module_path)?;
     writeln!(out, "  interface {} {{", config.interface_name)?;
@@ -259,18 +271,6 @@ fn generate_events(
     writeln!(out, "  }}")?;
     writeln!(out, "}}")?;
 
-    Ok(out)
-}
-
-/// Generate the index.ts re-export file.
-fn generate_index() -> Result<String, CodegenError> {
-    let mut out = String::new();
-    writeln!(out, "/**")?;
-    writeln!(out, " * Auto-generated from TypeSpec.")?;
-    writeln!(out, " */")?;
-    writeln!(out)?;
-    writeln!(out, "export * from './types';")?;
-    writeln!(out, "import './events';")?;
     Ok(out)
 }
 
@@ -312,23 +312,53 @@ fn resolve_event_fields(params: &[OperationParam], models: &ModelMap<'_>) -> Vec
     fields
 }
 
-/// Collect type names referenced in event fields that need importing.
-fn collect_type_imports(events: &[BusEvent], file: &TypeSpecFile) -> BTreeSet<String> {
-    let known_types: BTreeSet<String> = file
-        .models()
-        .map(|m| m.name.clone())
-        .chain(file.enums().map(|e| e.name.clone()))
-        .collect();
-
-    let mut imports = BTreeSet::new();
-
-    for event in events {
-        for field in &event.fields {
-            collect_named_refs(&field.type_ref, &known_types, &mut imports);
+/// Recursively extract named type references, splitting into model vs enum imports.
+fn collect_named_refs_split(
+    type_ref: &TypeRef,
+    known_models: &BTreeSet<String>,
+    known_enums: &BTreeSet<String>,
+    model_imports: &mut BTreeSet<String>,
+    enum_imports: &mut BTreeSet<String>,
+) {
+    match type_ref {
+        TypeRef::Named(name) => {
+            if known_models.contains(name) {
+                model_imports.insert(name.clone());
+            } else if known_enums.contains(name) {
+                enum_imports.insert(name.clone());
+            }
         }
+        TypeRef::Array(inner) => {
+            collect_named_refs_split(inner, known_models, known_enums, model_imports, enum_imports)
+        }
+        TypeRef::Generic { base, args } => {
+            collect_named_refs_split(base, known_models, known_enums, model_imports, enum_imports);
+            for arg in args {
+                collect_named_refs_split(
+                    arg,
+                    known_models,
+                    known_enums,
+                    model_imports,
+                    enum_imports,
+                );
+            }
+        }
+        TypeRef::Optional(inner) => {
+            collect_named_refs_split(inner, known_models, known_enums, model_imports, enum_imports)
+        }
+        TypeRef::Union(variants) => {
+            for v in variants {
+                collect_named_refs_split(
+                    v,
+                    known_models,
+                    known_enums,
+                    model_imports,
+                    enum_imports,
+                );
+            }
+        }
+        _ => {}
     }
-
-    imports
 }
 
 /// Recursively extract named type references from a TypeRef.
@@ -437,10 +467,14 @@ interface SignalingBus {
         let dir = tempfile::tempdir().unwrap();
         let generated = generate(&file, dir.path(), "test", &config).unwrap();
 
-        assert_eq!(generated.len(), 3);
+        assert_eq!(generated.len(), 2);
 
-        let types = std::fs::read_to_string(dir.path().join("types.ts")).unwrap();
-        assert!(types.contains("export enum WsState {"));
+        let types = std::fs::read_to_string(dir.path().join("bus-types.ts")).unwrap();
+        // Enums are NOT generated here — they come from sibling enums.ts
+        assert!(!types.contains("export enum WsState {"));
+        // But enums ARE imported
+        assert!(types.contains("import { WsState } from './enums';"));
+        // Payload interface is generated
         assert!(types.contains("export interface SignalingStateEvent {"));
         assert!(types.contains("url: string;"));
         assert!(types.contains("state: WsState;"));
@@ -471,7 +505,7 @@ interface AuthBus {
         let dir = tempfile::tempdir().unwrap();
         generate(&file, dir.path(), "test", &config).unwrap();
 
-        let events = std::fs::read_to_string(dir.path().join("events.ts")).unwrap();
+        let events = std::fs::read_to_string(dir.path().join("bus-events.ts")).unwrap();
         assert!(events.contains("declare module '@adi-family/sdk-plugin/types'"));
         assert!(events.contains("interface EventRegistry {"));
         assert!(events.contains("'signaling:state': SignalingStateEvent;"));
@@ -479,6 +513,8 @@ interface AuthBus {
         assert!(events.contains("'auth:state-changed': AuthStateChangedEvent;"));
         assert!(events.contains("// ── signaling ──"));
         assert!(events.contains("// ── auth ──"));
+        // Imports come from bus-types, not types
+        assert!(events.contains("from './bus-types'"));
     }
 
     #[test]
@@ -506,13 +542,13 @@ interface AuthBus {
         let dir = tempfile::tempdir().unwrap();
         generate(&file, dir.path(), "test", &config).unwrap();
 
-        let types = std::fs::read_to_string(dir.path().join("types.ts")).unwrap();
+        let types = std::fs::read_to_string(dir.path().join("bus-types.ts")).unwrap();
         assert!(types.contains("authDomain: string;"));
         assert!(types.contains("sourceUrl?: string;"));
     }
 
     #[test]
-    fn test_model_type_imports_in_events() {
+    fn test_model_type_imports_in_bus_types() {
         let source = r#"
 model ConnectionInfo {
     manual_allowed: boolean;
@@ -540,13 +576,11 @@ interface SignalingBus {
         let dir = tempfile::tempdir().unwrap();
         generate(&file, dir.path(), "test", &config).unwrap();
 
-        let events = std::fs::read_to_string(dir.path().join("events.ts")).unwrap();
-        assert!(events.contains("ConnectionInfo"));
-        assert!(events.contains("DeviceInfo"));
-
-        let types = std::fs::read_to_string(dir.path().join("types.ts")).unwrap();
-        assert!(types.contains("export interface ConnectionInfo {"));
-        assert!(types.contains("export interface DeviceInfo {"));
+        let bus_types = std::fs::read_to_string(dir.path().join("bus-types.ts")).unwrap();
+        // Models are imported, not defined inline
+        assert!(bus_types.contains("import type { ConnectionInfo, DeviceInfo } from './models'"));
+        assert!(!bus_types.contains("export interface ConnectionInfo {"));
+        assert!(!bus_types.contains("export interface DeviceInfo {"));
     }
 
     #[test]

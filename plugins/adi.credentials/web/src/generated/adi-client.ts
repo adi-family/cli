@@ -22,7 +22,7 @@ export const create = (c: Connection, params: { name: string; credential_type: C
 export const update = (c: Connection, params: { id: string; name?: string; description?: string; data?: Record<string, unknown>; metadata?: Record<string, unknown>; provider?: string; expires_at?: string; }) =>
   c.request<Credential>(SVC, 'update', params);
 
-export const delete = (c: Connection, id: string) =>
+export const delete_ = (c: Connection, id: string) =>
   c.request<DeleteResult>(SVC, 'delete', { id });
 
 export const verify = (c: Connection, id: string) =>

@@ -49,8 +49,8 @@
 [submodule "crates/adi-executor"]
 	path = crates/executor
 	url = https://github.com/adi-family/adi-executor.git
-[submodule "crates/cocoon"]
-	path = crates/cocoon
+[submodule "plugins/adi.cocoon"]
+	path = plugins/adi.cocoon
 	url = git@github.com:adi-family/cocoon.git
 [submodule "crates/_lib/lib-misc-color"]
 	path = crates/_lib/lib-misc-color

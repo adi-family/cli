@@ -1,11 +1,11 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { AdiRouterBusKey } from '@adi-family/plugin-router/bus';
-import type { AdiRouterChangedEvent } from '@adi-family/plugin-router/bus';
-import { AdiDebugScreenBusKey } from './bus';
-import type { AdiDebugScreenRegisterSectionEvent } from './bus';
+import { AdiRouterBusKey } from '@adi-family/plugin-router';
+import type { AdiRouterChangedEvent } from '@adi-family/plugin-router';
+import { AdiDebugScreenBusKey } from './generated/bus-types';
+import type { AdiDebugScreenRegisterSectionEvent } from './generated/bus-types';
 import type { AdiDebugPageElement, DebugSection } from './component.js';
 import { PLUGIN_ID } from './config';
-import './bus';
+import './generated/bus-events';
 
 const ROUTE_PREFIX = `/${PLUGIN_ID}`;
 

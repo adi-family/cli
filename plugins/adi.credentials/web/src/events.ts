@@ -1,2 +1,2 @@
-import './bus/events.js';
+import './generated/bus-events.js';
 export {};

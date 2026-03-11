@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "src/types.ts",
+  "types": "src/types.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./bus": "./src/bus/index.ts"
+    ".": "./src/types.ts",
+    "./build": "./src/index.ts"
   },
   "scripts": {
     "generate": "cargo check -p credentials-plugin",
@@ -20,6 +20,7 @@
     "@adi-family/cocoon-plugin-interface": "workspace:*",
     "@adi-family/plugin-signaling": "workspace:*",
     "@adi-family/plugin-router": "workspace:*",
+    "@adi-family/plugin-actions-feed": "workspace:*",
     "@adi-family/sdk-plugin": "workspace:*",
     "lit": "^3.3.2"
   },

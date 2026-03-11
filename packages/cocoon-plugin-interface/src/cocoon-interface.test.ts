@@ -1,8 +1,8 @@
 import { describe, it, expect, mock } from 'bun:test';
 import { CocoonPluginInterface } from './cocoon-interface.js';
 import { CocoonBusKey } from './bus-keys.js';
-import { AdiSignalingBusKey } from '@adi-family/plugin-signaling/bus';
-import type { Connection } from '@adi-family/plugin-signaling/bus';
+import { AdiSignalingBusKey } from '@adi-family/plugin-signaling';
+import type { Connection } from '@adi-family/plugin-signaling';
 import type { EventBus } from '@adi-family/sdk-plugin';
 
 type Handler = (payload: any) => void;

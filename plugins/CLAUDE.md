@@ -154,5 +154,5 @@ pub mod enums {
 
 Reference implementation in `plugins/adi.credentials/`.
 - `api.tsp`: 8 methods (list, get, getWithData, create, update, delete, verify, accessLogs)
-- Handler: `crates/cocoon/core/src/services/credentials.rs`
+- Handler: `plugins/adi.cocoon/core/src/services/credentials.rs`
 - Web client: `plugins/adi.credentials/web/src/generated/adi-client.ts`

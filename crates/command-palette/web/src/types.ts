@@ -4,13 +4,14 @@
  * DO NOT EDIT.
  */
 
-import type { MonacoEditorPlugin } from './plugin';
+import type { CommandPalettePlugin } from './plugin';
 
-export type { MonacoEditorPlugin };
+export type { CommandPalettePlugin };
 export * from './config';
+export * from './generated';
 
 declare module '@adi-family/sdk-plugin' {
   interface PluginApiRegistry {
-    'adi.monaco-editor': MonacoEditorPlugin['api'];
+    'adi.command-palette': CommandPalettePlugin['api'];
   }
 }

@@ -1,1 +1,1 @@
-export { AdiDebugScreenBusKey } from './bus';
+export { AdiDebugScreenBusKey } from './generated/bus-types';

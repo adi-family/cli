@@ -1,9 +1,10 @@
 //! Build-time codegen for ADI web plugins.
 //!
-//! Generates TypeScript files from Cargo.toml metadata and optional `.tsp` eventbus definitions:
+//! Generates TypeScript files from Cargo.toml metadata and optional `.tsp` definitions:
 //! - `config.ts` — plugin constants (PLUGIN_ID, PLUGIN_NAME, PLUGIN_VERSION, PLUGIN_TYPE)
-//! - `index.ts` — entry point with re-exports and PluginApiRegistry augmentation
-//! - `bus/` — eventbus types from `.tsp` (if the file exists)
+//! - `types.ts` — types-only entry: plugin type re-export, config, generated types, PluginApiRegistry augmentation
+//! - `index.ts` — build entry point with PluginShell export (runtime code)
+//! - `generated/` — all codegen output from `.tsp` (models, enums, adi-client, bus-types, bus-events)
 //!
 //! # Example
 //! ```ignore
@@ -25,7 +26,6 @@ use typespec_api::codegen::{Generator, Language, Side};
 pub struct PluginWebBuild {
     tsp_path: PathBuf,
     output_dir: PathBuf,
-    bus_subdir: String,
     plugin_class: Option<String>,
 }
 
@@ -34,7 +34,6 @@ impl PluginWebBuild {
         Self {
             tsp_path: PathBuf::from("../api.tsp"),
             output_dir: PathBuf::from("../web/src"),
-            bus_subdir: "bus".into(),
             plugin_class: None,
         }
     }
@@ -48,12 +47,6 @@ impl PluginWebBuild {
     /// Override the web source output directory (relative to plugin crate).
     pub fn output_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.output_dir = dir.into();
-        self
-    }
-
-    /// Override the eventbus subdirectory name within output_dir.
-    pub fn bus_subdir(mut self, name: impl Into<String>) -> Self {
-        self.bus_subdir = name.into();
         self
     }
 
@@ -86,6 +79,7 @@ impl PluginWebBuild {
         let meta = PluginMeta::parse(&manifest_str)?;
 
         let output_dir = manifest_dir.join(&self.output_dir);
+        let generated_dir = output_dir.join("generated");
 
         let plugin_class = self
             .plugin_class
@@ -94,11 +88,25 @@ impl PluginWebBuild {
 
         // TSP codegen (optional — only if .tsp exists)
         let tsp_path = manifest_dir.join(&self.tsp_path);
-        let has_eventbus = tsp_path.exists();
-        if has_eventbus {
+        let has_generated = tsp_path.exists();
+
+        if has_generated {
             println!("cargo:rerun-if-changed={}", tsp_path.display());
-            generate_eventbus(&tsp_path, &output_dir.join(&self.bus_subdir), &meta)?;
-            generate_adi_client(&tsp_path, &output_dir.join("generated"), &meta)?;
+
+            // Always generate types (models.ts, enums.ts) into generated/
+            generate_types(&tsp_path, &generated_dir, &meta)?;
+
+            // Generate eventbus (bus-types.ts, bus-events.ts) into generated/
+            let has_eventbus = generate_eventbus(&tsp_path, &generated_dir, &meta)?;
+
+            // Generate adi-client into generated/
+            let has_adi_client = generate_adi_client(&tsp_path, &generated_dir, &meta)?;
+
+            // Generate generated/index.ts re-exporting everything
+            write_if_changed(
+                &generated_dir.join("index.ts"),
+                &generate_generated_index_ts(has_eventbus, has_adi_client),
+            );
         }
 
         // config.ts
@@ -107,10 +115,16 @@ impl PluginWebBuild {
             &generate_config_ts(&meta),
         );
 
-        // index.ts
+        // types.ts — types-only entry for cross-plugin imports
+        write_if_changed(
+            &output_dir.join("types.ts"),
+            &generate_types_ts(&plugin_class, &meta.id, has_generated),
+        );
+
+        // index.ts — build entry point with PluginShell export
         write_if_changed(
             &output_dir.join("index.ts"),
-            &generate_index_ts(&plugin_class, has_eventbus, &self.bus_subdir),
+            &generate_index_ts(&plugin_class, has_generated),
         );
 
         Ok(())
@@ -187,11 +201,35 @@ impl PluginMeta {
 
 // ── Code generation ─────────────────────────────────────────
 
-fn generate_eventbus(tsp_path: &Path, bus_dir: &Path, meta: &PluginMeta) -> Result<()> {
+/// Generate models.ts and enums.ts into the generated directory.
+fn generate_types(tsp_path: &Path, generated_dir: &Path, meta: &PluginMeta) -> Result<()> {
     let source =
         std::fs::read_to_string(tsp_path).with_context(|| format!("read {}", tsp_path.display()))?;
     let file =
         typespec_api::parse(&source).with_context(|| format!("parse {}", tsp_path.display()))?;
+
+    let package_name = meta.id.rsplit('.').next().unwrap_or(&meta.id);
+
+    Generator::new(&file, generated_dir, package_name)
+        .generate(Language::TypeScript, Side::Types)
+        .context("types codegen failed")?;
+
+    Ok(())
+}
+
+/// Generate bus-types.ts and bus-events.ts into the generated directory.
+/// Returns true if any @bus interfaces were found and generated.
+fn generate_eventbus(tsp_path: &Path, generated_dir: &Path, meta: &PluginMeta) -> Result<bool> {
+    let source =
+        std::fs::read_to_string(tsp_path).with_context(|| format!("read {}", tsp_path.display()))?;
+    let file =
+        typespec_api::parse(&source).with_context(|| format!("parse {}", tsp_path.display()))?;
+
+    // Check if there are any @bus interfaces
+    let has_bus = file.interfaces().any(|i| i.decorators.iter().any(|d| d.name == "bus"));
+    if !has_bus {
+        return Ok(false);
+    }
 
     let config = EventBusConfig {
         module_path: "@adi-family/sdk-plugin/types".into(),
@@ -201,15 +239,17 @@ fn generate_eventbus(tsp_path: &Path, bus_dir: &Path, meta: &PluginMeta) -> Resu
 
     let package_name = meta.id.rsplit('.').next().unwrap_or(&meta.id);
 
-    Generator::new(&file, bus_dir, package_name)
+    Generator::new(&file, generated_dir, package_name)
         .with_eventbus_config(config)
         .generate(Language::TypeScript, Side::EventBus)
         .context("eventbus codegen failed")?;
 
-    Ok(())
+    Ok(true)
 }
 
-fn generate_adi_client(tsp_path: &Path, generated_dir: &Path, meta: &PluginMeta) -> Result<()> {
+/// Generate adi-client.ts into the generated directory.
+/// Returns true if any @channel interfaces were found and generated.
+fn generate_adi_client(tsp_path: &Path, generated_dir: &Path, meta: &PluginMeta) -> Result<bool> {
     let source =
         std::fs::read_to_string(tsp_path).with_context(|| format!("read {}", tsp_path.display()))?;
     let file =
@@ -221,14 +261,7 @@ fn generate_adi_client(tsp_path: &Path, generated_dir: &Path, meta: &PluginMeta)
         .generate(Language::TypeScript, Side::AdiService)
         .context("adi-client codegen failed")?;
 
-    // Also generate types alongside the client if not already present
-    if !generated.is_empty() {
-        Generator::new(&file, generated_dir, package_name)
-            .generate(Language::TypeScript, Side::Types)
-            .context("types codegen failed")?;
-    }
-
-    Ok(())
+    Ok(!generated.is_empty())
 }
 
 fn generate_config_ts(meta: &PluginMeta) -> String {
@@ -245,35 +278,80 @@ fn generate_config_ts(meta: &PluginMeta) -> String {
     out
 }
 
-fn generate_index_ts(plugin_class: &str, has_eventbus: bool, bus_subdir: &str) -> String {
+fn generate_types_ts(
+    plugin_class: &str,
+    plugin_id: &str,
+    has_generated: bool,
+) -> String {
     let mut out = String::new();
     writeln!(out, "/**").unwrap();
-    writeln!(out, " * Auto-generated plugin entry from Cargo.toml.").unwrap();
+    writeln!(out, " * Auto-generated plugin types.").unwrap();
+    writeln!(out, " * Import via: import '@adi-family/plugin-xxx'").unwrap();
     writeln!(out, " * DO NOT EDIT.").unwrap();
     writeln!(out, " */").unwrap();
     writeln!(out).unwrap();
-    writeln!(out, "import {{ PLUGIN_ID }} from './config';").unwrap();
+    writeln!(out, "import type {{ {plugin_class} }} from './plugin';").unwrap();
+    writeln!(out).unwrap();
+    writeln!(out, "export type {{ {plugin_class} }};").unwrap();
+    writeln!(out, "export * from './config';").unwrap();
+
+    if has_generated {
+        writeln!(out, "export * from './generated';").unwrap();
+    }
+
+    writeln!(out).unwrap();
+    writeln!(out, "declare module '@adi-family/sdk-plugin' {{").unwrap();
+    writeln!(out, "  interface PluginApiRegistry {{").unwrap();
+    writeln!(out, "    '{plugin_id}': {plugin_class}['api'];").unwrap();
+    writeln!(out, "  }}").unwrap();
+    writeln!(out, "}}").unwrap();
+    out
+}
+
+fn generate_index_ts(plugin_class: &str, has_generated: bool) -> String {
+    let mut out = String::new();
+    writeln!(out, "/**").unwrap();
+    writeln!(out, " * Auto-generated plugin build entry.").unwrap();
+    writeln!(out, " * DO NOT EDIT.").unwrap();
+    writeln!(out, " */").unwrap();
     writeln!(out).unwrap();
 
-    if has_eventbus {
-        writeln!(out, "import './{bus_subdir}';").unwrap();
-        writeln!(out, "export * from './{bus_subdir}';").unwrap();
+    if has_generated {
+        writeln!(out, "import './generated';").unwrap();
+        writeln!(out, "export * from './generated';").unwrap();
     }
 
     writeln!(out, "export * from './config';").unwrap();
     writeln!(out).unwrap();
-    writeln!(out, "import type {{ {plugin_class} }} from './plugin';").unwrap();
     writeln!(
         out,
         "export {{ {plugin_class}, {plugin_class} as PluginShell }} from './plugin';"
     )
     .unwrap();
+    out
+}
+
+/// Generate the index.ts for the generated/ directory.
+fn generate_generated_index_ts(has_eventbus: bool, has_adi_client: bool) -> String {
+    let mut out = String::new();
+    writeln!(out, "/**").unwrap();
+    writeln!(out, " * Auto-generated from TypeSpec.").unwrap();
+    writeln!(out, " * DO NOT EDIT.").unwrap();
+    writeln!(out, " */").unwrap();
     writeln!(out).unwrap();
-    writeln!(out, "declare module '@adi-family/sdk-plugin' {{").unwrap();
-    writeln!(out, "  interface PluginApiRegistry {{").unwrap();
-    writeln!(out, "    [PLUGIN_ID]: {plugin_class}['api'];").unwrap();
-    writeln!(out, "  }}").unwrap();
-    writeln!(out, "}}").unwrap();
+    writeln!(out, "export * from './models';").unwrap();
+    writeln!(out, "export * from './enums';").unwrap();
+
+    if has_eventbus {
+        writeln!(out, "export * from './bus-types';").unwrap();
+        writeln!(out, "import './bus-events';").unwrap();
+    }
+
+    if has_adi_client {
+        // Re-export adi-client under a namespace to avoid name collisions
+        writeln!(out, "export * as adiClient from './adi-client';").unwrap();
+    }
+
     out
 }
 

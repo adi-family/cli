@@ -1,13 +1,11 @@
-import '@adi-family/plugin-cocoon';
-import '@adi-family/plugin-signaling';
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { AdiSignalingBusKey, type DeviceInfo, type IceServer } from '@adi-family/plugin-signaling/bus';
-import { AdiRouterBusKey } from '@adi-family/plugin-router/bus';
-import { AdiDebugScreenBusKey } from '@adi-family/plugin-debug-screen/bus';
+import { AdiSignalingBusKey, type DeviceInfo, type IceServer } from '@adi-family/plugin-signaling';
+import { AdiRouterBusKey } from '@adi-family/plugin-router';
+import { AdiDebugScreenBusKey } from '@adi-family/plugin-debug-screen';
 import { PLUGIN_ID, PLUGIN_VERSION } from './config';
 import type { AdiCocoonControlCenterElement, ControlCenterCocoon } from './component';
 import type { AdiCocoonControlCenterDebugElement } from './debug-section';
-import './bus';
+import './generated';
 
 interface TrackedDevice {
   info: DeviceInfo;

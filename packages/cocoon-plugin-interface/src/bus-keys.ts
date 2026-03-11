@@ -1,4 +1,4 @@
-import type { Connection, DeviceInfo } from '@adi-family/plugin-signaling/bus';
+import type { Connection, DeviceInfo } from '@adi-family/plugin-signaling';
 
 export interface ConnectionSettings {
   autoinstallPlugins?: boolean;

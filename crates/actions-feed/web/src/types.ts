@@ -1,13 +1,17 @@
-// Types generated from bus.tsp — see src/generated/bus/types.ts
-export type { ActionPriority, ActionKindMode, ActionsPushEvent, ActionsDismissEvent, ActionsDismissedEvent, ActionsRegisterKindEvent } from './generated/bus';
+/**
+ * Auto-generated plugin types.
+ * Import via: import '@adi-family/plugin-xxx'
+ * DO NOT EDIT.
+ */
 
-export interface ActionCard {
-  id: string;
-  plugin: string;
-  kind: string;
-  data: Record<string, unknown>;
-  priority: 'low' | 'normal' | 'urgent';
+import type { ActionsFeedPlugin } from './plugin';
+
+export type { ActionsFeedPlugin };
+export * from './config';
+export * from './generated';
+
+declare module '@adi-family/sdk-plugin' {
+  interface PluginApiRegistry {
+    'adi.actions-feed': ActionsFeedPlugin['api'];
+  }
 }
-
-export type RenderFn = (data: Record<string, unknown>, actionId: string) => string;
-export type KindMode = 'exclusive';

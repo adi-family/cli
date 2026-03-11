@@ -4,13 +4,13 @@
  * DO NOT EDIT.
  */
 
-import type { MonacoEditorPlugin } from './plugin';
+import type { CocoonControlCenterPlugin } from './plugin';
 
-export type { MonacoEditorPlugin };
+export type { CocoonControlCenterPlugin };
 export * from './config';
 
 declare module '@adi-family/sdk-plugin' {
   interface PluginApiRegistry {
-    'adi.monaco-editor': MonacoEditorPlugin['api'];
+    'adi.cocoon-control-center': CocoonControlCenterPlugin['api'];
   }
 }

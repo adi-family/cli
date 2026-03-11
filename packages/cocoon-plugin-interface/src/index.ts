@@ -1,5 +1,5 @@
 export { CocoonPluginInterface } from './cocoon-interface.js';
 export { CocoonBusKey } from './bus-keys.js';
 export type { ConnectionSettings, CocoonConnectionAddedEvent, CocoonConnectionRemovedEvent, CocoonSettingsChangedEvent, DeviceInfo } from './bus-keys.js';
-export type { Connection } from '@adi-family/plugin-signaling/bus';
+export type { Connection } from '@adi-family/plugin-signaling';
 import './events.js';

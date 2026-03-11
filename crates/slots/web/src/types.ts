@@ -4,13 +4,14 @@
  * DO NOT EDIT.
  */
 
-import type { MonacoEditorPlugin } from './plugin';
+import type { SlotsPlugin } from './plugin';
 
-export type { MonacoEditorPlugin };
+export type { SlotsPlugin };
 export * from './config';
+export * from './generated';
 
 declare module '@adi-family/sdk-plugin' {
   interface PluginApiRegistry {
-    'adi.monaco-editor': MonacoEditorPlugin['api'];
+    'adi.slots': SlotsPlugin['api'];
   }
 }

@@ -81,7 +81,7 @@ def get_lib_extension(plat: str) -> str:
 
 # Legacy short-name -> crate directory fallback
 LEGACY_PLUGIN_MAP = {
-    "cocoon": "crates/cocoon",
+    "cocoon": "plugins/adi.cocoon",
     "hive": "crates/hive/plugin",
     "agent-loop": "crates/agent-loop/plugin",
     "indexer": "crates/indexer/plugin",

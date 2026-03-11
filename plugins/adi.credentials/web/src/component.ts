@@ -1,13 +1,16 @@
 import { LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
 import type { CocoonOption, DataField } from './views/credential-form.js';
-import type {
-  Credential,
-  CredentialAccessLog,
-  CredentialType,
-  CredentialWithData,
-  VerifyResult,
-} from './types.js';
+import {
+  AdiCredentialsBusKey,
+  type AdiCredentialsCreateEvent,
+  type AdiCredentialsUpdateEvent,
+  type CredentialAccessLog,
+  type CredentialType,
+  type CredentialWithCocoon,
+  type CredentialWithDataAndCocoon,
+  type VerifyResult,
+} from './generated/bus-types.js';
 import { renderCredentialList } from './views/credential-list.js';
 import { renderCredentialDetail } from './views/credential-detail.js';
 import { renderCredentialForm } from './views/credential-form.js';
@@ -15,13 +18,13 @@ import { cocoon } from './cocoon.js';
 
 type ViewState =
   | { type: 'list' }
-  | { type: 'detail'; credential: Credential }
+  | { type: 'detail'; credential: CredentialWithCocoon }
   | { type: 'create' }
-  | { type: 'edit'; credential: Credential };
+  | { type: 'edit'; credential: CredentialWithCocoon };
 
 export class AdiCredentialsElement extends LitElement {
-  @state() private credentials: Credential[] = [];
-  @state() private revealedData: CredentialWithData | null = null;
+  @state() private credentials: CredentialWithCocoon[] = [];
+  @state() private revealedData: CredentialWithDataAndCocoon | null = null;
   @state() private verifyResult: VerifyResult | null = null;
   @state() private accessLogs: CredentialAccessLog[] = [];
   @state() private filter: CredentialType | undefined = undefined;
@@ -40,36 +43,36 @@ export class AdiCredentialsElement extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.unsubs.push(
-      this.bus.on('credentials:list-changed', ({ credentials }) => {
+      this.bus.on(AdiCredentialsBusKey.ListChanged, ({ credentials }) => {
         this.credentials = credentials;
         this.loading = false;
       }, 'credentials-ui'),
-      this.bus.on('credentials:detail-changed', ({ credential }) => {
+      this.bus.on(AdiCredentialsBusKey.DetailChanged, ({ credential }) => {
         this.viewState = { type: 'detail', credential };
         this.loading = false;
       }, 'credentials-ui'),
-      this.bus.on('credentials:data-revealed', ({ credential }) => {
+      this.bus.on(AdiCredentialsBusKey.DataRevealed, ({ credential }) => {
         this.revealedData = credential;
       }, 'credentials-ui'),
-      this.bus.on('credentials:verified', ({ result }) => {
+      this.bus.on(AdiCredentialsBusKey.Verified, ({ result }) => {
         this.verifyResult = result;
       }, 'credentials-ui'),
-      this.bus.on('credentials:logs-changed', ({ logs }) => {
+      this.bus.on(AdiCredentialsBusKey.LogsChanged, ({ logs }) => {
         this.accessLogs = logs;
       }, 'credentials-ui'),
-      this.bus.on('credentials:mutated', () => {
+      this.bus.on(AdiCredentialsBusKey.Mutated, () => {
         this.submitting = false;
         this.viewState = { type: 'list' };
         this.dataFields = [{ key: '', value: '' }];
         this.loadData();
       }, 'credentials-ui'),
-      this.bus.on('credentials:deleted', ({ id }) => {
+      this.bus.on(AdiCredentialsBusKey.Deleted, ({ id }) => {
         this.credentials = this.credentials.filter(c => c.id !== id);
         this.viewState = { type: 'list' };
         this.confirmingDelete = false;
         this.submitting = false;
       }, 'credentials-ui'),
-      this.bus.on('credentials:error', ({ message }) => {
+      this.bus.on(AdiCredentialsBusKey.Error, ({ message }) => {
         this.error = message;
         this.loading = false;
         this.submitting = false;
@@ -86,7 +89,7 @@ export class AdiCredentialsElement extends LitElement {
 
   private get bus() { return cocoon.bus; }
 
-  private get selectedCredential(): Credential | null {
+  private get selectedCredential(): CredentialWithCocoon | null {
     const v = this.viewState;
     return v.type === 'detail' || v.type === 'edit' ? v.credential : null;
   }
@@ -94,12 +97,12 @@ export class AdiCredentialsElement extends LitElement {
   private loadData(): void {
     this.loading = true;
     this.error = null;
-    this.bus.emit('credentials:list', {
+    this.bus.emit(AdiCredentialsBusKey.List, {
       credential_type: this.filter,
     }, 'credentials-ui');
   }
 
-  private selectCredential(cred: Credential): void {
+  private selectCredential(cred: CredentialWithCocoon): void {
     this.revealedData = null;
     this.verifyResult = null;
     this.accessLogs = [];
@@ -120,19 +123,19 @@ export class AdiCredentialsElement extends LitElement {
   private handleReveal(): void {
     const cred = this.selectedCredential;
     if (!cred) return;
-    this.bus.emit('credentials:reveal', { id: cred.id, cocoonId: cred.cocoonId }, 'credentials-ui');
+    this.bus.emit(AdiCredentialsBusKey.Reveal, { id: cred.id, cocoonId: cred.cocoonId }, 'credentials-ui');
   }
 
   private handleVerify(): void {
     const cred = this.selectedCredential;
     if (!cred) return;
-    this.bus.emit('credentials:verify', { id: cred.id, cocoonId: cred.cocoonId }, 'credentials-ui');
+    this.bus.emit(AdiCredentialsBusKey.Verify, { id: cred.id, cocoonId: cred.cocoonId }, 'credentials-ui');
   }
 
   private handleLoadLogs(): void {
     const cred = this.selectedCredential;
     if (!cred) return;
-    this.bus.emit('credentials:logs', { id: cred.id, cocoonId: cred.cocoonId }, 'credentials-ui');
+    this.bus.emit(AdiCredentialsBusKey.Logs, { id: cred.id, cocoonId: cred.cocoonId }, 'credentials-ui');
   }
 
   private handleDelete(): void {
@@ -140,35 +143,19 @@ export class AdiCredentialsElement extends LitElement {
     if (!cred) return;
     if (!this.confirmingDelete) { this.confirmingDelete = true; return; }
     this.submitting = true;
-    this.bus.emit('credentials:delete', { id: cred.id, cocoonId: cred.cocoonId }, 'credentials-ui');
+    this.bus.emit(AdiCredentialsBusKey.Delete, { id: cred.id, cocoonId: cred.cocoonId }, 'credentials-ui');
   }
 
-  private handleCreate(data: {
-    cocoonId: string;
-    name: string;
-    credential_type: CredentialType;
-    data: Record<string, unknown>;
-    description?: string;
-    provider?: string;
-    expires_at?: string;
-  }): void {
+  private handleCreate(data: AdiCredentialsCreateEvent): void {
     this.submitting = true;
     this.error = null;
-    this.bus.emit('credentials:create', data, 'credentials-ui');
+    this.bus.emit(AdiCredentialsBusKey.Create, data, 'credentials-ui');
   }
 
-  private handleUpdate(data: {
-    cocoonId: string;
-    id: string;
-    name?: string;
-    description?: string;
-    data?: Record<string, unknown>;
-    provider?: string;
-    expires_at?: string;
-  }): void {
+  private handleUpdate(data: AdiCredentialsUpdateEvent): void {
     this.submitting = true;
     this.error = null;
-    this.bus.emit('credentials:update', data, 'credentials-ui');
+    this.bus.emit(AdiCredentialsBusKey.Update, data, 'credentials-ui');
   }
 
   private handleAddDataField(): void {

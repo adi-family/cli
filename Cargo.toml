@@ -177,8 +177,8 @@ members = [
     "crates/hive/plugin",
     "crates/llm-extract-plugin",
     "crates/tsp-gen/plugin",
-    "crates/cocoon/core",
-    "crates/cocoon/plugin",
+    "plugins/adi.cocoon/core",
+    "plugins/adi.cocoon/plugin",
     "crates/cocoon-control-center/plugin",
     "crates/registry/plugin",
     # Workflow translation plugins

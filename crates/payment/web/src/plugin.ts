@@ -1,5 +1,5 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { AdiRouterBusKey } from '@adi-family/plugin-router/bus';
+import { AdiRouterBusKey } from '@adi-family/plugin-router';
 import type { Connection } from '@adi-family/cocoon-plugin-interface';
 import * as api from './api.js';
 import { cocoon } from './cocoon.js';
