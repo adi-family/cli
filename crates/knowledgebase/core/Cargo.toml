@@ -16,6 +16,10 @@ fastembed = ["lib-embed/fastembed"]
 lib-embed = { path = "../../_lib/lib-embed" }
 lib-plugin-host = { path = "../../_lib/lib-plugin-host" }
 lib-migrations = { path = "../../_lib/lib-migrations" }
+lib-adi-service = { path = "../../_lib/lib-adi-service" }
+
+# Binary payload
+bytes = "1"
 
 # Error handling
 thiserror.workspace = true

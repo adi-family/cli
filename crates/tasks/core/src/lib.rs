@@ -20,10 +20,12 @@
 pub mod error;
 pub mod graph;
 mod migrations;
+pub mod service;
 pub mod storage;
 pub mod types;
 
 pub use error::{Error, Result};
+pub use service::TasksService;
 pub use storage::{SqliteTaskStorage, TaskStorage};
 pub use types::{
     unix_timestamp_now, CreateTask, Task, TaskId, TaskStatus, TaskWithDependencies, TasksStatus,

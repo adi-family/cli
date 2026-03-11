@@ -2359,11 +2359,11 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "chrono",
- "credentials-core",
  "futures",
  "glob",
  "hostname",
  "knowledgebase-core",
+ "lib-adi-service",
  "lib-console-output",
  "lib-daemon-client",
  "lib-env-parse",
@@ -2377,11 +2377,11 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "sqlx",
  "tasks-core",
  "tempfile",
  "tokio",
  "tokio-tungstenite 0.24.0",
+ "tools-core",
  "tower-http 0.6.8",
  "tracing",
  "tracing-subscriber",
@@ -2775,11 +2775,15 @@ name = "credentials-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "base64 0.22.1",
+ "bytes",
  "chacha20poly1305",
  "chrono",
  "hex",
+ "lib-adi-service",
  "lib-env-parse",
+ "lib-typespec-api",
  "rand 0.9.2",
  "serde",
  "serde_json",
@@ -6252,8 +6256,10 @@ version = "0.8.4"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bytes",
  "chrono",
  "dirs 6.0.0",
+ "lib-adi-service",
  "lib-embed",
  "lib-migrations",
  "lib-plugin-host",
@@ -6481,6 +6487,18 @@ dependencies = [
  "tokio-rustls 0.26.4",
  "url",
  "webpki-roots 1.0.6",
+]
+
+[[package]]
+name = "lib-adi-service"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "serde",
+ "serde_json",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -11738,13 +11756,18 @@ dependencies = [
 name = "tasks-core"
 version = "0.8.3"
 dependencies = [
+ "async-trait",
+ "bytes",
  "dirs 6.0.0",
+ "lib-adi-service",
  "lib-migrations",
+ "lib-typespec-api",
  "rusqlite",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
+ "tokio",
  "tracing",
 ]
 
@@ -12353,9 +12376,13 @@ name = "tools-core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64 0.22.1",
+ "bytes",
  "chrono",
  "dirs 6.0.0",
+ "glob",
  "hex",
+ "lib-adi-service",
  "lib-embed",
  "lib-plugin-manifest",
  "regex",

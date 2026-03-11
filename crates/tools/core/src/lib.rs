@@ -29,6 +29,7 @@ mod storage;
 mod discovery;
 mod search;
 mod help_parser;
+pub mod service;
 
 pub use error::{Error, Result};
 pub use types::*;
@@ -36,3 +37,7 @@ pub use storage::Storage;
 pub use discovery::*;
 pub use search::ToolSearch;
 pub use help_parser::parse_help_text;
+pub use service::{
+    FileSystemToolProvider, McpServerProvider, ShellToolProvider, ToolCategory, ToolContentType,
+    ToolDef, ToolProvider, ToolResult, ToolsService,
+};

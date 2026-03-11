@@ -1,0 +1,15 @@
+[package]
+name = "lib-adi-service"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "BSL-1.0"
+description = "Shared ADI service types — AdiService trait, caller context, error types"
+
+[dependencies]
+async-trait = "0.1"
+bytes = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["sync"] }
+uuid = { version = "1", features = ["v4", "serde"] }

@@ -7,8 +7,10 @@ plugins/adi.<name>/
   api.tsp                    # Source of truth for API
   core/
     Cargo.toml
+    build.rs                 # Generates handler trait + AdiService wrapper from api.tsp
     src/
       lib.rs                 # Types, business logic, re-exports
+      service.rs             # Handler implementation (includes generated trait)
       models/                # Domain types used by generated handler
   plugin/
     Cargo.toml
@@ -45,15 +47,15 @@ interface MyService {
 - `@request` marks methods as request/response operations
 - Method names: `camelCase` in TypeSpec, `snake_case` on wire, `camelCase` in TS client
 
-### 2. Rust Handler Generation (cocoon-core build.rs)
+### 2. Rust Handler Generation (plugin core build.rs)
 
-The handler trait + AdiService wrapper are generated to `OUT_DIR` via cocoon-core's `build.rs`:
+The handler trait + AdiService wrapper are generated to `OUT_DIR` via the plugin's own `core/build.rs`:
 
 ```rust
-// In cocoon-core build.rs:
+// In plugins/adi.my-plugin/core/build.rs:
 let adi_config = RustAdiServiceConfig {
-    types_crate: "my_plugin_core".into(),  // crate with models
-    cocoon_crate: "crate".into(),          // cocoon-core itself
+    types_crate: "crate".into(),            // types live in the plugin core crate itself
+    cocoon_crate: "lib_adi_service".into(), // shared types from lib-adi-service
     service_name: "MyPlugin".into(),
     ..Default::default()
 };
@@ -67,10 +69,10 @@ This generates:
 - `MyPluginServiceHandler` trait with typed methods
 - `MyPluginServiceAdi<H>` wrapper implementing `AdiService`
 
-### 3. Implement the Handler (in cocoon-core)
+### 3. Implement the Handler (in plugin core)
 
 ```rust
-// In cocoon-core service file:
+// In plugins/adi.my-plugin/core/src/service.rs:
 include!(concat!(env!("OUT_DIR"), "/my_plugin_adi_service.rs"));
 
 pub struct MyPluginService { /* business logic deps */ }
@@ -119,7 +121,8 @@ export const get = (c: Connection, id: string) =>
 - TS function names use `camelCase` (JS convention)
 - Core crate must re-export `Uuid` and `DateTime<Utc>` in `models` module for generated code
 - Core crate must have `pub mod enums` re-exporting enum types for generated imports
-- Handler trait lives in cocoon-core (not plugin core) due to circular dependency constraint
+- Handler trait + service impl live in each plugin's own `core/` crate (not cocoon-core)
+- Shared AdiService types (trait, context, errors) come from `lib-adi-service` crate
 
 ## Models Module Setup
 
@@ -154,5 +157,5 @@ pub mod enums {
 
 Reference implementation in `plugins/adi.credentials/`.
 - `api.tsp`: 8 methods (list, get, getWithData, create, update, delete, verify, accessLogs)
-- Handler: `plugins/adi.cocoon/core/src/services/credentials.rs`
+- Handler: `plugins/adi.credentials/core/src/service.rs`
 - Web client: `plugins/adi.credentials/web/src/generated/adi-client.ts`

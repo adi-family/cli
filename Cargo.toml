@@ -14,6 +14,7 @@ members = [
     "crates/cli",
 
     # Shared libraries
+    "crates/_lib/lib-adi-service",
     "crates/_lib/lib-env-parse",
     "crates/_lib/lib-cli-common",
     "crates/_lib/lib-console-output",
@@ -319,6 +320,7 @@ lib-json-tree = { path = "crates/_lib/lib-json-tree" }
 lib-terminal-grid = { path = "crates/_lib/lib-terminal-grid" }
 lib-iced-ui = { path = "crates/_lib/lib-iced-ui" }
 lib-tarminal-sync = { path = "crates/_lib/lib-tarminal-sync" }
+lib-adi-service = { path = "crates/_lib/lib-adi-service" }
 lib-embed = { path = "crates/_lib/lib-embed" }
 lib-env-parse = { path = "crates/_lib/lib-env-parse" }
 lib-cli-common = { path = "crates/_lib/lib-cli-common" }
