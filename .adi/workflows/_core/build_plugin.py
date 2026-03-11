@@ -134,27 +134,30 @@ for _lang in ("cpp", "csharp", "go", "java", "lua", "php", "python", "ruby", "ru
 
 def get_plugin_crate(name: str) -> str | None:
     """Find crate directory for a plugin by ID."""
-    crates_dir = PROJECT_ROOT / "crates"
+    search_dirs = [PROJECT_ROOT / "crates", PROJECT_ROOT / "plugins"]
 
     # Search by plugin ID in Cargo.toml [package.metadata.plugin]
-    for cargo_toml in crates_dir.rglob("Cargo.toml"):
-        try:
-            text = cargo_toml.read_text()
-            if "package.metadata.plugin" not in text:
-                continue
-            in_section = False
-            for line in text.splitlines():
-                if "package.metadata.plugin" in line:
-                    in_section = True
-                    continue
-                if in_section and line.startswith("["):
-                    break
-                if in_section and line.startswith("id = "):
-                    plugin_id = line.split('"')[1]
-                    if plugin_id == name:
-                        return str(cargo_toml.parent.relative_to(PROJECT_ROOT))
-        except (IndexError, OSError):
+    for search_dir in search_dirs:
+        if not search_dir.is_dir():
             continue
+        for cargo_toml in search_dir.rglob("Cargo.toml"):
+            try:
+                text = cargo_toml.read_text()
+                if "package.metadata.plugin" not in text:
+                    continue
+                in_section = False
+                for line in text.splitlines():
+                    if "package.metadata.plugin" in line:
+                        in_section = True
+                        continue
+                    if in_section and line.startswith("["):
+                        break
+                    if in_section and line.startswith("id = "):
+                        plugin_id = line.split('"')[1]
+                        if plugin_id == name:
+                            return str(cargo_toml.parent.relative_to(PROJECT_ROOT))
+            except (IndexError, OSError):
+                continue
 
     # Fallback to legacy map
     short = name.removesuffix("-plugin")

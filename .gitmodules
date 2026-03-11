@@ -59,10 +59,10 @@
 	path = crates/_lib/lib-indexer-lang-abi
 	url = https://github.com/adi-family/lib-indexer-lang-abi.git
 [submodule "crates/adi-lang"]
-	path = crates/indexer/lang
+	path = plugins/adi.indexer/lang
 	url = https://github.com/adi-family/adi-lang.git
 [submodule "crates/adi-indexer"]
-	path = crates/indexer
+	path = plugins/adi.indexer
 	url = https://github.com/adi-family/adi-indexer.git
 [submodule "crates/adi-tasks"]
 	path = crates/tasks
@@ -86,7 +86,7 @@
 	path = crates/llm-uzu-plugin
 	url = https://github.com/adi-family/adi-llm-uzu-plugin.git
 [submodule "crates/adi-auth"]
-	path = crates/auth
+	path = plugins/adi.auth
 	url = https://github.com/adi-family/adi-auth.git
 [submodule "crates/adi-api-proxy"]
 	path = crates/llm-proxy

@@ -113,37 +113,42 @@ def build_and_install_plugin(plugin_id: str):
 
 def find_related_plugins(plugin_id: str) -> list[str]:
     """Find all plugin IDs that share the same crate family directory."""
-    crates_dir = PROJECT_ROOT / "crates"
+    search_dirs = [PROJECT_ROOT / "crates", PROJECT_ROOT / "plugins"]
     plugin_ids: list[str] = []
 
     # Find the crate directory for the given plugin
     target_crate_dir: Path | None = None
-    for cargo_toml in crates_dir.rglob("Cargo.toml"):
-        try:
-            text = cargo_toml.read_text()
-            if "package.metadata.plugin" not in text:
-                continue
-            in_section = False
-            for line in text.splitlines():
-                if "package.metadata.plugin" in line:
-                    in_section = True
-                    continue
-                if in_section and line.startswith("["):
-                    break
-                if in_section and line.startswith("id = "):
-                    found_id = line.split('"')[1]
-                    if found_id == plugin_id:
-                        target_crate_dir = cargo_toml.parent
-                        break
-        except (IndexError, OSError):
+    containing_search_dir: Path | None = None
+    for search_dir in search_dirs:
+        if not search_dir.is_dir():
             continue
+        for cargo_toml in search_dir.rglob("Cargo.toml"):
+            try:
+                text = cargo_toml.read_text()
+                if "package.metadata.plugin" not in text:
+                    continue
+                in_section = False
+                for line in text.splitlines():
+                    if "package.metadata.plugin" in line:
+                        in_section = True
+                        continue
+                    if in_section and line.startswith("["):
+                        break
+                    if in_section and line.startswith("id = "):
+                        found_id = line.split('"')[1]
+                        if found_id == plugin_id:
+                            target_crate_dir = cargo_toml.parent
+                            containing_search_dir = search_dir
+                            break
+            except (IndexError, OSError):
+                continue
 
-    if not target_crate_dir:
+    if not target_crate_dir or not containing_search_dir:
         return []
 
-    # Walk up to the top-level crate family (first dir inside crates/)
+    # Walk up to the top-level crate family (first dir inside search_dir)
     family_dir = target_crate_dir
-    while family_dir.parent != crates_dir and family_dir.parent != family_dir:
+    while family_dir.parent != containing_search_dir and family_dir.parent != family_dir:
         family_dir = family_dir.parent
 
     # Find all plugins under the family directory

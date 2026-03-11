@@ -21,7 +21,7 @@ name = "plugin"
 type = "select"
 prompt = "Select plugin to patch"
 options_cmd = '''
-grep -rl 'package.metadata.plugin' crates/*/Cargo.toml crates/*/*/Cargo.toml crates/*/*/*/Cargo.toml 2>/dev/null | while read f; do
+grep -rl 'package.metadata.plugin' crates/*/Cargo.toml crates/*/*/Cargo.toml crates/*/*/*/Cargo.toml plugins/*/Cargo.toml plugins/*/*/Cargo.toml plugins/*/*/*/Cargo.toml 2>/dev/null | while read f; do
     sed -n 's/^id = "\(.*\)"/\1/p' "$f" | head -1
 done | sort -u
 '''

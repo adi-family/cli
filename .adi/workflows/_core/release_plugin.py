@@ -138,28 +138,31 @@ for lang in ("cpp", "csharp", "go", "java", "lua", "php", "python", "ruby", "rus
 
 def get_plugin_crate(name: str) -> str | None:
     """Find crate directory for a plugin by ID."""
-    crates_dir = PROJECT_ROOT / "crates"
+    search_dirs = [PROJECT_ROOT / "crates", PROJECT_ROOT / "plugins"]
 
     # Search by plugin ID in Cargo.toml [package.metadata.plugin]
-    for cargo_toml in crates_dir.rglob("Cargo.toml"):
-        try:
-            text = cargo_toml.read_text()
-            if "package.metadata.plugin" not in text:
-                continue
-            # Extract plugin id after [package.metadata.plugin] section
-            in_section = False
-            for line in text.splitlines():
-                if "package.metadata.plugin" in line:
-                    in_section = True
-                    continue
-                if in_section and line.startswith("["):
-                    break
-                if in_section and line.startswith("id = "):
-                    plugin_id = line.split('"')[1]
-                    if plugin_id == name:
-                        return str(cargo_toml.parent.relative_to(PROJECT_ROOT))
-        except (IndexError, OSError):
+    for search_dir in search_dirs:
+        if not search_dir.is_dir():
             continue
+        for cargo_toml in search_dir.rglob("Cargo.toml"):
+            try:
+                text = cargo_toml.read_text()
+                if "package.metadata.plugin" not in text:
+                    continue
+                # Extract plugin id after [package.metadata.plugin] section
+                in_section = False
+                for line in text.splitlines():
+                    if "package.metadata.plugin" in line:
+                        in_section = True
+                        continue
+                    if in_section and line.startswith("["):
+                        break
+                    if in_section and line.startswith("id = "):
+                        plugin_id = line.split('"')[1]
+                        if plugin_id == name:
+                            return str(cargo_toml.parent.relative_to(PROJECT_ROOT))
+            except (IndexError, OSError):
+                continue
 
     # Fallback to legacy map
     short = name.removesuffix("-plugin")
@@ -469,34 +472,39 @@ def publish_plugin(build: PluginBuild, registry: str, max_retries: int = 5):
 
 def find_related_plugins(plugin_id: str) -> list[str]:
     """Find all plugin IDs that share the same crate family directory."""
-    crates_dir = PROJECT_ROOT / "crates"
+    search_dirs = [PROJECT_ROOT / "crates", PROJECT_ROOT / "plugins"]
     target_crate_dir: Path | None = None
+    containing_search_dir: Path | None = None
 
-    for cargo_toml in crates_dir.rglob("Cargo.toml"):
-        try:
-            text = cargo_toml.read_text()
-            if "package.metadata.plugin" not in text:
-                continue
-            in_section = False
-            for line in text.splitlines():
-                if "package.metadata.plugin" in line:
-                    in_section = True
-                    continue
-                if in_section and line.startswith("["):
-                    break
-                if in_section and line.startswith("id = "):
-                    if line.split('"')[1] == plugin_id:
-                        target_crate_dir = cargo_toml.parent
-                        break
-        except (IndexError, OSError):
+    for search_dir in search_dirs:
+        if not search_dir.is_dir():
             continue
+        for cargo_toml in search_dir.rglob("Cargo.toml"):
+            try:
+                text = cargo_toml.read_text()
+                if "package.metadata.plugin" not in text:
+                    continue
+                in_section = False
+                for line in text.splitlines():
+                    if "package.metadata.plugin" in line:
+                        in_section = True
+                        continue
+                    if in_section and line.startswith("["):
+                        break
+                    if in_section and line.startswith("id = "):
+                        if line.split('"')[1] == plugin_id:
+                            target_crate_dir = cargo_toml.parent
+                            containing_search_dir = search_dir
+                            break
+            except (IndexError, OSError):
+                continue
 
-    if not target_crate_dir:
+    if not target_crate_dir or not containing_search_dir:
         return []
 
-    # Walk up to the top-level crate family (first dir inside crates/)
+    # Walk up to the top-level crate family (first dir inside search_dir)
     family_dir = target_crate_dir
-    while family_dir.parent != crates_dir and family_dir.parent != family_dir:
+    while family_dir.parent != containing_search_dir and family_dir.parent != family_dir:
         family_dir = family_dir.parent
 
     # Find all plugins under the family directory

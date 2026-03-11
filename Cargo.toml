@@ -30,7 +30,7 @@ members = [
 
     # Indexer components (flat submodules)
     "crates/_lib/lib-embed",
-    "crates/indexer/core",
+    "plugins/adi.indexer/core",
 
     # Tasks components
     "crates/tasks/core",
@@ -47,9 +47,9 @@ members = [
     "crates/linter/core",
 
     # Auth components
-    "crates/auth/core",
-    "crates/auth/http",
-    "crates/auth/plugin",
+    "plugins/adi.auth/core",
+    "plugins/adi.auth/http",
+    "plugins/adi.auth/plugin",
 
     # Mux components
     "crates/mux/core",
@@ -149,25 +149,25 @@ members = [
 
     # Indexer language plugins
     "crates/_lib/lib-indexer-lang-abi",
-    "crates/indexer/lang/rust/plugin",
-    "crates/indexer/lang/python/plugin",
-    "crates/indexer/lang/typescript/plugin",
-    "crates/indexer/lang/cpp/plugin",
-    "crates/indexer/lang/go/plugin",
-    "crates/indexer/lang/java/plugin",
-    "crates/indexer/lang/csharp/plugin",
-    "crates/indexer/lang/ruby/plugin",
-    "crates/indexer/lang/php/plugin",
-    "crates/indexer/lang/swift/plugin",
-    "crates/indexer/lang/lua/plugin",
+    "plugins/adi.indexer/lang/rust/plugin",
+    "plugins/adi.indexer/lang/python/plugin",
+    "plugins/adi.indexer/lang/typescript/plugin",
+    "plugins/adi.indexer/lang/cpp/plugin",
+    "plugins/adi.indexer/lang/go/plugin",
+    "plugins/adi.indexer/lang/java/plugin",
+    "plugins/adi.indexer/lang/csharp/plugin",
+    "plugins/adi.indexer/lang/ruby/plugin",
+    "plugins/adi.indexer/lang/php/plugin",
+    "plugins/adi.indexer/lang/swift/plugin",
+    "plugins/adi.indexer/lang/lua/plugin",
 
     # Core plugins
     "crates/embed-plugin",
-    "crates/indexer/plugin",
+    "plugins/adi.indexer/plugin",
     "crates/tasks/plugin",
     "crates/monaco-editor/plugin",
     "crates/debug-screen/plugin",
-    "crates/actions-feed/plugin",
+    "plugins/adi.actions-feed/plugin",
     "crates/router/plugin",
     "crates/command-palette/plugin",
     "crates/slots/plugin",
@@ -257,11 +257,11 @@ authors = ["ADI Team"]
 
 [workspace.dependencies]
 # Core crates (from submodules)
-indexer-core = { path = "crates/indexer/core" }
+indexer-core = { path = "plugins/adi.indexer/core" }
 tasks-core = { path = "crates/tasks/core" }
 knowledgebase-core = { path = "crates/knowledgebase/core" }
 agent-loop-core = { path = "crates/agent-loop/core" }
-auth-core = { path = "crates/auth/core" }
+auth-core = { path = "plugins/adi.auth/core" }
 mux-core = { path = "crates/mux/core" }
 flags-core = { path = "crates/flags/core" }
 linter-core = { path = "crates/linter/core" }

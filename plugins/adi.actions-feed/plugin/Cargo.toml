@@ -1,0 +1,37 @@
+[package]
+name = "actions-feed-plugin"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Action feed system for cross-plugin notifications"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lib-plugin-prelude = { path = "../../../crates/_lib/lib-plugin-prelude" }
+
+[build-dependencies]
+lib-plugin-web-build = { path = "../../../crates/_lib/lib-plugin-web-build" }
+
+[package.metadata.plugin]
+id = "adi.actions-feed"
+name = "ADI Actions Feed"
+type = "extension"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "2.0.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.actions-feed.web"
+version = "1.0.0"
+description = "Action feed system for cross-plugin notifications"
+
+[package.metadata.plugin.web_ui]
+entry = "web.js"
+sandbox = false
+plugin_class = "ActionsFeedPlugin"
+
+[package.metadata.plugin.tags]
+categories = ["web"]
