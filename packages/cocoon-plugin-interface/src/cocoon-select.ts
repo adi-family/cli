@@ -92,8 +92,8 @@ export class CocoonSelectElement extends LitElement {
   }
 
   private select(item: CocoonDisplayItem): void {
-    if (!item.connected || !item.pluginInstalled) return;
-    const connection = this.cocoonInterface?.allConnections().find(c => c.id === item.deviceId);
+    if (!item.pluginInstalled) return;
+    const connection = this.resolveConnection(item.deviceId);
     if (!connection) return;
 
     this.value = item.deviceId;
@@ -105,15 +105,22 @@ export class CocoonSelectElement extends LitElement {
     }));
   }
 
+  private resolveConnection(deviceId: string): Connection | undefined {
+    const existing = this.cocoonInterface?.allConnections().find(c => c.id === deviceId);
+    if (existing) return existing;
+    return this.cocoonInterface?.connectProvider?.(deviceId) ?? undefined;
+  }
+
   private async installPlugin(item: CocoonDisplayItem): Promise<void> {
-    if (!this.withPlugin || !item.connected) return;
-    const connection = this.cocoonInterface?.allConnections().find(c => c.id === item.deviceId);
-    if (!connection) return;
+    if (!this.withPlugin) return;
 
     this.installing = item.deviceId;
     this.error = null;
 
     try {
+      const connection = this.resolveConnection(item.deviceId);
+      if (!connection) throw new Error('Could not connect to cocoon');
+
       await connection.installPlugin(this.withPlugin);
       await connection.refreshPlugins();
       this.refresh();
@@ -189,7 +196,7 @@ export class CocoonSelectElement extends LitElement {
 
   private renderItem(item: CocoonDisplayItem) {
     const isInstalling = this.installing === item.deviceId;
-    const canSelect = item.connected && item.pluginInstalled;
+    const canSelect = item.pluginInstalled;
     const isSelected = this.value === item.deviceId;
 
     return html`
@@ -203,19 +210,21 @@ export class CocoonSelectElement extends LitElement {
         </div>
 
         <div class="flex items-center gap-2 shrink-0 ml-2">
-          ${!item.connected
+          ${!item.online
             ? html`<span class="text-xs text-gray-600">offline</span>`
-            : !item.pluginInstalled && this.withPlugin
-              ? html`
-                  <button
-                    class="px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors disabled:opacity-50"
-                    ?disabled=${isInstalling}
-                    @click=${(e: Event) => { e.stopPropagation(); this.installPlugin(item); }}
-                  >${isInstalling ? 'Installing...' : 'Install Plugin'}</button>
-                `
-              : isSelected
-                ? html`<span class="text-xs text-purple-400">selected</span>`
-                : nothing
+            : isSelected
+              ? html`<span class="text-xs text-purple-400">selected</span>`
+              : nothing
+          }
+          ${!item.pluginInstalled && this.withPlugin
+            ? html`
+                <button
+                  class="px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors disabled:opacity-50"
+                  ?disabled=${isInstalling || !item.online}
+                  @click=${(e: Event) => { e.stopPropagation(); this.installPlugin(item); }}
+                >${isInstalling ? 'Installing...' : 'Install Plugin'}</button>
+              `
+            : nothing
           }
         </div>
       </div>

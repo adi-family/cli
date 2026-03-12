@@ -1,0 +1,94 @@
+<!doctype html>
+<html class="dark" lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ADI App (Dev)</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Loading shell: visible instantly, removed when SDK is ready -->
+    <div id="loading-shell">
+      <style>
+        #loading-shell {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 24px;
+          background: #0a0a0a;
+          font-family: 'Inter', system-ui, sans-serif;
+          transition: opacity 0.3s ease;
+        }
+
+        #loading-shell.fade-out {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        #loading-shell .logo {
+          width: 56px;
+          height: 56px;
+          border-radius: 14px;
+        }
+
+        #loading-shell .title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #e4e4e7;
+          letter-spacing: 0.02em;
+        }
+
+        #loading-shell .spinner {
+          width: 20px;
+          height: 20px;
+          border: 2px solid #27272a;
+          border-top-color: #a78bfa;
+          border-radius: 50%;
+          animation: shell-spin 0.7s linear infinite;
+        }
+
+        @keyframes shell-spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      </style>
+      <img class="logo" src="/icons/icon-192.png" alt="" />
+      <span class="title">ADI</span>
+      <div class="spinner"></div>
+    </div>
+
+    <app-root></app-root>
+    <script type="module" src="./src/main-dev.ts"></script>
+    <script>
+      (function () {
+        var minReady = new Promise(function (r) {
+          setTimeout(r, 100);
+        });
+
+        var appReady = new Promise(function (r) {
+          window.addEventListener('app-ready', r, { once: true });
+        });
+
+        Promise.all([minReady, appReady]).then(function () {
+          var el = document.getElementById('loading-shell');
+          if (!el) return;
+          el.classList.add('fade-out');
+          el.addEventListener('transitionend', function () {
+            el.remove();
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

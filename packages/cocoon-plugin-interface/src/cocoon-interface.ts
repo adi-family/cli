@@ -11,6 +11,8 @@ export class CocoonPluginInterface {
   private _bus: EventBus | undefined;
   private unsubs: Array<() => void> = [];
 
+  connectProvider: ((deviceId: string) => Connection | undefined) | null = null;
+
   private constructor(pluginId: string) {
     this.pluginId = pluginId;
   }

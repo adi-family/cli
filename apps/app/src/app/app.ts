@@ -3,6 +3,8 @@ import {
   Logger,
   trace,
   configureApp,
+  initInternalPlugin,
+  type AdiPlugin,
   type PluginDescriptor,
 } from '@adi-family/sdk-plugin';
 import { AdiDebugScreenBusKey } from '@adi-family/plugin-debug-screen';
@@ -25,8 +27,8 @@ export class App {
 
   readonly bus: EventBus;
   readonly db: DbConnection;
-  readonly core: PluginCore;
-  private readonly registryHub: RegistryHub;
+  readonly core!: PluginCore;
+  private readonly registryHub!: RegistryHub;
 
   allPlugins: PluginDescriptor[] = [];
   debug: { loaded: string[]; failed: string[]; timedOut: string[] } | null =

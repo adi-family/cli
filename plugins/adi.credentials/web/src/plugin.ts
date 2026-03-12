@@ -60,6 +60,7 @@ export class CredentialsPlugin extends AdiPlugin {
 
   async onRegister(): Promise<void> {
     cocoon.init(this.bus);
+    cocoon.connectProvider = (deviceId: string) => this.ensureConnection(deviceId);
 
     const { AdiCredentialsElement } = await import('./component.js');
     if (!customElements.get('adi-credentials')) {
