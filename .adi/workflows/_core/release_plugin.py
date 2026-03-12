@@ -355,14 +355,15 @@ def build_plugin(plugin_name: str, crate_dir: str, dist_dir: Path, release: bool
         run_cmd(["npm", "install", "--silent"], cwd=web_dir, stream=stream)
         run_cmd(["npm", "run", "build"], cwd=web_dir, stream=stream)
         info(f"Web UI build took {time.time() - t0:.1f}s")
-        web_js = web_dir / "dist" / "web.js"
+        dist_dir = PROJECT_ROOT / "dist" / build.id
+        web_js = dist_dir / "web.js"
         if web_js.is_file():
             build.web_js = web_js
             size = web_js.stat().st_size
             success(f"Web UI built: {size // 1024}K ({web_js.name})")
         else:
-            warn("Web UI build did not produce dist/web.js, skipping")
-        style_css = web_dir / "dist" / "style.css"
+            warn(f"Web UI build did not produce {web_js}, skipping")
+        style_css = dist_dir / "style.css"
         if style_css.is_file():
             build.style_css = style_css
             size = style_css.stat().st_size

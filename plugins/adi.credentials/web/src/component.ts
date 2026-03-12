@@ -1,6 +1,6 @@
 import { LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
-import type { CocoonOption, DataField } from './views/credential-form.js';
+import type { DataField } from './views/credential-form.js';
 import {
   AdiCredentialsBusKey,
   type AdiCredentialsCreateEvent,
@@ -35,6 +35,7 @@ export class AdiCredentialsElement extends LitElement {
   @state() private confirmingDelete = false;
   @state() private error: string | null = null;
   @state() private dataFields: DataField[] = [{ key: '', value: '' }];
+  @state() private selectedCocoonId = '';
 
   private unsubs: Array<() => void> = [];
 
@@ -62,6 +63,7 @@ export class AdiCredentialsElement extends LitElement {
       }, 'credentials-ui'),
       this.bus.on(AdiCredentialsBusKey.Mutated, () => {
         this.submitting = false;
+        this.selectedCocoonId = '';
         this.viewState = { type: 'list' };
         this.dataFields = [{ key: '', value: '' }];
         this.loadData();
@@ -169,12 +171,6 @@ export class AdiCredentialsElement extends LitElement {
   }
 
   override render() {
-    const credConns = new Set(cocoon.connectionsWithPlugin('adi.credentials').map(c => c.id));
-    const cocoons: CocoonOption[] = cocoon.cocoonDevices().map(d => ({
-      id: d.device_id,
-      installed: credConns.has(d.device_id),
-    }));
-
     const view = this.viewState;
 
     if (view.type === 'detail') {
@@ -199,17 +195,20 @@ export class AdiCredentialsElement extends LitElement {
     if (view.type === 'create' || view.type === 'edit') {
       const editing = view.type === 'edit' ? view.credential : null;
       return renderCredentialForm({
-        cocoons,
+        cocoonInterface: cocoon,
+        selectedCocoonId: this.selectedCocoonId,
         submitting: this.submitting,
         editing,
         dataFields: this.dataFields,
         onBack: () => {
           this.submitting = false;
+          this.selectedCocoonId = '';
           this.dataFields = [{ key: '', value: '' }];
           this.viewState = view.type === 'edit'
             ? { type: 'detail', credential: view.credential }
             : { type: 'list' };
         },
+        onCocoonSelected: (e) => { this.selectedCocoonId = e.detail.cocoonId; },
         onAddDataField: () => this.handleAddDataField(),
         onDataFieldChange: (i, f, v) => this.handleDataFieldChange(i, f, v),
         onCreate: (data) => this.handleCreate(data),
@@ -226,7 +225,7 @@ export class AdiCredentialsElement extends LitElement {
       onSelect: (c) => this.selectCredential(c),
       onFilterChange: (t) => this.handleFilterChange(t),
       onSearch: (q) => this.handleSearch(q),
-      onNew: () => { this.submitting = false; this.dataFields = [{ key: '', value: '' }]; this.viewState = { type: 'create' }; },
+      onNew: () => { this.submitting = false; this.selectedCocoonId = ''; this.dataFields = [{ key: '', value: '' }]; this.viewState = { type: 'create' }; },
     });
   }
 }

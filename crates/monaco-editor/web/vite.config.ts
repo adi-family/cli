@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
-    outDir: "../../../dist/monaco-editor",
+    outDir: "../../../dist/adi.monaco-editor",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],

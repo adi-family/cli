@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../../../dist/debug-screen",
+    outDir: "../../../dist/adi.debug-screen",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],

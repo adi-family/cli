@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
-    outDir: "../../../dist/actions-feed",
+    outDir: "../../../dist/adi.actions-feed",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],

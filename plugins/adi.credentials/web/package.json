@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@adi-family/cocoon-plugin-interface": "workspace:*",
+    "@adi-family/plugin-cocoon": "workspace:*",
     "@adi-family/plugin-signaling": "workspace:*",
     "@adi-family/plugin-router": "workspace:*",
     "@adi-family/plugin-actions-feed": "workspace:*",

@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../../../dist/router",
+    outDir: "../../../dist/adi.router",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],

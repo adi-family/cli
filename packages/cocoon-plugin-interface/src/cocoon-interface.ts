@@ -1,7 +1,7 @@
 import type { EventBus } from '@adi-family/sdk-plugin';
-import type { Connection, DeviceInfo } from '@adi-family/plugin-signaling';
+import type { DeviceInfo } from '@adi-family/plugin-signaling';
 import { AdiSignalingBusKey } from '@adi-family/plugin-signaling';
-import { CocoonBusKey, type ConnectionSettings } from './bus-keys.js';
+import { CocoonBusKey, type Connection, type ConnectionSettings } from './bus-keys.js';
 
 export class CocoonPluginInterface {
   private readonly connections = new Map<string, Connection>();

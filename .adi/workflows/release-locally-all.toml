@@ -25,6 +25,14 @@ else
     PLUGINS="$ALL_PLUGINS"
 fi
 
+REGISTRY_DIR="$(cd "$WORKFLOWS_DIR/../.." && pwd)/.dev/registry-data/plugins"
+for PLUGIN in $PLUGINS; do
+    if [ -d "$REGISTRY_DIR/$PLUGIN" ]; then
+        rm -rf "$REGISTRY_DIR/$PLUGIN"
+        info "Cleaned old build: $PLUGIN"
+    fi
+done
+
 FAILED=""
 PIDS=""
 TMPDIR_LOGS=$(mktemp -d)

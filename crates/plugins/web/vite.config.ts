@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [tailwindcss()],
   build: {
-    outDir: "../../../dist/plugins",
+    outDir: "../../../dist/adi.plugins",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],

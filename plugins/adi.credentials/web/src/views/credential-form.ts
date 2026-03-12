@@ -1,11 +1,8 @@
 import { html, nothing, type TemplateResult } from 'lit';
-import type { Credential, CredentialType } from '../types.js';
+import type { CocoonPluginInterface, CocoonSelectEvent } from '@adi-family/cocoon-plugin-interface';
+import type { CredentialType } from '../types.js';
+import type { CredentialWithCocoon } from '../generated/models.js';
 import { ALL_TYPES, TYPE_LABELS } from './shared.js';
-
-export interface CocoonOption {
-  id: string;
-  installed: boolean;
-}
 
 export interface DataField {
   key: string;
@@ -13,11 +10,13 @@ export interface DataField {
 }
 
 interface CredentialFormProps {
-  cocoons: CocoonOption[];
+  cocoonInterface: CocoonPluginInterface;
+  selectedCocoonId: string;
   submitting: boolean;
-  editing: Credential | null;
+  editing: CredentialWithCocoon | null;
   dataFields: DataField[];
   onBack(): void;
+  onCocoonSelected(e: CustomEvent<CocoonSelectEvent>): void;
   onAddDataField(): void;
   onDataFieldChange(index: number, field: 'key' | 'value', val: string): void;
   onCreate(data: {
@@ -75,15 +74,15 @@ const dataFieldPair = (
 `;
 
 export function renderCredentialForm(props: CredentialFormProps): TemplateResult {
-  const { cocoons, submitting, editing, dataFields, onBack, onAddDataField, onDataFieldChange, onCreate, onUpdate } = props;
+  const { cocoonInterface, selectedCocoonId, submitting, editing, dataFields, onBack, onCocoonSelected, onAddDataField, onDataFieldChange, onCreate, onUpdate } = props;
   const isEdit = editing !== null;
+  const cocoonId = selectedCocoonId || editing?.cocoonId || '';
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
 
-    const cocoonId = fd.get('cocoonId') as string;
     const name = (fd.get('name') as string ?? '').trim();
     const description = (fd.get('description') as string ?? '').trim();
     const provider = (fd.get('provider') as string ?? '').trim();
@@ -127,18 +126,13 @@ export function renderCredentialForm(props: CredentialFormProps): TemplateResult
         <form @submit=${handleSubmit} class="space-y-4">
           <div>
             <label class="block text-xs text-gray-400 uppercase tracking-wider mb-1">Connection</label>
-            <select
-              name="cocoonId"
-              required
-              ?disabled=${submitting}
-              class="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-200 focus:outline-none focus:border-purple-500/50 disabled:opacity-50"
-            >
-              ${cocoons.map((c: CocoonOption) => html`
-                <option value=${c.id} ?selected=${isEdit && c.id === editing?.cocoonId}>
-                  ${c.id} — ${c.installed ? 'already installed on cocoon' : 'will be installed on cocoon'}
-                </option>
-              `)}
-            </select>
+            <cocoon-select
+              with-plugin="adi.credentials"
+              .cocoonInterface=${cocoonInterface}
+              .value=${cocoonId}
+              label="Select cocoon..."
+              @cocoon-selected=${onCocoonSelected}
+            ></cocoon-select>
           </div>
 
           <div>

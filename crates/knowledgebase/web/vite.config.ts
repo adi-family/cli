@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
-    outDir: "../../../dist/knowledgebase",
+    outDir: "../../../dist/adi.knowledgebase",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],
