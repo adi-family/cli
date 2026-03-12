@@ -1,0 +1,37 @@
+[package]
+name = "cli-lang-ru-RU"
+version = "3.0.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Russian translations for ADI CLI (v3)"
+build = "../build.rs"
+
+[lib]
+crate-type = ["cdylib"]
+path = "../translation.rs"
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+
+[build-dependencies]
+toml = "0.8"
+
+[package.metadata.plugin]
+id = "adi.cli.ru-RU"
+name = "ADI CLI - Русский"
+type = "translation"
+
+[package.metadata.plugin.compatibility]
+api_version = 3
+min_host_version = "3.0.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.i18n.cli.ru-RU"
+version = "3.0.0"
+description = "Russian translations for CLI"
+
+[package.metadata.plugin.translation]
+translates = "adi.cli"
+language = "ru-RU"
+language_name = "Русский"
+namespace = "cli"

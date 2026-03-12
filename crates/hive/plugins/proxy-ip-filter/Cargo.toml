@@ -1,0 +1,40 @@
+[package]
+name = "hive-proxy-ip-filter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "IP filter proxy middleware plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+ipnetwork = "0.20"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.proxy.ip-filter"
+name = "IP Filter"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "proxy", "security", "ip-filter"]
+
+[package.metadata.plugin.hive]
+category = "proxy"
+name = "ip-filter"

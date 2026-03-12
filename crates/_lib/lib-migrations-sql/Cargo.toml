@@ -1,0 +1,26 @@
+[package]
+name = "lib-migrations-sql"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "SQL migrations built on lib-migrations-core"
+authors = ["ADI Team"]
+keywords = ["migrations", "database", "sql", "sqlite"]
+categories = ["database"]
+repository = "https://github.com/adi-family/lib-migrations-sql"
+homepage = "https://adi.the-ihor.com"
+documentation = "https://docs.rs/lib-migrations-sql"
+
+[workspace]
+
+[features]
+default = ["sqlite"]
+sqlite = ["rusqlite"]
+
+[dependencies]
+lib-migrations-core = "0.1"
+rusqlite = { version = "0.31", optional = true }
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"

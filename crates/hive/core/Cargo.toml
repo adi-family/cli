@@ -1,0 +1,108 @@
+[package]
+name = "hive-core"
+version = "0.1.0"
+edition = "2021"
+description = "Hive core library - local service orchestration business logic"
+license = "LicenseRef-Proprietary"
+authors = ["ADI Team"]
+
+[lib]
+name = "hive_core"
+path = "src/lib.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# WebSocket client (rustls for cross-compilation)
+tokio-tungstenite = { version = "0.21", default-features = false, features = ["connect", "rustls-tls-native-roots"] }
+
+# Crypto provider for rustls (required for rustls 0.23+)
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yml = "0.0.12"
+
+# YAML config parsing
+regex = "1"
+dirs = "6"
+
+# Docker
+bollard = "0.17"
+
+# UUID
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Logging
+tracing = "0.1"
+
+# Daemon client for core plugins
+lib-hive-daemon-client = { path = "../../_lib/lib-hive-daemon-client" }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+# Daemon management
+lib-daemon-core = { path = "../../_lib/lib-daemon-core" }
+
+# Environment variable parsing
+lib-env-parse = { path = "../../_lib/lib-env-parse" }
+
+# Async utilities
+futures = "0.3"
+
+# Random/crypto
+rand = "0.9"
+
+# HTTP proxy dependencies
+axum = { version = "0.7", features = ["ws"] }
+tower = "0.4"
+http = "1"
+http-body-util = "0.1"
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# DNS server
+simple-dns = "0.7"
+
+# High-performance proxy
+hyper = { version = "1", features = ["client", "http1", "http2"] }
+hyper-util = { version = "0.1", features = ["client", "client-legacy", "http1", "http2", "tokio"] }
+dashmap = "6"
+
+# Health check HTTP client
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+
+# Async trait for plugins
+async-trait = "0.1"
+
+# Plugin system ABI (v3 unified)
+lib-plugin-abi-v3 = { path = "../../_lib/lib-plugin-abi-v3" }
+
+# Script runner (always bundled — it is the fundamental runner)
+hive-runner-script = { path = "../plugins/runner-script" }
+
+# SQLite for config backend
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# gRPC health check (optional, for grpc health plugin)
+tonic = { version = "0.11", optional = true }
+prost = { version = "0.12", optional = true }
+
+[features]
+default = []
+grpc = ["tonic", "prost"]
+
+# Unix signals for process management
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tempfile.workspace = true

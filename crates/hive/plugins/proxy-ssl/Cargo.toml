@@ -1,0 +1,76 @@
+[package]
+name = "hive-proxy-ssl"
+version = "0.1.0"
+edition = "2021"
+description = "SSL/TLS support with Let's Encrypt automatic certificate management for Hive"
+license = "LicenseRef-Proprietary"
+authors = ["ADI Team"]
+
+[lib]
+name = "hive_proxy_ssl"
+path = "src/lib.rs"
+
+[dependencies]
+# Core hive types
+hive-core = { path = "../../core" }
+
+# ACME client (Let's Encrypt)
+instant-acme = "0.7"
+
+# TLS implementation (ring for cross-compilation compatibility)
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+tokio-rustls = "0.26"
+rustls-pemfile = "2"
+
+# Certificate generation (for CSR)
+rcgen = "0.13"
+
+# HTTPS server with rustls
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+
+# Web framework (for challenge handlers)
+axum = "0.7"
+tower = "0.4"
+http = "1"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Hot-reload config
+arc-swap = "1"
+
+# Lock-free concurrent map (for challenge tokens)
+dashmap = "6"
+
+# Environment variable parsing
+lib-env-parse = { path = "../../../_lib/lib-env-parse" }
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+# Logging
+tracing = "0.1"
+
+# Time/chrono for certificate expiry
+chrono = { version = "0.4", features = ["serde"] }
+
+# Base64 encoding for PEM
+base64 = "0.22"
+
+# X.509 certificate parsing
+x509-parser = "0.16"
+pem = "3"
+
+# Async utilities
+futures = "0.3"
+
+# Time for certificate generation
+time = "0.3"
+
+# SHA2 for ALPN challenge
+sha2 = "0.10"

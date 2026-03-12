@@ -1,0 +1,37 @@
+[package]
+name = "hive-health-redis"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Redis health check plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tokio = { workspace = true, features = ["time"] }
+redis = { version = "0.27", features = ["tokio-comp"] }
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.health.redis"
+name = "Redis Health Check"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "health", "redis", "cache"]
+
+[package.metadata.plugin.hive]
+category = "health"
+name = "redis"

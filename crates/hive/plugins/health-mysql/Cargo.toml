@@ -1,0 +1,38 @@
+[package]
+name = "hive-health-mysql"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "MySQL health check plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tokio = { workspace = true, features = ["time"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "mysql"] }
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.health.mysql"
+name = "MySQL Health Check"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "health", "mysql", "database"]
+
+[package.metadata.plugin.hive]
+category = "health"
+name = "mysql"

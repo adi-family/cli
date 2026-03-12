@@ -1,0 +1,38 @@
+[package]
+name = "hive-proxy-cors"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "CORS middleware plugin for Hive proxy"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.proxy.cors"
+name = "CORS Middleware"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "proxy", "middleware", "cors", "http"]
+
+[package.metadata.plugin.hive]
+category = "proxy"
+name = "cors"

@@ -1,0 +1,16 @@
+[package]
+name = "lib-terminal-theme"
+version = "0.8.3"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "Terminal color themes and typography - framework-agnostic"
+keywords = ["terminal", "theme", "colors", "ansi"]
+categories = ["command-line-interface"]
+
+[lib]
+name = "lib_terminal_theme"
+path = "src/lib.rs"
+
+[dependencies]
+lib-misc-color = { path = "../lib-misc-color" }

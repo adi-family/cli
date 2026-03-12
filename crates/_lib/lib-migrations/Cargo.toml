@@ -1,0 +1,13 @@
+[package]
+name = "lib-migrations"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Database migration framework for ADI components"
+
+[dependencies]
+rusqlite = { version = "0.31", features = ["bundled"] }
+thiserror = "1.0"
+
+[dev-dependencies]
+tempfile = "3.10"

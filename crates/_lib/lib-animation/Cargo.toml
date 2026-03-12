@@ -1,0 +1,16 @@
+[package]
+name = "lib-animation"
+version = "0.8.3"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "UI animation utilities - easing functions, spring physics, animation manager"
+keywords = ["animation", "easing", "ui", "spring"]
+categories = ["gui"]
+
+[lib]
+name = "lib_animation"
+path = "src/lib.rs"
+
+[dependencies]
+# No dependencies - uses std::time only

@@ -1,0 +1,41 @@
+[package]
+name = "hive-proxy-compress"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Response compression proxy middleware plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+flate2 = "1"
+brotli = "7"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.proxy.compress"
+name = "Response Compression"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "proxy", "compress", "gzip", "brotli", "performance"]
+
+[package.metadata.plugin.hive]
+category = "proxy"
+name = "compress"

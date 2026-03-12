@@ -1,0 +1,1924 @@
+use crate::adi_router::AdiRouter;
+use crate::silk::{AnsiToHtml, SilkSession};
+use futures::{SinkExt, StreamExt};
+use crate::protocol::messages::CocoonMessage;
+use crate::protocol::types::{SilkHtmlSpan, SilkStream};
+use lib_signaling_protocol::SignalingMessage;
+use portable_pty::{CommandBuilder, PtySize};
+use rand::Rng;
+use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
+use std::collections::HashMap;
+use std::io::Read;
+use std::path::Path;
+use std::process::Stdio;
+use std::sync::Arc;
+use tokio::io::AsyncWriteExt;
+use tokio::sync::{broadcast, Mutex};
+use tokio_tungstenite::{connect_async, tungstenite::Message};
+use uuid::Uuid;
+use lib_env_parse::{env_vars, env_opt, env_or};
+
+env_vars! {
+    CocoonSecret => "COCOON_SECRET",
+    SignalingServerUrl => "SIGNALING_SERVER_URL",
+    CocoonServices => "COCOON_SERVICES",
+    CocoonSetupToken => "COCOON_SETUP_TOKEN",
+    CocoonName => "COCOON_NAME",
+    CocoonProtocols => "COCOON_PROTOCOLS",
+}
+
+const OUTPUT_DIR: &str = "/cocoon/output";
+const RESPONSE_PATH: &str = "/cocoon/output/response.json";
+const SECRET_PATH: &str = "/cocoon/.secret";
+const DEVICE_ID_PATH: &str = "/cocoon/.device_id";
+
+// Secret security requirements
+const MIN_SECRET_LENGTH: usize = 32;
+const GENERATED_SECRET_LENGTH: usize = 48; // 288 bits of entropy
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum QueryType {
+    ListTasks,
+    GetTaskStats,
+    SearchTasks,
+    SearchKnowledgebase,
+    Custom { query_name: String },
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "type")]
+enum SilkResponse {
+    #[serde(rename = "silk_create_session_response")]
+    SessionCreated {
+        session_id: Uuid,
+        cwd: String,
+        shell: String,
+    },
+    #[serde(rename = "silk_command_started")]
+    CommandStarted {
+        session_id: Uuid,
+        command_id: String,
+        interactive: bool,
+    },
+    #[serde(rename = "silk_output")]
+    Output {
+        session_id: Uuid,
+        command_id: String,
+        stream: SilkStream,
+        data: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        html: Option<Vec<SilkHtmlSpan>>,
+    },
+    #[serde(rename = "silk_interactive_required")]
+    InteractiveRequired {
+        session_id: Uuid,
+        command_id: String,
+        reason: String,
+        pty_session_id: Uuid,
+    },
+    #[serde(rename = "silk_command_completed")]
+    CommandCompleted {
+        session_id: Uuid,
+        command_id: String,
+        exit_code: i32,
+        cwd: String,
+    },
+    #[serde(rename = "silk_session_closed")]
+    SessionClosed {
+        session_id: Uuid,
+    },
+    #[serde(rename = "silk_pty_output")]
+    PtyOutput {
+        session_id: Uuid,
+        command_id: String,
+        pty_session_id: Uuid,
+        data: String,
+    },
+    #[serde(rename = "silk_error")]
+    Error {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        session_id: Option<Uuid>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        command_id: Option<String>,
+        code: String,
+        message: String,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum CommandRequest {
+    Execute {
+        command: String,
+        input: Option<String>,
+    },
+
+    AttachPty {
+        command: String,
+        cols: u16,
+        rows: u16,
+        #[serde(default)]
+        env: HashMap<String, String>,
+    },
+
+    PtyInput { session_id: Uuid, data: String },
+
+    /// Resize PTY terminal (remote controls size)
+    PtyResize {
+        session_id: Uuid,
+        cols: u16,
+        rows: u16,
+    },
+
+    PtyClose { session_id: Uuid },
+
+    ProxyHttp {
+        request_id: String,
+        service_name: String,
+        method: String,
+        path: String,
+        headers: HashMap<String, String>,
+        body: Option<String>,
+    },
+
+    QueryLocal {
+        query_id: String,
+        query_type: QueryType,
+        params: JsonValue,
+    },
+
+    SilkCreateSession {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        cwd: Option<String>,
+        #[serde(default)]
+        env: HashMap<String, String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        shell: Option<String>,
+    },
+
+    SilkExecute {
+        session_id: Uuid,
+        command: String,
+        command_id: String,
+    },
+
+    /// Send input to running Silk command (for interactive mode)
+    SilkInput {
+        session_id: Uuid,
+        command_id: String,
+        data: String,
+    },
+
+    SilkResize {
+        session_id: Uuid,
+        command_id: String,
+        cols: u16,
+        rows: u16,
+    },
+
+    SilkCloseSession { session_id: Uuid },
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum CommandResponse {
+    ExecuteResult {
+        success: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        data: Option<serde_json::Value>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<ErrorInfo>,
+        #[serde(default)]
+        files: Vec<OutputFile>,
+    },
+
+    PtyCreated { session_id: Uuid },
+
+    PtyOutput { session_id: Uuid, data: String },
+
+    PtyExited { session_id: Uuid, exit_code: i32 },
+
+    ProxyResult {
+        request_id: String,
+        status_code: u16,
+        headers: HashMap<String, String>,
+        body: Option<String>,
+    },
+
+    QueryResult {
+        query_id: String,
+        data: JsonValue,
+        is_final: bool,
+    },
+
+    Error { code: String, message: String },
+
+    #[serde(untagged)]
+    SilkResponse(SilkResponse),
+}
+
+#[derive(Debug, Serialize)]
+struct ErrorInfo {
+    code: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    details: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct OutputFile {
+    path: String,
+    content: String,
+    binary: bool,
+}
+
+struct PtySession {
+    #[allow(dead_code)]
+    id: Uuid,
+    pair: portable_pty::PtyPair,
+    child: Box<dyn portable_pty::Child + Send>,
+    writer: Box<dyn std::io::Write + Send>,
+}
+
+type SharedWriter = Arc<
+    Mutex<
+        futures::stream::SplitSink<
+            tokio_tungstenite::WebSocketStream<
+                tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+            >,
+            Message,
+        >,
+    >,
+>;
+
+async fn collect_output_files(dir: &str) -> Vec<OutputFile> {
+    let mut files = Vec::new();
+    let output_path = Path::new(dir);
+
+    if !output_path.exists() {
+        return files;
+    }
+
+    for entry in walkdir::WalkDir::new(dir)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .filter(|e| e.path().to_string_lossy() != RESPONSE_PATH)
+    {
+        let path = entry.path();
+        let rel_path = path
+            .strip_prefix(dir)
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|_| path.to_string_lossy().to_string());
+
+        match tokio::fs::read(path).await {
+            Ok(content) => {
+                let is_binary = content.contains(&0);
+                let content_str = if is_binary {
+                    base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &content)
+                } else {
+                    String::from_utf8_lossy(&content).to_string()
+                };
+
+                files.push(OutputFile {
+                    path: rel_path,
+                    content: content_str,
+                    binary: is_binary,
+                });
+            }
+            Err(_) => continue,
+        }
+    }
+
+    files
+}
+
+async fn execute_command(command: &str, input: Option<&str>) -> CommandResponse {
+    let _ = tokio::fs::create_dir_all(OUTPUT_DIR).await;
+
+    let mut child = match tokio::process::Command::new("/bin/sh")
+        .arg("-c")
+        .arg(command)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(e) => {
+            return CommandResponse::ExecuteResult {
+                success: false,
+                data: None,
+                error: Some(ErrorInfo {
+                    code: "spawn_failed".into(),
+                    details: Some(e.to_string()),
+                }),
+                files: vec![],
+            };
+        }
+    };
+
+    if let Some(input_str) = input {
+        if let Some(mut stdin) = child.stdin.take() {
+            let _ = stdin.write_all(input_str.as_bytes()).await;
+            let _ = stdin.shutdown().await;
+        }
+    }
+
+    let output = match child.wait_with_output().await {
+        Ok(output) => output,
+        Err(e) => {
+            return CommandResponse::ExecuteResult {
+                success: false,
+                data: None,
+                error: Some(ErrorInfo {
+                    code: "execution_failed".into(),
+                    details: Some(e.to_string()),
+                }),
+                files: vec![],
+            };
+        }
+    };
+
+    let files = collect_output_files(OUTPUT_DIR).await;
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+    if output.status.success() {
+        CommandResponse::ExecuteResult {
+            success: true,
+            data: Some(serde_json::json!({
+                "stdout": stdout,
+                "stderr": stderr,
+                "exit_code": 0
+            })),
+            error: None,
+            files,
+        }
+    } else {
+        let exit_code = output.status.code().unwrap_or(-1);
+        CommandResponse::ExecuteResult {
+            success: false,
+            data: Some(serde_json::json!({
+                "stdout": stdout,
+                "stderr": stderr,
+                "exit_code": exit_code
+            })),
+            error: Some(ErrorInfo {
+                code: "command_failed".into(),
+                details: Some(format!("exit code: {}", exit_code)),
+            }),
+            files,
+        }
+    }
+}
+
+async fn create_pty_session(
+    command: &str,
+    cols: u16,
+    rows: u16,
+    env: &HashMap<String, String>,
+    writer: SharedWriter,
+) -> Result<(Uuid, PtySession), String> {
+    let session_id = Uuid::new_v4();
+    let pty_system = portable_pty::native_pty_system();
+
+    let pair = pty_system
+        .openpty(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .map_err(|e| format!("Failed to open PTY: {}", e))?;
+
+    let mut cmd = CommandBuilder::new("/bin/sh");
+    cmd.arg("-c");
+    cmd.arg(command);
+
+    for (key, value) in env {
+        cmd.env(key, value);
+    }
+
+    // Set TERM for proper terminal support
+    cmd.env("TERM", "xterm-256color");
+
+    let child = pair
+        .slave
+        .spawn_command(cmd)
+        .map_err(|e| format!("Failed to spawn command: {}", e))?;
+
+    let mut reader = pair
+        .master
+        .try_clone_reader()
+        .map_err(|e| format!("Failed to clone reader: {}", e))?;
+
+    let session_id_clone = session_id;
+    tokio::task::spawn_blocking(move || {
+        let mut buffer = [0u8; 4096];
+        loop {
+            match reader.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let data = String::from_utf8_lossy(&buffer[..n]).to_string();
+                    let response = CommandResponse::PtyOutput {
+                        session_id: session_id_clone,
+                        data,
+                    };
+
+                    let msg = SignalingMessage::SyncData {
+                        payload: serde_json::to_value(&response)
+                            .expect("CommandResponse serialization cannot fail"),
+                    };
+
+                    let writer_clone = writer.clone();
+                    tokio::spawn(async move {
+                        let mut w = writer_clone.lock().await;
+                        let _ = w
+                            .send(Message::Text(
+                                serde_json::to_string(&msg)
+                                    .expect("SignalingMessage serialization cannot fail"),
+                            ))
+                            .await;
+                    });
+                }
+                Err(e) => {
+                    tracing::warn!("PTY read error: {}", e);
+                    break;
+                }
+            }
+        }
+
+        tracing::info!("PTY session {} reader task ended", session_id_clone);
+    });
+
+    let pty_writer = pair
+        .master
+        .take_writer()
+        .map_err(|e| format!("Failed to take PTY writer: {}", e))?;
+
+    Ok((
+        session_id,
+        PtySession {
+            id: session_id,
+            pair,
+            child,
+            writer: pty_writer,
+        },
+    ))
+}
+
+async fn handle_proxy_request(
+    request_id: String,
+    service_name: String,
+    method: String,
+    path: String,
+    headers: HashMap<String, String>,
+    body: Option<String>,
+    services: &HashMap<String, u16>,
+) -> CommandResponse {
+    let port = match services.get(&service_name) {
+        Some(port) => *port,
+        None => {
+            tracing::warn!("Service not found: {}", service_name);
+            return CommandResponse::ProxyResult {
+                request_id,
+                status_code: 404,
+                headers: HashMap::new(),
+                body: Some(format!("Service not found: {}", service_name)),
+            };
+        }
+    };
+
+    let url = format!("http://localhost:{}{}", port, path);
+    tracing::debug!("Proxying {} {} to {}", method, path, url);
+
+    let client = reqwest::Client::new();
+
+    let http_method = match method.to_uppercase().as_str() {
+        "GET" => reqwest::Method::GET,
+        "POST" => reqwest::Method::POST,
+        "PUT" => reqwest::Method::PUT,
+        "DELETE" => reqwest::Method::DELETE,
+        "PATCH" => reqwest::Method::PATCH,
+        "HEAD" => reqwest::Method::HEAD,
+        "OPTIONS" => reqwest::Method::OPTIONS,
+        _ => {
+            tracing::warn!("Unsupported HTTP method: {}", method);
+            return CommandResponse::ProxyResult {
+                request_id,
+                status_code: 405,
+                headers: HashMap::new(),
+                body: Some(format!("Unsupported method: {}", method)),
+            };
+        }
+    };
+
+    let mut request_builder = client.request(http_method, &url);
+
+    for (key, value) in headers {
+        request_builder = request_builder.header(&key, &value);
+    }
+
+    if let Some(body_str) = body {
+        request_builder = request_builder.body(body_str);
+    }
+
+    match request_builder
+        .timeout(std::time::Duration::from_secs(30))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            let status_code = response.status().as_u16();
+            let mut response_headers = HashMap::new();
+
+            for (key, value) in response.headers() {
+                if let Ok(value_str) = value.to_str() {
+                    response_headers.insert(key.to_string(), value_str.to_string());
+                }
+            }
+
+            let response_body = match response.text().await {
+                Ok(text) => Some(text),
+                Err(e) => {
+                    tracing::warn!("Failed to read response body: {}", e);
+                    None
+                }
+            };
+
+            CommandResponse::ProxyResult {
+                request_id,
+                status_code,
+                headers: response_headers,
+                body: response_body,
+            }
+        }
+        Err(e) => {
+            tracing::error!("HTTP proxy request failed: {}", e);
+            CommandResponse::ProxyResult {
+                request_id,
+                status_code: 502,
+                headers: HashMap::new(),
+                body: Some(format!("Proxy error: {}", e)),
+            }
+        }
+    }
+}
+
+async fn handle_query_local(
+    query_id: String,
+    query_type: QueryType,
+    params: JsonValue,
+) -> CommandResponse {
+    match query_type {
+        QueryType::ListTasks => {
+            tracing::debug!("Listing local tasks with params: {:?}", params);
+
+            CommandResponse::QueryResult {
+                query_id,
+                data: serde_json::json!({
+                    "tasks": [],
+                    "total": 0,
+                    "source": "cocoon-local"
+                }),
+                is_final: true,
+            }
+        }
+        QueryType::GetTaskStats => {
+            tracing::debug!("Getting task stats");
+
+            CommandResponse::QueryResult {
+                query_id,
+                data: serde_json::json!({
+                    "pending": 0,
+                    "running": 0,
+                    "completed": 0,
+                    "failed": 0,
+                    "total": 0
+                }),
+                is_final: true,
+            }
+        }
+        QueryType::SearchTasks => {
+            let query = params.get("query").and_then(|v| v.as_str()).unwrap_or("");
+            tracing::debug!("Searching tasks for: {}", query);
+
+            CommandResponse::QueryResult {
+                query_id,
+                data: serde_json::json!({
+                    "tasks": [],
+                    "query": query,
+                    "total": 0
+                }),
+                is_final: true,
+            }
+        }
+        QueryType::SearchKnowledgebase => {
+            let query = params.get("query").and_then(|v| v.as_str()).unwrap_or("");
+            tracing::debug!("Searching knowledgebase for: {}", query);
+
+            CommandResponse::QueryResult {
+                query_id,
+                data: serde_json::json!({
+                    "results": [],
+                    "query": query,
+                    "total": 0
+                }),
+                is_final: true,
+            }
+        }
+        QueryType::Custom { query_name } => {
+            tracing::warn!("Custom query not implemented: {}", query_name);
+
+            CommandResponse::QueryResult {
+                query_id,
+                data: serde_json::json!({
+                    "error": format!("Custom query '{}' not implemented", query_name)
+                }),
+                is_final: true,
+            }
+        }
+    }
+}
+
+fn validate_secret(secret: &str) -> Result<(), String> {
+    if secret.len() < MIN_SECRET_LENGTH {
+        return Err(format!(
+            "Secret too short: {} characters (minimum: {})",
+            secret.len(),
+            MIN_SECRET_LENGTH
+        ));
+    }
+
+    if secret.chars().all(|c| c.is_numeric()) {
+        return Err("Secret must not be only numbers".to_string());
+    }
+
+    if secret.to_lowercase() == secret && secret.chars().all(|c| c.is_alphabetic()) {
+        return Err("Secret must not be only lowercase letters".to_string());
+    }
+
+    if secret.chars().all(|c| Some(c) == secret.chars().next()) {
+        return Err("Secret must not be repetitive characters".to_string());
+    }
+
+    let lower = secret.to_lowercase();
+    let weak_patterns = ["password", "secret", "admin", "12345", "qwerty", "test"];
+    for pattern in &weak_patterns {
+        if lower.contains(pattern) {
+            return Err(format!("Secret contains weak pattern: {}", pattern));
+        }
+    }
+
+    Ok(())
+}
+
+fn generate_strong_secret() -> String {
+    const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let mut rng = rand::rng();
+
+    (0..GENERATED_SECRET_LENGTH)
+        .map(|_| {
+            let idx = rng.random_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect()
+}
+
+async fn load_device_id() -> Option<String> {
+    match tokio::fs::read_to_string(DEVICE_ID_PATH).await {
+        Ok(device_id) => {
+            let device_id = device_id.trim().to_string();
+            if device_id.is_empty() {
+                None
+            } else {
+                tracing::info!("📱 Loaded existing device ID from {}", DEVICE_ID_PATH);
+                Some(device_id)
+            }
+        }
+        Err(_) => None,
+    }
+}
+
+async fn save_device_id(device_id: &str) {
+    if let Err(e) = tokio::fs::write(DEVICE_ID_PATH, device_id).await {
+        tracing::warn!("⚠️ Could not save device ID to {}: {}", DEVICE_ID_PATH, e);
+        tracing::warn!("💡 Mount volume at /cocoon for persistent device ID");
+    } else {
+        tracing::info!(
+            "💾 Saved device ID to {} for reconnection verification",
+            DEVICE_ID_PATH
+        );
+    }
+}
+
+async fn send_deregister(writer: &SharedWriter, device_id: &str, reason: Option<&str>) {
+    let deregister_msg = SignalingMessage::DeviceDeregister {
+        device_id: device_id.to_string(),
+        reason: reason.map(|r| r.to_string()),
+    };
+
+    let mut w = writer.lock().await;
+    if let Err(e) = w
+        .send(Message::Text(
+            serde_json::to_string(&deregister_msg)
+                .expect("SignalingMessage serialization cannot fail"),
+        ))
+        .await
+    {
+        tracing::warn!("⚠️ Failed to send deregister message: {}", e);
+    } else {
+        tracing::info!("📤 Sent deregister message to server");
+    }
+}
+
+async fn get_or_create_secret() -> Result<(String, Option<String>), Box<dyn std::error::Error>> {
+    let device_id = load_device_id().await;
+
+    // Try environment variable first (for manual management)
+    if let Some(secret) = env_opt(EnvVar::CocoonSecret.as_str()) {
+        tracing::info!("📋 Using secret from COCOON_SECRET environment variable");
+
+        if let Err(e) = validate_secret(&secret) {
+            tracing::error!("❌ Invalid secret from COCOON_SECRET: {}", e);
+            tracing::error!("💡 Secret requirements:");
+            tracing::error!("   - Minimum {} characters", MIN_SECRET_LENGTH);
+            tracing::error!("   - Must be random and unpredictable");
+            tracing::error!("   - Avoid common patterns, dictionary words");
+            tracing::error!("   - Use: openssl rand -base64 36");
+            return Err(format!("Invalid COCOON_SECRET: {}", e).into());
+        }
+
+        return Ok((secret, device_id));
+    }
+
+    match tokio::fs::read_to_string(SECRET_PATH).await {
+        Ok(secret) => {
+            let secret = secret.trim().to_string();
+
+            if let Err(e) = validate_secret(&secret) {
+                tracing::error!("❌ Invalid secret from {}: {}", SECRET_PATH, e);
+                tracing::error!("💡 Deleting weak secret and generating new one");
+                let _ = tokio::fs::remove_file(SECRET_PATH).await;
+                // Also delete device_id since secret changed
+                let _ = tokio::fs::remove_file(DEVICE_ID_PATH).await;
+            } else {
+                tracing::info!("🔑 Loaded existing secret from {}", SECRET_PATH);
+                return Ok((secret, device_id));
+            }
+        }
+        Err(_) => {}
+    }
+
+    let secret = generate_strong_secret();
+    tracing::info!(
+        "🆕 Generated new cryptographically strong secret ({} chars, {} bits entropy)",
+        GENERATED_SECRET_LENGTH,
+        GENERATED_SECRET_LENGTH * 6
+    );
+
+    // Try to save it (may fail in read-only containers, that's ok)
+    if let Err(e) = tokio::fs::write(SECRET_PATH, &secret).await {
+        tracing::warn!(
+            "⚠️ Could not save secret to {} (ephemeral session): {}",
+            SECRET_PATH,
+            e
+        );
+        tracing::warn!(
+            "💡 Set COCOON_SECRET env var or mount volume at /cocoon for persistent sessions"
+        );
+    } else {
+        tracing::info!("💾 Saved secret to {} for persistent sessions", SECRET_PATH);
+    }
+
+    // New secret means no device_id yet (first registration)
+    Ok((secret, None))
+}
+
+async fn handle_cocoon_webrtc(
+    msg: CocoonMessage,
+    webrtc: Arc<crate::webrtc::WebRtcManager>,
+    writer: SharedWriter,
+) {
+    async fn send_cocoon_msg(writer: &SharedWriter, msg: &CocoonMessage) {
+        let sync_msg = SignalingMessage::SyncData {
+            payload: serde_json::to_value(msg).expect("CocoonMessage serialization cannot fail"),
+        };
+        let mut w = writer.lock().await;
+        let _ = w
+            .send(Message::Text(
+                serde_json::to_string(&sync_msg).expect("SignalingMessage serialization cannot fail"),
+            ))
+            .await;
+    }
+
+    match msg {
+        CocoonMessage::WebrtcStartSession {
+            session_id,
+            device_id: client_id,
+            user_id,
+            data_channels,
+        } => {
+            if let Some(ref channels) = data_channels {
+                tracing::info!("🎥 WebRTC session request from {}: {} (user_id={:?}, data_channels={:?})", client_id, session_id, user_id, channels);
+            } else {
+                tracing::info!("🎥 WebRTC session request from {}: {} (user_id={:?})", client_id, session_id, user_id);
+            }
+            match webrtc.create_session(session_id.clone(), user_id).await {
+                Ok(()) => {
+                    tracing::info!("✅ WebRTC session {} created", session_id);
+                }
+                Err(e) => {
+                    tracing::error!("❌ Failed to create WebRTC session: {}", e);
+                    send_cocoon_msg(&writer, &CocoonMessage::WebrtcError {
+                        session_id,
+                        code: "session_create_failed".to_string(),
+                        message: e,
+                    }).await;
+                }
+            }
+        }
+
+        CocoonMessage::WebrtcOffer { session_id, sdp } => {
+            tracing::info!("📥 WebRTC offer received for session {}", session_id);
+            match webrtc.handle_offer(&session_id, &sdp).await {
+                Ok(answer_sdp) => {
+                    tracing::info!("📤 Sending WebRTC answer for session {}", session_id);
+                    send_cocoon_msg(&writer, &CocoonMessage::WebrtcAnswer {
+                        session_id,
+                        sdp: answer_sdp,
+                    }).await;
+                }
+                Err(e) => {
+                    tracing::error!("❌ Failed to handle WebRTC offer: {}", e);
+                    send_cocoon_msg(&writer, &CocoonMessage::WebrtcError {
+                        session_id,
+                        code: "offer_failed".to_string(),
+                        message: e,
+                    }).await;
+                }
+            }
+        }
+
+        CocoonMessage::WebrtcIceCandidate {
+            session_id,
+            candidate,
+            sdp_mid,
+            sdp_mline_index,
+        } => {
+            tracing::debug!("🧊 ICE candidate received for session {}", session_id);
+            if let Err(e) = webrtc
+                .add_ice_candidate(
+                    &session_id,
+                    &candidate,
+                    sdp_mid.as_deref(),
+                    sdp_mline_index.map(|i| i as u32),
+                )
+                .await
+            {
+                tracing::warn!("⚠️ Failed to add ICE candidate: {}", e);
+            }
+        }
+
+        CocoonMessage::WebrtcSessionEnded { session_id, reason } => {
+            let reason_str = reason.as_deref().unwrap_or("not specified");
+            if reason_str == "session_replaced" {
+                tracing::info!("🔄 WebRTC session {} replaced by newer session from same client", session_id);
+            } else {
+                tracing::info!("🔌 WebRTC session {} ended (reason: {})", session_id, reason_str);
+            }
+            let _ = webrtc.close_session(&session_id).await;
+        }
+
+        CocoonMessage::WebrtcData {
+            session_id: _,
+            channel,
+            data,
+            binary,
+        } => {
+            tracing::debug!("📦 WebRTC data received: {} bytes on channel {}", data.len(), channel);
+            match channel.as_str() {
+                "terminal" => tracing::debug!("Terminal data: {}", data),
+                "file-transfer" => tracing::debug!("File transfer data: {} bytes, binary: {}", data.len(), binary),
+                _ => tracing::debug!("Unknown channel: {}", channel),
+            }
+        }
+
+        CocoonMessage::WebrtcError { session_id, code, message } => {
+            tracing::error!("❌ WebRTC error for session {}: {} - {}", session_id, code, message);
+            let _ = webrtc.close_session(&session_id).await;
+        }
+
+        _ => {
+            tracing::debug!("📨 Unhandled CocoonMessage in WebRTC handler");
+        }
+    }
+}
+
+pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive("cocoon=info".parse().expect("valid tracing directive")),
+        )
+        .try_init();
+
+    tracing::info!("🐛 Cocoon starting (v{})", env!("CARGO_PKG_VERSION"));
+
+    let (secret, device_id) = get_or_create_secret().await?;
+
+    let base_url = env_or(EnvVar::SignalingServerUrl.as_str(), "ws://localhost:8080/ws");
+    let signaling_url = if base_url.contains('?') {
+        format!("{}&kind=cocoon", base_url)
+    } else {
+        format!("{}?kind=cocoon", base_url)
+    };
+
+    tracing::info!("🔗 Connecting to signaling server: {}", signaling_url);
+
+    let (ws_stream, _) = match connect_async(&signaling_url).await {
+        Ok(conn) => conn,
+        Err(e) => {
+            tracing::error!("❌ Failed to connect to signaling server: {}", e);
+            return Err(format!("Failed to connect to signaling server: {}", e).into());
+        }
+    };
+
+    let (write, mut read) = ws_stream.split();
+    let writer = Arc::new(Mutex::new(write));
+
+    let pty_sessions: Arc<Mutex<HashMap<Uuid, PtySession>>> = Arc::new(Mutex::new(HashMap::new()));
+
+    let silk_sessions: Arc<Mutex<HashMap<Uuid, SilkSession>>> =
+        Arc::new(Mutex::new(HashMap::new()));
+
+    let adi_router = {
+        let mut router = AdiRouter::new();
+
+        #[cfg(feature = "tasks-core")]
+        {
+            match tasks_core::TasksService::new_global() {
+                Ok(tasks_service) => {
+                    router.register(std::sync::Arc::new(tasks_service));
+                    tracing::info!("📦 Registered ADI plugin: adi.tasks");
+                }
+                Err(e) => {
+                    tracing::warn!("⚠️ Failed to initialize tasks plugin: {}", e);
+                }
+            }
+        }
+
+        #[cfg(feature = "kb-core")]
+        {
+            match knowledgebase_core::service::KnowledgebaseService::open_default().await {
+                Ok(kb_service) => {
+                    router.register(std::sync::Arc::new(kb_service));
+                    tracing::info!("📦 Registered ADI plugin: adi.knowledgebase");
+                }
+                Err(e) => {
+                    tracing::warn!("⚠️ Failed to initialize knowledgebase plugin: {}", e);
+                }
+            }
+        }
+
+        #[cfg(feature = "tools-core")]
+        {
+            let tools_service = tools_core::ToolsService::new();
+            let tool_count = tools_service.list_all_tools().len();
+            router.register(std::sync::Arc::new(tools_service));
+            tracing::info!("📦 Registered ADI plugin: adi.tools ({} tools)", tool_count);
+        }
+
+        router
+    };
+
+    let adi_plugins: Vec<String> = adi_router
+        .list_plugins()
+        .iter()
+        .map(|s| format!("{}:{}", s.id, s.version))
+        .collect();
+
+    let adi_router = Arc::new(Mutex::new(adi_router));
+
+    let (webrtc_tx, mut webrtc_rx) = tokio::sync::mpsc::unbounded_channel::<SignalingMessage>();
+
+    let webrtc_manager = Arc::new(crate::webrtc::WebRtcManager::with_adi_router(
+        webrtc_tx,
+        adi_router,
+    ));
+
+    let writer_for_webrtc = writer.clone();
+    tokio::spawn(async move {
+        while let Some(msg) = webrtc_rx.recv().await {
+            let mut w = writer_for_webrtc.lock().await;
+            if let Err(e) = w
+                .send(Message::Text(
+                    serde_json::to_string(&msg).unwrap_or_default(),
+                ))
+                .await
+            {
+                tracing::warn!("⚠️ Failed to send WebRTC signaling message: {}", e);
+            }
+        }
+    });
+
+    // Serialized WebRTC message channel — processes signaling messages one at a time
+    // so create_session() always completes before handle_offer() runs for the same session.
+    let (webrtc_msg_tx, mut webrtc_msg_rx) =
+        tokio::sync::mpsc::unbounded_channel::<CocoonMessage>();
+    let webrtc_manager_for_task = webrtc_manager.clone();
+    let writer_for_webrtc_msgs = writer.clone();
+    tokio::spawn(async move {
+        while let Some(msg) = webrtc_msg_rx.recv().await {
+            handle_cocoon_webrtc(msg, webrtc_manager_for_task.clone(), writer_for_webrtc_msgs.clone()).await;
+        }
+    });
+
+    // Service registry - parse from COCOON_SERVICES env var
+    // Format: "service1:port1,service2:port2"
+    // Example: "flowmap-api:8092,postgres:5432"
+    let mut services = HashMap::new();
+    if let Some(services_str) = env_opt(EnvVar::CocoonServices.as_str()) {
+        for service_def in services_str.split(',') {
+            let parts: Vec<&str> = service_def.trim().split(':').collect();
+            if parts.len() == 2 {
+                if let Ok(port) = parts[1].parse::<u16>() {
+                    services.insert(parts[0].to_string(), port);
+                    tracing::info!("📦 Registered service: {} → localhost:{}", parts[0], port);
+                } else {
+                    tracing::warn!("⚠️ Invalid port for service {}: {}", parts[0], parts[1]);
+                }
+            } else {
+                tracing::warn!("⚠️ Invalid service definition: {}", service_def);
+            }
+        }
+    }
+    let services = Arc::new(services);
+
+    let setup_token = env_opt(EnvVar::CocoonSetupToken.as_str());
+    let cocoon_name = env_opt(EnvVar::CocoonName.as_str());
+
+    let cocoon_version = env!("CARGO_PKG_VERSION").to_string();
+    let mut tags = std::collections::HashMap::new();
+    if let Some(ref token) = setup_token {
+        tracing::info!("🎫 Using setup token for auto-registration");
+        tags.insert("setup_token".to_string(), token.clone());
+    }
+    if let Some(ref name) = cocoon_name {
+        tags.insert("name".to_string(), name.clone());
+    }
+    let protocols: Vec<String> = env_opt(EnvVar::CocoonProtocols.as_str())
+        .map(|s| s.split(',').map(|v| v.trim().to_string()).filter(|v| !v.is_empty()).collect())
+        .unwrap_or_else(|| vec!["silk".to_string()]);
+
+    let device_config = Some(serde_json::json!({
+        "adi_plugins": adi_plugins,
+        "protocols": protocols,
+    }));
+
+    let register_msg = SignalingMessage::DeviceRegister {
+        secret,
+        device_id: device_id.clone(),
+        version: cocoon_version,
+        tags: if tags.is_empty() { None } else { Some(tags) },
+        device_type: Some("cocoon".to_string()),
+        device_config,
+    };
+
+    let current_device_id: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+
+    // Send DeviceRegister immediately (cocoon endpoint skips auth)
+    tracing::info!("⏳ Registering with signaling server...");
+    {
+        let mut w = writer.lock().await;
+        w.send(Message::Text(
+            serde_json::to_string(&register_msg).unwrap(),
+        ))
+        .await
+        .map_err(|e| format!("Failed to send register: {}", e))?;
+    }
+
+    let mut registered = false;
+    while let Some(Ok(msg)) = read.next().await {
+        let text = match msg {
+            Message::Text(t) => t,
+            Message::Close(_) => return Err("Connection closed during registration".into()),
+            _ => continue,
+        };
+        let parsed: SignalingMessage = match serde_json::from_str(&text) {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+        match parsed {
+            SignalingMessage::DeviceRegisterResponse { device_id: assigned_id, tags } => {
+                registered = true;
+                tracing::info!("✅ Registration confirmed");
+                tracing::info!("🆔 Device ID: {}", assigned_id);
+
+                if let Some(ref t) = tags {
+                    if let Some(owner_id) = t.get("owner_id") {
+                        tracing::info!("👤 Owner: {}", owner_id);
+                        if let Some(name) = t.get("name") {
+                            tracing::info!("📛 Name: {}", name);
+                        }
+                        tracing::info!("🎉 Cocoon is ready and claimed by your account!");
+                    }
+                }
+
+                save_device_id(&assigned_id).await;
+                *current_device_id.lock().await = Some(assigned_id);
+                break;
+            }
+            SignalingMessage::SystemError { message } => {
+                tracing::error!("❌ Server error during registration: {}", message);
+                return Err(format!("Server error: {}", message).into());
+            }
+            _ => continue,
+        }
+    }
+
+    if !registered {
+        return Err("Connection closed before registration completed".into());
+    }
+
+    let current_device_id_for_loop = current_device_id.clone();
+
+    let (shutdown_tx, mut shutdown_rx) = broadcast::channel::<()>(1);
+    let writer_for_shutdown = writer.clone();
+    let device_id_for_shutdown = current_device_id.clone();
+
+    tokio::spawn(async move {
+        #[cfg(unix)]
+        {
+            use tokio::signal::unix::{signal, SignalKind};
+            let mut sigterm =
+                signal(SignalKind::terminate()).expect("Failed to create SIGTERM handler");
+            let mut sigint =
+                signal(SignalKind::interrupt()).expect("Failed to create SIGINT handler");
+
+            tokio::select! {
+                _ = sigterm.recv() => {
+                    tracing::info!("📥 Received SIGTERM, initiating graceful shutdown...");
+                }
+                _ = sigint.recv() => {
+                    tracing::info!("📥 Received SIGINT, initiating graceful shutdown...");
+                }
+            }
+        }
+
+        #[cfg(not(unix))]
+        {
+            let _ = tokio::signal::ctrl_c().await;
+            tracing::info!("📥 Received Ctrl+C, initiating graceful shutdown...");
+        }
+
+        if let Some(device_id) = device_id_for_shutdown.lock().await.as_ref() {
+            send_deregister(&writer_for_shutdown, device_id, Some("shutdown")).await;
+        }
+
+        let _ = shutdown_tx.send(());
+    });
+
+    loop {
+        tokio::select! {
+            _ = shutdown_rx.recv() => {
+                tracing::info!("🛑 Shutdown signal received, exiting main loop...");
+                break;
+            }
+            msg_result = read.next() => {
+                let msg = match msg_result {
+                    Some(Ok(msg)) => msg,
+                    Some(Err(e)) => {
+                        tracing::error!("❌ WebSocket error: {}", e);
+                        break;
+                    }
+                    None => {
+                        tracing::info!("🔌 Connection closed by server");
+                        break;
+                    }
+                };
+
+                let text = match msg {
+                    Message::Text(t) => t,
+                    Message::Close(_) => {
+                        tracing::info!("🔌 Connection closed");
+                        break;
+                    }
+                    _ => continue,
+                };
+
+                let message: SignalingMessage = match serde_json::from_str(&text) {
+                    Ok(m) => m,
+                    Err(e) => {
+                        tracing::warn!("⚠️ Invalid message: {}", e);
+                        continue;
+                    }
+                };
+
+                match message {
+                    SignalingMessage::DeviceRegisterResponse {
+                        device_id: assigned_id,
+                        tags,
+                    } => {
+                        tracing::info!("✅ Registration confirmed");
+                        tracing::info!("🆔 Device ID: {}", assigned_id);
+
+                            if let Some(ref t) = tags {
+                            if let Some(owner_id) = t.get("owner_id") {
+                                tracing::info!("👤 Owner: {}", owner_id);
+                                if let Some(name) = t.get("name") {
+                                    tracing::info!("📛 Name: {}", name);
+                                }
+                                tracing::info!("");
+                                tracing::info!("🎉 Cocoon is ready and claimed by your account!");
+                            }
+                        } else {
+                            tracing::info!("");
+                            tracing::info!("📋 To claim ownership:");
+                            tracing::info!(
+                                "   Anyone with this secret can become an owner (co-ownership supported)"
+                            );
+                            tracing::info!("");
+                            tracing::info!("   ⚠️  Share this secret only with trusted co-owners!");
+                        }
+                        tracing::info!("");
+
+                        *current_device_id_for_loop.lock().await = Some(assigned_id.clone());
+                        save_device_id(&assigned_id).await;
+                    }
+
+                    SignalingMessage::DeviceDeregisterResponse { device_id } => {
+                        tracing::info!("✅ Deregistration confirmed for device: {}", device_id);
+                    }
+
+                    SignalingMessage::SyncData { payload } => {
+                        let type_str = payload.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                        if type_str.starts_with("webrtc_") {
+                            match serde_json::from_value::<CocoonMessage>(payload) {
+                                Ok(cocoon_msg) => {
+                                    let _ = webrtc_msg_tx.send(cocoon_msg);
+                                    continue;
+                                }
+                                Err(e) => {
+                                    tracing::warn!("⚠️ Invalid CocoonMessage: {}", e);
+                                    continue;
+                                }
+                            }
+                        }
+
+                        // Handle query protocol messages (query_query_local → query_query_result)
+                        if type_str == "query_query_local" {
+                            let query_id = payload.get("query_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                            let params = payload.get("params").cloned().unwrap_or(serde_json::json!({}));
+
+                            let query_type: QueryType = match payload.get("query_type").cloned() {
+                                Some(v) => match serde_json::from_value(v) {
+                                    Ok(qt) => qt,
+                                    Err(e) => {
+                                        tracing::warn!("⚠️ Invalid query_type: {}", e);
+                                        continue;
+                                    }
+                                }
+                                None => {
+                                    tracing::warn!("⚠️ Missing query_type in query_query_local");
+                                    continue;
+                                }
+                            };
+
+                            let writer_clone = writer.clone();
+                            tokio::spawn(async move {
+                                let result = handle_query_local(query_id, query_type, params).await;
+                                if let CommandResponse::QueryResult { query_id, data, is_final } = result {
+                                    let response = serde_json::json!({
+                                        "type": "query_query_result",
+                                        "query_id": query_id,
+                                        "data": data,
+                                        "is_final": is_final,
+                                    });
+                                    let sync_msg = SignalingMessage::SyncData { payload: response };
+                                    let mut w = writer_clone.lock().await;
+                                    let _ = w.send(Message::Text(
+                                        serde_json::to_string(&sync_msg).expect("serialization cannot fail"),
+                                    )).await;
+                                }
+                            });
+                            continue;
+                        }
+
+                        let request: CommandRequest = match serde_json::from_value(payload) {
+                            Ok(req) => req,
+                            Err(e) => {
+                                tracing::warn!("⚠️ Invalid command request: {}", e);
+                                continue;
+                            }
+                        };
+
+                        let writer_clone = writer.clone();
+                        let sessions_clone = pty_sessions.clone();
+                        let services_clone = services.clone();
+                        let silk_sessions_clone = silk_sessions.clone();
+
+                        tokio::spawn(async move {
+                            let response: Option<CommandResponse> = match request {
+                                CommandRequest::Execute { command, input } => {
+                                    tracing::info!("🚀 Executing: {}", command);
+                                    Some(execute_command(&command, input.as_deref()).await)
+                                }
+
+                                CommandRequest::AttachPty {
+                                    command,
+                                    cols,
+                                    rows,
+                                    env,
+                                } => {
+                                    tracing::info!("🔗 Attaching PTY: {} ({}x{})", command, cols, rows);
+
+                                    match create_pty_session(
+                                        &command,
+                                        cols,
+                                        rows,
+                                        &env,
+                                        writer_clone.clone(),
+                                    )
+                                    .await
+                                    {
+                                        Ok((session_id, session)) => {
+                                            sessions_clone.lock().await.insert(session_id, session);
+                                            Some(CommandResponse::PtyCreated { session_id })
+                                        }
+                                        Err(e) => Some(CommandResponse::Error {
+                                            code: "pty_create_failed".into(),
+                                            message: e,
+                                        }),
+                                    }
+                                }
+
+                                CommandRequest::PtyInput { session_id, data } => {
+                                    let mut sessions = sessions_clone.lock().await;
+                                    if let Some(session) = sessions.get_mut(&session_id) {
+                                        if let Err(e) =
+                                            std::io::Write::write_all(&mut session.writer, data.as_bytes())
+                                        {
+                                            Some(CommandResponse::Error {
+                                                code: "pty_write_failed".into(),
+                                                message: e.to_string(),
+                                            })
+                                        } else {
+                                            let _ = std::io::Write::flush(&mut session.writer);
+                                            None // No response needed for successful input
+                                        }
+                                    } else {
+                                        Some(CommandResponse::Error {
+                                            code: "session_not_found".into(),
+                                            message: format!("PTY session {} not found", session_id),
+                                        })
+                                    }
+                                }
+
+                                CommandRequest::PtyResize {
+                                    session_id,
+                                    cols,
+                                    rows,
+                                } => {
+                                    tracing::info!("📐 Resizing PTY {} to {}x{}", session_id, cols, rows);
+                                    let sessions = sessions_clone.lock().await;
+                                    if let Some(session) = sessions.get(&session_id) {
+                                        if let Err(e) = session.pair.master.resize(PtySize {
+                                            rows,
+                                            cols,
+                                            pixel_width: 0,
+                                            pixel_height: 0,
+                                        }) {
+                                            Some(CommandResponse::Error {
+                                                code: "resize_failed".into(),
+                                                message: e.to_string(),
+                                            })
+                                        } else {
+                                            None // No response needed for successful resize
+                                        }
+                                    } else {
+                                        Some(CommandResponse::Error {
+                                            code: "session_not_found".into(),
+                                            message: format!("PTY session {} not found", session_id),
+                                        })
+                                    }
+                        }
+
+                        CommandRequest::PtyClose { session_id } => {
+                            tracing::info!("🔌 Closing PTY session {}", session_id);
+                            let mut sessions = sessions_clone.lock().await;
+                            if let Some(mut session) = sessions.remove(&session_id) {
+                                let exit_status = session.child.wait().ok();
+                                let exit_code =
+                                    exit_status.map(|s| s.exit_code() as i32).unwrap_or(-1);
+
+                                Some(CommandResponse::PtyExited {
+                                    session_id,
+                                    exit_code,
+                                })
+                            } else {
+                                Some(CommandResponse::Error {
+                                    code: "session_not_found".into(),
+                                    message: format!("PTY session {} not found", session_id),
+                                })
+                            }
+                        }
+
+                        CommandRequest::ProxyHttp {
+                            request_id,
+                            service_name,
+                            method,
+                            path,
+                            headers,
+                            body,
+                        } => {
+                            tracing::info!(
+                                "🔀 Proxying HTTP {} {} to service {}",
+                                method,
+                                path,
+                                service_name
+                            );
+                            Some(
+                                handle_proxy_request(
+                                    request_id,
+                                    service_name,
+                                    method,
+                                    path,
+                                    headers,
+                                    body,
+                                    &services_clone,
+                                )
+                                .await,
+                            )
+                        }
+
+                        CommandRequest::QueryLocal {
+                            query_id,
+                            query_type,
+                            params,
+                        } => {
+                            tracing::info!("📊 Processing query: {:?}", query_type);
+                            Some(handle_query_local(query_id, query_type, params).await)
+                        }
+
+                        CommandRequest::SilkCreateSession { cwd, env, shell } => {
+                            tracing::info!("🧵 Creating Silk session");
+                            match SilkSession::new(cwd, env, shell) {
+                                Ok(session) => {
+                                    let response = SilkResponse::SessionCreated {
+                                        session_id: session.id,
+                                        cwd: session.cwd.clone(),
+                                        shell: session.shell.clone(),
+                                    };
+                                    silk_sessions_clone.lock().await.insert(session.id, session);
+                                    Some(CommandResponse::SilkResponse(response))
+                                }
+                                Err(e) => {
+                                    Some(CommandResponse::SilkResponse(SilkResponse::Error {
+                                        session_id: None,
+                                        command_id: None,
+                                        code: "session_create_failed".to_string(),
+                                        message: e,
+                                    }))
+                                }
+                            }
+                        }
+
+                        CommandRequest::SilkExecute {
+                            session_id,
+                            command,
+                            command_id,
+                        } => {
+                            tracing::info!("🧵 Silk execute: {} (session {})", command, session_id);
+                            let mut silk_sessions = silk_sessions_clone.lock().await;
+
+                            if let Some(session) = silk_sessions.get_mut(&session_id) {
+                                match session.execute(&command, command_id.clone()) {
+                                    Ok((interactive, child_opt)) => {
+                                        if interactive {
+                                            drop(silk_sessions); // Release lock before async call
+
+                                            let mut env = HashMap::new();
+                                            env.insert(
+                                                "TERM".to_string(),
+                                                "xterm-256color".to_string(),
+                                            );
+
+                                            match create_pty_session(
+                                                &command,
+                                                80,
+                                                24,
+                                                &env,
+                                                writer_clone.clone(),
+                                            )
+                                            .await
+                                            {
+                                                Ok((pty_session_id, pty_session)) => {
+                                                    sessions_clone
+                                                        .lock()
+                                                        .await
+                                                        .insert(pty_session_id, pty_session);
+
+                                                    if let Some(s) = silk_sessions_clone
+                                                        .lock()
+                                                        .await
+                                                        .get_mut(&session_id)
+                                                    {
+                                                        s.set_pty_session(
+                                                            command_id.clone(),
+                                                            pty_session_id,
+                                                        );
+                                                    }
+
+                                                    Some(CommandResponse::SilkResponse(
+                                                        SilkResponse::InteractiveRequired {
+                                                            session_id,
+                                                            command_id,
+                                                            reason: format!(
+                                                                "Command '{}' requires interactive mode",
+                                                                command
+                                                                    .split_whitespace()
+                                                                    .next()
+                                                                    .unwrap_or(&command)
+                                                            ),
+                                                            pty_session_id,
+                                                        },
+                                                    ))
+                                                }
+                                                Err(e) => Some(CommandResponse::SilkResponse(
+                                                    SilkResponse::Error {
+                                                        session_id: Some(session_id),
+                                                        command_id: Some(command_id),
+                                                        code: "pty_create_failed".to_string(),
+                                                        message: e,
+                                                    },
+                                                )),
+                                            }
+                                        } else if let Some(mut child) = child_opt {
+                                            let writer_for_output = writer_clone.clone();
+                                            let sessions_for_cwd = silk_sessions_clone.clone();
+                                            let cmd_for_cwd = command.clone();
+                                            let command_id_for_spawn = command_id.clone();
+
+                                            let started = SilkResponse::CommandStarted {
+                                                session_id,
+                                                command_id,
+                                                interactive: false,
+                                            };
+                                            let started_msg = SignalingMessage::SyncData {
+                                                payload: serde_json::to_value(
+                                                    &CommandResponse::SilkResponse(started),
+                                                )
+                                                .expect("CommandResponse serialization cannot fail"),
+                                            };
+                                            let mut w = writer_clone.lock().await;
+                                            let _ = w
+                                                .send(Message::Text(
+                                                    serde_json::to_string(&started_msg).expect(
+                                                        "SignalingMessage serialization cannot fail",
+                                                    ),
+                                                ))
+                                                .await;
+                                            drop(w);
+
+                                            if let Some(stdin) = child.stdin.take() {
+                                                let mut silk_lock = silk_sessions_clone.lock().await;
+                                                if let Some(session) = silk_lock.get_mut(&session_id) {
+                                                    if let Some(cmd) = session.running_commands.get_mut(&command_id_for_spawn) {
+                                                        cmd.stdin = Some(stdin);
+                                                    }
+                                                }
+                                            }
+
+                                            tokio::spawn(async move {
+                                                let command_id = command_id_for_spawn;
+                                                let mut stdout_reader = std::io::BufReader::new(
+                                                    child.stdout.take().expect("child stdout is piped"),
+                                                );
+                                                let mut stderr_reader = std::io::BufReader::new(
+                                                    child.stderr.take().expect("child stderr is piped"),
+                                                );
+
+                                                let mut buf = [0u8; 4096];
+                                                loop {
+                                                    match stdout_reader.get_mut().read(&mut buf) {
+                                                        Ok(0) => break,
+                                                        Ok(n) => {
+                                                            let data =
+                                                                String::from_utf8_lossy(&buf[..n])
+                                                                    .to_string();
+                                                            let html = AnsiToHtml::convert(&data);
+                                                            let output = SilkResponse::Output {
+                                                                session_id,
+                                                                command_id: command_id.clone(),
+                                                                stream: SilkStream::Stdout,
+                                                                data: data.clone(),
+                                                                html: Some(html),
+                                                            };
+                                                            let msg = SignalingMessage::SyncData {
+                                                                payload: serde_json::to_value(
+                                                                    &CommandResponse::SilkResponse(
+                                                                        output,
+                                                                    ),
+                                                                )
+                                                                .expect("CommandResponse serialization cannot fail"),
+                                                            };
+                                                            let mut w =
+                                                                writer_for_output.lock().await;
+                                                            let _ = w
+                                                                .send(Message::Text(
+                                                                    serde_json::to_string(&msg)
+                                                                        .expect("SignalingMessage serialization cannot fail"),
+                                                                ))
+                                                                .await;
+                                                        }
+                                                        Err(_) => break,
+                                                    }
+                                                }
+
+                                                let mut stderr_buf = Vec::new();
+                                                let _ = stderr_reader.read_to_end(&mut stderr_buf);
+                                                if !stderr_buf.is_empty() {
+                                                    let data = String::from_utf8_lossy(&stderr_buf)
+                                                        .to_string();
+                                                    let html = AnsiToHtml::convert(&data);
+                                                    let output = SilkResponse::Output {
+                                                        session_id,
+                                                        command_id: command_id.clone(),
+                                                        stream: SilkStream::Stderr,
+                                                        data: data.clone(),
+                                                        html: Some(html),
+                                                    };
+                                                    let msg = SignalingMessage::SyncData {
+                                                        payload: serde_json::to_value(
+                                                            &CommandResponse::SilkResponse(output),
+                                                        )
+                                                        .expect("CommandResponse serialization cannot fail"),
+                                                    };
+                                                    let mut w = writer_for_output.lock().await;
+                                                    let _ = w
+                                                        .send(Message::Text(
+                                                            serde_json::to_string(&msg).expect(
+                                                                "SignalingMessage serialization cannot fail",
+                                                            ),
+                                                        ))
+                                                        .await;
+                                                }
+
+                                                let exit_code = child
+                                                    .wait()
+                                                    .map(|s| s.code().unwrap_or(-1))
+                                                    .unwrap_or(-1);
+
+                                                {
+                                                    let mut sessions =
+                                                        sessions_for_cwd.lock().await;
+                                                    if let Some(s) = sessions.get_mut(&session_id) {
+                                                        s.update_cwd_if_cd(&cmd_for_cwd);
+                                                        s.complete_command(command_id.clone());
+
+                                                        let completed =
+                                                            SilkResponse::CommandCompleted {
+                                                                session_id,
+                                                                command_id,
+                                                                exit_code,
+                                                                cwd: s.cwd.clone(),
+                                                            };
+                                                        let msg = SignalingMessage::SyncData {
+                                                            payload: serde_json::to_value(
+                                                                &CommandResponse::SilkResponse(
+                                                                    completed,
+                                                                ),
+                                                            )
+                                                            .expect("CommandResponse serialization cannot fail"),
+                                                        };
+                                                        let mut w = writer_for_output.lock().await;
+                                                        let _ = w
+                                                            .send(Message::Text(
+                                                                serde_json::to_string(&msg).expect(
+                                                                    "SignalingMessage serialization cannot fail",
+                                                                ),
+                                                            ))
+                                                            .await;
+                                                    }
+                                                }
+                                            });
+
+                                            None // Response sent asynchronously
+                                        } else {
+                                            Some(CommandResponse::SilkResponse(
+                                                SilkResponse::Error {
+                                                    session_id: Some(session_id),
+                                                    command_id: Some(command_id),
+                                                    code: "execute_failed".to_string(),
+                                                    message: "No child process created".to_string(),
+                                                },
+                                            ))
+                                        }
+                                    }
+                                    Err(e) => {
+                                        Some(CommandResponse::SilkResponse(SilkResponse::Error {
+                                            session_id: Some(session_id),
+                                            command_id: Some(command_id),
+                                            code: "execute_failed".to_string(),
+                                            message: e,
+                                        }))
+                                    }
+                                }
+                            } else {
+                                Some(CommandResponse::SilkResponse(SilkResponse::Error {
+                                    session_id: Some(session_id),
+                                    command_id: Some(command_id),
+                                    code: "session_not_found".to_string(),
+                                    message: format!("Silk session {} not found", session_id),
+                                }))
+                            }
+                        }
+
+                        CommandRequest::SilkInput {
+                            session_id,
+                            command_id,
+                            data,
+                        } => {
+                            let mut silk_sessions = silk_sessions_clone.lock().await;
+                            if let Some(session) = silk_sessions.get_mut(&session_id) {
+                                if let Some(cmd) = session.running_commands.get_mut(&command_id) {
+                                    if let Some(pty_session_id) = cmd.pty_session_id {
+                                        drop(silk_sessions);
+                                        let mut pty_sessions = sessions_clone.lock().await;
+                                        if let Some(pty) = pty_sessions.get_mut(&pty_session_id) {
+                                            if let Err(e) = std::io::Write::write_all(
+                                                &mut pty.writer,
+                                                data.as_bytes(),
+                                            ) {
+                                                Some(CommandResponse::SilkResponse(
+                                                    SilkResponse::Error {
+                                                        session_id: Some(session_id),
+                                                        command_id: Some(command_id),
+                                                        code: "input_failed".to_string(),
+                                                        message: e.to_string(),
+                                                    },
+                                                ))
+                                            } else {
+                                                let _ = std::io::Write::flush(&mut pty.writer);
+                                                None
+                                            }
+                                        } else {
+                                            Some(CommandResponse::SilkResponse(
+                                                SilkResponse::Error {
+                                                    session_id: Some(session_id),
+                                                    command_id: Some(command_id),
+                                                    code: "pty_not_found".to_string(),
+                                                    message: "PTY session not found".to_string(),
+                                                },
+                                            ))
+                                        }
+                                    } else if let Some(ref mut stdin) = cmd.stdin {
+                                        use std::io::Write;
+                                        if let Err(e) = writeln!(stdin, "{}", data) {
+                                            Some(CommandResponse::SilkResponse(
+                                                SilkResponse::Error {
+                                                    session_id: Some(session_id),
+                                                    command_id: Some(command_id),
+                                                    code: "input_failed".to_string(),
+                                                    message: e.to_string(),
+                                                },
+                                            ))
+                                        } else {
+                                            let _ = stdin.flush();
+                                            None
+                                        }
+                                    } else {
+                                        Some(CommandResponse::SilkResponse(SilkResponse::Error {
+                                            session_id: Some(session_id),
+                                            command_id: Some(command_id),
+                                            code: "stdin_closed".to_string(),
+                                            message: "Command stdin is not available"
+                                                .to_string(),
+                                        }))
+                                    }
+                                } else {
+                                    Some(CommandResponse::SilkResponse(SilkResponse::Error {
+                                        session_id: Some(session_id),
+                                        command_id: Some(command_id),
+                                        code: "command_not_found".to_string(),
+                                        message: "Command not found in session".to_string(),
+                                    }))
+                                }
+                            } else {
+                                Some(CommandResponse::SilkResponse(SilkResponse::Error {
+                                    session_id: Some(session_id),
+                                    command_id: Some(command_id),
+                                    code: "session_not_found".to_string(),
+                                    message: format!("Silk session {} not found", session_id),
+                                }))
+                            }
+                        }
+
+                        CommandRequest::SilkResize {
+                            session_id,
+                            command_id,
+                            cols,
+                            rows,
+                        } => {
+                            let silk_sessions = silk_sessions_clone.lock().await;
+                            if let Some(session) = silk_sessions.get(&session_id) {
+                                if let Some(cmd) = session.running_commands.get(&command_id) {
+                                    if let Some(pty_session_id) = cmd.pty_session_id {
+                                        drop(silk_sessions);
+                                        let pty_sessions = sessions_clone.lock().await;
+                                        if let Some(pty) = pty_sessions.get(&pty_session_id) {
+                                            if let Err(e) = pty.pair.master.resize(PtySize {
+                                                rows,
+                                                cols,
+                                                pixel_width: 0,
+                                                pixel_height: 0,
+                                            }) {
+                                                Some(CommandResponse::SilkResponse(
+                                                    SilkResponse::Error {
+                                                        session_id: Some(session_id),
+                                                        command_id: Some(command_id),
+                                                        code: "resize_failed".to_string(),
+                                                        message: e.to_string(),
+                                                    },
+                                                ))
+                                            } else {
+                                                None
+                                            }
+                                        } else {
+                                            None // PTY may have closed already
+                                        }
+                                    } else {
+                                        None // Not interactive, no resize needed
+                                    }
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        }
+
+                        CommandRequest::SilkCloseSession { session_id } => {
+                            tracing::info!("🧵 Closing Silk session {}", session_id);
+                            let mut silk_sessions = silk_sessions_clone.lock().await;
+                            if silk_sessions.remove(&session_id).is_some() {
+                                Some(CommandResponse::SilkResponse(SilkResponse::SessionClosed {
+                                    session_id,
+                                }))
+                            } else {
+                                Some(CommandResponse::SilkResponse(SilkResponse::Error {
+                                    session_id: Some(session_id),
+                                    command_id: None,
+                                    code: "session_not_found".to_string(),
+                                    message: format!("Silk session {} not found", session_id),
+                                }))
+                            }
+                        }
+                    };
+
+                                if let Some(response) = response {
+                                    let response_msg = SignalingMessage::SyncData {
+                                        payload: serde_json::to_value(&response)
+                                            .expect("CommandResponse serialization cannot fail"),
+                                    };
+
+                                    let mut w = writer_clone.lock().await;
+                                    if let Err(e) = w
+                                        .send(Message::Text(
+                                            serde_json::to_string(&response_msg)
+                                                .expect("SignalingMessage serialization cannot fail"),
+                                        ))
+                                        .await
+                                    {
+                                        tracing::error!("❌ Failed to send response: {}", e);
+                                    }
+                                }
+                            });
+                        }
+
+                    SignalingMessage::DevicePeerConnected { peer_id } => {
+                        tracing::info!("👋 Peer connected: {}", peer_id);
+                    }
+
+                    SignalingMessage::DevicePeerDisconnected { peer_id } => {
+                        tracing::info!("👋 Peer disconnected: {}", peer_id);
+                    }
+
+                    SignalingMessage::SystemError { message } => {
+                        tracing::error!("❌ Server error: {}", message);
+                    }
+
+                    _ => {
+                        tracing::debug!("📨 Other message: {:?}", message);
+                    }
+                }
+            }
+        }
+    }
+
+    tracing::info!("🐛 Cocoon shutting down");
+    Ok(())
+}

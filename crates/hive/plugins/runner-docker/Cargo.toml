@@ -1,0 +1,43 @@
+[package]
+name = "hive-runner-docker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Docker container runner plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+futures = "0.3"
+uuid.workspace = true
+
+# Docker client (match hive-core version)
+bollard = "0.17"
+
+[features]
+default = ["plugin"]
+# Enable this to build as a dynamic library plugin
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.runner.docker"
+name = "Docker Runner"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "runner", "docker", "containers"]
+
+[package.metadata.plugin.hive]
+category = "runner"
+name = "docker"

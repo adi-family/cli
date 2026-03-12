@@ -1,0 +1,39 @@
+[package]
+name = "hive-proxy-auth-jwt"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "JWT authentication proxy middleware plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+jsonwebtoken = "9"
+reqwest = { workspace = true, features = ["json"] }
+tokio = { workspace = true, features = ["sync", "time"] }
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.proxy.auth.jwt"
+name = "JWT Authentication"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "proxy", "auth", "jwt", "security"]
+
+[package.metadata.plugin.hive]
+category = "proxy"
+name = "auth.jwt"

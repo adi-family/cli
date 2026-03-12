@@ -1,0 +1,41 @@
+[package]
+name = "hive-runner-script"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Script runner plugin for Hive - executes shell commands and scripts"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+dashmap = "6"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.runner.script"
+name = "Script Runner"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "runner", "script", "shell"]
+
+[package.metadata.plugin.hive]
+category = "runner"
+name = "script"

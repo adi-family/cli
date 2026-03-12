@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>404 Not Found</title>
+<style>
+:root {
+  --bg: #08080F;
+  --text: #EEEDF5;
+  --muted: #8884A8;
+  --accent: #6C5CE7;
+  --warning: #E8A317;
+  --dim: #3a3960;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #F8F7FC;
+    --text: #1A1A2E;
+    --muted: #7672A0;
+    --accent: #5241C5;
+    --warning: #B87D0A;
+    --dim: #c4c0e0;
+  }
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','Fira Code','Cascadia Code','SF Mono',monospace;min-height:100vh;padding:3rem 2rem;font-size:14px;line-height:1.8}
+.prompt{color:var(--accent)}
+.warn{color:var(--warning);font-weight:700}
+.muted{color:var(--muted)}
+.dim{color:var(--dim)}
+.hint{color:var(--accent)}
+.label{color:var(--muted);display:inline-block;min-width:10ch}
+.value{color:var(--text)}
+.line{margin-bottom:.15rem}
+.spacer{height:1.2rem}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.link-label{color:var(--muted);display:inline-block;min-width:10ch}
+</style>
+</head>
+<body>
+<div class="line"><span class="prompt">hive</span> <span class="dim">::</span> <span class="warn">warn</span> <span class="dim">[404 Not Found]</span></div>
+<div class="spacer"></div>
+<div class="line"><span class="muted">{{message}}</span></div>
+<div class="spacer"></div>
+<div class="line"><span class="label">path</span> <span class="value">{{request_path}}</span></div>
+<div class="line"><span class="label">host</span> <span class="value">{{host}}</span></div>
+<div class="spacer"></div>
+<div class="line"><span class="hint">hint: check that the service is registered and the path is correct</span></div>
+<div class="spacer"></div>
+<div class="line dim">--- links ---</div>
+<div class="line"><span class="link-label">for llm</span> <a href="{{link_llm}}">Error 404 - LLM debugging reference</a></div>
+<div class="line"><span class="link-label">for user</span> <a href="{{link_user}}">Error 404 - Not Found help</a></div>
+<div class="spacer"></div>
+<div class="line"><span class="dim">hive {{version}} &middot; {{timestamp}}</span></div>
+</body>
+</html>

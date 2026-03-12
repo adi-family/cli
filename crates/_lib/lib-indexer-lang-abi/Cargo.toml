@@ -1,0 +1,14 @@
+[package]
+name = "lib-indexer-lang-abi"
+version.workspace = true
+edition.workspace = true
+license = "MIT"
+authors.workspace = true
+description = "Stable ABI definitions for indexer language plugins"
+keywords = ["indexer", "plugin", "abi", "ffi", "tree-sitter"]
+categories = ["development-tools"]
+
+[dependencies]
+abi_stable.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true

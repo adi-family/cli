@@ -1,0 +1,37 @@
+[package]
+name = "hive-health-postgres"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "PostgreSQL health check plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tokio = { workspace = true, features = ["time"] }
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.health.postgres"
+name = "PostgreSQL Health Check"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "health", "postgres", "database"]
+
+[package.metadata.plugin.hive]
+category = "health"
+name = "postgres"

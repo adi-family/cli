@@ -1,0 +1,65 @@
+[package]
+name = "cli"
+version = "2.0.1"
+edition = "2021"
+license = "BSL-1.0"
+description = "CLI for ADI family components - component installer and manager"
+authors = ["ADI Team"]
+repository = "https://github.com/adi-family/adi-cli"
+
+[[bin]]
+name = "adi"
+path = "src/main.rs"
+
+[dependencies]
+dotenvy = "0.15"
+thiserror = "2"
+tokio = { version = "1.49", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.9"
+clap = { version = "4.5", features = ["derive"] }
+clap_complete = "4"
+indicatif = "0.18.3"
+dialoguer = "0.12.0"
+anyhow = "1.0"
+dirs = "6.0.0"
+reqwest = { version = "0.13.1", features = ["json", "native-tls-vendored", "stream"] }
+flate2 = "1"
+tar = "0.4"
+zip = "0.6"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# GitHub API
+lib-client-github = { path = "../_lib/lib-client/github" }
+
+# Plugin system (unified v3 ABI)
+registry-client = { path = "../registry/client" }
+lib-plugin-host = { path = "../_lib/lib-plugin-host" }
+lib-plugin-abi-v3 = { path = "../_lib/lib-plugin-abi-v3" }
+lib-plugin-manifest = { path = "../_lib/lib-plugin-manifest" }
+
+# Internationalization
+lib-i18n-core = { path = "../_lib/lib-i18n-core" }
+
+# Console output with theme support
+lib-console-output = { path = "../_lib/lib-console-output" }
+
+# Environment variable parsing
+lib-env-parse = { path = "../_lib/lib-env-parse" }
+
+# Daemon core (process management, lifecycle, PID files)
+lib-daemon-core = { path = "../_lib/lib-daemon-core" }
+
+# Daemon client (IPC protocol, client)
+lib-daemon-client = { path = "../_lib/lib-daemon-client" }
+
+# Zero-copy serialization for IPC
+rkyv = { version = "0.8" }
+
+# Cross-platform local sockets
+interprocess = "2"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

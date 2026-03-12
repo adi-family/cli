@@ -1,0 +1,17 @@
+[package]
+name = "lib-iced-ui"
+version = "0.8.3"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "Reusable iced UI components - buttons, cards, pills, tabs, inputs"
+keywords = ["iced", "ui", "components", "widgets"]
+categories = ["gui"]
+
+[lib]
+name = "lib_iced_ui"
+path = "src/lib.rs"
+
+[dependencies]
+iced = { version = "0.13", features = ["advanced"] }
+lib-terminal-theme = { path = "../lib-terminal-theme" }

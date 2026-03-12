@@ -1,0 +1,24 @@
+[package]
+name = "lib-terminal-grid"
+version = "0.8.3"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "VTE terminal emulation with grid, parser, and PTY support"
+keywords = ["terminal", "vte", "pty", "emulator"]
+categories = ["command-line-interface"]
+
+[lib]
+name = "lib_terminal_grid"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow = "1.0"
+crossbeam-channel = "0.5"
+parking_lot = "0.12"
+portable-pty = "0.8"
+vte = "0.15"
+log = "0.4"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

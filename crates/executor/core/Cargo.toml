@@ -1,0 +1,38 @@
+[package]
+name = "executor-core"
+version = "0.1.0"
+edition = "2021"
+description = "Core library for Docker-based task execution — types, orchestration, Docker client, output handlers, job store"
+license = "LicenseRef-Proprietary"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Docker
+bollard = "0.17"
+
+# HTTP client (for output handlers - webhooks)
+reqwest = { version = "0.12", features = ["json"] }
+
+# GitHub API
+lib-client-github = { path = "../../_lib/lib-client/github" }
+
+# Async utilities
+futures-util = "0.3"
+
+# Base64 encoding
+base64 = "0.22"
+
+# Utilities
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1"
+anyhow = "1"
+tracing = "0.1"
+parking_lot = "0.12"
+dashmap = "6"

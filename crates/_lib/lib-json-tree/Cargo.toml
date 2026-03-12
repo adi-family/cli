@@ -1,0 +1,26 @@
+[package]
+name = "lib-json-tree"
+version = "0.8.3"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "JSON tree view state management - framework-agnostic"
+keywords = ["json", "tree", "viewer"]
+categories = ["data-structures"]
+
+[lib]
+name = "lib_json_tree"
+path = "src/lib.rs"
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+smallvec = { version = "1.13", features = ["serde"] }
+
+[dev-dependencies]
+criterion = "0.5"
+proptest = "1.4"
+
+[[bench]]
+name = "json_tree_bench"
+harness = false

@@ -1,0 +1,17 @@
+[package]
+name = "lib-migrations-core"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Generic migration framework - bring your own storage and actions"
+authors = ["ADI Team"]
+keywords = ["migrations", "database", "schema"]
+categories = ["database"]
+repository = "https://github.com/adi-family/lib-migrations-core"
+homepage = "https://adi.the-ihor.com"
+documentation = "https://docs.rs/lib-migrations-core"
+
+[workspace]
+
+[dependencies]
+thiserror = "2"

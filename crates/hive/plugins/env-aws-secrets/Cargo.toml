@@ -1,0 +1,39 @@
+[package]
+name = "hive-env-aws-secrets"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "AWS Secrets Manager environment plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+aws-config = "1.5"
+aws-sdk-secretsmanager = "1.56"
+tokio.workspace = true
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.env.aws-secrets"
+name = "AWS Secrets Manager Environment"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "env", "aws", "secrets"]
+
+[package.metadata.plugin.hive]
+category = "env"
+name = "aws-secrets"

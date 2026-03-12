@@ -1,0 +1,39 @@
+[package]
+name = "hive-rollout-blue-green"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Blue-Green rollout strategy plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.rollout.blue-green"
+name = "Blue-Green Rollout"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "rollout", "blue-green", "zero-downtime"]
+
+[package.metadata.plugin.hive]
+category = "rollout"
+name = "blue-green"

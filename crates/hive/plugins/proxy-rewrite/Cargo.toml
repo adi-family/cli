@@ -1,0 +1,40 @@
+[package]
+name = "hive-proxy-rewrite"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "URL rewriting proxy middleware plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+regex = "1"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.proxy.rewrite"
+name = "URL Rewrite"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "proxy", "rewrite", "routing"]
+
+[package.metadata.plugin.hive]
+category = "proxy"
+name = "rewrite"

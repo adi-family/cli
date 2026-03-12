@@ -1,0 +1,37 @@
+[package]
+name = "hive-env-1password"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "1Password environment plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tokio = { workspace = true, features = ["process"] }
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.env.1password"
+name = "1Password Environment"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "env", "1password", "secrets"]
+
+[package.metadata.plugin.hive]
+category = "env"
+name = "1password"

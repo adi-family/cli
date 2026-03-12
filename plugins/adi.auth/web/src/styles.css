@@ -1,0 +1,197 @@
+/* ─── Auth Plugin ─── */
+
+.auth-container {
+  max-width: 24rem;
+  margin-inline: auto;
+}
+
+.auth-heading {
+  font-weight: 600;
+  color: var(--adi-text);
+}
+
+.auth-error {
+  color: var(--adi-error);
+  background: color-mix(in srgb, var(--adi-error) 10%, transparent);
+  border-radius: 0.5rem;
+}
+
+.auth-label {
+  display: block;
+  color: var(--adi-text-muted);
+}
+
+.auth-input {
+  display: block;
+  width: 100%;
+  background: var(--adi-surface-alt);
+  border: 1px solid var(--adi-border);
+  border-radius: 0.5rem;
+  color: var(--adi-text);
+  outline: none;
+}
+
+.auth-input::placeholder {
+  color: var(--adi-text-muted);
+}
+
+.auth-input:focus {
+  outline: 1px solid var(--adi-accent);
+  outline-offset: -1px;
+}
+
+.auth-btn {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  transition: background-color 150ms;
+}
+
+.auth-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.auth-btn-primary {
+  background: var(--adi-accent);
+  color: white;
+}
+
+.auth-btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--adi-accent) 80%, black);
+}
+
+.auth-btn-ghost {
+  background: var(--adi-surface-alt);
+  color: var(--adi-text-muted);
+}
+
+.auth-btn-ghost:hover:not(:disabled) {
+  background: var(--adi-surface-2, var(--adi-surface-alt));
+  color: var(--adi-text);
+}
+
+.auth-btn-secondary {
+  background: var(--adi-surface-alt);
+  color: var(--adi-text);
+  flex: 1;
+}
+
+.auth-btn-secondary:hover:not(:disabled) {
+  background: var(--adi-surface-2, var(--adi-surface-alt));
+}
+
+.auth-btn-danger {
+  background: color-mix(in srgb, var(--adi-error) 10%, transparent);
+  color: var(--adi-error);
+  border: none;
+}
+
+.auth-btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--adi-error) 20%, transparent);
+}
+
+.auth-btn-verify {
+  flex: 1;
+  background: var(--adi-accent);
+  color: white;
+}
+
+.auth-btn-verify:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--adi-accent) 80%, black);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+}
+
+.auth-divider hr {
+  flex: 1;
+  border: none;
+  border-top: 1px solid var(--adi-border);
+}
+
+.auth-divider span {
+  color: var(--adi-text-muted);
+}
+
+.auth-code-input {
+  font-family: var(--adi-font-mono-body);
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+.auth-hint {
+  color: var(--adi-text-muted);
+}
+
+.auth-hint strong {
+  color: var(--adi-text);
+}
+
+/* ─── Profile ─── */
+
+.auth-profile-card {
+  background: var(--adi-surface-alt);
+  border: 1px solid var(--adi-border);
+  border-radius: 0.75rem;
+}
+
+.auth-avatar {
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--adi-accent) 20%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--adi-accent);
+  font-weight: 700;
+}
+
+.auth-profile-email {
+  font-weight: 500;
+  color: var(--adi-text);
+}
+
+.auth-profile-id {
+  font-family: var(--adi-font-mono-body);
+  color: var(--adi-text-muted);
+}
+
+.auth-profile-meta {
+  border-top: 1px solid var(--adi-border);
+}
+
+.auth-profile-meta-label {
+  color: var(--adi-text-muted);
+}
+
+.auth-profile-meta-value {
+  color: var(--adi-text);
+}
+
+.auth-profile-meta-accent {
+  color: var(--adi-accent);
+  font-weight: 500;
+}
+
+/* ─── Inline (action card) ─── */
+
+.auth-inline-status {
+  color: var(--adi-success);
+}
+
+.auth-action-label {
+  font-weight: 600;
+  color: var(--adi-error);
+}
+
+.auth-action-detail {
+  color: var(--adi-text-muted);
+}
+
+.auth-action-mono {
+  font-family: var(--adi-font-mono-body);
+}

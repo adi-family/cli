@@ -1,0 +1,16 @@
+[package]
+name = "lib-syntax-highlight"
+version = "0.8.3"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "Semantic syntax highlighting tokenizer - framework-agnostic"
+keywords = ["syntax", "highlighting", "tokenizer"]
+categories = ["text-processing"]
+
+[lib]
+name = "lib_syntax_highlight"
+path = "src/lib.rs"
+
+[dependencies]
+# No dependencies - pure tokenization logic

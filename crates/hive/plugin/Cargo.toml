@@ -1,0 +1,86 @@
+[package]
+name = "hive-plugin"
+version = "1.0.0"
+edition = "2021"
+description = "ADI Hive plugin - service orchestration via hive.yaml"
+license = "LicenseRef-Proprietary"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Core library
+hive-core = { path = "../core" }
+
+# Plugin SDK - one import for everything
+lib-plugin-prelude = { path = "../../_lib/lib-plugin-prelude" }
+
+# Log provider types (not re-exported by prelude)
+lib-plugin-abi-v3 = { path = "../../_lib/lib-plugin-abi-v3" }
+
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+futures = "0.3"
+async-trait = "0.1"
+
+# Global state
+once_cell = "1.21"
+
+# Plugin install path detection
+dirs = "6"
+
+# Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Console output
+lib-console-output = { path = "../../_lib/lib-console-output" }
+
+# Ctrl+C handling
+ctrlc = "3.4"
+
+# Daemon client for adi daemon communication
+lib-daemon-client = { path = "../../_lib/lib-daemon-client" }
+
+# Daemon core for socket activation
+lib-daemon-core = { path = "../../_lib/lib-daemon-core" }
+
+# Error handling
+anyhow = "1"
+
+# Dynamic plugin loading
+libloading = "0.8"
+lib-plugin-manifest = { path = "../../_lib/lib-plugin-manifest" }
+
+[package.metadata.plugin]
+id = "adi.hive"
+name = "ADI Hive"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "2.0.0"
+
+[package.metadata.plugin.cli]
+command = "hive"
+description = "Service orchestration"
+aliases = ["h"]
+
+[[package.metadata.plugin.provides]]
+id = "adi.hive.cli"
+version = "1.0.0"
+description = "CLI commands for service orchestration via hive.yaml"
+
+[[package.metadata.plugin.provides]]
+id = "adi.hive.logs"
+version = "1.0.0"
+description = "Log streaming for hive services"
+
+[package.metadata.plugin.daemon]
+auto_start = true
+restart_on_failure = true
+max_restarts = 20
+restart_exponential_backoff = true
+
+[package.metadata.plugin.tags]
+categories = ["services", "orchestration", "docker"]

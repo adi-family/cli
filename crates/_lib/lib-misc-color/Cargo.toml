@@ -1,0 +1,19 @@
+[package]
+name = "lib-misc-color"
+version = "0.8.3"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "Unified color type with lazy conversion - RGB, RGBA, Hex support"
+keywords = ["color", "rgb", "rgba", "hex"]
+categories = ["graphics"]
+repository = "https://github.com/adi-family/lib-misc-color"
+homepage = "https://adi.the-ihor.com"
+documentation = "https://docs.rs/lib-misc-color"
+
+[lib]
+name = "lib_misc_color"
+path = "src/lib.rs"
+
+[dependencies]
+# No dependencies - pure data structures

@@ -1,0 +1,39 @@
+[package]
+name = "llm-proxy-plugin"
+version = "0.8.4"
+edition = "2021"
+license = "BSL-1.0"
+description = "ADI LLM Proxy plugin - CLI management for LLM API proxying with BYOK/Platform modes"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+llm-proxy-core = { path = "../core" }
+lib-plugin-prelude = { path = "../../_lib/lib-plugin-prelude" }
+lib-plugin-abi-v3 = { path = "../../_lib/lib-plugin-abi-v3" }
+lib-console-output = { path = "../../_lib/lib-console-output" }
+lib-env-parse = { path = "../../_lib/lib-env-parse" }
+
+async-trait = "0.1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+once_cell = "1.21"
+
+[package.metadata.plugin]
+id = "adi.llm-proxy"
+name = "ADI LLM Proxy"
+type = "core"
+
+[package.metadata.plugin.compatibility]
+api_version = 3
+min_host_version = "0.9.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.llm-proxy.cli"
+version = "0.1.0"
+description = "CLI commands for managing LLM proxy tokens and keys"
+
+[package.metadata.plugin.tags]
+categories = ["llm", "proxy", "api"]

@@ -1,0 +1,4 @@
+DROP INDEX IF EXISTS idx_users_login;
+ALTER TABLE users DROP COLUMN IF EXISTS is_anonymous;
+ALTER TABLE users DROP COLUMN IF EXISTS password_hash;
+ALTER TABLE users DROP COLUMN IF EXISTS login;
