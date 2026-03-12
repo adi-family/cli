@@ -129,7 +129,7 @@ Available workflows in `.adi/workflows/`. Run with `adi wf <name>` or directly v
     mcp/      # MCP server (bin, optional)
   ```
 - **Dependencies flow:** `cli` → `core` ← `http` (both depend on core)
-- **Libraries** go in `crates/lib/lib-<name>/`
+- **Libraries** go in `crates/_lib/lib-<name>/`
 - **Standalone plugins** use `crates/<name>-plugin/` pattern
 - **Tools** use `crates/tool-<name>/` pattern
 
@@ -220,7 +220,7 @@ adi tsp-gen generate signaling.tsp -l typescript -s protocol \
 # Rust protocol (usually via build.rs instead)
 adi tsp-gen generate signaling.tsp -l rust -s protocol \
   --protocol-tag type --protocol-rename snake_case --protocol-enum-name SignalingMessage \
-  -o crates/lib/lib-signaling-protocol/src/generated
+  -o crates/signaling/protocol/src/generated
 
 # HTTP API generation
 adi tsp-gen generate api.tsp -l typescript -s client -o src/generated
@@ -349,7 +349,7 @@ signaling:
       - type: script
         run: >-
           adi tsp-gen generate
-          crates/lib/lib-signaling-protocol/signaling.tsp
+          crates/signaling/protocol/signaling.tsp
           -l typescript -s protocol
           --protocol-tag type --protocol-rename snake_case --protocol-enum-name SignalingMessage
           -o apps/app/src/app/generated/signaling

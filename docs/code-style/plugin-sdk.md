@@ -390,7 +390,7 @@ impl HttpRoutes for TasksPlugin {
 }
 ```
 
-- Port assigned by host at runtime via `ctx.http_port()`
+- Port assigned by host at runtime
 
 ---
 
@@ -423,22 +423,14 @@ impl WebRtcHandlers for TasksPlugin {
 
 ## 6. Daemon Commands
 
-Execute privileged commands via daemon:
+Execute privileged commands via daemon. `DaemonCommand::regular()` and `DaemonCommand::sudo()` are available:
 
 ```rust
-impl TasksPlugin {
-    // Regular (user-level)
-    async fn install_deps(&self, ctx: &PluginContext) -> Result<()> {
-        ctx.daemon().exec(DaemonCommand::regular("brew install ffmpeg")).await?;
-        Ok(())
-    }
+// Regular (user-level)
+DaemonCommand::regular("brew install ffmpeg")
 
-    // Sudo (root-level)
-    async fn restart_service(&self, ctx: &PluginContext) -> Result<()> {
-        ctx.daemon().exec(DaemonCommand::sudo("systemctl restart nginx")).await?;
-        Ok(())
-    }
-}
+// Sudo (root-level)
+DaemonCommand::sudo("systemctl restart nginx")
 ```
 
 User sees permission prompt on install:

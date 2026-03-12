@@ -20,17 +20,20 @@ plugins/adi.<name>/
     src/
       generated/             # 100% auto-generated from api.tsp (safe to delete + rebuild)
         types.ts
+        models.ts
         enums.ts
+        messages.ts
         adi-client.ts        # Typed API client functions
+        bus-types.ts         # Bus event types (from @bus interfaces)
+        bus-events.ts        # Bus event key enums
         index.ts
       plugin.ts              # Hand-written: UI, lifecycle, bus events
-      types.ts               # Hand-written: extends generated types (e.g. adds cocoonId)
   migrations/                # SQL migrations
 ```
 
 ## How It Works
 
-Write `api.tsp` with `@channel` + `@request` decorators, implement handler trait, done.
+Write `api.tsp` with `@channel` + `@request` decorators for the service, optionally `@bus` + `@event` for the event bus. Implement handler trait, done.
 
 ### 1. Define API in TypeSpec (`api.tsp`)
 
@@ -87,11 +90,7 @@ impl MyPluginServiceHandler for MyPluginService {
 }
 ```
 
-Register with the router:
-```rust
-let svc = MyPluginServiceAdi::new(MyPluginService::new());
-router.register(Arc::new(svc));
-```
+The `core/` crate re-exports `MyPluginServiceAdi` for use by the cocoon binary (which registers it with the AdiService router). The CLI `plugin/` crate is a thin shell and does not wire AdiService.
 
 ### 4. TypeScript Client Generation (plugin build.rs)
 
@@ -148,9 +147,10 @@ pub mod enums {
 
 | Decorator | Purpose |
 |-----------|---------|
-| `@channel("adi.plugin-id")` | Sets plugin_id and wire channel |
-| `@request` | Request/response method |
-| `@event` | One-way event (protocol mode only) |
+| `@channel("adi.plugin-id")` | Sets plugin_id and wire channel (AdiService) |
+| `@bus("bus.name")` | Defines event bus interface (generates TS bus types + events) |
+| `@request` | Request/response method (in `@channel` interface) |
+| `@event` | One-way event (in `@bus` or protocol mode) |
 | `@serverPush` | Server-to-client push (protocol mode only) |
 
 ## Existing Plugin: adi.credentials
