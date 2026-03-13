@@ -9,7 +9,12 @@ authors = ["ADI Team"]
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[[bin]]
+name = "adi-registry-server"
+path = "src/main.rs"
+
 [dependencies]
+tracing-subscriber = { workspace = true }
 # Plugin ABI
 lib-plugin-abi-v3 = { path = "../../_lib/lib-plugin-abi-v3" }
 

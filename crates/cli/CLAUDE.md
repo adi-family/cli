@@ -3,7 +3,7 @@ adi-cli, rust, plugin-manager, plugin-registry, cross-platform
 ## Overview
 - ADI CLI Manager - installs and manages plugins from registry
 - Binary name: `adi` (run as `adi <command>`)
-- Plugin registry: https://adi-plugin-registry.the-ihor.com
+- Plugin registry: https://registry.withadi.dev
 - License: BSL-1.0
 
 ## Commands

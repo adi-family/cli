@@ -13,10 +13,10 @@ fastembed = ["lib-embed/fastembed"]
 
 [dependencies]
 # Internal
-lib-embed = { path = "../../_lib/lib-embed" }
-lib-plugin-host = { path = "../../_lib/lib-plugin-host" }
-lib-migrations = { path = "../../_lib/lib-migrations" }
-lib-adi-service = { path = "../../_lib/lib-adi-service" }
+lib-embed = { path = "../../../crates/_lib/lib-embed" }
+lib-plugin-host = { path = "../../../crates/_lib/lib-plugin-host" }
+lib-migrations = { path = "../../../crates/_lib/lib-migrations" }
+lib-adi-service = { path = "../../../crates/_lib/lib-adi-service" }
 
 # Binary payload
 bytes = "1"

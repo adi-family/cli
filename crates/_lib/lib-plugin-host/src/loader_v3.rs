@@ -13,8 +13,8 @@ pub struct LoadedPluginV3 {
     /// Plugin manifest
     pub manifest: PluginManifest,
 
-    /// Dynamic library handle
-    _library: Library,
+    /// Dynamic library handle — must stay alive as long as trait objects are used
+    pub(crate) _library: Library,
 
     /// Plugin instance
     pub plugin: Arc<dyn Plugin>,

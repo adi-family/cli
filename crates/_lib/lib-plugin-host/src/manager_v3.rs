@@ -42,6 +42,9 @@ pub fn current_plugin_manager() -> Option<Arc<PluginManagerV3>> {
 ///
 /// Manages loaded plugins and provides type-safe access to plugin services.
 pub struct PluginManagerV3 {
+    /// Dynamic library handles — kept alive so plugin `.so`/`.dylib` stay mapped
+    _libraries: Vec<libloading::Library>,
+
     /// All loaded plugins
     plugins: HashMap<String, Arc<dyn Plugin>>,
 
@@ -73,6 +76,7 @@ impl PluginManagerV3 {
     /// Create a new plugin manager
     pub fn new() -> Self {
         Self {
+            _libraries: Vec::new(),
             plugins: HashMap::new(),
             cli_commands: HashMap::new(),
             http_routes: HashMap::new(),
@@ -92,6 +96,12 @@ impl PluginManagerV3 {
     /// Register a loaded plugin
     pub fn register(&mut self, loaded: LoadedPluginV3) -> lib_plugin_abi_v3::Result<()> {
         let plugin_id = loaded.metadata().id.clone();
+
+        // Keep the library handle alive so the .so/.dylib stays mapped.
+        // On Linux, dropping Library calls dlclose() which unmaps the shared object,
+        // invalidating all vtable pointers from that plugin.
+        self._libraries.push(loaded._library);
+
         let plugin = loaded.plugin;
 
         // Store base plugin
@@ -329,6 +339,9 @@ impl PluginManagerV3 {
         self.rollout_strategies.clear();
         self.log_providers.clear();
         self.daemon_services.clear();
+
+        // Drop library handles last, after all trait objects are gone
+        self._libraries.clear();
 
         Ok(())
     }

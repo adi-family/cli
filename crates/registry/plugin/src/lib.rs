@@ -77,6 +77,11 @@ impl CliCommands for RegistryPlugin {
 }
 
 #[no_mangle]
+pub extern "C" fn plugin_abi_version() -> u32 {
+    lib_plugin_abi_v3::PLUGIN_API_VERSION
+}
+
+#[no_mangle]
 pub fn plugin_create() -> Box<dyn Plugin> {
     Box::new(RegistryPlugin::new())
 }

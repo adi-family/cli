@@ -22,7 +22,7 @@ env_vars! {
 
 const FALLBACK_CONFIG_DIR: &str = "~/.config";
 const ADI_SUBDIR: &str = "adi";
-const DEFAULT_REGISTRY_URL: &str = "https://adi-plugin-registry.the-ihor.com";
+const DEFAULT_REGISTRY_URL: &str = "https://registry.withadi.dev";
 const DEFAULT_SIGNALING_URL: &str = "wss://adi.the-ihor.com/api/signaling/ws";
 pub const CLI_PLUGIN_PREFIX: &str = "adi.cli.";
 

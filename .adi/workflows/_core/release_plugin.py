@@ -20,7 +20,8 @@ sys.stderr.reconfigure(line_buffering=True)
 SCRIPT_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", SCRIPT_DIR.parent.parent))
 WORKFLOWS_DIR = Path(os.environ.get("WORKFLOWS_DIR", SCRIPT_DIR))
-REGISTRY_URL = os.environ.get("ADI_REGISTRY_URL", "https://adi-plugin-registry.the-ihor.com")
+REGISTRY_URL = os.environ.get("ADI_REGISTRY_URL", "https://registry.withadi.dev")
+REGISTRY_TOKEN_1PASSWORD_REF = "op://ADI/ADI Registry Token/password"
 
 # ANSI colors
 CYAN = "\033[0;36m"
@@ -71,6 +72,25 @@ def get_platform() -> str:
     return f"{os_name}-{arch}"
 
 
+def get_registry_token() -> str:
+    """Resolve registry auth token from env or 1Password CLI."""
+    token = os.environ.get("REGISTRY_AUTH_TOKEN", "").strip()
+    if token:
+        return token
+    if not check_command("op"):
+        error("REGISTRY_AUTH_TOKEN not set and 1Password CLI (op) not found")
+    result = subprocess.run(
+        ["op", "read", REGISTRY_TOKEN_1PASSWORD_REF],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        error(f"Failed to read registry token from 1Password: {result.stderr.strip()}")
+    token = result.stdout.strip()
+    if not token:
+        error("Registry token from 1Password is empty")
+    return token
+
+
 def get_lib_extension(plat: str) -> str:
     if plat.startswith("darwin"):
         return "dylib"
@@ -85,7 +105,7 @@ LEGACY_PLUGIN_MAP = {
     "hive": "crates/hive/plugin",
     "agent-loop": "crates/agent-loop/plugin",
     "indexer": "crates/indexer/plugin",
-    "knowledgebase": "crates/knowledgebase/plugin",
+    "knowledgebase": "plugins/adi.knowledgebase/plugin",
     "tasks": "crates/tasks/plugin",
     "workflow": "crates/workflow/plugin",
     "coolify": "crates/coolify/plugin",
@@ -398,7 +418,7 @@ def build_plugin(plugin_name: str, crate_dir: str, dist_dir: Path, release: bool
     return build
 
 
-def publish_plugin(build: PluginBuild, registry: str, max_retries: int = 5):
+def publish_plugin(build: PluginBuild, registry: str, token: str, max_retries: int = 5):
     """Publish plugin archive to registry."""
     info(f"Publishing {build.id} v{build.version} for {build.platform}...")
     info(f"Registry: {registry}")
@@ -418,6 +438,7 @@ def publish_plugin(build: PluginBuild, registry: str, max_retries: int = 5):
             "curl", "-s", "-w", "\n%{http_code}", "--max-time", "300",
             "-X", "POST", url,
             "-H", "Content-Type: application/gzip",
+            "-H", f"X-Registry-Token: {token}",
             "--data-binary", f"@{build.archive}",
         ])
 
@@ -455,6 +476,7 @@ def publish_plugin(build: PluginBuild, registry: str, max_retries: int = 5):
                 "curl", "-s", "-w", "\n%{http_code}", "--max-time", "60",
                 "-X", "POST", css_url,
                 "-H", "Content-Type: text/css",
+                "-H", f"X-Registry-Token: {token}",
                 "--data-binary", f"@{build.style_css}",
             ])
             css_lines = css_result.stdout.strip().splitlines()
@@ -594,7 +616,8 @@ def release_single_plugin(plugin_name: str, registry: str, no_push: bool, bump: 
     print()
 
     if not no_push:
-        publish_plugin(build, registry)
+        token = get_registry_token()
+        publish_plugin(build, registry, token)
         print()
         success(f"Install with: adi plugin install {build.id}")
     else:

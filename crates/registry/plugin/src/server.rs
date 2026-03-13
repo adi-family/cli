@@ -21,13 +21,11 @@ struct AppState {
 }
 
 impl AppState {
-    fn check_auth(&self, auth_header: Option<&str>) -> Result<(), ApiError> {
+    fn check_auth(&self, token: Option<&str>) -> Result<(), ApiError> {
         let Some(expected) = &self.auth_token else {
             return Ok(());
         };
-        let token = auth_header
-            .and_then(|h| h.strip_prefix("Bearer "))
-            .ok_or_else(unauthorized)?;
+        let token = token.ok_or_else(unauthorized)?;
         if token != expected {
             return Err(unauthorized());
         }
@@ -104,12 +102,11 @@ async fn check_publish_auth(
     req: axum::http::Request<Body>,
     next: axum::middleware::Next,
 ) -> Result<axum::response::Response, ApiError> {
-    let auth_header = req
+    let token = req
         .headers()
-        .get(header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
-    state.check_auth(auth_header.as_deref())?;
+        .get("X-Registry-Token")
+        .and_then(|v| v.to_str().ok());
+    state.check_auth(token)?;
     Ok(next.run(req).await)
 }
 
@@ -171,143 +168,14 @@ fn matches_query(id: &str, name: &str, description: &str, tags: &[String], q: &s
 }
 
 // ---------------------------------------------------------------------------
-// Handlers — HTML plugins page
+// Handlers — root
 // ---------------------------------------------------------------------------
 
-async fn plugins_page(State(st): State<Arc<AppState>>) -> Result<axum::response::Response, ApiError> {
-    let index = st.storage.load_index().await.map_err(internal_error)?;
-
-    let mut html = String::with_capacity(8192);
-    html.push_str(r#"<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ADI Plugin Registry</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0d1117;color:#c9d1d9;line-height:1.6;padding:2rem}
-h1{color:#58a6ff;margin-bottom:.5rem;font-size:1.8rem}
-.subtitle{color:#8b949e;margin-bottom:2rem}
-.search{width:100%;max-width:400px;padding:.6rem 1rem;border:1px solid #30363d;border-radius:6px;background:#161b22;color:#c9d1d9;font-size:.95rem;margin-bottom:1.5rem}
-.search:focus{outline:none;border-color:#58a6ff}
-.stats{color:#8b949e;font-size:.85rem;margin-bottom:1.5rem}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem}
-.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:1.2rem;transition:border-color .2s}
-.card:hover{border-color:#58a6ff}
-.card-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem}
-.card-name{color:#58a6ff;font-weight:600;font-size:1.05rem}
-.card-version{color:#8b949e;font-size:.85rem}
-.card-desc{color:#8b949e;font-size:.9rem;margin-bottom:.6rem}
-.card-meta{display:flex;gap:1rem;flex-wrap:wrap;font-size:.8rem;color:#8b949e}
-.tag{background:#1f6feb22;color:#58a6ff;padding:.15rem .5rem;border-radius:12px;font-size:.75rem}
-.type-badge{background:#23863622;color:#3fb950;padding:.15rem .5rem;border-radius:12px;font-size:.75rem}
-.download-count{color:#8b949e}
-.empty{text-align:center;color:#8b949e;padding:3rem;font-size:1.1rem}
-</style>
-</head>
-<body>
-<h1>ADI Plugin Registry</h1>
-<p class="subtitle">Browse and discover plugins</p>
-<input class="search" type="text" placeholder="Search plugins..." id="search" autocomplete="off">
-"#);
-
-    html.push_str(&format!(
-        r#"<p class="stats">{} plugins available</p>"#,
-        index.plugins.len()
-    ));
-
-    html.push_str(r#"<div class="grid" id="grid">"#);
-
-    if index.plugins.is_empty() {
-        html.push_str(r#"<div class="empty">No plugins published yet.</div>"#);
-    } else {
-        for p in &index.plugins {
-            let desc = html_escape(&p.description);
-            let name = html_escape(&p.name);
-            let id = html_escape(&p.id);
-
-            html.push_str(r#"<div class="card" data-search=""#);
-            html.push_str(&format!(
-                "{} {} {}",
-                id.to_lowercase(),
-                name.to_lowercase(),
-                desc.to_lowercase()
-            ));
-            html.push_str(r#"">"#);
-
-            html.push_str(r#"<div class="card-header">"#);
-            html.push_str(&format!(r#"<span class="card-name">{id}</span>"#));
-            html.push_str(&format!(
-                r#"<span class="card-version">v{}</span>"#,
-                html_escape(&p.latest_version)
-            ));
-            html.push_str("</div>");
-
-            if !desc.is_empty() {
-                html.push_str(&format!(r#"<p class="card-desc">{desc}</p>"#));
-            }
-
-            html.push_str(r#"<div class="card-meta">"#);
-
-            for t in &p.plugin_types {
-                html.push_str(&format!(
-                    r#"<span class="type-badge">{}</span>"#,
-                    html_escape(t)
-                ));
-            }
-
-            if p.downloads > 0 {
-                html.push_str(&format!(
-                    r#"<span class="download-count">{} downloads</span>"#,
-                    p.downloads
-                ));
-            }
-
-            if !p.author.is_empty() {
-                html.push_str(&format!(
-                    r#"<span>by {}</span>"#,
-                    html_escape(&p.author)
-                ));
-            }
-
-            for tag in &p.tags {
-                html.push_str(&format!(
-                    r#"<span class="tag">{}</span>"#,
-                    html_escape(tag)
-                ));
-            }
-
-            html.push_str("</div></div>");
-        }
-    }
-
-    html.push_str("</div>");
-
-    html.push_str(r#"
-<script>
-document.getElementById('search').addEventListener('input', function(e) {
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll('.card').forEach(function(card) {
-        card.style.display = card.dataset.search.includes(q) ? '' : 'none';
-    });
-});
-</script>
-</body>
-</html>"#);
-
-    axum::response::Response::builder()
-        .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
-        .body(Body::from(html))
-        .map_err(internal_error)
-}
-
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
+async fn root() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "plugin": "adi.registry",
+        "version": env!("CARGO_PKG_VERSION"),
+    }))
 }
 
 // ---------------------------------------------------------------------------
@@ -773,8 +641,8 @@ async fn registry_public_key(
 
 fn build_router(state: Arc<AppState>) -> Router {
     let read_routes = Router::new()
+        .route("/", get(root))
         .route("/health", get(health))
-        .route("/plugins", get(plugins_page))
         .route("/v1/index", get(get_index))
         .route("/v1/search", get(search))
         .route("/v1/plugins/:id/latest", get(plugin_latest))
