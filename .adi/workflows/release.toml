@@ -72,11 +72,12 @@ name = "registry_target"
 type = "select"
 prompt = "Target registry"
 options = [
-    "production - adi-plugin-registry.the-ihor.com",
+    "cli-beta - cli.registry.beta.withadi.dev",
+    "production - registry.withadi.dev",
     "local - adi.test/registry",
     "dry-run - Build only, no publish",
 ]
-default = "production - adi-plugin-registry.the-ihor.com"
+default = "cli-beta - cli.registry.beta.withadi.dev"
 if = "{{ target | contains('plugin') }}"
 
 # --- Steps ---
@@ -113,6 +114,9 @@ case "$TARGET" in
         fi
 
         case "$REGISTRY" in
+            cli-beta)
+                python3 "$WORKFLOWS_DIR/_core/release_plugin.py" "$PLUGIN" --registry https://cli.registry.beta.withadi.dev $BUMP_FLAG
+                ;;
             production)
                 python3 "$WORKFLOWS_DIR/_core/release_plugin.py" "$PLUGIN" $BUMP_FLAG
                 ;;
@@ -136,6 +140,7 @@ case "$TARGET" in
 
         REGISTRY_FLAG=""
         case "$REGISTRY" in
+            cli-beta) REGISTRY_FLAG="--registry https://cli.registry.beta.withadi.dev" ;;
             local) REGISTRY_FLAG="--local" ;;
             dry-run) REGISTRY_FLAG="--no-push" ;;
         esac

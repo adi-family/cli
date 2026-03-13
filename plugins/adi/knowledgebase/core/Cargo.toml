@@ -1,0 +1,25 @@
+[package]
+name = "knowledgebase-core-v2"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Core library for ADI Knowledgebase - graph DB, embedding storage, semantic search"
+
+[dependencies]
+lib-adi-service = { path = "../../../../crates/_lib/lib-adi-service" }
+rusqlite.workspace = true
+usearch.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+bytes = "1"
+tokio = { workspace = true, features = ["rt"] }
+reqwest = { version = "0.12", features = ["json"], default-features = false }
+
+[build-dependencies]
+typespec-api = { package = "lib-typespec-api", path = "../../../../crates/tsp-gen/core" }

@@ -56,7 +56,7 @@ members = [
     "crates/mux/plugin",
 
     # Knowledgebase components
-    "plugins/adi.knowledgebase/core",
+    "plugins/adi/knowledgebase/core",
 
     # Agent Loop components
     "crates/agent-loop/core",
@@ -176,7 +176,7 @@ members = [
     "crates/router/plugin",
     "crates/command-palette/plugin",
     "crates/slots/plugin",
-    "plugins/adi.knowledgebase/plugin",
+    "plugins/adi/knowledgebase/plugin",
     "crates/agent-loop/plugin",
     "crates/linter/plugin",
     "crates/workflow/plugin",
@@ -266,7 +266,7 @@ authors = ["ADI Team"]
 # Core crates (from submodules)
 indexer-core = { path = "plugins/adi.indexer/core" }
 tasks-core = { path = "crates/tasks/core" }
-knowledgebase-core = { path = "plugins/adi.knowledgebase/core" }
+knowledgebase-core-v2 = { path = "plugins/adi/knowledgebase/core" }
 agent-loop-core = { path = "crates/agent-loop/core" }
 auth-core = { path = "plugins/adi.auth/core" }
 mux-core = { path = "crates/mux/core" }

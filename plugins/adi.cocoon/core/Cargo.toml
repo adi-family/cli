@@ -15,7 +15,6 @@ required-features = ["standalone"]
 default = ["services"]
 standalone = []
 services = ["tasks-core", "tools-core"]
-kb-service = ["kb-core"]
 
 [dependencies]
 # ADI service types
@@ -44,7 +43,6 @@ anyhow = "1"
 
 # ADI services (optional)
 tasks-core = { path = "../../../crates/tasks/core", optional = true }
-kb-core = { package = "knowledgebase-core", path = "../../adi.knowledgebase/core", features = ["fastembed"], optional = true }
 tools-core = { path = "../../../crates/tools/core", optional = true }
 
 bytes = "1"

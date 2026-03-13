@@ -20,8 +20,8 @@ sys.stderr.reconfigure(line_buffering=True)
 SCRIPT_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", SCRIPT_DIR.parent.parent))
 WORKFLOWS_DIR = Path(os.environ.get("WORKFLOWS_DIR", SCRIPT_DIR))
-REGISTRY_URL = os.environ.get("ADI_REGISTRY_URL", "https://registry.withadi.dev")
-REGISTRY_TOKEN_1PASSWORD_REF = "op://ADI/ADI Registry Token/password"
+REGISTRY_URL = os.environ.get("ADI_REGISTRY_URL", "https://cli.registry.beta.withadi.dev")
+REGISTRY_TOKEN_1PASSWORD_REF = "op://ADI/ADI Beta Registry Token/password"
 
 # ANSI colors
 CYAN = "\033[0;36m"
@@ -105,7 +105,7 @@ LEGACY_PLUGIN_MAP = {
     "hive": "crates/hive/plugin",
     "agent-loop": "crates/agent-loop/plugin",
     "indexer": "crates/indexer/plugin",
-    "knowledgebase": "plugins/adi.knowledgebase/plugin",
+    "knowledgebase": "plugins/adi/knowledgebase/plugin",
     "tasks": "crates/tasks/plugin",
     "workflow": "crates/workflow/plugin",
     "coolify": "crates/coolify/plugin",
@@ -429,7 +429,7 @@ def publish_plugin(build: PluginBuild, registry: str, token: str, max_retries: i
         "pluginType": build.type,
         "author": build.author,
     })
-    url = f"{registry}/v1/publish/plugins/{build.id}/{build.version}/{build.platform}?{params}"
+    url = f"{registry}/v1/publish/{build.id}/{build.version}/{build.platform}?{params}"
 
     http_code = "0"
     body = ""
@@ -469,7 +469,7 @@ def publish_plugin(build: PluginBuild, registry: str, token: str, max_retries: i
     # Upload style.css separately if present
     if build.style_css and build.style_css.is_file():
         info("Uploading style.css...")
-        css_url = f"{registry}/v1/publish/plugins/{build.id}/{build.version}/style"
+        css_url = f"{registry}/v1/publish/{build.id}/{build.version}/style"
         css_code = "0"
         for attempt in range(1, max_retries + 1):
             css_result = run_cmd([
@@ -629,12 +629,15 @@ def main():
     parser.add_argument("plugin_name", help="Plugin name/ID to release")
     parser.add_argument("--no-push", action="store_true", help="Build only, skip publishing")
     parser.add_argument("--local", action="store_true", help="Push to local registry")
+    parser.add_argument("--registry", default="", help="Override registry URL")
     parser.add_argument("--bump", default="", choices=["", "patch", "minor", "major"], help="Version bump type")
     parser.add_argument("--related", action="store_true", help="Also release all related plugins in the same crate family")
     args = parser.parse_args()
 
     registry = REGISTRY_URL
-    if args.local:
+    if args.registry:
+        registry = args.registry
+    elif args.local:
         registry = "http://adi.test/registry"
 
     if args.related:

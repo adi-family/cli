@@ -81,7 +81,7 @@ LEGACY_PLUGIN_MAP = {
     "hive": "crates/hive/plugin",
     "agent-loop": "crates/agent-loop/plugin",
     "indexer": "crates/indexer/plugin",
-    "knowledgebase": "plugins/adi.knowledgebase/plugin",
+    "knowledgebase": "plugins/adi/knowledgebase/plugin",
     "tasks": "crates/tasks/plugin",
     "workflow": "crates/workflow/plugin",
     "coolify": "crates/coolify/plugin",

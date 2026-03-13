@@ -970,19 +970,6 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        #[cfg(feature = "kb-core")]
-        {
-            match knowledgebase_core::service::KnowledgebaseService::open_default().await {
-                Ok(kb_service) => {
-                    router.register(std::sync::Arc::new(kb_service));
-                    tracing::info!("📦 Registered ADI plugin: adi.knowledgebase");
-                }
-                Err(e) => {
-                    tracing::warn!("⚠️ Failed to initialize knowledgebase plugin: {}", e);
-                }
-            }
-        }
-
         #[cfg(feature = "tools-core")]
         {
             let tools_service = tools_core::ToolsService::new();
