@@ -62,8 +62,9 @@ members = [
     "crates/agent-loop/core",
 
     # LLM Proxy components
-    "crates/llm-proxy/core",
-    "crates/llm-proxy/plugin",
+    "plugins/adi/llm-proxy/core",
+    "plugins/adi/llm-proxy/http",
+    "plugins/adi/llm-proxy/plugin",
 
     # Hive components
     "crates/hive/core",
@@ -272,7 +273,7 @@ auth-core = { path = "plugins/adi.auth/core" }
 mux-core = { path = "crates/mux/core" }
 flags-core = { path = "crates/flags/core" }
 linter-core = { path = "crates/linter/core" }
-llm-proxy-core = { path = "crates/llm-proxy/core" }
+llm-proxy-core = { path = "plugins/adi/llm-proxy/core" }
 hive-core = { path = "crates/hive/core" }
 tools-core = { path = "crates/tools/core" }
 payment-core = { path = "crates/payment/core" }

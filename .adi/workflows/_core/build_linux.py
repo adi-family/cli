@@ -64,7 +64,7 @@ SERVICE_CONFIGS: dict[str, ServiceConfig] = {
     "signaling-server": ServiceConfig("crates/signaling-server", ["signaling-server"], None),
     "flowmap-api": ServiceConfig("apps/flowmap-api", ["flowmap-api"], None),
     "cocoon": ServiceConfig("plugins/adi.cocoon", ["cocoon"], "standalone"),
-    "llm-proxy": ServiceConfig("crates/llm-proxy/http", ["llm-proxy", "llm-proxy-migrate"], None),
+    "llm-proxy": ServiceConfig("plugins/adi/llm-proxy/http", ["llm-proxy", "llm-proxy-migrate"], None),
 }
 
 ALL_SERVICES = list(SERVICE_CONFIGS.keys())

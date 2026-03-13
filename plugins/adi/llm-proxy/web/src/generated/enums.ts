@@ -1,0 +1,23 @@
+/**
+ * Auto-generated enums from TypeSpec.
+ * DO NOT EDIT.
+ */
+
+
+export enum ProviderType {
+  Openai = "openai",
+  Anthropic = "anthropic",
+  Openrouter = "openrouter",
+  Custom = "custom",
+}
+
+export enum KeyMode {
+  Byok = "byok",
+  Platform = "platform",
+}
+
+export enum RequestStatus {
+  Success = "success",
+  Error = "error",
+  UpstreamError = "upstream_error",
+}

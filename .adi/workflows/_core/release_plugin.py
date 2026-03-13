@@ -110,7 +110,7 @@ LEGACY_PLUGIN_MAP = {
     "workflow": "crates/workflow/plugin",
     "coolify": "crates/coolify/plugin",
     "linter": "crates/linter/plugin",
-    "llm-proxy": "crates/llm-proxy/plugin",
+    "llm-proxy": "plugins/adi/llm-proxy/plugin",
     "llm-extract": "crates/llm-extract-plugin",
     "llm-uzu": "crates/llm-uzu-plugin",
     "tsp-gen": "crates/_lib/lib-typespec-api/plugin",
