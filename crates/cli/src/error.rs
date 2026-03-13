@@ -33,7 +33,7 @@ pub enum InstallerError {
     UninstallationFailed { component: String, reason: String },
 
     #[error("error-registry")]
-    Registry(#[from] registry_client::RegistryError),
+    Registry(#[from] adi_cli_registry_client::RegistryError),
 
     #[error("error-plugin-not-found")]
     PluginNotFound { id: String },

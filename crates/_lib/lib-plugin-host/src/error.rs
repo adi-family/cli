@@ -35,7 +35,7 @@ pub enum HostError {
 
     /// Registry error
     #[error("Registry error: {0}")]
-    Registry(#[from] registry_client::RegistryError),
+    Registry(#[from] adi_cli_registry_client::RegistryError),
 
     /// Verification error
     #[error("Verification error: {0}")]

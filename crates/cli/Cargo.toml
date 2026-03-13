@@ -35,7 +35,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 lib-client-github = { path = "../_lib/lib-client/github" }
 
 # Plugin system (unified v3 ABI)
-registry-client = { path = "../registry/client" }
+adi-cli-registry-client = { path = "../../plugins/adi/registry/client/cli" }
 lib-plugin-host = { path = "../_lib/lib-plugin-host" }
 lib-plugin-abi-v3 = { path = "../_lib/lib-plugin-abi-v3" }
 lib-plugin-manifest = { path = "../_lib/lib-plugin-manifest" }

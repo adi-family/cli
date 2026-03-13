@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 use lib_plugin_manifest::PluginManifest;
-use registry_client::{PluginEntry, PluginInfo, RegistryClient, SearchKind, SearchResults};
+use adi_cli_registry_client::{CliPluginEntry, CliPluginInfo, CliRegistryClient, CliSearchResults};
 
 use crate::HostError;
 
@@ -31,7 +31,7 @@ pub enum UpdateCheck {
 ///
 /// Contains no UI logic. Callers handle progress bars, i18n messages, and prompts.
 pub struct PluginInstaller {
-    client: RegistryClient,
+    client: CliRegistryClient,
     install_dir: PathBuf,
 }
 
@@ -42,7 +42,7 @@ impl PluginInstaller {
             .registry_url
             .as_deref()
             .unwrap_or("https://registry.example.com");
-        let client = RegistryClient::new(url).with_cache(config.cache_dir.clone());
+        let client = CliRegistryClient::new(url).with_cache(config.cache_dir.clone());
         Self {
             client,
             install_dir: config.plugins_dir.clone(),
@@ -51,7 +51,7 @@ impl PluginInstaller {
 
     /// Create with explicit registry URL and directories.
     pub fn new(registry_url: &str, install_dir: PathBuf, cache_dir: PathBuf) -> Self {
-        let client = RegistryClient::new(registry_url).with_cache(cache_dir);
+        let client = CliRegistryClient::new(registry_url).with_cache(cache_dir);
         Self {
             client,
             install_dir,
@@ -71,22 +71,22 @@ impl PluginInstaller {
     // -- Registry operations --
 
     /// Search the plugin registry.
-    pub async fn search(&self, query: &str) -> Result<SearchResults, HostError> {
-        Ok(self.client.search(query, SearchKind::All).await?)
+    pub async fn search(&self, query: &str) -> Result<CliSearchResults, HostError> {
+        Ok(self.client.search(query).await?)
     }
 
     /// List all available plugins in the registry.
-    pub async fn list_available(&self) -> Result<Vec<PluginEntry>, HostError> {
+    pub async fn list_available(&self) -> Result<Vec<CliPluginEntry>, HostError> {
         Ok(self.client.list_plugins().await?)
     }
 
     /// Check if a plugin exists in the registry (without downloading).
     ///
     /// Returns `Ok(Some(info))` if found, `Ok(None)` if not found.
-    pub async fn get_plugin_info(&self, id: &str) -> Result<Option<PluginInfo>, HostError> {
+    pub async fn get_plugin_info(&self, id: &str) -> Result<Option<CliPluginInfo>, HostError> {
         match self.client.get_plugin_latest(id).await {
             Ok(info) => Ok(Some(info)),
-            Err(registry_client::RegistryError::NotFound(_)) => Ok(None),
+            Err(adi_cli_registry_client::RegistryError::NotFound(_)) => Ok(None),
             Err(e) => Err(e.into()),
         }
     }
@@ -342,7 +342,7 @@ impl PluginInstaller {
     // -- Pattern matching --
 
     /// Find all available plugins matching a glob pattern (e.g., "adi.lang.*").
-    pub async fn find_matching(&self, pattern: &str) -> Result<Vec<PluginEntry>, HostError> {
+    pub async fn find_matching(&self, pattern: &str) -> Result<Vec<CliPluginEntry>, HostError> {
         let all = self.list_available().await?;
         Ok(all
             .into_iter()

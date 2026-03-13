@@ -146,7 +146,7 @@ async fn get_available_languages() -> Vec<(String, String)> {
     languages
 }
 
-fn registry_languages(plugins: &[registry_client::PluginEntry]) -> Vec<(String, String)> {
+fn registry_languages(plugins: &[adi_cli_registry_client::CliPluginEntry]) -> Vec<(String, String)> {
     plugins
         .iter()
         .filter(|p| p.plugin_types.iter().any(|t| t == "translation"))

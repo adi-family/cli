@@ -1,0 +1,24 @@
+[package]
+name = "adi-cli-registry-client"
+version.workspace = true
+edition.workspace = true
+license = "MIT"
+authors.workspace = true
+description = "CLI plugin registry HTTP client"
+
+[dependencies]
+adi-registry-core-cli = { path = "../../core/cli" }
+adi-registry-core-shared = { path = "../../core/shared" }
+lib-plugin-manifest.workspace = true
+reqwest = { workspace = true, features = ["stream"] }
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+futures.workspace = true
+urlencoding = "2.1"
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { workspace = true, features = ["test-util", "macros"] }
+serde_json = { workspace = true }

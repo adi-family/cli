@@ -1,0 +1,22 @@
+[package]
+name = "adi-registry-core-cli"
+version.workspace = true
+edition.workspace = true
+license = "BSL-1.0"
+authors.workspace = true
+description = "CLI registry core - storage and types for native plugin distribution"
+
+[dependencies]
+adi-registry-core-shared = { path = "../shared" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+semver = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["test-util", "macros"] }
+flate2 = { workspace = true }
+tar = { workspace = true }

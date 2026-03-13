@@ -5,7 +5,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use lib_console_output::{theme, out_info, out_success, out_warn};
 use lib_i18n_core::t;
 use lib_plugin_host::{is_glob_pattern, InstallResult, PluginConfig, PluginInstaller, UpdateCheck};
-use registry_client::{PluginEntry, PluginInfo, SearchResults};
+use adi_cli_registry_client::{CliPluginEntry, CliPluginInfo, CliSearchResults};
 
 use crate::error::Result;
 
@@ -46,21 +46,21 @@ impl PluginManager {
         }
     }
 
-    pub async fn search(&self, query: &str) -> Result<SearchResults> {
+    pub async fn search(&self, query: &str) -> Result<CliSearchResults> {
         tracing::trace!(query = %query, "Searching plugin registry");
         let results = self.installer.search(query).await?;
-        tracing::trace!(packages = results.packages.len(), plugins = results.plugins.len(), "Search complete");
+        tracing::trace!(plugins = results.plugins.len(), "Search complete");
         Ok(results)
     }
 
-    pub async fn list_plugins(&self) -> Result<Vec<PluginEntry>> {
+    pub async fn list_plugins(&self) -> Result<Vec<CliPluginEntry>> {
         tracing::trace!("Listing available plugins from registry");
         let plugins = self.installer.list_available().await?;
         tracing::trace!(count = plugins.len(), "Available plugins fetched");
         Ok(plugins)
     }
 
-    pub async fn get_plugin_info(&self, id: &str) -> Result<Option<PluginInfo>> {
+    pub async fn get_plugin_info(&self, id: &str) -> Result<Option<CliPluginInfo>> {
         tracing::trace!(id = %id, "Fetching plugin info from registry");
         let info = self.installer.get_plugin_info(id).await?;
         tracing::trace!(id = %id, found = info.is_some(), "Plugin info result");
@@ -247,7 +247,7 @@ impl PluginManager {
         Ok(())
     }
 
-    fn display_matching_plugins(plugins: &[registry_client::PluginEntry]) {
+    fn display_matching_plugins(plugins: &[CliPluginEntry]) {
         out_info!("{}", t!("plugin-install-pattern-found", "count" => &plugins.len().to_string()));
         for plugin in plugins {
             out_info!("  {} {} - {}",
@@ -260,7 +260,7 @@ impl PluginManager {
 
     async fn install_batch(
         &self,
-        plugins: &[registry_client::PluginEntry],
+        plugins: &[CliPluginEntry],
         version: Option<&str>,
     ) -> Vec<String> {
         let mut failed = Vec::new();

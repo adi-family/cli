@@ -1,0 +1,61 @@
+[package]
+name = "adi-cli-registry-server"
+version = "0.1.0"
+edition = "2021"
+description = "ADI plugin: CLI plugin registry server"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "adi-cli-registry-server"
+path = "src/main.rs"
+
+[dependencies]
+# Registry core
+adi-registry-core-cli = { path = "../../core/cli" }
+adi-registry-core-shared = { path = "../../core/shared" }
+
+# Plugin ABI
+lib-plugin-abi-v3 = { path = "../../../../../crates/_lib/lib-plugin-abi-v3" }
+
+# Web framework
+axum = { workspace = true }
+tower-http = { workspace = true, features = ["cors", "trace"] }
+
+# Async
+tokio = { workspace = true }
+tokio-util = { version = "0.7", features = ["io"] }
+async-trait = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Directories
+dirs = { workspace = true }
+
+[package.metadata.plugin]
+id = "cli.adi.registry-server"
+name = "CLI Registry Server"
+type = "extension"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[[package.metadata.plugin.provides]]
+id = "cli.adi.registry-server.cli"
+version = "1.0.0"
+description = "CLI commands for CLI registry server management"
+
+[package.metadata.plugin.tags]
+categories = ["registry", "server", "plugins"]

@@ -144,7 +144,12 @@ members = [
     "crates/_lib/lib-plugin-prelude",
     "crates/_lib/lib-plugin-manifest",
     "crates/_lib/lib-plugin-verify",
-    "crates/registry/client",
+    "plugins/adi/registry/core/shared",
+    "plugins/adi/registry/core/cli",
+    "plugins/adi/registry/core/web",
+    "plugins/adi/registry/server-plugin/cli",
+    "plugins/adi/registry/server-plugin/web",
+    "plugins/adi/registry/client/cli",
     "crates/_lib/lib-plugin-host",
 
     # Indexer language plugins
@@ -181,7 +186,7 @@ members = [
     "plugins/adi.cocoon/core",
     "plugins/adi.cocoon/plugin",
     "crates/cocoon-control-center/plugin",
-    "crates/registry/plugin",
+    # Old adi.registry/plugin removed — replaced by server-plugin/cli and server-plugin/web
     # Workflow translation plugins
     "crates/workflow/langs/en",
     "crates/workflow/langs/uk",
@@ -219,8 +224,7 @@ members = [
     "crates/video/core",
     "crates/video/plugin",
 
-    # Plugin Registry
-    "crates/registry/core",
+    # Plugin Registry (old core removed — replaced by plugins/adi/registry/core/*)
 
     # Payment
     "crates/payment/core",
@@ -244,6 +248,9 @@ members = [
 
     # Website
     "crates/website",
+
+    # Experiments
+    "experiment",
 ]
 
 # FlowMap is standalone (not in workspace) - build with:
@@ -272,7 +279,9 @@ payment-core = { path = "crates/payment/core" }
 credentials-core = { path = "plugins/adi.credentials/core" }
 executor-core = { path = "crates/executor/core" }
 video-core = { path = "crates/video/core" }
-plugin-registry-core = { path = "crates/registry/core" }
+adi-registry-core-shared = { path = "plugins/adi/registry/core/shared" }
+adi-registry-core-cli = { path = "plugins/adi/registry/core/cli" }
+adi-registry-core-web = { path = "plugins/adi/registry/core/web" }
 cocoon-spawner-core = { path = "crates/cocoon-spawner/core" }
 signaling-core = { path = "crates/signaling/core" }
 
@@ -353,7 +362,9 @@ lib-client-trello = { path = "crates/_lib/lib-client/trello" }
 # Plugin system
 lib-plugin-manifest = { path = "crates/_lib/lib-plugin-manifest" }
 lib-plugin-verify = { path = "crates/_lib/lib-plugin-verify" }
-registry-client = { path = "crates/registry/client" }
+adi-cli-registry-client = { path = "plugins/adi/registry/client/cli" }
+adi-cli-registry-server = { path = "plugins/adi/registry/server-plugin/cli" }
+adi-web-registry-server = { path = "plugins/adi/registry/server-plugin/web" }
 lib-plugin-host = { path = "crates/_lib/lib-plugin-host" }
 
 # Indexer language plugins
