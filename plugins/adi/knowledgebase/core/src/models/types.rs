@@ -36,7 +36,7 @@ impl NodeType {
             "glossary" => Self::Glossary,
             "context" => Self::Context,
             "assumption" => Self::Assumption,
-            _ => Self::Fact,
+            other => panic!("unknown NodeType: {other}"),
         }
     }
 }
@@ -72,7 +72,7 @@ impl EdgeType {
             "related_to" => Self::RelatedTo,
             "derived_from" => Self::DerivedFrom,
             "answers" => Self::Answers,
-            _ => Self::RelatedTo,
+            other => panic!("unknown EdgeType: {other}"),
         }
     }
 }
@@ -99,7 +99,7 @@ impl ApprovalStatus {
             "pending" => Self::Pending,
             "approved" => Self::Approved,
             "rejected" => Self::Rejected,
-            _ => Self::Pending,
+            other => panic!("unknown ApprovalStatus: {other}"),
         }
     }
 }
@@ -226,4 +226,36 @@ pub struct NodeStats {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeleteResult {
     pub deleted: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// FIX CHECK: unknown NodeType strings must NOT silently become Fact.
+    /// Silent fallback corrupts data when encountering unknown types
+    /// from newer schema versions or typos. Fix: return Result or panic.
+    #[test]
+    #[should_panic]
+    fn unknown_node_type_must_not_be_silent() {
+        // This must panic (or from_str should return Result/Option).
+        // Currently it silently returns Fact, which is a data corruption bug.
+        let _ = NodeType::from_str("tutorial");
+    }
+
+    /// FIX CHECK: unknown EdgeType strings must NOT silently become RelatedTo.
+    /// Silent fallback changes graph traversal semantics.
+    #[test]
+    #[should_panic]
+    fn unknown_edge_type_must_not_be_silent() {
+        let _ = EdgeType::from_str("depends_on");
+    }
+
+    /// FIX CHECK: unknown ApprovalStatus strings must NOT silently become Pending.
+    /// Silent fallback re-enters rejected items into the approval workflow.
+    #[test]
+    #[should_panic]
+    fn unknown_approval_status_must_not_be_silent() {
+        let _ = ApprovalStatus::from_str("archived");
+    }
 }

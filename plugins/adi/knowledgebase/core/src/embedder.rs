@@ -126,3 +126,50 @@ fn hash_to_vector(text: &str, dimensions: u32) -> Vec<f32> {
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dummy_embedder_deterministic() {
+        let embedder = DummyEmbedder::new(128);
+        let a = embedder.embed(&["hello world"]).unwrap();
+        let b = embedder.embed(&["hello world"]).unwrap();
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn dummy_embedder_different_texts_differ() {
+        let embedder = DummyEmbedder::new(128);
+        let a = embedder.embed(&["hello"]).unwrap();
+        let b = embedder.embed(&["world"]).unwrap();
+        assert_ne!(a[0], b[0]);
+    }
+
+    #[test]
+    fn dummy_embedder_correct_dimensions() {
+        let embedder = DummyEmbedder::new(64);
+        assert_eq!(embedder.dimensions(), 64);
+        let result = embedder.embed(&["test"]).unwrap();
+        assert_eq!(result[0].len(), 64);
+    }
+
+    #[test]
+    fn dummy_embedder_batch() {
+        let embedder = DummyEmbedder::new(32);
+        let results = embedder.embed(&["a", "b", "c"]).unwrap();
+        assert_eq!(results.len(), 3);
+        assert_ne!(results[0], results[1]);
+        assert_ne!(results[1], results[2]);
+    }
+
+    #[test]
+    fn dummy_embedder_values_in_range() {
+        let embedder = DummyEmbedder::new(256);
+        let result = embedder.embed(&["test"]).unwrap();
+        for val in &result[0] {
+            assert!(*val >= -1.0 && *val <= 1.0);
+        }
+    }
+}

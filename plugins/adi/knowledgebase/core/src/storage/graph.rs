@@ -61,8 +61,7 @@ impl GraphStorage {
                 actor_source TEXT NOT NULL,
                 actor_id TEXT,
                 details TEXT,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
+                created_at TEXT NOT NULL
             );
 
             CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(node_type);
@@ -336,14 +335,10 @@ impl GraphStorage {
 
                 let edges = self.get_edges(id)?;
                 for edge in &edges {
-                    if types.contains(&edge.edge_type) {
+                    if types.contains(&edge.edge_type) && edge.from_id == id {
                         subgraph.add_edge(edge.clone());
-                        // Follow edges where this node is the source
-                        if edge.from_id == id && !visited.contains(&edge.to_id) {
+                        if !visited.contains(&edge.to_id) {
                             next_frontier.push(edge.to_id);
-                        }
-                        if edge.to_id == id && !visited.contains(&edge.from_id) {
-                            next_frontier.push(edge.from_id);
                         }
                     }
                 }
@@ -529,17 +524,25 @@ fn row_to_audit(row: &rusqlite::Row) -> rusqlite::Result<AuditEntry> {
     let created_at_str: String = row.get("created_at")?;
     let details_str: Option<String> = row.get("details")?;
 
+    let action = match action_str.as_str() {
+        "create" => AuditAction::Create,
+        "update" => AuditAction::Update,
+        "delete" => AuditAction::Delete,
+        "approve" => AuditAction::Approve,
+        "reject" => AuditAction::Reject,
+        other => {
+            return Err(rusqlite::Error::FromSqlConversionFailure(
+                2,
+                rusqlite::types::Type::Text,
+                format!("unknown audit action: {other}").into(),
+            ));
+        }
+    };
+
     Ok(AuditEntry {
         id: Uuid::parse_str(&id_str).unwrap(),
         node_id: Uuid::parse_str(&node_id_str).unwrap(),
-        action: match action_str.as_str() {
-            "create" => AuditAction::Create,
-            "update" => AuditAction::Update,
-            "delete" => AuditAction::Delete,
-            "approve" => AuditAction::Approve,
-            "reject" => AuditAction::Reject,
-            _ => AuditAction::Create,
-        },
+        action,
         actor_source: row.get("actor_source")?,
         actor_id: row.get("actor_id")?,
         details: details_str.and_then(|s| serde_json::from_str(&s).ok()),
@@ -547,4 +550,460 @@ fn row_to_audit(row: &rusqlite::Row) -> rusqlite::Result<AuditEntry> {
             .unwrap()
             .with_timezone(&Utc),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn test_storage() -> (GraphStorage, TempDir) {
+        let dir = TempDir::new().unwrap();
+        let storage = GraphStorage::open(&dir.path().join("test.db")).unwrap();
+        (storage, dir)
+    }
+
+    fn make_node(node_type: NodeType, source: &str) -> Node {
+        let now = Utc::now();
+        Node {
+            id: Uuid::new_v4(),
+            node_type,
+            title: format!("Test {}", node_type.as_str()),
+            content: "Test content".into(),
+            source: source.into(),
+            approval_status: ApprovalStatus::Pending,
+            metadata: serde_json::json!({}),
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    fn make_edge(from: Uuid, to: Uuid, edge_type: EdgeType) -> Edge {
+        Edge {
+            id: Uuid::new_v4(),
+            from_id: from,
+            to_id: to,
+            edge_type,
+            weight: 1.0,
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn insert_and_get_node() {
+        let (storage, _dir) = test_storage();
+        let node = make_node(NodeType::Decision, "human");
+        storage.insert_node(&node).unwrap();
+
+        let fetched = storage.get_node(node.id).unwrap().unwrap();
+        assert_eq!(fetched.id, node.id);
+        assert_eq!(fetched.title, node.title);
+        assert_eq!(fetched.source, "human");
+        assert_eq!(fetched.node_type, NodeType::Decision);
+        assert_eq!(fetched.approval_status, ApprovalStatus::Pending);
+    }
+
+    #[test]
+    fn get_nonexistent_node_returns_none() {
+        let (storage, _dir) = test_storage();
+        assert!(storage.get_node(Uuid::new_v4()).unwrap().is_none());
+    }
+
+    #[test]
+    fn update_node_partial() {
+        let (storage, _dir) = test_storage();
+        let node = make_node(NodeType::Fact, "ai:gpt-4");
+        storage.insert_node(&node).unwrap();
+
+        let updated = storage
+            .update_node(node.id, Some("New title"), None, None, None)
+            .unwrap()
+            .unwrap();
+        assert_eq!(updated.title, "New title");
+        assert_eq!(updated.content, node.content);
+    }
+
+    #[test]
+    fn update_nonexistent_returns_none() {
+        let (storage, _dir) = test_storage();
+        let result = storage
+            .update_node(Uuid::new_v4(), Some("x"), None, None, None)
+            .unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn delete_node() {
+        let (storage, _dir) = test_storage();
+        let node = make_node(NodeType::Fact, "human");
+        storage.insert_node(&node).unwrap();
+
+        assert!(storage.delete_node(node.id).unwrap());
+        assert!(storage.get_node(node.id).unwrap().is_none());
+    }
+
+    #[test]
+    fn delete_nonexistent_returns_false() {
+        let (storage, _dir) = test_storage();
+        assert!(!storage.delete_node(Uuid::new_v4()).unwrap());
+    }
+
+    #[test]
+    fn list_nodes_with_filters() {
+        let (storage, _dir) = test_storage();
+        let n1 = make_node(NodeType::Decision, "human");
+        let n2 = make_node(NodeType::Fact, "ai:gpt-4");
+        let n3 = make_node(NodeType::Decision, "ai:gpt-4");
+        storage.insert_node(&n1).unwrap();
+        storage.insert_node(&n2).unwrap();
+        storage.insert_node(&n3).unwrap();
+
+        let all = storage.list_nodes(None, None, None, 50, 0).unwrap();
+        assert_eq!(all.len(), 3);
+
+        let decisions = storage
+            .list_nodes(Some(NodeType::Decision), None, None, 50, 0)
+            .unwrap();
+        assert_eq!(decisions.len(), 2);
+
+        let ai_nodes = storage
+            .list_nodes(None, None, Some("ai:gpt-4"), 50, 0)
+            .unwrap();
+        assert_eq!(ai_nodes.len(), 2);
+
+        let limited = storage.list_nodes(None, None, None, 1, 0).unwrap();
+        assert_eq!(limited.len(), 1);
+    }
+
+    #[test]
+    fn approval_workflow() {
+        let (storage, _dir) = test_storage();
+        let node = make_node(NodeType::Assumption, "ai");
+        storage.insert_node(&node).unwrap();
+        assert_eq!(
+            storage.get_node(node.id).unwrap().unwrap().approval_status,
+            ApprovalStatus::Pending
+        );
+
+        let approved = storage
+            .update_approval_status(node.id, ApprovalStatus::Approved)
+            .unwrap()
+            .unwrap();
+        assert_eq!(approved.approval_status, ApprovalStatus::Approved);
+
+        let pending = storage
+            .list_nodes(None, Some(ApprovalStatus::Pending), None, 50, 0)
+            .unwrap();
+        assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn edge_crud() {
+        let (storage, _dir) = test_storage();
+        let n1 = make_node(NodeType::Decision, "human");
+        let n2 = make_node(NodeType::Decision, "human");
+        storage.insert_node(&n1).unwrap();
+        storage.insert_node(&n2).unwrap();
+
+        let edge = make_edge(n1.id, n2.id, EdgeType::DerivedFrom);
+        storage.insert_edge(&edge).unwrap();
+
+        let edges = storage.get_edges(n1.id).unwrap();
+        assert_eq!(edges.len(), 1);
+        assert_eq!(edges[0].edge_type, EdgeType::DerivedFrom);
+
+        let edges_from_n2 = storage.get_edges(n2.id).unwrap();
+        assert_eq!(edges_from_n2.len(), 1);
+
+        assert!(storage.delete_edge(edge.id).unwrap());
+        assert!(storage.get_edges(n1.id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn cascade_delete_removes_edges() {
+        let (storage, _dir) = test_storage();
+        let n1 = make_node(NodeType::Fact, "human");
+        let n2 = make_node(NodeType::Fact, "human");
+        storage.insert_node(&n1).unwrap();
+        storage.insert_node(&n2).unwrap();
+        storage
+            .insert_edge(&make_edge(n1.id, n2.id, EdgeType::Requires))
+            .unwrap();
+
+        storage.delete_node(n1.id).unwrap();
+        assert!(storage.get_edges(n2.id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn find_orphans() {
+        let (storage, _dir) = test_storage();
+        let n1 = make_node(NodeType::Fact, "human");
+        let n2 = make_node(NodeType::Fact, "human");
+        let n3 = make_node(NodeType::Fact, "human");
+        storage.insert_node(&n1).unwrap();
+        storage.insert_node(&n2).unwrap();
+        storage.insert_node(&n3).unwrap();
+        storage
+            .insert_edge(&make_edge(n1.id, n2.id, EdgeType::RelatedTo))
+            .unwrap();
+
+        let orphans = storage.find_orphans().unwrap();
+        assert_eq!(orphans.len(), 1);
+        assert_eq!(orphans[0].id, n3.id);
+    }
+
+    #[test]
+    fn find_conflicts() {
+        let (storage, _dir) = test_storage();
+        let n1 = make_node(NodeType::Fact, "human");
+        let n2 = make_node(NodeType::Fact, "ai");
+        storage.insert_node(&n1).unwrap();
+        storage.insert_node(&n2).unwrap();
+        storage
+            .insert_edge(&make_edge(n1.id, n2.id, EdgeType::Contradicts))
+            .unwrap();
+
+        let conflicts = storage.find_conflicts().unwrap();
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].node_a.id, n1.id);
+        assert_eq!(conflicts[0].node_b.id, n2.id);
+    }
+
+    #[test]
+    fn get_neighbors_traversal() {
+        let (storage, _dir) = test_storage();
+        let n1 = make_node(NodeType::Decision, "human");
+        let n2 = make_node(NodeType::Decision, "human");
+        let n3 = make_node(NodeType::Decision, "human");
+        storage.insert_node(&n1).unwrap();
+        storage.insert_node(&n2).unwrap();
+        storage.insert_node(&n3).unwrap();
+        storage
+            .insert_edge(&make_edge(n1.id, n2.id, EdgeType::Requires))
+            .unwrap();
+        storage
+            .insert_edge(&make_edge(n2.id, n3.id, EdgeType::Requires))
+            .unwrap();
+
+        let sub_1hop = storage.get_neighbors(n1.id, 1).unwrap();
+        assert_eq!(sub_1hop.nodes.len(), 2);
+
+        let sub_2hop = storage.get_neighbors(n1.id, 2).unwrap();
+        assert_eq!(sub_2hop.nodes.len(), 3);
+    }
+
+    #[test]
+    fn get_impact_follows_dependency_edges() {
+        let (storage, _dir) = test_storage();
+        let root = make_node(NodeType::Decision, "human");
+        let child = make_node(NodeType::Decision, "human");
+        let grandchild = make_node(NodeType::Decision, "human");
+        let unrelated = make_node(NodeType::Decision, "human");
+        storage.insert_node(&root).unwrap();
+        storage.insert_node(&child).unwrap();
+        storage.insert_node(&grandchild).unwrap();
+        storage.insert_node(&unrelated).unwrap();
+
+        storage
+            .insert_edge(&make_edge(root.id, child.id, EdgeType::DerivedFrom))
+            .unwrap();
+        storage
+            .insert_edge(&make_edge(child.id, grandchild.id, EdgeType::Requires))
+            .unwrap();
+        storage
+            .insert_edge(&make_edge(root.id, unrelated.id, EdgeType::RelatedTo))
+            .unwrap();
+
+        let impact = storage.get_impact(root.id, &[]).unwrap();
+        assert_eq!(impact.nodes.len(), 3);
+        assert!(!impact.nodes.iter().any(|n| n.id == unrelated.id));
+    }
+
+    #[test]
+    fn get_stats() {
+        let (storage, _dir) = test_storage();
+        let n1 = make_node(NodeType::Decision, "human");
+        let n2 = make_node(NodeType::Fact, "ai");
+        let n3 = make_node(NodeType::Decision, "human");
+        storage.insert_node(&n1).unwrap();
+        storage.insert_node(&n2).unwrap();
+        storage.insert_node(&n3).unwrap();
+        storage
+            .insert_edge(&make_edge(n1.id, n2.id, EdgeType::Contradicts))
+            .unwrap();
+
+        let stats = storage.get_stats().unwrap();
+        assert_eq!(stats.total_nodes, 3);
+        assert_eq!(stats.total_edges, 1);
+        assert_eq!(stats.by_type["decision"], 2);
+        assert_eq!(stats.by_type["fact"], 1);
+        assert_eq!(stats.by_status["pending"], 3);
+        assert_eq!(stats.orphan_count, 1);
+        assert_eq!(stats.conflict_count, 1);
+    }
+
+    #[test]
+    fn audit_trail() {
+        let (storage, _dir) = test_storage();
+        let node = make_node(NodeType::Fact, "human");
+        storage.insert_node(&node).unwrap();
+
+        let entry = AuditEntry {
+            id: Uuid::new_v4(),
+            node_id: node.id,
+            action: AuditAction::Create,
+            actor_source: "user:alice".into(),
+            actor_id: Some("device-1".into()),
+            details: Some(serde_json::json!({"method": "api"})),
+            created_at: Utc::now(),
+        };
+        storage.insert_audit(&entry).unwrap();
+
+        let log = storage.get_audit_log(node.id, 10).unwrap();
+        assert_eq!(log.len(), 1);
+        assert_eq!(log[0].action, AuditAction::Create);
+        assert_eq!(log[0].actor_source, "user:alice");
+        assert_eq!(log[0].actor_id.as_deref(), Some("device-1"));
+        assert!(log[0].details.is_some());
+    }
+
+    #[test]
+    fn audit_preserved_on_node_delete() {
+        let (storage, _dir) = test_storage();
+        let node = make_node(NodeType::Fact, "human");
+        storage.insert_node(&node).unwrap();
+
+        let entry = AuditEntry {
+            id: Uuid::new_v4(),
+            node_id: node.id,
+            action: AuditAction::Create,
+            actor_source: "system".into(),
+            actor_id: None,
+            details: None,
+            created_at: Utc::now(),
+        };
+        storage.insert_audit(&entry).unwrap();
+        storage.delete_node(node.id).unwrap();
+
+        let log = storage.get_audit_log(node.id, 10).unwrap();
+        assert_eq!(log.len(), 1, "audit entries must be preserved after node deletion");
+    }
+
+    /// FIX CHECK: get_impact must only traverse FORWARD (outbound) edges.
+    /// Given A --DerivedFrom--> B --DerivedFrom--> C,
+    /// get_impact(B) should return {B, C} — only downstream nodes.
+    /// A is upstream of B and should NOT be included in B's impact.
+    #[test]
+    fn get_impact_only_traverses_forward() {
+        let (storage, _dir) = test_storage();
+        let a = make_node(NodeType::Decision, "human");
+        let b = make_node(NodeType::Decision, "human");
+        let c = make_node(NodeType::Decision, "human");
+        storage.insert_node(&a).unwrap();
+        storage.insert_node(&b).unwrap();
+        storage.insert_node(&c).unwrap();
+
+        // A --DerivedFrom--> B --DerivedFrom--> C
+        storage.insert_edge(&make_edge(a.id, b.id, EdgeType::DerivedFrom)).unwrap();
+        storage.insert_edge(&make_edge(b.id, c.id, EdgeType::DerivedFrom)).unwrap();
+
+        let impact = storage.get_impact(b.id, &[EdgeType::DerivedFrom]).unwrap();
+
+        // Must NOT include A (upstream node)
+        let has_a = impact.nodes.iter().any(|n| n.id == a.id);
+        assert!(
+            !has_a,
+            "get_impact must not include upstream node A — only forward dependencies"
+        );
+        // Must include B (self) and C (downstream)
+        assert_eq!(
+            impact.nodes.len(), 2,
+            "get_impact(B) should return exactly {{B, C}}, got {} nodes", impact.nodes.len()
+        );
+    }
+
+    /// FIX CHECK: unknown AuditAction strings must return an error, not silently
+    /// become AuditAction::Create. Silent fallback corrupts audit trail semantics.
+    #[test]
+    fn unknown_audit_action_returns_error() {
+        let (storage, _dir) = test_storage();
+        let node = make_node(NodeType::Fact, "human");
+        storage.insert_node(&node).unwrap();
+
+        // Insert an audit entry with an unknown action string directly via SQL
+        let conn = storage.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO audit_log (id, node_id, action, actor_source, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                Uuid::new_v4().to_string(),
+                node.id.to_string(),
+                "archive",  // Unknown action from a newer schema version
+                "system",
+                Utc::now().to_rfc3339(),
+            ],
+        ).unwrap();
+        drop(conn);
+
+        // Reading an unknown action should return an error, not silently map to Create
+        let result = storage.get_audit_log(node.id, 10);
+        assert!(
+            result.is_err(),
+            "unknown audit action 'archive' should return an error, not silently become Create"
+        );
+    }
+
+    /// FIX CHECK: audit entries must be preserved when a node is deleted.
+    /// The audit trail is critical for compliance — cascade delete must not
+    /// destroy audit records. Either remove the CASCADE or move audit to a
+    /// separate table without foreign key constraints.
+    #[test]
+    fn audit_entries_preserved_after_node_delete() {
+        let (storage, _dir) = test_storage();
+        let node = make_node(NodeType::Fact, "human");
+        storage.insert_node(&node).unwrap();
+
+        let create_audit = AuditEntry {
+            id: Uuid::new_v4(),
+            node_id: node.id,
+            action: AuditAction::Create,
+            actor_source: "user".into(),
+            actor_id: None,
+            details: None,
+            created_at: Utc::now(),
+        };
+        let delete_audit = AuditEntry {
+            id: Uuid::new_v4(),
+            node_id: node.id,
+            action: AuditAction::Delete,
+            actor_source: "user".into(),
+            actor_id: None,
+            details: None,
+            created_at: Utc::now(),
+        };
+        storage.insert_audit(&create_audit).unwrap();
+        storage.insert_audit(&delete_audit).unwrap();
+
+        // Delete the node
+        storage.delete_node(node.id).unwrap();
+
+        // Audit entries must survive node deletion
+        let log_after = storage.get_audit_log(node.id, 10).unwrap();
+        assert_eq!(
+            log_after.len(), 2,
+            "audit entries must be preserved after node deletion for compliance"
+        );
+    }
+
+    #[test]
+    fn source_string_preserved_exactly() {
+        let (storage, _dir) = test_storage();
+        let sources = ["human", "ai:gpt-4", "import:jira", "ai:agent-loop", "system"];
+        for src in sources {
+            let node = make_node(NodeType::Fact, src);
+            storage.insert_node(&node).unwrap();
+            let fetched = storage.get_node(node.id).unwrap().unwrap();
+            assert_eq!(fetched.source, src);
+        }
+    }
 }

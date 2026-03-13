@@ -119,11 +119,21 @@ impl EmbeddingStorage {
     }
 
     pub fn insert(&self, uuid: Uuid, embedding: &[f32]) -> Result<()> {
+        if embedding.iter().any(|v| !v.is_finite()) {
+            return Err(KnowledgebaseError::Embedding(
+                "embedding contains NaN or Inf values".into(),
+            ));
+        }
+
         let mut id_map = self.id_map.lock().unwrap();
         let key = id_map.get_or_create_key(uuid);
         drop(id_map);
 
         let index = self.index.lock().unwrap();
+        let new_size = index.size() + 1;
+        index
+            .reserve(new_size)
+            .map_err(|e| KnowledgebaseError::Embedding(e.to_string()))?;
         index
             .add(key, embedding)
             .map_err(|e| KnowledgebaseError::Embedding(e.to_string()))?;
@@ -135,21 +145,33 @@ impl EmbeddingStorage {
 
     pub fn delete(&self, uuid: Uuid) -> Result<()> {
         let mut id_map = self.id_map.lock().unwrap();
-        if let Some(key) = id_map.remove(uuid) {
-            let index = self.index.lock().unwrap();
-            index
-                .remove(key)
-                .map_err(|e| KnowledgebaseError::Embedding(e.to_string()))?;
-            drop(index);
+        let removed = id_map.remove(uuid).is_some();
+        drop(id_map);
+
+        if removed {
+            // Skip `index.remove()` — usearch's C++ HNSW remove corrupts the
+            // graph and causes SIGSEGV on subsequent searches. The ghost entry
+            // stays in the index; `search()` filters through IdMap so ghost
+            // keys are silently skipped.
             self.save()?;
         }
         Ok(())
     }
 
     pub fn search(&self, embedding: &[f32], limit: usize) -> Result<Vec<(Uuid, f32)>> {
+        if embedding.iter().any(|v| !v.is_finite()) {
+            return Err(KnowledgebaseError::Embedding(
+                "search query contains NaN or Inf values".into(),
+            ));
+        }
+
         let index = self.index.lock().unwrap();
+        let clamped_limit = limit.min(index.size());
+        if clamped_limit == 0 {
+            return Ok(Vec::new());
+        }
         let results = index
-            .search(embedding, limit)
+            .search(embedding, clamped_limit)
             .map_err(|e| KnowledgebaseError::Embedding(e.to_string()))?;
 
         let id_map = self.id_map.lock().unwrap();
@@ -185,4 +207,124 @@ impl EmbeddingStorage {
     pub fn dimensions(&self) -> usize {
         self.dimensions
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    const DIMS: usize = 4;
+
+    fn test_storage() -> (EmbeddingStorage, TempDir) {
+        let dir = TempDir::new().unwrap();
+        let storage = EmbeddingStorage::open(&dir.path().join("embed"), DIMS).unwrap();
+        (storage, dir)
+    }
+
+    #[test]
+    fn insert_and_search() {
+        let (storage, _dir) = test_storage();
+        let id = Uuid::new_v4();
+        let embedding = vec![1.0, 0.0, 0.0, 0.0];
+        storage.insert(id, &embedding).unwrap();
+
+        let results = storage.search(&embedding, 5).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].0, id);
+        assert!(results[0].1 > 0.9);
+    }
+
+    #[test]
+    fn search_returns_closest() {
+        let (storage, _dir) = test_storage();
+        let id_a = Uuid::new_v4();
+        let id_b = Uuid::new_v4();
+        storage.insert(id_a, &[1.0, 0.0, 0.0, 0.0]).unwrap();
+        storage.insert(id_b, &[0.0, 1.0, 0.0, 0.0]).unwrap();
+
+        let results = storage.search(&[0.9, 0.1, 0.0, 0.0], 2).unwrap();
+        assert_eq!(results[0].0, id_a);
+        assert!(results[0].1 > results[1].1);
+    }
+
+    #[test]
+    fn delete_removes_from_search_results() {
+        let (storage, _dir) = test_storage();
+        let id = Uuid::new_v4();
+        storage.insert(id, &[1.0, 0.0, 0.0, 0.0]).unwrap();
+
+        storage.delete(id).unwrap();
+        // Ghost entry remains in usearch index, but IdMap filter excludes it
+        let results = storage.search(&[1.0, 0.0, 0.0, 0.0], 5).unwrap();
+        assert!(results.iter().all(|(uuid, _)| *uuid != id));
+    }
+
+    #[test]
+    fn empty_search_returns_empty() {
+        let (storage, _dir) = test_storage();
+        let results = storage.search(&[1.0, 0.0, 0.0, 0.0], 5).unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn persistence_across_reopen() {
+        let dir = TempDir::new().unwrap();
+        let embed_dir = dir.path().join("embed");
+        let id = Uuid::new_v4();
+
+        {
+            let storage = EmbeddingStorage::open(&embed_dir, DIMS).unwrap();
+            storage.insert(id, &[1.0, 0.0, 0.0, 0.0]).unwrap();
+        }
+
+        let storage = EmbeddingStorage::open(&embed_dir, DIMS).unwrap();
+        let results = storage.search(&[1.0, 0.0, 0.0, 0.0], 5).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].0, id);
+    }
+
+    #[test]
+    fn dimensions_preserved() {
+        let (storage, _dir) = test_storage();
+        assert_eq!(storage.dimensions(), DIMS);
+    }
+
+    #[test]
+    fn insert_rejects_nan_embedding() {
+        let (storage, _dir) = test_storage();
+        let result = storage.insert(Uuid::new_v4(), &[1.0, f32::NAN, 0.0, 0.0]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn insert_rejects_inf_embedding() {
+        let (storage, _dir) = test_storage();
+        let result = storage.insert(Uuid::new_v4(), &[1.0, f32::INFINITY, 0.0, 0.0]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn search_rejects_nan_query() {
+        let (storage, _dir) = test_storage();
+        storage.insert(Uuid::new_v4(), &[1.0, 0.0, 0.0, 0.0]).unwrap();
+        let result = storage.search(&[f32::NAN, 0.0, 0.0, 0.0], 5);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn delete_then_search_no_crash() {
+        let (storage, _dir) = test_storage();
+        let id = Uuid::new_v4();
+        storage.insert(id, &[1.0, 0.0, 0.0, 0.0]).unwrap();
+        storage.delete(id).unwrap();
+        // Must not crash — ghost entry filtered by IdMap
+        let results = storage.search(&[1.0, 0.0, 0.0, 0.0], 5).unwrap();
+        assert!(results.iter().all(|(uuid, _)| *uuid != id));
+    }
+
+    // usearch v2.24.0 KNOWN BUGS (not tested here — they SIGSEGV):
+    // - Index::remove() + Index::search() = use-after-free in HNSW graph
+    // - Index is not thread-safe without external synchronization
+    // Workarounds: skip Index::remove() in delete(), use Mutex in EmbeddingStorage.
 }

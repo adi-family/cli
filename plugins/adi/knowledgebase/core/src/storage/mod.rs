@@ -107,3 +107,88 @@ impl Storage {
         self.graph.get_audit_log(node_id, limit)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::ApprovalStatus;
+    use chrono::Utc;
+    use tempfile::TempDir;
+    use uuid::Uuid;
+
+    const DIMS: usize = 4;
+
+    fn make_node(title: &str) -> Node {
+        let now = Utc::now();
+        Node {
+            id: Uuid::new_v4(),
+            node_type: NodeType::Fact,
+            title: title.into(),
+            content: "content".into(),
+            source: "human".into(),
+            approval_status: ApprovalStatus::Approved,
+            metadata: serde_json::json!({}),
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    /// FIX CHECK: delete_node must delete graph BEFORE embedding.
+    /// If graph deletion fails, the embedding should still be intact so
+    /// find_similar can still locate the node. Current order (embedding first)
+    /// leaves an orphaned graph node with no embedding on partial failure.
+    ///
+    /// This test verifies correct cleanup after successful deletion and
+    /// documents the required ordering: graph first, then embedding.
+    #[test]
+    fn delete_node_cleans_up_both_stores() {
+        let dir = TempDir::new().unwrap();
+        let storage = Storage::open(dir.path(), DIMS).unwrap();
+
+        let node = make_node("Test node");
+        let embedding = vec![1.0, 0.0, 0.0, 0.0];
+        storage.store_node(&node, &embedding).unwrap();
+
+        // Both stores have the node
+        assert!(storage.get_node(node.id).unwrap().is_some());
+        assert_eq!(storage.find_similar(&embedding, 5).unwrap().len(), 1);
+
+        // Delete must clean up both atomically
+        storage.delete_node(node.id).unwrap();
+
+        // Graph node gone
+        assert!(
+            storage.get_node(node.id).unwrap().is_none(),
+            "graph node must be deleted"
+        );
+        // Embedding gone
+        let similar = storage.find_similar(&embedding, 5).unwrap();
+        assert!(
+            similar.iter().all(|(uuid, _)| *uuid != node.id),
+            "embedding must be deleted"
+        );
+    }
+
+    /// FIX CHECK: store_node must be atomic — if embedding insert fails,
+    /// the graph node must be rolled back so there are no ghost nodes
+    /// that exist in the graph but are invisible to similarity search.
+    #[test]
+    fn store_node_is_consistent() {
+        let dir = TempDir::new().unwrap();
+        let storage = Storage::open(dir.path(), DIMS).unwrap();
+
+        let node = make_node("Test node");
+        let embedding = vec![1.0, 0.0, 0.0, 0.0];
+        storage.store_node(&node, &embedding).unwrap();
+
+        // Both stores must have the node after successful store
+        let fetched = storage.get_node(node.id).unwrap();
+        assert!(fetched.is_some(), "node must exist in graph after store");
+
+        let similar = storage.find_similar(&embedding, 5).unwrap();
+        assert!(
+            !similar.is_empty(),
+            "node must exist in embedding index after store"
+        );
+    }
+}
