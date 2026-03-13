@@ -1,0 +1,48 @@
+# Cloud Build config for CLI registry service
+# Triggered manually or via CI
+
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/cli-registry:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/cli-registry:latest'
+      - '-f'
+      - 'deploy/cli-registry/Dockerfile'
+      - '.'
+
+  # Push the image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/cli-registry'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/cli-registry:${SHORT_SHA}'
+      - '--region=${_REGION}'
+      - '--port=8080'
+      - '--memory=512Mi'
+      - '--cpu=1'
+      - '--min-instances=0'
+      - '--max-instances=3'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=REGISTRY_DATA_DIR=/data'
+      - '--execution-environment=gen2'
+
+substitutions:
+  _REGION: europe-west1
+  _REPO: adi-registry
+  _SERVICE_NAME: adi-cli-registry-beta
+
+options:
+  logging: CLOUD_LOGGING_ONLY

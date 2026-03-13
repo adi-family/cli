@@ -34,7 +34,7 @@ impl AppState {
 }
 
 fn data_dir() -> PathBuf {
-    if let Ok(dir) = std::env::var("CLI_REGISTRY_DATA_DIR") {
+    if let Ok(dir) = std::env::var("REGISTRY_DATA_DIR") {
         return PathBuf::from(dir);
     }
     dirs::data_local_dir()
@@ -351,7 +351,7 @@ pub fn run_server(port: u16) -> anyhow::Result<()> {
         let storage = CliRegistryStorage::new(root);
         storage.init().await?;
 
-        let auth_token = std::env::var("CLI_REGISTRY_AUTH_TOKEN").ok().filter(|s| !s.is_empty());
+        let auth_token = std::env::var("REGISTRY_AUTH_TOKEN").ok().filter(|s| !s.is_empty());
         if auth_token.is_some() {
             tracing::info!("Auth token configured — publish endpoints require authorization");
         }

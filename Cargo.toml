@@ -250,7 +250,7 @@ members = [
     "crates/website",
 
     # Experiments
-    "experiment",
+    "experiment/semantic-duplicates",
 ]
 
 # FlowMap is standalone (not in workspace) - build with:

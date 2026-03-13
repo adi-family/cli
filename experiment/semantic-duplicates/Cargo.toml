@@ -1,0 +1,35 @@
+[package]
+name = "experiment-semantic-duplicates"
+version = "0.1.0"
+edition = "2021"
+description = "Experiment: detect semantically similar code across distant modules using embeddings"
+
+[dependencies]
+# Rust source parsing
+syn = { version = "2", features = ["full", "parsing", "visit"] }
+quote = "1"
+proc-macro2 = { version = "1", features = ["span-locations"] }
+
+# Embeddings
+lib-embed = { path = "../../crates/_lib/lib-embed", features = ["fastembed"] }
+
+# File walking
+walkdir = { workspace = true }
+ignore = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Config parsing
+toml = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Misc
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
