@@ -21,5 +21,8 @@ bytes = "1"
 tokio = { workspace = true, features = ["rt"] }
 reqwest = { version = "0.12", features = ["json"], default-features = false }
 
+[dev-dependencies]
+tempfile = "3"
+
 [build-dependencies]
 typespec-api = { package = "lib-typespec-api", path = "../../../../crates/tsp-gen/core" }

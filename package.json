@@ -5,6 +5,7 @@
     "packages/*",
     "crates/*/web",
     "plugins/*/web",
+    "plugins/*/*/web",
     "apps/*"
   ],
   "scripts": {

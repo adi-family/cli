@@ -9,7 +9,7 @@ export default defineConfig({
       fileName: () => "web.js",
     },
     rollupOptions: {
-      external: ["@adi-family/sdk-plugin"],
+      external: (id: string) => id.startsWith("@adi-family/"),
       output: {
         inlineDynamicImports: true,
         assetFileNames: "style[extname]",

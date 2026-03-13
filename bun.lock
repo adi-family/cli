@@ -78,22 +78,6 @@
         "vite": "^7.3.1",
       },
     },
-    "crates/knowledgebase/web": {
-      "name": "@adi-family/plugin-knowledgebase",
-      "version": "0.1.0",
-      "dependencies": {
-        "@adi-family/cocoon-plugin-interface": "workspace:*",
-        "@adi-family/plugin-router": "workspace:*",
-        "@adi-family/sdk-plugin": "workspace:*",
-        "lit": "^3.3.2",
-      },
-      "devDependencies": {
-        "@tailwindcss/vite": "^4.2.0",
-        "tailwindcss": "^4.2.0",
-        "typescript": "~5.9.3",
-        "vite": "^7.3.1",
-      },
-    },
     "crates/monaco-editor/web": {
       "name": "@adi-family/plugin-monaco-editor",
       "version": "0.1.0",
@@ -339,6 +323,25 @@
         "vite": "^7.3.1",
       },
     },
+    "plugins/adi/knowledgebase/web": {
+      "name": "@adi-family/plugin-knowledgebase",
+      "version": "0.1.0",
+      "dependencies": {
+        "@adi-family/cocoon-plugin-interface": "workspace:*",
+        "@adi-family/plugin-actions-feed": "workspace:*",
+        "@adi-family/plugin-cocoon": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
+        "@adi-family/plugin-signaling": "workspace:*",
+        "@adi-family/sdk-plugin": "workspace:*",
+        "lit": "^3.3.2",
+      },
+      "devDependencies": {
+        "@tailwindcss/vite": "^4.2.0",
+        "tailwindcss": "^4.2.0",
+        "typescript": "~5.9.3",
+        "vite": "^7.3.1",
+      },
+    },
   },
   "packages": {
     "@adi-family/cocoon-plugin-interface": ["@adi-family/cocoon-plugin-interface@workspace:packages/cocoon-plugin-interface"],
@@ -357,7 +360,7 @@
 
     "@adi-family/plugin-debug-screen": ["@adi-family/plugin-debug-screen@workspace:crates/debug-screen/web"],
 
-    "@adi-family/plugin-knowledgebase": ["@adi-family/plugin-knowledgebase@workspace:crates/knowledgebase/web"],
+    "@adi-family/plugin-knowledgebase": ["@adi-family/plugin-knowledgebase@workspace:plugins/adi/knowledgebase/web"],
 
     "@adi-family/plugin-monaco-editor": ["@adi-family/plugin-monaco-editor@workspace:crates/monaco-editor/web"],
 

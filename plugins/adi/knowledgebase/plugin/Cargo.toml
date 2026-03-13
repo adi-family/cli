@@ -1,6 +1,6 @@
 [package]
 name = "knowledgebase-plugin-v2"
-version = "0.1.0"
+version = "0.1.3"
 edition = "2021"
 description = "ADI plugin: Knowledgebase"
 license = "BSL-1.0"
