@@ -1,7 +1,8 @@
 import { Logger, trace, type EventBus } from '@adi-family/sdk-plugin';
 import { ActionsBusKey } from '@adi-family/plugin-actions-feed';
 import { AdiAuthBusKey, AdiSignalingBusKey, WsState } from './generated';
-import type { SignalingMessage } from './generated/channels';
+import type { RoomInfo } from './generated';
+import type { DeviceInfo, SignalingMessage } from './generated/channels';
 import { createWebSocket, type WsControl } from './websocket';
 
 export type TokenGetter = (authDomain: string) => Promise<string | null>;
@@ -22,7 +23,8 @@ export class SignalingServer {
   private authenticatedUserId: string | null = null;
   private registeredDeviceId: string | null = null;
   private connectedPeers = new Set<string>();
-  private knownDevices: import('./generated/channels').DeviceInfo[] = [];
+  private knownDevices: DeviceInfo[] = [];
+  private knownRooms = new Map<string, RoomInfo>();
   private authenticating = false;
   private disposed = false;
   private state: WsState = WsState.Disconnected;
@@ -44,6 +46,7 @@ export class SignalingServer {
           this.registeredDeviceId = null;
           this.connectedPeers.clear();
           this.knownDevices = [];
+          this.knownRooms.clear();
           this.authenticating = false;
         }
       },
@@ -93,7 +96,7 @@ export class SignalingServer {
     return this.connectedPeers;
   }
 
-  getDevices(): readonly import('./generated/channels').DeviceInfo[] {
+  getDevices(): readonly DeviceInfo[] {
     return this.knownDevices;
   }
 
@@ -136,6 +139,55 @@ export class SignalingServer {
   @trace('sending sync data')
   sendSyncData(payload: unknown): void {
     this.ws.send({ type: 'sync_data', payload });
+  }
+
+  getRooms(): ReadonlyMap<string, RoomInfo> {
+    return this.knownRooms;
+  }
+
+  @trace('creating room')
+  createRoom(roomId?: string): void {
+    this.ws.send({ type: 'room_create', ...(roomId ? { room_id: roomId } : {}) } as SignalingMessage);
+  }
+
+  @trace('deleting room')
+  deleteRoom(roomId: string): void {
+    this.ws.send({ type: 'room_delete', room_id: roomId });
+  }
+
+  @trace('adding actor to room')
+  addRoomActor(roomId: string, deviceId: string): void {
+    this.ws.send({ type: 'room_add_actor', room_id: roomId, device_id: deviceId });
+  }
+
+  @trace('removing actor from room')
+  removeRoomActor(roomId: string, deviceId: string): void {
+    this.ws.send({ type: 'room_remove_actor', room_id: roomId, device_id: deviceId });
+  }
+
+  @trace('granting room access')
+  grantRoomAccess(roomId: string, userId: string): void {
+    this.ws.send({ type: 'room_grant_access', room_id: roomId, user_id: userId });
+  }
+
+  @trace('revoking room access')
+  revokeRoomAccess(roomId: string, userId: string): void {
+    this.ws.send({ type: 'room_revoke_access', room_id: roomId, user_id: userId });
+  }
+
+  @trace('listing rooms')
+  listRooms(): void {
+    this.ws.send({ type: 'room_list' });
+  }
+
+  @trace('getting room')
+  getRoom(roomId: string): void {
+    this.ws.send({ type: 'room_get', room_id: roomId });
+  }
+
+  @trace('sending room message')
+  sendRoomMessage(roomId: string, payload: unknown, to?: string): void {
+    this.ws.send({ type: 'room_send', room_id: roomId, payload, ...(to ? { to } : {}) } as SignalingMessage);
   }
 
   @trace('connecting')
@@ -299,6 +351,69 @@ export class SignalingServer {
         this.bus.emit(
           AdiSignalingBusKey.SyncData,
           { url: this.url, payload: msg.payload },
+          SOURCE,
+        );
+        break;
+
+      case 'room_create_response':
+        this.listRooms();
+        break;
+
+      case 'room_delete_response':
+        this.knownRooms.delete(msg.room_id);
+        break;
+
+      case 'room_add_actor_response':
+      case 'room_remove_actor_response':
+      case 'room_grant_access_response':
+      case 'room_revoke_access_response':
+        break;
+
+      case 'room_list_response':
+        this.knownRooms.clear();
+        for (const room of msg.rooms) {
+          this.knownRooms.set(room.room_id, room);
+        }
+        break;
+
+      case 'room_get_response':
+        this.knownRooms.set(msg.room_id, {
+          room_id: msg.room_id,
+          owner_user_id: msg.owner_user_id,
+          granted_users: msg.granted_users,
+          actors: msg.actors,
+        });
+        break;
+
+      case 'room_updated':
+        this.knownRooms.set(msg.room.room_id, msg.room);
+        this.bus.emit(
+          AdiSignalingBusKey.RoomUpdated,
+          { url: this.url, room: msg.room },
+          SOURCE,
+        );
+        break;
+
+      case 'room_actor_joined':
+        this.bus.emit(
+          AdiSignalingBusKey.RoomActorJoined,
+          { url: this.url, roomId: msg.room_id, deviceId: msg.device_id },
+          SOURCE,
+        );
+        break;
+
+      case 'room_actor_left':
+        this.bus.emit(
+          AdiSignalingBusKey.RoomActorLeft,
+          { url: this.url, roomId: msg.room_id, deviceId: msg.device_id },
+          SOURCE,
+        );
+        break;
+
+      case 'room_send':
+        this.bus.emit(
+          AdiSignalingBusKey.RoomMessage,
+          { url: this.url, roomId: msg.room_id, from: '', payload: msg.payload },
           SOURCE,
         );
         break;
