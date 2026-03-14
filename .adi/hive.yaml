@@ -361,8 +361,9 @@ services:
       static:
         PORT: '8035'
         VITE_LOCAL_PROXY_PORT: '8011'
-        VITE_DEFAULT_REGISTRY_URLS: ${env.VITE_DEFAULT_REGISTRY_URLS:-http://adi.test/registry}
+        VITE_DEFAULT_REGISTRY_URLS: ${env.VITE_DEFAULT_REGISTRY_URLS:-http://adi.test/web-registry}
         VITE_DEFAULT_SIGNALING_URLS: ${env.VITE_DEFAULT_SIGNALING_URLS:-ws://adi.test/api/signaling/ws}
+        VITE_REQUIRED_PLUGINS: adi.slots,adi.router,adi.command-palette,adi.auth,adi.signaling,adi.cocoon,adi.actions-feed,adi.plugins
     restart: on-failure
 
   # ---------------------------------------------------------------------------
@@ -436,27 +437,19 @@ services:
       - timescaledb
     restart: on-failure
 
-  # ---------------------------------------------------------------------------
-  # Optional Services
-  # ---------------------------------------------------------------------------
-
-  credentials:
-    hooks:
-      pre-up:
-        - type: script
-          run: python3 .adi/workflows/_core/patch.py plugin adi.credentials
+  llm-proxy:
     runner:
       type: script
       script:
-        run: adi run adi.credentials start --port 8033
+        run: cargo run -p llm-proxy-http --bin llm-proxy
     rollout:
       type: recreate
       recreate:
         ports:
-          http: 8033
+          http: 8024
     proxy:
       - host: adi.test
-        path: /api/credentials
+        path: /api/llm-proxy
         strip_prefix: true
     healthcheck:
       type: http
@@ -465,14 +458,80 @@ services:
         path: /health
     environment:
       static:
-        PORT: '8033'
-        DATABASE_URL: 'postgres://adi:adi@localhost:8027/adi_credentials'
+        PORT: '8024'
+        DATABASE_URL: 'postgres://adi:adi@localhost:8027/adi_llm_proxy'
         JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
         ENCRYPTION_KEY: ${env.ENCRYPTION_KEY:-5a747f27420b903522ae3746c4ba79b5ecffea02f6bc333fd4da39fb2ef27de4}
         ANALYTICS_URL: 'http://localhost:8022'
     depends_on:
       - postgres
       - analytics-ingestion
+    restart: on-failure
+
+  embed-proxy:
+    runner:
+      type: script
+      script:
+        run: cargo run -p embed-proxy-http --bin embed-proxy
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8025
+    proxy:
+      - host: adi.test
+        path: /api/embed-proxy
+        strip_prefix: true
+    healthcheck:
+      type: http
+      http:
+        port: '{{runtime.port.http}}'
+        path: /health
+    environment:
+      static:
+        PORT: '8025'
+        DATABASE_URL: 'postgres://adi:adi@localhost:8027/adi_embed_proxy'
+        JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
+        ENCRYPTION_KEY: ${env.ENCRYPTION_KEY:-5a747f27420b903522ae3746c4ba79b5ecffea02f6bc333fd4da39fb2ef27de4}
+    depends_on:
+      - postgres
+    restart: on-failure
+
+  payment:
+    hooks:
+      pre-up:
+        - type: script
+          run: python3 .adi/workflows/_core/patch.py plugin adi.payment
+    runner:
+      type: script
+      script:
+        run: adi run adi.payment start --port 8040
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8040
+    proxy:
+      - host: adi.test
+        path: /api/payment
+        strip_prefix: true
+    healthcheck:
+      type: http
+      http:
+        port: '{{runtime.port.http}}'
+        path: /health
+    environment:
+      static:
+        PORT: '8040'
+        DATABASE_URL: 'postgres://adi:adi@localhost:8027/adi_payment'
+        JWT_SECRET: ${env.JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}
+        COINBASE_API_KEY: ${env.COINBASE_API_KEY:-}
+        COINBASE_WEBHOOK_SECRET: ${env.COINBASE_WEBHOOK_SECRET:-}
+        PADDLE_API_KEY: ${env.PADDLE_API_KEY:-}
+        PADDLE_WEBHOOK_SECRET: ${env.PADDLE_WEBHOOK_SECRET:-}
+        PADDLE_ENVIRONMENT: ${env.PADDLE_ENVIRONMENT:-sandbox}
+    depends_on:
+      - postgres
     restart: on-failure
 
   cocoon-spawner:
@@ -499,15 +558,15 @@ services:
       - coturn
     restart: on-failure
 
-  registry:
+  cli-registry:
     hooks:
       pre-up:
         - type: script
-          run: python3 .adi/workflows/_core/patch.py plugin adi.registry
+          run: python3 .adi/workflows/_core/patch.py plugin cli.adi.cli-registry-server
     runner:
       type: script
       script:
-        run: adi run adi.registry start --port 8019
+        run: adi run cli.adi.cli-registry-server start --port 8019
     rollout:
       type: recreate
       recreate:
@@ -515,10 +574,38 @@ services:
           http: 8019
     proxy:
       - host: adi.test
-        path: /api/registry
+        path: /api/cli-registry
         strip_prefix: true
       - host: adi.test
-        path: /registry
+        path: /cli-registry
+        strip_prefix: true
+    healthcheck:
+      type: http
+      http:
+        port: '{{runtime.port.http}}'
+        path: /health
+    restart: on-failure
+
+  web-registry:
+    hooks:
+      pre-up:
+        - type: script
+          run: python3 .adi/workflows/_core/patch.py plugin cli.adi.web-registry-server
+    runner:
+      type: script
+      script:
+        run: adi run cli.adi.web-registry-server start --port 8063
+    rollout:
+      type: recreate
+      recreate:
+        ports:
+          http: 8063
+    proxy:
+      - host: adi.test
+        path: /api/web-registry
+        strip_prefix: true
+      - host: adi.test
+        path: /web-registry
         strip_prefix: true
     healthcheck:
       type: http

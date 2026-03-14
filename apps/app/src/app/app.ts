@@ -16,7 +16,10 @@ import { createRegistryHubDebugSync } from './registry-hub-debug';
 import { getEnabledWebPluginIds } from '../plugin-prefs';
 
 const SIGNALING_CONNECT_TIMEOUT_MS = 10_000;
-const MIN_LOADING_MS = 2_000;
+const MIN_LOADING_MS = 1_500;
+const REQUIRED_PLUGINS = new Set(
+  (import.meta.env.VITE_REQUIRED_PLUGINS as string ?? '').split(',').filter(Boolean),
+);
 
 export interface Context {
   db: DbConnection;
@@ -97,7 +100,26 @@ export class App {
     this.core.registerPluginById('adi.plugins');
 
     await this.registerEnabledPlugins();
-    this.allPlugins = await this.core.fetchPlugins();
+    const { allPlugins, loaded, failed, timedOut } = await this.core.fetchPlugins();
+    this.allPlugins = allPlugins;
+    this.debug = { loaded, failed, timedOut };
+
+    const broken = [...failed, ...timedOut];
+    const requiredBroken = broken.filter((id) => REQUIRED_PLUGINS.has(id));
+    const optionalBroken = broken.filter((id) => !REQUIRED_PLUGINS.has(id));
+
+    if (optionalBroken.length > 0) {
+      console.warn(`[app] optional plugins failed to load: ${optionalBroken.join(', ')}`);
+    }
+
+    if (requiredBroken.length > 0) {
+      const reasons = [
+        ...failed.filter((id) => REQUIRED_PLUGINS.has(id)).map((id) => `${id} failed`),
+        ...timedOut.filter((id) => REQUIRED_PLUGINS.has(id)).map((id) => `${id} timed out`),
+      ];
+      throw new Error(`Required plugins failed: ${reasons.join(', ')}`);
+    }
+
     this.registerRegistryHubDebug();
   }
 
@@ -118,21 +140,23 @@ export class App {
   async start(): Promise<void> {
     window.dispatchEvent(new CustomEvent('loading-step', { detail: 'signaling' }));
 
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        unsub();
+        reject(new Error('Signaling connection timed out after 10s'));
+      }, SIGNALING_CONNECT_TIMEOUT_MS);
+
       const unsub = this.bus.on(
         'adi.signaling:state',
         ({ state }: { state: string }) => {
           if (state === 'connected') {
+            clearTimeout(timer);
             unsub();
             resolve();
           }
         },
         'app',
       );
-      setTimeout(() => {
-        unsub();
-        resolve();
-      }, SIGNALING_CONNECT_TIMEOUT_MS);
     });
 
     const elapsed = Date.now() - this.loadingStart;

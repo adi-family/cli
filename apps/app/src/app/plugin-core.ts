@@ -34,14 +34,37 @@ export class PluginCore {
     this.pendingIds.add(id);
   }
 
-  async fetchPlugins(): Promise<PluginDescriptor[]> {
+  async fetchPlugins(): Promise<{
+    allPlugins: PluginDescriptor[];
+    loaded: string[];
+    failed: string[];
+    timedOut: string[];
+  }> {
     const all = dedupeById(await this.registryHub.fetchAllDescriptors());
     const toLoad = all.filter((d) => this.pendingIds.has(d.id));
+
+    let loaded: string[] = [];
+    let failed: string[] = [];
+    let timedOut: string[] = [];
+
     if (toLoad.length > 0) {
+      const resultPromise = new Promise<{ loaded: string[]; failed: string[]; timedOut: string[] }>((resolve) => {
+        const unsub = this.bus.on(
+          'loading-finished',
+          (result: { loaded: string[]; failed: string[]; timedOut: string[] }) => {
+            unsub();
+            resolve(result);
+          },
+          'app',
+        );
+      });
+
       await loadPlugins(this.bus, toLoad, { availablePlugins: all });
+      ({ loaded, failed, timedOut } = await resultPromise);
     }
+
     this.pendingIds.clear();
-    return all;
+    return { allPlugins: all, loaded, failed, timedOut };
   }
 
   dispose(): void {
