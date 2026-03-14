@@ -1,0 +1,77 @@
+# ADI Web Plugin Release Workflow
+# Build web UI and publish to the web plugin registry
+
+[workflow]
+name = "release-web"
+description = "Release a web plugin to the web registry"
+
+[[inputs]]
+name = "plugin"
+type = "select"
+prompt = "Select plugin to release"
+options_cmd = '''
+grep -rl 'package.metadata.plugin' crates/*/Cargo.toml crates/*/*/Cargo.toml crates/*/*/*/Cargo.toml plugins/*/Cargo.toml plugins/*/*/Cargo.toml plugins/*/*/*/Cargo.toml 2>/dev/null | while read f; do
+    sed -n 's/^id = "\(.*\)"/\1/p' "$f" | head -1
+done | sort -u
+'''
+autocomplete = true
+autocomplete_count = 10
+
+[[inputs]]
+name = "related"
+type = "confirm"
+prompt = "Also release all related plugins?"
+default = false
+
+[[inputs]]
+name = "version_bump"
+type = "select"
+prompt = "Version bump type"
+options = [
+    "same - Keep current version",
+    "patch - Bug fixes (0.0.x)",
+    "minor - New features (0.x.0)",
+    "major - Breaking changes (x.0.0)",
+]
+default = "same - Keep current version"
+
+[[inputs]]
+name = "registry_target"
+type = "select"
+prompt = "Target registry"
+options = [
+    "cli-beta - cli.registry.beta.withadi.dev",
+    "production - registry.withadi.dev",
+    "local - adi.test/web-registry",
+    "dry-run - Build only, no publish",
+]
+default = "cli-beta - cli.registry.beta.withadi.dev"
+
+[[steps]]
+name = "Release plugin"
+run = """
+PLUGIN="{{ plugin }}"
+REGISTRY="{{ registry_target | split(' ') | first }}"
+BUMP="{{ version_bump | split(' ') | first }}"
+RELATED="{{ related }}"
+
+BUMP_FLAG=""
+if [ "$BUMP" != "same" ]; then
+    BUMP_FLAG="--bump $BUMP"
+fi
+
+REGISTRY_FLAG=""
+case "$REGISTRY" in
+    cli-beta) REGISTRY_FLAG="--registry https://cli.registry.beta.withadi.dev" ;;
+    production) ;;
+    local) REGISTRY_FLAG="--local" ;;
+    dry-run) REGISTRY_FLAG="--no-push" ;;
+esac
+
+RELATED_FLAG=""
+if [ "$RELATED" = "true" ]; then
+    RELATED_FLAG="--related"
+fi
+
+python3 "$WORKFLOWS_DIR/_core/release_web_plugin.py" "$PLUGIN" $RELATED_FLAG $BUMP_FLAG $REGISTRY_FLAG
+"""

@@ -19,7 +19,7 @@ impl CliRegistryPlugin {
 impl Plugin for CliRegistryPlugin {
     fn metadata(&self) -> PluginMetadata {
         PluginMetadata {
-            id: "cli.adi.registry-server".to_string(),
+            id: "cli.adi.cli-registry-server".to_string(),
             name: "CLI Registry Server".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
             plugin_type: PluginType::Extension,

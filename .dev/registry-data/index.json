@@ -1,17 +1,11 @@
 {
   "version": 1,
-  "updatedAt": 1773278176,
-  "packages": [],
+  "updatedAt": 1773522879,
   "plugins": [
     {
       "id": "adi.auth",
       "name": "Auth",
-      "description": "ADI plugin: Auth HTTP server",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
+      "description": "CLI commands for authentication",
       "latestVersion": "0.1.0",
       "downloads": 0,
       "author": "ADI Team",
@@ -19,27 +13,17 @@
     },
     {
       "id": "adi.knowledgebase",
-      "name": "ADI Knowledgebase",
-      "description": "ADI Knowledgebase plugin providing tools for knowledge graph and embeddings",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
+      "name": "Knowledgebase",
+      "description": "CLI commands for knowledgebase",
       "latestVersion": "0.8.4",
       "downloads": 0,
-      "author": "",
+      "author": "ADI Team",
       "tags": []
     },
     {
       "id": "adi.video",
       "name": "ADI Video",
       "description": "ADI Video plugin providing CLI commands for video rendering",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
       "latestVersion": "0.1.0",
       "downloads": 0,
       "author": "ADI Team",
@@ -49,11 +33,6 @@
       "id": "adi.router",
       "name": "ADI Router",
       "description": "Client-side SPA router with navigation management",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
       "latestVersion": "0.1.0",
       "downloads": 0,
       "author": "ADI Team",
@@ -63,11 +42,6 @@
       "id": "adi.command-palette",
       "name": "ADI Command Palette",
       "description": "Command palette for quick command search and execution",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
       "latestVersion": "0.1.0",
       "downloads": 0,
       "author": "ADI Team",
@@ -77,11 +51,6 @@
       "id": "adi.slots",
       "name": "ADI Slots",
       "description": "Content slots for cross-plugin UI extension points",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
       "latestVersion": "0.1.0",
       "downloads": 0,
       "author": "ADI Team",
@@ -90,12 +59,7 @@
     {
       "id": "adi.signaling",
       "name": "ADI Signaling",
-      "description": "ADI Signaling plugin — CLI commands for device pairing and signaling server",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
+      "description": "CLI commands for signaling server",
       "latestVersion": "0.1.0",
       "downloads": 0,
       "author": "ADI Team",
@@ -105,11 +69,6 @@
       "id": "adi.debug-screen",
       "name": "ADI Debug Screen",
       "description": "Debug screen and operations log",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
       "latestVersion": "0.1.0",
       "downloads": 0,
       "author": "ADI Team",
@@ -118,12 +77,7 @@
     {
       "id": "adi.cocoon",
       "name": "Cocoon",
-      "description": "ADI Cocoon plugin - containerized worker for remote command execution",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
+      "description": "CLI commands for cocoon management",
       "latestVersion": "0.2.7",
       "downloads": 0,
       "author": "ADI Team",
@@ -133,11 +87,6 @@
       "id": "adi.actions-feed",
       "name": "ADI Actions Feed",
       "description": "Action feed system for cross-plugin notifications",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
       "latestVersion": "0.1.0",
       "downloads": 0,
       "author": "ADI Team",
@@ -147,11 +96,6 @@
       "id": "adi.cocoon-control-center",
       "name": "Cocoon Control Center",
       "description": "ADI plugin: Cocoon Control Center - terminal UI for remote cocoon management",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
       "latestVersion": "0.1.0",
       "downloads": 0,
       "author": "ADI Team",
@@ -160,12 +104,7 @@
     {
       "id": "adi.credentials",
       "name": "Credentials",
-      "description": "ADI plugin: Credentials",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
+      "description": "CLI commands for credentials",
       "latestVersion": "0.1.0",
       "downloads": 0,
       "author": "ADI Team",
@@ -175,12 +114,16 @@
       "id": "adi.plugins",
       "name": "Plugins",
       "description": "ADI plugin: Plugins - browse and install plugins from the registry",
-      "pluginTypes": [
-        "extension",
-        "web"
-      ],
-      "packageId": null,
       "latestVersion": "0.1.0",
+      "downloads": 0,
+      "author": "ADI Team",
+      "tags": []
+    },
+    {
+      "id": "adi.llm-proxy",
+      "name": "LLM Proxy",
+      "description": "CLI commands for LLM proxy management",
+      "latestVersion": "0.8.4",
       "downloads": 0,
       "author": "ADI Team",
       "tags": []

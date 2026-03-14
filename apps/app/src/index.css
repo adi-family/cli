@@ -22,7 +22,14 @@
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light;
+  }
+
+  :root {
+    --adi-accent: #F5A623;
+    --adi-accent-soft: rgba(245, 166, 35, 0.08);
+    --adi-gradient: linear-gradient(135deg, #F5A623 0%, #E08A1E 100%);
+    --adi-font-heading: 'Instrument Sans', system-ui, -apple-system, sans-serif;
   }
 
   body {

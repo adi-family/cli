@@ -1,0 +1,37 @@
+[package]
+name = "slots-plugin"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "Content slots for cross-plugin UI extension points"
+authors = ["ADI Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lib-plugin-prelude = { path = "../../../../crates/_lib/lib-plugin-prelude" }
+
+[build-dependencies]
+lib-plugin-web-build = { path = "../../../../crates/_lib/lib-plugin-web-build" }
+
+[package.metadata.plugin]
+id = "adi.slots"
+name = "ADI Slots"
+type = "extension"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "2.0.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.slots.web"
+version = "1.0.0"
+description = "Content slots for cross-plugin UI extension points"
+
+[package.metadata.plugin.web_ui]
+entry = "web.js"
+sandbox = false
+plugin_class = "SlotsPlugin"
+
+[package.metadata.plugin.tags]
+categories = ["web"]

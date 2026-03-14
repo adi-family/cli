@@ -101,10 +101,10 @@ def get_lib_extension(plat: str) -> str:
 
 # Legacy short-name -> crate directory fallback
 LEGACY_PLUGIN_MAP = {
-    "cocoon": "plugins/adi.cocoon",
+    "cocoon": "plugins/adi/cocoon",
     "hive": "crates/hive/plugin",
     "agent-loop": "crates/agent-loop/plugin",
-    "indexer": "crates/indexer/plugin",
+    "indexer": "plugins/adi/indexer/plugin",
     "knowledgebase": "plugins/adi/knowledgebase/plugin",
     "tasks": "crates/tasks/plugin",
     "workflow": "crates/workflow/plugin",
@@ -153,7 +153,7 @@ LEGACY_PLUGIN_MAP = {
 
 # Language plugins
 for lang in ("cpp", "csharp", "go", "java", "lua", "php", "python", "ruby", "rust", "swift", "typescript"):
-    LEGACY_PLUGIN_MAP[f"lang-{lang}"] = f"crates/indexer/lang/{lang}/plugin"
+    LEGACY_PLUGIN_MAP[f"lang-{lang}"] = f"plugins/adi/indexer/lang/{lang}/plugin"
 
 
 def get_plugin_crate(name: str) -> str | None:
@@ -638,7 +638,7 @@ def main():
     if args.registry:
         registry = args.registry
     elif args.local:
-        registry = "http://adi.test/registry"
+        registry = "http://adi.test/web-registry"
 
     if args.related:
         related = find_related_plugins(args.plugin_name)

@@ -1,0 +1,62 @@
+[package]
+name = "signaling-plugin"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+description = "ADI Signaling plugin — CLI commands for device pairing and signaling server"
+authors = ["ADI Team"]
+
+[lib]
+name = "signaling_plugin"
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "signaling-server"
+path = "src/main.rs"
+
+[dependencies]
+lib-plugin-prelude = { path = "../../../../crates/_lib/lib-plugin-prelude" }
+signaling-core = { path = "../core" }
+lib-signaling-protocol = { path = "../protocol" }
+
+axum = { version = "0.8", features = ["ws"] }
+futures = { workspace = true }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+anyhow = { workspace = true }
+dotenvy = "0.15"
+lib-env-parse = { path = "../../../../crates/_lib/lib-env-parse" }
+
+[build-dependencies]
+lib-plugin-web-build = { path = "../../../../crates/_lib/lib-plugin-web-build" }
+
+[dev-dependencies]
+tokio-tungstenite = "0.26"
+
+[package.metadata.plugin]
+id = "adi.signaling"
+name = "ADI Signaling"
+type = "core,extension"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "2.0.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.signaling.cli"
+version = "1.0.0"
+description = "CLI commands for signaling server"
+
+[package.metadata.plugin.web_ui]
+entry = "web.js"
+sandbox = false
+plugin_class = "SignalingPlugin"
+
+[package.metadata.plugin.tags]
+categories = ["signaling", "pairing", "websocket", "devices"]

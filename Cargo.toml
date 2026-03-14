@@ -30,7 +30,7 @@ members = [
 
     # Indexer components (flat submodules)
     "crates/_lib/lib-embed",
-    "plugins/adi.indexer/core",
+    "plugins/adi/indexer/core",
 
     # Tasks components
     "crates/tasks/core",
@@ -47,9 +47,9 @@ members = [
     "crates/linter/core",
 
     # Auth components
-    "plugins/adi.auth/core",
-    "plugins/adi.auth/http",
-    "plugins/adi.auth/plugin",
+    "plugins/adi/auth/core",
+    "plugins/adi/auth/http",
+    "plugins/adi/auth/plugin",
 
     # Mux components
     "crates/mux/core",
@@ -116,7 +116,7 @@ members = [
     "crates/_lib/lib-json-tree",
     "crates/_lib/lib-terminal-grid",
     "crates/_lib/lib-iced-ui",
-    "crates/signaling/protocol",
+    "plugins/adi/signaling/protocol",
     "crates/_lib/lib-tarminal-sync",
 
     # Analytics
@@ -160,28 +160,28 @@ members = [
 
     # Indexer language plugins
     "crates/_lib/lib-indexer-lang-abi",
-    "plugins/adi.indexer/lang/rust/plugin",
-    "plugins/adi.indexer/lang/python/plugin",
-    "plugins/adi.indexer/lang/typescript/plugin",
-    "plugins/adi.indexer/lang/cpp/plugin",
-    "plugins/adi.indexer/lang/go/plugin",
-    "plugins/adi.indexer/lang/java/plugin",
-    "plugins/adi.indexer/lang/csharp/plugin",
-    "plugins/adi.indexer/lang/ruby/plugin",
-    "plugins/adi.indexer/lang/php/plugin",
-    "plugins/adi.indexer/lang/swift/plugin",
-    "plugins/adi.indexer/lang/lua/plugin",
+    "plugins/adi/indexer/lang/rust/plugin",
+    "plugins/adi/indexer/lang/python/plugin",
+    "plugins/adi/indexer/lang/typescript/plugin",
+    "plugins/adi/indexer/lang/cpp/plugin",
+    "plugins/adi/indexer/lang/go/plugin",
+    "plugins/adi/indexer/lang/java/plugin",
+    "plugins/adi/indexer/lang/csharp/plugin",
+    "plugins/adi/indexer/lang/ruby/plugin",
+    "plugins/adi/indexer/lang/php/plugin",
+    "plugins/adi/indexer/lang/swift/plugin",
+    "plugins/adi/indexer/lang/lua/plugin",
 
     # Core plugins
     "crates/embed-plugin",
-    "plugins/adi.indexer/plugin",
+    "plugins/adi/indexer/plugin",
     "crates/tasks/plugin",
     "crates/monaco-editor/plugin",
-    "crates/debug-screen/plugin",
-    "plugins/adi.actions-feed/plugin",
-    "crates/router/plugin",
+    "plugins/adi/debug-screen/plugin",
+    "plugins/adi/actions-feed/plugin",
+    "plugins/adi/router/plugin",
     "plugins/adi/command-palette/plugin",
-    "crates/slots/plugin",
+    "plugins/adi/slots/plugin",
     "plugins/adi/knowledgebase/plugin",
     "crates/agent-loop/plugin",
     "crates/linter/plugin",
@@ -189,8 +189,8 @@ members = [
     "crates/hive/plugin",
     "crates/llm-extract-plugin",
     "crates/tsp-gen/plugin",
-    "plugins/adi.cocoon/core",
-    "plugins/adi.cocoon/plugin",
+    "plugins/adi/cocoon/core",
+    "plugins/adi/cocoon/plugin",
     "crates/cocoon-control-center/plugin",
     # Old adi.registry/plugin removed — replaced by server-plugin/cli and server-plugin/web
     # Workflow translation plugins
@@ -220,8 +220,8 @@ members = [
     "crates/cocoon-spawner/plugin",
 
     # Signaling server
-    "crates/signaling/core",
-    "crates/signaling/plugin",
+    "plugins/adi/signaling/core",
+    "plugins/adi/signaling/plugin",
 
     # Executor
     "crates/executor/core",
@@ -238,12 +238,12 @@ members = [
     "crates/payment/plugin",
 
     # Credentials
-    "plugins/adi.credentials/core",
-    "plugins/adi.credentials/plugin",
+    "plugins/adi/credentials/core",
+    "plugins/adi/credentials/plugin",
 
     # Plugins
-    "crates/plugins/core",
-    "crates/plugins/plugin",
+    "plugins/adi/plugins/core",
+    "plugins/adi/plugins/plugin",
 
     # Shortcuts
     "crates/shortcuts",
@@ -270,11 +270,11 @@ authors = ["ADI Team"]
 
 [workspace.dependencies]
 # Core crates (from submodules)
-indexer-core = { path = "plugins/adi.indexer/core" }
+indexer-core = { path = "plugins/adi/indexer/core" }
 tasks-core = { path = "crates/tasks/core" }
 knowledgebase-core-v2 = { path = "plugins/adi/knowledgebase/core" }
 agent-loop-core = { path = "crates/agent-loop/core" }
-auth-core = { path = "plugins/adi.auth/core" }
+auth-core = { path = "plugins/adi/auth/core" }
 mux-core = { path = "crates/mux/core" }
 flags-core = { path = "crates/flags/core" }
 linter-core = { path = "crates/linter/core" }
@@ -283,14 +283,14 @@ embed-proxy-core = { path = "plugins/adi/embed-proxy/core" }
 hive-core = { path = "crates/hive/core" }
 tools-core = { path = "crates/tools/core" }
 payment-core = { path = "crates/payment/core" }
-credentials-core = { path = "plugins/adi.credentials/core" }
+credentials-core = { path = "plugins/adi/credentials/core" }
 executor-core = { path = "crates/executor/core" }
 video-core = { path = "crates/video/core" }
 adi-registry-core-shared = { path = "plugins/adi/registry/core/shared" }
 adi-registry-core-cli = { path = "plugins/adi/registry/core/cli" }
 adi-registry-core-web = { path = "plugins/adi/registry/core/web" }
 cocoon-spawner-core = { path = "crates/cocoon-spawner/core" }
-signaling-core = { path = "crates/signaling/core" }
+signaling-core = { path = "plugins/adi/signaling/core" }
 
 # Hive plugin system
 hive-plugin-abi = { path = "crates/hive/plugins/abi" }

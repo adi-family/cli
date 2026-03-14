@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
-    outDir: "../../../dist/adi.llm-proxy",
+    outDir: "../../../../dist/adi.llm-proxy",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],

@@ -118,7 +118,7 @@ fn matches_query(id: &str, name: &str, description: &str, tags: &[String], q: &s
 
 async fn root() -> Json<serde_json::Value> {
     Json(serde_json::json!({
-        "plugin": "cli.adi.registry-server",
+        "plugin": "cli.adi.cli-registry-server",
         "version": env!("CARGO_PKG_VERSION"),
     }))
 }
