@@ -5,7 +5,7 @@ WORKDIR /app
 COPY . .
 
 RUN bun install
-RUN cd apps/app && PORT=3000 VITE_DEFAULT_REGISTRY_URLS=https://web.registry.beta.withadi.dev bunx vite build
+RUN cd apps/app && PORT=3000 VITE_DEFAULT_REGISTRY_URLS=https://web.registry.beta.withadi.dev VITE_DEFAULT_SIGNALING_URLS=wss://signaling.beta.withadi.dev/ws bunx vite build
 
 # Stage 2: Serve with nginx
 FROM nginx:alpine
