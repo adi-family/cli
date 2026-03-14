@@ -14,7 +14,7 @@ required-features = ["standalone"]
 [features]
 default = ["services"]
 standalone = []
-services = ["tasks-core", "tools-core"]
+services = ["tasks-core", "tools-core", "llm-proxy-core", "embed-proxy-core"]
 
 [dependencies]
 # ADI service types
@@ -44,6 +44,8 @@ anyhow = "1"
 # ADI services (optional)
 tasks-core = { path = "../../../../crates/tasks/core", optional = true }
 tools-core = { path = "../../../../crates/tools/core", optional = true }
+llm-proxy-core = { path = "../../llm-proxy/core", optional = true }
+embed-proxy-core = { path = "../../embed-proxy/core", optional = true }
 
 bytes = "1"
 base64 = "0.22"

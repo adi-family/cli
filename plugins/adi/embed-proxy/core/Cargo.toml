@@ -45,6 +45,8 @@ rust_decimal = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util", "rt-multi-thread", "macros"] }
+wiremock = "0.6"
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "migrate"] }
 
 [build-dependencies]
 typespec-api = { package = "lib-typespec-api", path = "../../../../crates/tsp-gen/core" }

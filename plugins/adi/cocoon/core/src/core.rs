@@ -978,6 +978,36 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             tracing::info!("📦 Registered ADI plugin: adi.tools ({} tools)", tool_count);
         }
 
+        #[cfg(feature = "llm-proxy-core")]
+        {
+            match llm_proxy_core::LlmProxyService::from_env().await {
+                Ok(service) => {
+                    router.register(std::sync::Arc::new(
+                        llm_proxy_core::LlmProxyServiceAdi::new(service),
+                    ));
+                    tracing::info!("📦 Registered ADI plugin: adi.llm-proxy");
+                }
+                Err(e) => {
+                    tracing::warn!("⚠️ Failed to initialize llm-proxy plugin: {}", e);
+                }
+            }
+        }
+
+        #[cfg(feature = "embed-proxy-core")]
+        {
+            match embed_proxy_core::EmbedProxyService::from_env().await {
+                Ok(service) => {
+                    router.register(std::sync::Arc::new(
+                        embed_proxy_core::EmbedProxyServiceAdi::new(service),
+                    ));
+                    tracing::info!("📦 Registered ADI plugin: adi.embed-proxy");
+                }
+                Err(e) => {
+                    tracing::warn!("⚠️ Failed to initialize embed-proxy plugin: {}", e);
+                }
+            }
+        }
+
         router
     };
 
