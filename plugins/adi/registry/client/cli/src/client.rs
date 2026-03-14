@@ -52,7 +52,7 @@ impl CliRegistryClient {
             }
         }
 
-        let url = format!("{}/v1/index.json", self.base_url);
+        let url = format!("{}/v1/index", self.base_url);
         let response = self.http.get(&url).send().await?;
 
         if !response.status().is_success() {
@@ -98,7 +98,7 @@ impl CliRegistryClient {
     }
 
     pub async fn get_plugin_version(&self, id: &str, version: &str) -> Result<CliPluginInfo, RegistryError> {
-        let url = format!("{}/v1/{}/{}.json", self.base_url, id, version);
+        let url = format!("{}/v1/{}/{}", self.base_url, id, version);
         let response = self.http.get(&url).send().await?;
 
         if response.status().is_client_error() {
@@ -112,7 +112,7 @@ impl CliRegistryClient {
     }
 
     pub async fn get_plugin_latest(&self, id: &str) -> Result<CliPluginInfo, RegistryError> {
-        let url = format!("{}/v1/{}/latest.json", self.base_url, id);
+        let url = format!("{}/v1/{}/latest", self.base_url, id);
         let response = self.http.get(&url).send().await?;
 
         if response.status().is_client_error() {

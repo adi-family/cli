@@ -40,7 +40,7 @@ describe('HttpPluginRegistry', () => {
 
       const reg = new HttpPluginRegistry(BASE);
       const info = await reg.getBundleInfo('tasks', '1.2.0');
-      expect(fetchMock).toHaveBeenCalledWith(`${BASE}/v1/tasks/1.2.0.json`);
+      expect(fetchMock).toHaveBeenCalledWith(`${BASE}/v1/tasks/1.2.0`);
       expect(info.jsUrl).toBe(`${BASE}/v1/tasks/1.2.0/main.js`);
       expect(info.cssUrl).toBe(`${BASE}/v1/tasks/1.2.0/main.css`);
     });
@@ -106,7 +106,7 @@ describe('HttpPluginRegistry', () => {
 
       const reg = new HttpPluginRegistry(BASE);
       await reg.checkLatest('tasks', '1.2.0');
-      expect(fetchMock).toHaveBeenCalledWith(`${BASE}/v1/tasks/latest.json`);
+      expect(fetchMock).toHaveBeenCalledWith(`${BASE}/v1/tasks/latest`);
     });
 
     it('throws when registry returns non-2xx', async () => {
@@ -142,7 +142,7 @@ describe('HttpPluginRegistry', () => {
       expect(health.pluginCount).toBe(2);
       expect(health.version).toBe(3);
       expect(typeof health.latencyMs).toBe('number');
-      expect(fetchMock).toHaveBeenCalledWith(`${BASE}/v1/index.json`);
+      expect(fetchMock).toHaveBeenCalledWith(`${BASE}/v1/index`);
     });
 
     it('returns offline on non-2xx', async () => {

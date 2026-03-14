@@ -20,7 +20,7 @@ async function fetchRegistryPlugins(registryUrls: string[]): Promise<RegistryPlu
 
   for (const url of registryUrls) {
     try {
-      const resp = await fetch(`${url}/v1/index.json`);
+      const resp = await fetch(`${url}/v1/index`);
       if (!resp.ok) continue;
       const data = await resp.json();
       for (const p of data.plugins ?? []) {

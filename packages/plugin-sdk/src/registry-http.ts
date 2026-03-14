@@ -41,7 +41,7 @@ export class HttpPluginRegistry implements PluginRegistry {
   get url(): string { return this.baseUrl; }
 
   async getBundleInfo(id: string, version: string): Promise<PluginBundleInfo> {
-    const res = await fetch(`${this.baseUrl}/v1/${id}/${version}.json`);
+    const res = await fetch(`${this.baseUrl}/v1/${id}/${version}`);
     if (!res.ok) {
       throw new Error(`getBundleInfo failed: ${res.status} ${res.statusText}`);
     }
@@ -56,7 +56,7 @@ export class HttpPluginRegistry implements PluginRegistry {
     id: string,
     currentVersion: string
   ): Promise<{ version: string } | null> {
-    const res = await fetch(`${this.baseUrl}/v1/${id}/latest.json`);
+    const res = await fetch(`${this.baseUrl}/v1/${id}/latest`);
     if (!res.ok) {
       throw new Error(`checkLatest failed: ${res.status} ${res.statusText}`);
     }
@@ -68,7 +68,7 @@ export class HttpPluginRegistry implements PluginRegistry {
   async checkHealth(): Promise<RegistryHealth> {
     const start = Date.now();
     try {
-      const res = await fetch(`${this.baseUrl}/v1/index.json`);
+      const res = await fetch(`${this.baseUrl}/v1/index`);
       const latencyMs = Date.now() - start;
       if (!res.ok) return { online: false, pluginCount: 0, latencyMs };
       const data = (await res.json()) as WebRegistryIndex;
@@ -81,7 +81,7 @@ export class HttpPluginRegistry implements PluginRegistry {
   /** Fetch all plugins from the registry index. Returns empty array on any failure. */
   async listPlugins(): Promise<PluginDescriptor[]> {
     try {
-      const res = await fetch(`${this.baseUrl}/v1/index.json`);
+      const res = await fetch(`${this.baseUrl}/v1/index`);
       if (!res.ok) return [];
       const { plugins } = (await res.json()) as WebRegistryIndex;
       return plugins.map(p => ({

@@ -38,7 +38,7 @@ export const searchPlugins = async (
 ): Promise<RegistryPlugin[]> => {
   const url = query.trim()
     ? `${registryUrl}/v1/search?q=${encodeURIComponent(query)}`
-    : `${registryUrl}/v1/index.json`;
+    : `${registryUrl}/v1/index`;
 
   const res = await fetch(url);
   if (!res.ok) return [];
@@ -53,7 +53,7 @@ export const fetchAllPlugins = async (
 ): Promise<RegistryPlugin[]> => {
   const results = await Promise.allSettled(
     registryUrls.map(async (url) => {
-      const res = await fetch(`${url}/v1/index.json`);
+      const res = await fetch(`${url}/v1/index`);
       if (!res.ok) return [];
       const data = (await res.json()) as WebRegistryIndex;
       return (data.plugins ?? []).map(toRegistryPlugin);
