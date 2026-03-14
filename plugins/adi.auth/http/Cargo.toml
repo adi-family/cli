@@ -9,6 +9,14 @@ description = "HTTP API server for ADI Auth - email-based passwordless authentic
 name = "auth_http"
 path = "src/lib.rs"
 
+[[bin]]
+name = "auth-server"
+path = "src/main.rs"
+
+[[bin]]
+name = "auth-migrate"
+path = "src/migrate.rs"
+
 [dependencies]
 auth-core = { path = "../core" }
 axum = "0.7"
@@ -26,3 +34,4 @@ lib-env-parse = { path = "../../../crates/_lib/lib-env-parse" }
 lib-http-common = { path = "../../../crates/_lib/lib-http-common" }
 anyhow = "1"
 dotenvy = "0.15"
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "migrate"] }
