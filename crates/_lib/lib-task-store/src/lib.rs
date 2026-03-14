@@ -1,17 +1,14 @@
 //! Task storage abstraction for hybrid cloud deployment.
 //!
 //! Provides a device-agnostic interface for task storage, allowing each device
-//! to choose its own backend (SQLite, PostgreSQL, etc.) while maintaining
-//! a consistent protocol for querying and aggregation.
+//! to choose its own backend while maintaining a consistent protocol for
+//! querying and aggregation.
 
 pub mod error;
 pub mod models;
 
 #[cfg(feature = "sqlite")]
 pub mod sqlite;
-
-#[cfg(feature = "postgres")]
-pub mod postgres;
 
 use async_trait::async_trait;
 pub use error::{Result, TaskStoreError};
@@ -49,9 +46,6 @@ pub trait TaskStore: Send + Sync {
 pub enum TaskStoreBackend {
     #[cfg(feature = "sqlite")]
     Sqlite { path: std::path::PathBuf },
-
-    #[cfg(feature = "postgres")]
-    Postgres { url: String },
 }
 
 /// Create a task store from backend configuration
@@ -60,12 +54,6 @@ pub async fn create_task_store(backend: TaskStoreBackend) -> Result<Box<dyn Task
         #[cfg(feature = "sqlite")]
         TaskStoreBackend::Sqlite { path } => {
             let store = sqlite::SqliteTaskStore::new(path).await?;
-            Ok(Box::new(store))
-        }
-
-        #[cfg(feature = "postgres")]
-        TaskStoreBackend::Postgres { url } => {
-            let store = postgres::PostgresTaskStore::new(url).await?;
             Ok(Box::new(store))
         }
     }

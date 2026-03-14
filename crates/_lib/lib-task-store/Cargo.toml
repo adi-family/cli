@@ -25,9 +25,8 @@ thiserror = "2.0"
 async-trait = "0.1"
 
 [features]
-default = ["sqlite", "postgres"]
+default = ["sqlite"]
 sqlite = ["sqlx/sqlite", "sqlx/chrono"]
-postgres = ["sqlx/postgres", "sqlx/uuid", "sqlx/chrono"]
 
 [dev-dependencies]
 tokio-test = "0.4"
