@@ -15,6 +15,9 @@ import { RegistryHub } from './registry-hub';
 import { createRegistryHubDebugSync } from './registry-hub-debug';
 import { getEnabledWebPluginIds } from '../plugin-prefs';
 
+const SIGNALING_CONNECT_TIMEOUT_MS = 10_000;
+const MIN_LOADING_MS = 2_000;
+
 export interface Context {
   db: DbConnection;
 }
@@ -33,6 +36,7 @@ export class App {
   allPlugins: PluginDescriptor[] = [];
   debug: { loaded: string[]; failed: string[]; timedOut: string[] } | null =
     null;
+  private loadingStart = 0;
 
   private constructor(
     bus: EventBus,
@@ -56,16 +60,25 @@ export class App {
   }
 
   static async init(): Promise<App> {
+    const loadingStart = Date.now();
+
+    window.dispatchEvent(new CustomEvent('loading-step', { detail: 'init' }));
     const bus = EventBus.init();
     configureApp({ storageFactory: pluginStorageFactory });
     const db = DbConnection.init();
     db.registerStore('prefs');
+
+    window.dispatchEvent(new CustomEvent('loading-step', { detail: 'registry' }));
     const registryHub = RegistryHub.init();
     await registryHub.start({ db });
+
+    window.dispatchEvent(new CustomEvent('loading-step', { detail: 'plugins' }));
     const core = new PluginCore(bus, registryHub);
     const app = new App(bus, db, core, registryHub);
     App._instance = app;
     await app.init();
+
+    app.loadingStart = loadingStart;
     return app;
   }
 
@@ -103,6 +116,30 @@ export class App {
 
   @trace('starting')
   async start(): Promise<void> {
+    window.dispatchEvent(new CustomEvent('loading-step', { detail: 'signaling' }));
+
+    await new Promise<void>((resolve) => {
+      const unsub = this.bus.on(
+        'adi.signaling:state',
+        ({ state }: { state: string }) => {
+          if (state === 'connected') {
+            unsub();
+            resolve();
+          }
+        },
+        'app',
+      );
+      setTimeout(() => {
+        unsub();
+        resolve();
+      }, SIGNALING_CONNECT_TIMEOUT_MS);
+    });
+
+    const elapsed = Date.now() - this.loadingStart;
+    if (elapsed < MIN_LOADING_MS) {
+      await new Promise((r) => setTimeout(r, MIN_LOADING_MS - elapsed));
+    }
+
     window.dispatchEvent(new Event('app-ready'));
   }
 
