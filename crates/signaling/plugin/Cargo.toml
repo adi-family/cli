@@ -7,7 +7,12 @@ description = "ADI Signaling plugin — CLI commands for device pairing and sign
 authors = ["ADI Team"]
 
 [lib]
-crate-type = ["cdylib"]
+name = "signaling_plugin"
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "signaling-server"
+path = "src/main.rs"
 
 [dependencies]
 lib-plugin-prelude = { path = "../../_lib/lib-plugin-prelude" }
@@ -26,6 +31,7 @@ tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 anyhow = { workspace = true }
+dotenvy = "0.15"
 lib-env-parse = { path = "../../_lib/lib-env-parse" }
 
 [build-dependencies]

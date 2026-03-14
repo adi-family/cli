@@ -1,5 +1,5 @@
-mod server;
-mod ws;
+pub mod server;
+pub mod ws;
 
 use lib_plugin_prelude::*;
 
