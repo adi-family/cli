@@ -36,7 +36,7 @@ TAG="$(git -C "$PROJECT_ROOT" rev-parse --short HEAD)"
 SERVICE_ENVS="DATABASE_URL=${DATABASE_URL}"
 SERVICE_ENVS+=",JWT_SECRET=${JWT_SECRET}"
 SERVICE_ENVS+=",ENCRYPTION_KEY=${ENCRYPTION_KEY}"
-SERVICE_ENVS+=",PORT=8080"
+SERVICE_ENVS+=",HOST=0.0.0.0"
 [[ -n "${AUTH_DOMAIN:-}" ]] && SERVICE_ENVS+=",AUTH_DOMAIN=${AUTH_DOMAIN}"
 [[ -n "${ANALYTICS_URL:-}" ]] && SERVICE_ENVS+=",ANALYTICS_URL=${ANALYTICS_URL}"
 [[ -n "${UPSTREAM_TIMEOUT_SECS:-}" ]] && SERVICE_ENVS+=",UPSTREAM_TIMEOUT_SECS=${UPSTREAM_TIMEOUT_SECS}"
@@ -68,7 +68,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --cpu=1 \
   --min-instances=0 \
   --max-instances=3 \
-  --allow-unauthenticated \
+  --no-invoker-iam-check \
   --set-env-vars="$SERVICE_ENVS" \
   --add-cloudsql-instances="$CLOUDSQL_INSTANCE" \
   --execution-environment=gen2

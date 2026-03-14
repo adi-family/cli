@@ -141,7 +141,7 @@ describe('loadPlugins — requires', () => {
     const availablePlugins: PluginDescriptor[] = [{
       id: 'adi.auth',
       installedVersion: '1.0.0',
-      registry: { bundleUrl: async () => 'https://test/adi.auth.js', checkLatest: async () => null },
+      registry: { url: 'https://test', getBundleInfo: async () => ({ jsUrl: 'https://test/adi.auth.js' }), checkLatest: async () => null },
     }];
 
     await loadPlugins(bus, [], { timeout: 1000, availablePlugins });
@@ -183,8 +183,8 @@ describe('loadPlugins — requires', () => {
     bus.on('loading-finished', finished, 'test');
 
     const availablePlugins: PluginDescriptor[] = [
-      { id: 'mid', installedVersion: '1.0.0', registry: { bundleUrl: async () => 'https://test/mid.js', checkLatest: async () => null } },
-      { id: 'base', installedVersion: '1.0.0', registry: { bundleUrl: async () => 'https://test/base.js', checkLatest: async () => null } },
+      { id: 'mid', installedVersion: '1.0.0', registry: { url: 'https://test', getBundleInfo: async () => ({ jsUrl: 'https://test/mid.js' }), checkLatest: async () => null } },
+      { id: 'base', installedVersion: '1.0.0', registry: { url: 'https://test', getBundleInfo: async () => ({ jsUrl: 'https://test/base.js' }), checkLatest: async () => null } },
     ];
 
     await loadPlugins(bus, [], { timeout: 1000, availablePlugins });
@@ -217,7 +217,7 @@ describe('loadPlugins — requires', () => {
     const availablePlugins: PluginDescriptor[] = [{
       id: 'auth',
       installedVersion: '1.0.0',
-      registry: { bundleUrl: async () => 'https://test/auth.js', checkLatest: async () => null },
+      registry: { url: 'https://test', getBundleInfo: async () => ({ jsUrl: 'https://test/auth.js' }), checkLatest: async () => null },
     }];
 
     await loadPlugins(bus, [], { timeout: 1000, availablePlugins });

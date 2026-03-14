@@ -12,7 +12,6 @@ import './generated';
 
 interface RegistryPlugin {
   id: string;
-  pluginTypes: string[];
 }
 
 async function fetchRegistryPlugins(registryUrls: string[]): Promise<RegistryPlugin[]> {
@@ -21,13 +20,13 @@ async function fetchRegistryPlugins(registryUrls: string[]): Promise<RegistryPlu
 
   for (const url of registryUrls) {
     try {
-      const resp = await fetch(`${url}/v1/index`);
+      const resp = await fetch(`${url}/v1/index.json`);
       if (!resp.ok) continue;
       const data = await resp.json();
       for (const p of data.plugins ?? []) {
         if (seen.has(p.id)) continue;
         seen.add(p.id);
-        result.push({ id: p.id, pluginTypes: p.pluginTypes ?? [] });
+        result.push({ id: p.id });
       }
     } catch {
       // skip unavailable registries
@@ -273,9 +272,8 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
         connection.refreshPlugins(),
       ]);
 
-      const extensionPlugins = registryPlugins.filter(p => p.pluginTypes.includes('extension'));
       const installedIds = new Set(connection.plugins);
-      const missing = extensionPlugins.filter(p => !installedIds.has(p.id));
+      const missing = registryPlugins.filter(p => !installedIds.has(p.id));
 
       if (missing.length === 0) return;
 

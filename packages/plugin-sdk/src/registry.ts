@@ -172,9 +172,9 @@ export async function registerPluginSW(
 
     for (const [id, descriptor] of descriptors) {
       descriptor.registry
-        .bundleUrl(id, descriptor.installedVersion)
-        .then((bundleUrl) => {
-          if (bundleUrl !== data.url) return;
+        .getBundleInfo(id, descriptor.installedVersion)
+        .then((info) => {
+          if (info.jsUrl !== data.url) return;
           descriptor.registry
             .checkLatest(id, descriptor.installedVersion)
             .then((latest) => {
@@ -203,13 +203,13 @@ async function checkForUpdates(
     pluginDescriptors.map(async ({ id, registry: reg, installedVersion }) => {
       const result = await reg.checkLatest(id, installedVersion).catch(() => null);
       if (!result) return;
-      const newUrl = await reg.bundleUrl(id, result.version).catch(() => null);
-      if (!newUrl) return;
+      const info = await reg.getBundleInfo(id, result.version).catch(() => null);
+      if (!info) return;
       bus.emit('plugin:update-available', {
         pluginId: id,
         currentVersion: installedVersion,
         newVersion: result.version,
-        newUrl,
+        newUrl: info.jsUrl,
       }, 'plugin-registry');
     })
   );
@@ -232,25 +232,22 @@ async function initWithTimeout(
 }
 
 async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
-  const url = await descriptor.registry.bundleUrl(
+  const bundleInfo = await descriptor.registry.getBundleInfo(
     descriptor.id,
     descriptor.installedVersion
   );
 
-  // Derive CSS URL from bundle URL (sibling style.css next to web.js)
-  const cssUrl = url.replace(/\/[^/]+$/, '/style.css');
-
-  // Fetch JS + CSS in parallel
-  const [res, cssRes] = await Promise.all([
-    fetch(url),
-    fetch(cssUrl).catch(() => null),
-  ]);
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch plugin bundle: ${res.status} ${res.statusText} (${url})`);
+  const fetches: Promise<Response | null>[] = [fetch(bundleInfo.jsUrl)];
+  if (bundleInfo.cssUrl) {
+    fetches.push(fetch(bundleInfo.cssUrl).catch(() => null));
   }
 
-  // Inject CSS if available (backwards compat: silently ignore 404 / fetch errors)
+  const [res, cssRes] = await Promise.all(fetches);
+
+  if (!res?.ok) {
+    throw new Error(`Failed to fetch plugin bundle: ${res?.status} ${res?.statusText} (${bundleInfo.jsUrl})`);
+  }
+
   if (cssRes?.ok) {
     const cssText = await cssRes.text();
     if (cssText) {
@@ -265,7 +262,6 @@ async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
   const blobUrl = URL.createObjectURL(blob);
   try {
     const mod = await import(/* @vite-ignore */ blobUrl);
-    // Convention: export { MyPlugin as PluginShell } — SDK auto-registers it.
     if ('PluginShell' in mod) {
       if (typeof mod.PluginShell !== 'function') {
         throw new Error(`PluginShell export must be a class, got ${typeof mod.PluginShell}`);

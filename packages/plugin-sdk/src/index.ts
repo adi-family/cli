@@ -6,6 +6,7 @@ export type {
   BusMiddleware,
   EventHandler,
   PluginApiRegistry,
+  PluginBundleInfo,
   PluginRegistry,
   PluginDescriptor,
 } from './types.js';

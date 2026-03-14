@@ -1,24 +1,26 @@
 import type { RegistryPlugin } from './types.js';
 
-interface RegistryIndexResponse {
-  plugins: Array<{
-    id: string;
-    name: string;
-    description: string;
-    pluginType?: string;
-    pluginTypes?: string[];
-    latestVersion: string;
-    downloads: number;
-    author: string;
-    tags: string[];
-  }>;
+interface WebPluginEntry {
+  id: string;
+  name: string;
+  description: string;
+  latestVersion: string;
+  downloads: number;
+  author: string;
+  tags: string[];
 }
 
-interface SearchResponse {
-  plugins: RegistryIndexResponse['plugins'];
+interface WebRegistryIndex {
+  version: number;
+  updatedAt: number;
+  plugins: WebPluginEntry[];
 }
 
-const normalizePlugin = (p: RegistryIndexResponse['plugins'][number]): RegistryPlugin => ({
+interface WebSearchResults {
+  plugins: WebPluginEntry[];
+}
+
+const toRegistryPlugin = (p: WebPluginEntry): RegistryPlugin => ({
   id: p.id,
   name: p.name,
   description: p.description,
@@ -26,7 +28,7 @@ const normalizePlugin = (p: RegistryIndexResponse['plugins'][number]): RegistryP
   downloads: p.downloads,
   author: p.author,
   tags: p.tags ?? [],
-  pluginTypes: p.pluginTypes ?? (p.pluginType ? [p.pluginType] : []),
+  pluginTypes: ['web'],
 });
 
 /** Search plugins from a registry. Returns matching subset. */
@@ -35,14 +37,14 @@ export const searchPlugins = async (
   query: string,
 ): Promise<RegistryPlugin[]> => {
   const url = query.trim()
-    ? `${registryUrl}/v1/search?q=${encodeURIComponent(query)}&kind=plugin`
-    : `${registryUrl}/v1/index`;
+    ? `${registryUrl}/v1/search?q=${encodeURIComponent(query)}`
+    : `${registryUrl}/v1/index.json`;
 
   const res = await fetch(url);
   if (!res.ok) return [];
 
-  const data = (await res.json()) as SearchResponse;
-  return (data.plugins ?? []).map(normalizePlugin);
+  const data = (await res.json()) as WebSearchResults;
+  return (data.plugins ?? []).map(toRegistryPlugin);
 };
 
 /** Fetch full list from all registries. */
@@ -51,10 +53,10 @@ export const fetchAllPlugins = async (
 ): Promise<RegistryPlugin[]> => {
   const results = await Promise.allSettled(
     registryUrls.map(async (url) => {
-      const res = await fetch(`${url}/v1/index`);
+      const res = await fetch(`${url}/v1/index.json`);
       if (!res.ok) return [];
-      const data = (await res.json()) as RegistryIndexResponse;
-      return (data.plugins ?? []).map(normalizePlugin);
+      const data = (await res.json()) as WebRegistryIndex;
+      return (data.plugins ?? []).map(toRegistryPlugin);
     }),
   );
 

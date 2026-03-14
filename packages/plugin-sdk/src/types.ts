@@ -18,8 +18,15 @@ export interface BusMiddleware {
 }
 
 
+export interface PluginBundleInfo {
+  jsUrl: string;
+  cssUrl?: string;
+}
+
 export interface PluginRegistry {
-  bundleUrl(id: string, version: string): Promise<string>;
+  readonly url: string;
+
+  getBundleInfo(id: string, version: string): Promise<PluginBundleInfo>;
 
   checkLatest(
     id: string,
@@ -29,9 +36,12 @@ export interface PluginRegistry {
 
 export interface PluginDescriptor {
   id: string;
+  name?: string;
+  description?: string;
+  author?: string;
+  tags?: string[];
+  downloads?: number;
   registry: PluginRegistry;
   installedVersion: string;
   latestVersion?: string;
-  /** Plugin kinds reported by the registry (e.g. ["web"], ["http","web"], ["core"]). */
-  pluginTypes?: string[];
 }
