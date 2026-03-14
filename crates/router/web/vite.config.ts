@@ -6,7 +6,7 @@ export default defineConfig({
     alias: {
       "@adi-family/plugin-command-palette/bus": path.resolve(
         __dirname,
-        "../../command-palette/web/src/bus/index.ts",
+        "../../../plugins/adi/command-palette/web/src/bus/index.ts",
       ),
     },
   },

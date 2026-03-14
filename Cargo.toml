@@ -180,7 +180,7 @@ members = [
     "crates/debug-screen/plugin",
     "plugins/adi.actions-feed/plugin",
     "crates/router/plugin",
-    "crates/command-palette/plugin",
+    "plugins/adi/command-palette/plugin",
     "crates/slots/plugin",
     "plugins/adi/knowledgebase/plugin",
     "crates/agent-loop/plugin",

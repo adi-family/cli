@@ -10,10 +10,10 @@ authors = ["ADI Team"]
 crate-type = ["cdylib"]
 
 [dependencies]
-lib-plugin-prelude = { path = "../../_lib/lib-plugin-prelude" }
+lib-plugin-prelude = { path = "../../../../crates/_lib/lib-plugin-prelude" }
 
 [build-dependencies]
-lib-plugin-web-build = { path = "../../_lib/lib-plugin-web-build" }
+lib-plugin-web-build = { path = "../../../../crates/_lib/lib-plugin-web-build" }
 
 [package.metadata.plugin]
 id = "adi.command-palette"

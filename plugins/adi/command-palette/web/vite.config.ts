@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
-    outDir: "../../../dist/adi.command-palette",
+    outDir: "../../../../dist/adi.command-palette",
     lib: {
       entry: "src/index.ts",
       formats: ["es"],

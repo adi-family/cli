@@ -48,21 +48,6 @@
         "vite": "^7.3.1",
       },
     },
-    "crates/command-palette/web": {
-      "name": "@adi-family/plugin-command-palette",
-      "version": "0.1.0",
-      "dependencies": {
-        "@adi-family/plugin-slots": "workspace:*",
-        "@adi-family/sdk-plugin": "workspace:*",
-        "lit": "^3.3.2",
-      },
-      "devDependencies": {
-        "@tailwindcss/vite": "^4.2.0",
-        "tailwindcss": "^4.2.0",
-        "typescript": "~5.9.3",
-        "vite": "^7.3.1",
-      },
-    },
     "crates/debug-screen/web": {
       "name": "@adi-family/plugin-debug-screen",
       "version": "0.1.0",
@@ -323,9 +308,43 @@
         "vite": "^7.3.1",
       },
     },
+    "plugins/adi/command-palette/web": {
+      "name": "@adi-family/plugin-command-palette",
+      "version": "0.1.0",
+      "dependencies": {
+        "@adi-family/plugin-slots": "workspace:*",
+        "@adi-family/sdk-plugin": "workspace:*",
+        "lit": "^3.3.2",
+      },
+      "devDependencies": {
+        "@tailwindcss/vite": "^4.2.0",
+        "tailwindcss": "^4.2.0",
+        "typescript": "~5.9.3",
+        "vite": "^7.3.1",
+      },
+    },
     "plugins/adi/knowledgebase/web": {
       "name": "@adi-family/plugin-knowledgebase",
       "version": "0.1.0",
+      "dependencies": {
+        "@adi-family/cocoon-plugin-interface": "workspace:*",
+        "@adi-family/plugin-actions-feed": "workspace:*",
+        "@adi-family/plugin-cocoon": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
+        "@adi-family/plugin-signaling": "workspace:*",
+        "@adi-family/sdk-plugin": "workspace:*",
+        "lit": "^3.3.2",
+      },
+      "devDependencies": {
+        "@tailwindcss/vite": "^4.2.0",
+        "tailwindcss": "^4.2.0",
+        "typescript": "~5.9.3",
+        "vite": "^7.3.1",
+      },
+    },
+    "plugins/adi/llm-proxy/web": {
+      "name": "@adi-family/plugin-llm-proxy",
+      "version": "0.8.4",
       "dependencies": {
         "@adi-family/cocoon-plugin-interface": "workspace:*",
         "@adi-family/plugin-actions-feed": "workspace:*",
@@ -354,13 +373,15 @@
 
     "@adi-family/plugin-cocoon-control-center": ["@adi-family/plugin-cocoon-control-center@workspace:crates/cocoon-control-center/web"],
 
-    "@adi-family/plugin-command-palette": ["@adi-family/plugin-command-palette@workspace:crates/command-palette/web"],
+    "@adi-family/plugin-command-palette": ["@adi-family/plugin-command-palette@workspace:plugins/adi/command-palette/web"],
 
     "@adi-family/plugin-credentials": ["@adi-family/plugin-credentials@workspace:plugins/adi.credentials/web"],
 
     "@adi-family/plugin-debug-screen": ["@adi-family/plugin-debug-screen@workspace:crates/debug-screen/web"],
 
     "@adi-family/plugin-knowledgebase": ["@adi-family/plugin-knowledgebase@workspace:plugins/adi/knowledgebase/web"],
+
+    "@adi-family/plugin-llm-proxy": ["@adi-family/plugin-llm-proxy@workspace:plugins/adi/llm-proxy/web"],
 
     "@adi-family/plugin-monaco-editor": ["@adi-family/plugin-monaco-editor@workspace:crates/monaco-editor/web"],
 
