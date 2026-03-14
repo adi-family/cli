@@ -1,0 +1,60 @@
+[package]
+name = "embed-proxy-http"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "ADI Embed Proxy HTTP server - RESTful API + /v1/embeddings proxy forwarding"
+
+[[bin]]
+name = "embed-proxy"
+path = "src/main.rs"
+
+[[bin]]
+name = "embed-proxy-migrate"
+path = "src/migrate.rs"
+
+[dependencies]
+embed-proxy-core = { path = "../core" }
+lib-http-common = { path = "../../../../crates/_lib/lib-http-common" }
+lib-env-parse = { path = "../../../../crates/_lib/lib-env-parse" }
+
+# Web framework
+axum = { version = "0.7", features = ["macros"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tower = "0.5"
+
+# Runtime
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal"] }
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Auth
+jsonwebtoken = "9"
+
+# Types
+uuid.workspace = true
+chrono.workspace = true
+rust_decimal = { version = "1", features = ["serde"] }
+
+# Async
+async-trait.workspace = true
+
+# Observability
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# Database (for migrations binary)
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "migrate"] }
+
+# HTTP types
+http = "1"
+
+# Env
+dotenvy = "0.15"

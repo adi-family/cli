@@ -1,0 +1,37 @@
+[package]
+name = "embed-proxy-plugin"
+version = "0.1.0"
+edition = "2021"
+license = "BSL-1.0"
+authors = ["ADI Team"]
+description = "ADI Embed Proxy plugin - web UI for embedding API proxy management"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lib-plugin-prelude = { path = "../../../../crates/_lib/lib-plugin-prelude" }
+
+[build-dependencies]
+lib-plugin-web-build = { path = "../../../../crates/_lib/lib-plugin-web-build" }
+
+[package.metadata.plugin]
+id = "adi.embed-proxy"
+name = "Embed Proxy"
+type = "extension"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "2.0.0"
+
+[[package.metadata.plugin.provides]]
+id = "adi.embed-proxy.cli"
+version = "0.1.0"
+description = "CLI commands for embedding proxy management"
+
+[package.metadata.plugin.web_ui]
+entry = "web.js"
+sandbox = false
+plugin_class = "EmbedProxyPlugin"
+
+[package.metadata.plugin.tags]
+categories = ["embedding", "proxy", "api"]

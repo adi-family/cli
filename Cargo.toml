@@ -66,6 +66,11 @@ members = [
     "plugins/adi/llm-proxy/http",
     "plugins/adi/llm-proxy/plugin",
 
+    # Embed Proxy components
+    "plugins/adi/embed-proxy/core",
+    "plugins/adi/embed-proxy/http",
+    "plugins/adi/embed-proxy/plugin",
+
     # Hive components
     "crates/hive/core",
     # Hive plugins
@@ -274,6 +279,7 @@ mux-core = { path = "crates/mux/core" }
 flags-core = { path = "crates/flags/core" }
 linter-core = { path = "crates/linter/core" }
 llm-proxy-core = { path = "plugins/adi/llm-proxy/core" }
+embed-proxy-core = { path = "plugins/adi/embed-proxy/core" }
 hive-core = { path = "crates/hive/core" }
 tools-core = { path = "crates/tools/core" }
 payment-core = { path = "crates/payment/core" }
