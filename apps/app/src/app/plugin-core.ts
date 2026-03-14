@@ -39,6 +39,7 @@ export class PluginCore {
     loaded: string[];
     failed: string[];
     timedOut: string[];
+    reasons: Record<string, string>;
   }> {
     const all = dedupeById(await this.registryHub.fetchAllDescriptors());
     const toLoad = all.filter((d) => this.pendingIds.has(d.id));
@@ -46,12 +47,13 @@ export class PluginCore {
     let loaded: string[] = [];
     let failed: string[] = [];
     let timedOut: string[] = [];
+    let reasons: Record<string, string> = {};
 
     if (toLoad.length > 0) {
-      const resultPromise = new Promise<{ loaded: string[]; failed: string[]; timedOut: string[] }>((resolve) => {
+      const resultPromise = new Promise<{ loaded: string[]; failed: string[]; timedOut: string[]; reasons: Record<string, string> }>((resolve) => {
         const unsub = this.bus.on(
           'loading-finished',
-          (result: { loaded: string[]; failed: string[]; timedOut: string[] }) => {
+          (result) => {
             unsub();
             resolve(result);
           },
@@ -60,11 +62,11 @@ export class PluginCore {
       });
 
       await loadPlugins(this.bus, toLoad, { availablePlugins: all });
-      ({ loaded, failed, timedOut } = await resultPromise);
+      ({ loaded, failed, timedOut, reasons } = await resultPromise);
     }
 
     this.pendingIds.clear();
-    return { allPlugins: all, loaded, failed, timedOut };
+    return { allPlugins: all, loaded, failed, timedOut, reasons };
   }
 
   dispose(): void {

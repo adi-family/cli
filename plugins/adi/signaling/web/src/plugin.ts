@@ -23,7 +23,7 @@ export class SignalingPlugin extends AdiPlugin implements SignalingApi {
   private debugEl: AdiSignalingDebugElement | null = null;
   private readonly debugUnsubs: (() => void)[] = [];
 
-  private get authApi() {
+  private authApi() {
     return this.app.api('adi.auth');
   }
 
@@ -56,7 +56,10 @@ export class SignalingPlugin extends AdiPlugin implements SignalingApi {
     this.hub = SignalingHub.init(
       this.bus,
       this.app.env('DEFAULT_SIGNALING_URLS'),
-      (domain) => this.authApi.getToken(domain),
+      async (domain) => {
+        const auth = await this.authApi();
+        return auth.getToken(domain);
+      },
       this.app.storage(this.id),
     );
     await this.hub.start();

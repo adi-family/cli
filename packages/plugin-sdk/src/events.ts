@@ -12,6 +12,7 @@ declare module './types.js' {
       loaded: string[];
       failed: string[];
       timedOut: string[];
+      reasons: Record<string, string>;
     };
 
     // --- Plugin versioning ---

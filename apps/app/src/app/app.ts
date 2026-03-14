@@ -100,7 +100,7 @@ export class App {
     this.core.registerPluginById('adi.plugins');
 
     await this.registerEnabledPlugins();
-    const { allPlugins, loaded, failed, timedOut } = await this.core.fetchPlugins();
+    const { allPlugins, loaded, failed, timedOut, reasons } = await this.core.fetchPlugins();
     this.allPlugins = allPlugins;
     this.debug = { loaded, failed, timedOut };
 
@@ -109,15 +109,13 @@ export class App {
     const optionalBroken = broken.filter((id) => !REQUIRED_PLUGINS.has(id));
 
     if (optionalBroken.length > 0) {
-      console.warn(`[app] optional plugins failed to load: ${optionalBroken.join(', ')}`);
+      const details = optionalBroken.map((id) => `${id}: ${reasons[id] ?? 'unknown'}`);
+      console.warn(`[app] optional plugins failed to load:\n  ${details.join('\n  ')}`);
     }
 
     if (requiredBroken.length > 0) {
-      const reasons = [
-        ...failed.filter((id) => REQUIRED_PLUGINS.has(id)).map((id) => `${id} failed`),
-        ...timedOut.filter((id) => REQUIRED_PLUGINS.has(id)).map((id) => `${id} timed out`),
-      ];
-      throw new Error(`Required plugins failed: ${reasons.join(', ')}`);
+      const details = requiredBroken.map((id) => `${id}: ${reasons[id] ?? 'unknown'}`);
+      throw new Error(`Required plugins failed:\n  ${details.join('\n  ')}`);
     }
 
     this.registerRegistryHubDebug();

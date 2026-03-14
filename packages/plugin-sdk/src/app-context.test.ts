@@ -45,18 +45,11 @@ describe('AppContext — env', () => {
 });
 
 describe('AppContext — api provide/retrieve', () => {
-  it('provides and retrieves an API', () => {
+  it('provides and retrieves an API', async () => {
     const ctx = makeCtx();
     const api = { doStuff: () => 42 };
     ctx._provide('my-api', api);
-    expect(ctx.api('my-api' as never)).toBe(api);
-  });
-
-  it('throws when accessing unregistered API', () => {
-    const ctx = makeCtx();
-    expect(() => ctx.api('missing' as never)).toThrow(
-      "API 'missing' is not registered",
-    );
+    expect(await ctx.api('my-api' as never)).toBe(api);
   });
 
   it('throws on duplicate provide', () => {
@@ -67,18 +60,18 @@ describe('AppContext — api provide/retrieve', () => {
     );
   });
 
-  it('apiReady resolves immediately when already provided', async () => {
+  it('resolves immediately when already provided', async () => {
     const ctx = makeCtx();
     const api = { value: 99 };
     ctx._provide('ready', api);
-    const result = await (ctx as any).apiReady('ready');
+    const result = await ctx.api('ready' as never);
     expect(result).toBe(api);
   });
 
-  it('apiReady waits for a late-provided API', async () => {
+  it('waits for a late-provided API', async () => {
     const ctx = makeCtx();
     const api = { late: true };
-    const promise = (ctx as any).apiReady('deferred');
+    const promise = ctx.api('deferred' as never);
 
     ctx._provide('deferred', api);
 
@@ -86,11 +79,11 @@ describe('AppContext — api provide/retrieve', () => {
     expect(result).toBe(api);
   });
 
-  it('apiReady resolves multiple waiters', async () => {
+  it('resolves multiple waiters', async () => {
     const ctx = makeCtx();
     const api = { shared: true };
-    const p1 = (ctx as any).apiReady('multi');
-    const p2 = (ctx as any).apiReady('multi');
+    const p1 = ctx.api('multi' as never);
+    const p2 = ctx.api('multi' as never);
 
     ctx._provide('multi', api);
 
@@ -99,13 +92,15 @@ describe('AppContext — api provide/retrieve', () => {
     expect(r2).toBe(api);
   });
 
-  it('unprovide removes the API', () => {
+  it('waits after unprovide until re-provided', async () => {
     const ctx = makeCtx();
     ctx._provide('temp', { x: 1 });
     ctx._unprovide('temp');
-    expect(() => ctx.api('temp' as never)).toThrow(
-      "API 'temp' is not registered",
-    );
+
+    const api = { x: 2 };
+    const promise = ctx.api('temp' as never);
+    ctx._provide('temp', api);
+    expect(await promise).toBe(api);
   });
 });
 

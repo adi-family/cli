@@ -28,15 +28,15 @@ export class CredentialsPlugin extends AdiPlugin {
 
   get api() { return api; }
 
-  private ensureConnection(cocoonId: string): Connection {
+  private async ensureConnection(cocoonId: string): Promise<Connection> {
     try {
       return cocoon.getConnection(cocoonId);
     } catch {
       const tracked = this.devices.get(cocoonId);
       if (!tracked) throw new Error(`Device '${cocoonId}' not found`);
-      const cocoonApi = this.app.api('adi.cocoon');
+      const cocoonApi = await this.app.api('adi.cocoon');
       const rtcConfig = this.iceServers ? { iceServers: this.iceServers } : undefined;
-      cocoonApi.createClient(cocoonId, tracked.signalingUrl, rtcConfig);
+      await cocoonApi.createClient(cocoonId, tracked.signalingUrl, rtcConfig);
       return cocoon.getConnection(cocoonId);
     }
   }

@@ -15,7 +15,9 @@ export function registerPlugin(plugin: AdiPlugin): void {
 /** Configure AppContext options before plugins are loaded. */
 export function configureApp(options: AppContextOptions): void {
   if (sharedApp) {
-    throw new Error('configureApp() must be called before any plugins are loaded.');
+    throw new Error(
+      'configureApp() must be called before any plugins are loaded.',
+    );
   }
   appOptions = { ...appOptions, ...options };
 }
@@ -31,7 +33,11 @@ export function _resetRegistry(): void {
 }
 
 function getApp(bus: EventBus): AppContext {
-  if (!sharedApp) sharedApp = new AppContext(bus, { envSource: import.meta.env, ...appOptions });
+  if (!sharedApp)
+    sharedApp = new AppContext(bus, {
+      envSource: import.meta.env,
+      ...appOptions,
+    });
   return sharedApp;
 }
 
@@ -44,7 +50,7 @@ export interface LoadPluginsOptions {
 export async function loadPlugins(
   bus: EventBus,
   pluginDescriptors: PluginDescriptor[],
-  options: LoadPluginsOptions = {}
+  options: LoadPluginsOptions = {},
 ): Promise<void> {
   const timeout = options.timeout ?? 5000;
 
@@ -52,16 +58,23 @@ export async function loadPlugins(
     descriptors.set(d.id, d);
   }
 
-  const importResults = await Promise.allSettled(pluginDescriptors.map((d) => fetchAndImport(d)));
+  const importResults = await Promise.allSettled(
+    pluginDescriptors.map((d) => fetchAndImport(d)),
+  );
   for (let i = 0; i < importResults.length; i++) {
     const r = importResults[i];
     if (r.status === 'rejected') {
-      console.error(`[plugin] failed to load '${pluginDescriptors[i].id}':`, r.reason);
+      console.error(
+        `[plugin] failed to load '${pluginDescriptors[i].id}':`,
+        r.reason,
+      );
     }
   }
 
   // Resolve `requires`: auto-fetch missing required plugins from availablePlugins.
-  const available = new Map((options.availablePlugins ?? []).map((d) => [d.id, d]));
+  const available = new Map(
+    (options.availablePlugins ?? []).map((d) => [d.id, d]),
+  );
   const autoInstalled = await resolveRequires(bus, available);
 
   const plugins = [...registry.values()];
@@ -71,26 +84,59 @@ export async function loadPlugins(
   const loaded: string[] = [];
   const failed: string[] = [...cycled];
   const timedOut: string[] = [];
+  const reasons: Record<string, string> = {};
+
+  for (const id of cycled) {
+    reasons[id] = 'circular dependency detected';
+  }
+
+  // Track bundle fetch failures so they get the real reason, not "did not register".
+  const fetchFailed = new Set<string>();
+  for (let i = 0; i < importResults.length; i++) {
+    const r = importResults[i];
+    if (r.status === 'rejected') {
+      const id = pluginDescriptors[i].id;
+      const reason = `failed to load bundle: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`;
+      failed.push(id);
+      reasons[id] = reason;
+      fetchFailed.add(id);
+    }
+  }
 
   const allDescriptors = [...pluginDescriptors, ...autoInstalled];
   const registeredIds = new Set(plugins.map((p) => p.id));
   for (const d of allDescriptors) {
-    if (!registeredIds.has(d.id)) {
-      console.error(`[plugin] '${d.id}' bundle loaded but did not register — export your plugin class as PluginShell: export { MyPlugin as PluginShell }`);
+    if (!registeredIds.has(d.id) && !fetchFailed.has(d.id)) {
+      const reason = `bundle loaded but did not register (missing PluginShell export)`;
+      console.error(`[plugin] '${d.id}' ${reason}`);
       failed.push(d.id);
+      reasons[d.id] = reason;
     }
   }
 
   const app = getApp(bus);
-  for (const plugin of order) {
-    const result = await initWithTimeout(plugin, app, timeout);
-    if (result === 'ok') loaded.push(plugin.id);
-    else if (result === 'timeout') {
-      console.error(`[plugin] '${plugin.id}' timed out during onRegister (>${timeout}ms)`);
-      timedOut.push(plugin.id);
-    } else {
-      console.error(`[plugin] '${plugin.id}' threw during onRegister:`, result.error);
-      failed.push(plugin.id);
+  const levels = topoLevels(order, requiresEdges);
+  for (const level of levels) {
+    const results = await Promise.all(
+      level.map(async (plugin: AdiPlugin) => {
+        const result = await initWithTimeout(plugin, app, timeout);
+        return { plugin, result };
+      }),
+    );
+
+    for (const { plugin, result } of results) {
+      if (result === 'ok') loaded.push(plugin.id);
+      else if (result === 'timeout') {
+        const reason = `timed out during onRegister (>${timeout}ms)`;
+        console.error(`[plugin] '${plugin.id}' ${reason}`);
+        timedOut.push(plugin.id);
+        reasons[plugin.id] = reason;
+      } else {
+        const reason = `threw during onRegister: ${result.error instanceof Error ? result.error.message : String(result.error)}`;
+        console.error(`[plugin] '${plugin.id}' ${reason}`);
+        failed.push(plugin.id);
+        reasons[plugin.id] = reason;
+      }
     }
   }
 
@@ -98,14 +144,21 @@ export async function loadPlugins(
   void checkForUpdates(bus, allDescriptors);
 
   // Phase 5: Signal completion.
-  bus.emit('loading-finished', { loaded, failed, timedOut }, 'plugin-registry');
+  bus.emit(
+    'loading-finished',
+    { loaded, failed, timedOut, reasons },
+    'plugin-registry',
+  );
 }
 
 export interface UpgradePluginOptions {
   timeout?: number;
 }
 
-export async function initInternalPlugin(bus: EventBus, plugin: AdiPlugin): Promise<void> {
+export async function initInternalPlugin(
+  bus: EventBus,
+  plugin: AdiPlugin,
+): Promise<void> {
   registerPlugin(plugin);
   await plugin._init(getApp(bus));
 }
@@ -113,14 +166,18 @@ export async function initInternalPlugin(bus: EventBus, plugin: AdiPlugin): Prom
 export async function upgradePlugin(
   bus: EventBus,
   descriptor: PluginDescriptor,
-  options: UpgradePluginOptions = {}
+  options: UpgradePluginOptions = {},
 ): Promise<void> {
   const timeout = options.timeout ?? 5000;
   const { id, installedVersion } = descriptor;
   const existing = registry.get(id);
   const fromVersion = existing?.version ?? 'unknown';
 
-  bus.emit('plugin:upgrading', { pluginId: id, fromVersion, toVersion: installedVersion }, 'plugin-registry');
+  bus.emit(
+    'plugin:upgrading',
+    { pluginId: id, fromVersion, toVersion: installedVersion },
+    'plugin-registry',
+  );
 
   try {
     if (existing) {
@@ -132,24 +189,33 @@ export async function upgradePlugin(
     await fetchAndImport(descriptor);
 
     const newPlugin = registry.get(id);
-    if (!newPlugin) throw new Error(`Plugin ${id} did not call registerPlugin()`);
+    if (!newPlugin)
+      throw new Error(`Plugin ${id} did not call registerPlugin()`);
 
     const result = await initWithTimeout(newPlugin, getApp(bus), timeout);
     if (result === 'timeout') {
       throw new Error(`Plugin ${id} timed out during upgrade`);
     } else if (typeof result === 'object') {
       throw new Error(
-        `Plugin ${id} errored during upgrade: ${result.error instanceof Error ? result.error.message : String(result.error)}`
+        `Plugin ${id} errored during upgrade: ${result.error instanceof Error ? result.error.message : String(result.error)}`,
       );
     }
 
     descriptors.set(id, descriptor);
-    bus.emit('plugin:upgraded', { pluginId: id, fromVersion, toVersion: installedVersion }, 'plugin-registry');
+    bus.emit(
+      'plugin:upgraded',
+      { pluginId: id, fromVersion, toVersion: installedVersion },
+      'plugin-registry',
+    );
   } catch (err) {
-    bus.emit('plugin:upgrade-failed', {
-      pluginId: id,
-      reason: err instanceof Error ? err.message : String(err),
-    }, 'plugin-registry');
+    bus.emit(
+      'plugin:upgrade-failed',
+      {
+        pluginId: id,
+        reason: err instanceof Error ? err.message : String(err),
+      },
+      'plugin-registry',
+    );
   }
 }
 
@@ -157,7 +223,7 @@ let swMessageController: AbortController | undefined;
 
 export async function registerPluginSW(
   swUrl: URL | string,
-  bus: EventBus
+  bus: EventBus,
 ): Promise<void> {
   if (!('serviceWorker' in navigator)) return;
 
@@ -166,52 +232,68 @@ export async function registerPluginSW(
 
   const reg = await navigator.serviceWorker.register(swUrl, { type: 'module' });
 
-  navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
-    const data = event.data as { type: string; url: string } | undefined;
-    if (data?.type !== 'plugin:bundle-updated') return;
+  navigator.serviceWorker.addEventListener(
+    'message',
+    (event: MessageEvent) => {
+      const data = event.data as { type: string; url: string } | undefined;
+      if (data?.type !== 'plugin:bundle-updated') return;
 
-    for (const [id, descriptor] of descriptors) {
-      descriptor.registry
-        .getBundleInfo(id, descriptor.installedVersion)
-        .then((info) => {
-          if (info.jsUrl !== data.url) return;
-          descriptor.registry
-            .checkLatest(id, descriptor.installedVersion)
-            .then((latest) => {
-              if (!latest) return;
-              bus.emit('plugin:update-available', {
-                pluginId: id,
-                currentVersion: descriptor.installedVersion,
-                newVersion: latest.version,
-                newUrl: data.url,
-              }, 'plugin-sw');
-            })
-            .catch(() => null);
-        })
-        .catch(() => null);
-    }
-  }, { signal: swMessageController.signal });
+      for (const [id, descriptor] of descriptors) {
+        descriptor.registry
+          .getBundleInfo(id, descriptor.installedVersion)
+          .then((info) => {
+            if (info.jsUrl !== data.url) return;
+            descriptor.registry
+              .checkLatest(id, descriptor.installedVersion)
+              .then((latest) => {
+                if (!latest) return;
+                bus.emit(
+                  'plugin:update-available',
+                  {
+                    pluginId: id,
+                    currentVersion: descriptor.installedVersion,
+                    newVersion: latest.version,
+                    newUrl: data.url,
+                  },
+                  'plugin-sw',
+                );
+              })
+              .catch(() => null);
+          })
+          .catch(() => null);
+      }
+    },
+    { signal: swMessageController.signal },
+  );
 
   await reg.update().catch(() => null);
 }
 
 async function checkForUpdates(
   bus: EventBus,
-  pluginDescriptors: PluginDescriptor[]
+  pluginDescriptors: PluginDescriptor[],
 ): Promise<void> {
   await Promise.allSettled(
     pluginDescriptors.map(async ({ id, registry: reg, installedVersion }) => {
-      const result = await reg.checkLatest(id, installedVersion).catch(() => null);
+      const result = await reg
+        .checkLatest(id, installedVersion)
+        .catch(() => null);
       if (!result) return;
-      const info = await reg.getBundleInfo(id, result.version).catch(() => null);
+      const info = await reg
+        .getBundleInfo(id, result.version)
+        .catch(() => null);
       if (!info) return;
-      bus.emit('plugin:update-available', {
-        pluginId: id,
-        currentVersion: installedVersion,
-        newVersion: result.version,
-        newUrl: info.jsUrl,
-      }, 'plugin-registry');
-    })
+      bus.emit(
+        'plugin:update-available',
+        {
+          pluginId: id,
+          currentVersion: installedVersion,
+          newVersion: result.version,
+          newUrl: info.jsUrl,
+        },
+        'plugin-registry',
+      );
+    }),
   );
 }
 
@@ -220,21 +302,27 @@ type InitResult = 'ok' | 'timeout' | { error: unknown };
 async function initWithTimeout(
   plugin: AdiPlugin,
   app: AppContext,
-  timeoutMs: number
+  timeoutMs: number,
 ): Promise<InitResult> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve('timeout'), timeoutMs);
     plugin
       ._init(app)
-      .then(() => { clearTimeout(timer); resolve('ok'); })
-      .catch((err: unknown) => { clearTimeout(timer); resolve({ error: err }); });
+      .then(() => {
+        clearTimeout(timer);
+        resolve('ok');
+      })
+      .catch((err: unknown) => {
+        clearTimeout(timer);
+        resolve({ error: err });
+      });
   });
 }
 
 async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
   const bundleInfo = await descriptor.registry.getBundleInfo(
     descriptor.id,
-    descriptor.installedVersion
+    descriptor.installedVersion,
   );
 
   const fetches: Promise<Response | null>[] = [fetch(bundleInfo.jsUrl)];
@@ -245,7 +333,9 @@ async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
   const [res, cssRes] = await Promise.all(fetches);
 
   if (!res?.ok) {
-    throw new Error(`Failed to fetch plugin bundle: ${res?.status} ${res?.statusText} (${bundleInfo.jsUrl})`);
+    throw new Error(
+      `Failed to fetch plugin bundle: ${res?.status} ${res?.statusText} (${bundleInfo.jsUrl})`,
+    );
   }
 
   if (cssRes?.ok) {
@@ -264,11 +354,14 @@ async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
     const mod = await import(/* @vite-ignore */ blobUrl);
     if ('PluginShell' in mod) {
       if (typeof mod.PluginShell !== 'function') {
-        throw new Error(`PluginShell export must be a class, got ${typeof mod.PluginShell}`);
+        throw new Error(
+          `PluginShell export must be a class, got ${typeof mod.PluginShell}`,
+        );
       }
       const instance = new (mod.PluginShell as new () => unknown)();
       if (
-        typeof instance !== 'object' || instance === null ||
+        typeof instance !== 'object' ||
+        instance === null ||
         typeof (instance as Record<string, unknown>)['id'] !== 'string' ||
         typeof (instance as Record<string, unknown>)['_init'] !== 'function' ||
         typeof (instance as Record<string, unknown>)['_destroy'] !== 'function'
@@ -285,7 +378,7 @@ async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
 /** Walk registered plugins' `requires`, fetch missing ones from availablePlugins. */
 async function resolveRequires(
   bus: EventBus,
-  available: Map<string, PluginDescriptor>
+  available: Map<string, PluginDescriptor>,
 ): Promise<PluginDescriptor[]> {
   const installed: PluginDescriptor[] = [];
   const seen = new Set<string>();
@@ -299,7 +392,9 @@ async function resolveRequires(
 
       const desc = available.get(reqId);
       if (!desc) {
-        console.error(`[plugin] required plugin '${reqId}' not found in availablePlugins`);
+        console.error(
+          `[plugin] required plugin '${reqId}' not found in availablePlugins`,
+        );
         continue;
       }
 
@@ -307,14 +402,21 @@ async function resolveRequires(
         await fetchAndImport(desc);
         descriptors.set(desc.id, desc);
         installed.push(desc);
-        bus.emit('plugin:installed', { pluginId: reqId, reason: 'auto' }, 'plugin-registry');
+        bus.emit(
+          'plugin:installed',
+          { pluginId: reqId, reason: 'auto' },
+          'plugin-registry',
+        );
 
         const newPlugin = registry.get(reqId);
         if (newPlugin) {
           next.push(...(newPlugin.requires ?? []));
         }
       } catch (err) {
-        console.error(`[plugin] failed to auto-install required plugin '${reqId}':`, err);
+        console.error(
+          `[plugin] failed to auto-install required plugin '${reqId}':`,
+          err,
+        );
       }
     }
     frontier = next;
@@ -325,13 +427,39 @@ async function resolveRequires(
 
 /** Collect dependency edges from `requires` (same direction as `dependencies`). */
 function collectRequiresEdges(plugins: AdiPlugin[]): Array<[string, string]> {
-  return plugins.flatMap((p) => (p.requires ?? []).map((req): [string, string] => [req, p.id]));
+  return plugins.flatMap((p) =>
+    (p.requires ?? []).map((req): [string, string] => [req, p.id]),
+  );
+}
+
+/** Group topo-sorted plugins into parallel levels respecting dependency order. */
+function topoLevels(
+  order: AdiPlugin[],
+  edges: Array<[string, string]>,
+): AdiPlugin[][] {
+  const depSet = new Map<string, Set<string>>();
+  for (const [from, to] of edges)
+    depSet.set(to, (depSet.get(to) ?? new Set()).add(from));
+
+  const levels: AdiPlugin[][] = [];
+  const assigned = new Map<string, number>();
+
+  for (const plugin of order) {
+    const deps = depSet.get(plugin.id);
+    const level = deps
+      ? Math.max(...[...deps].map((d) => (assigned.get(d) ?? -1) + 1))
+      : 0;
+    assigned.set(plugin.id, level);
+    (levels[level] ??= []).push(plugin);
+  }
+
+  return levels;
 }
 
 /** Kahn's algorithm topological sort. */
 function topoSort(
   plugins: AdiPlugin[],
-  extraEdges: Array<[string, string]> = []
+  extraEdges: Array<[string, string]> = [],
 ): { order: AdiPlugin[]; cycled: string[] } {
   const ids = new Set(plugins.map((p) => p.id));
   const inDegree = new Map<string, number>();

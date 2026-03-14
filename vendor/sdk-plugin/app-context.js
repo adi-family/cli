@@ -16,16 +16,8 @@ export class AppContext {
     env(key) {
         return (this.envSource[`VITE_${key}`] ?? '').split(',').filter(Boolean);
     }
-    /** Retrieve a typed plugin API by its registered key. Throws if not yet available. */
-    api(id) {
-        const instance = this.apis.get(id);
-        if (!instance) {
-            throw new Error(`API '${String(id)}' is not registered. Ensure the plugin is loaded and calls app.provide().`);
-        }
-        return instance;
-    }
     /** Retrieve a typed plugin API, waiting for it to become available if not yet registered. */
-    apiReady(id) {
+    api(id) {
         const instance = this.apis.get(id);
         if (instance)
             return Promise.resolve(instance);

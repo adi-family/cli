@@ -49,12 +49,30 @@ export async function loadPlugins(bus, pluginDescriptors, options = {}) {
     const loaded = [];
     const failed = [...cycled];
     const timedOut = [];
+    const reasons = {};
+    for (const id of cycled) {
+        reasons[id] = 'circular dependency detected';
+    }
+    // Track bundle fetch failures so they get the real reason, not "did not register".
+    const fetchFailed = new Set();
+    for (let i = 0; i < importResults.length; i++) {
+        const r = importResults[i];
+        if (r.status === 'rejected') {
+            const id = pluginDescriptors[i].id;
+            const reason = `failed to load bundle: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`;
+            failed.push(id);
+            reasons[id] = reason;
+            fetchFailed.add(id);
+        }
+    }
     const allDescriptors = [...pluginDescriptors, ...autoInstalled];
     const registeredIds = new Set(plugins.map((p) => p.id));
     for (const d of allDescriptors) {
-        if (!registeredIds.has(d.id)) {
-            console.error(`[plugin] '${d.id}' bundle loaded but did not register — export your plugin class as PluginShell: export { MyPlugin as PluginShell }`);
+        if (!registeredIds.has(d.id) && !fetchFailed.has(d.id)) {
+            const reason = `bundle loaded but did not register (missing PluginShell export)`;
+            console.error(`[plugin] '${d.id}' ${reason}`);
             failed.push(d.id);
+            reasons[d.id] = reason;
         }
     }
     const app = getApp(bus);
@@ -63,18 +81,22 @@ export async function loadPlugins(bus, pluginDescriptors, options = {}) {
         if (result === 'ok')
             loaded.push(plugin.id);
         else if (result === 'timeout') {
-            console.error(`[plugin] '${plugin.id}' timed out during onRegister (>${timeout}ms)`);
+            const reason = `timed out during onRegister (>${timeout}ms)`;
+            console.error(`[plugin] '${plugin.id}' ${reason}`);
             timedOut.push(plugin.id);
+            reasons[plugin.id] = reason;
         }
         else {
-            console.error(`[plugin] '${plugin.id}' threw during onRegister:`, result.error);
+            const reason = `threw during onRegister: ${result.error instanceof Error ? result.error.message : String(result.error)}`;
+            console.error(`[plugin] '${plugin.id}' ${reason}`);
             failed.push(plugin.id);
+            reasons[plugin.id] = reason;
         }
     }
     // Phase 4: Background update checks (non-blocking).
     void checkForUpdates(bus, allDescriptors);
     // Phase 5: Signal completion.
-    bus.emit('loading-finished', { loaded, failed, timedOut }, 'plugin-registry');
+    bus.emit('loading-finished', { loaded, failed, timedOut, reasons }, 'plugin-registry');
 }
 export async function initInternalPlugin(bus, plugin) {
     registerPlugin(plugin);

@@ -202,14 +202,14 @@ export class PluginsPlugin extends AdiPlugin {
   }
 
   private async createCocoonSession(cocoonId: string) {
-    const cocoonApi = this.app.api('adi.cocoon');
+    const cocoonApi = await this.app.api('adi.cocoon');
     let client = cocoonApi.getClient(cocoonId);
 
     if (!client) {
       const tracked = this.cocoons.get(cocoonId);
       if (!tracked) return undefined;
       const rtcConfig = this.iceServers ? { iceServers: this.iceServers } : undefined;
-      client = cocoonApi.createClient(cocoonId, tracked.signalingUrl, rtcConfig);
+      client = await cocoonApi.createClient(cocoonId, tracked.signalingUrl, rtcConfig);
     }
 
     if (!client) return undefined;

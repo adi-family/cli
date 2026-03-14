@@ -121,8 +121,8 @@ export class CocoonControlCenterPlugin extends AdiPlugin {
     this.debugEl.cocoons = this.buildCocoonList();
   }
 
-  private resolveClient(deviceId: string) {
-    const cocoonApi = this.app.api('adi.cocoon');
+  private async resolveClient(deviceId: string) {
+    const cocoonApi = await this.app.api('adi.cocoon');
     const existing = cocoonApi.getClient(deviceId);
     if (existing) return existing;
     const tracked = this.devices.get(deviceId);

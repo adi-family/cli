@@ -1,20 +1,34 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
+import '@adi-family/plugin-auth';
 import { AdiDebugScreenBusKey } from '@adi-family/plugin-debug-screen';
-import { AdiSignalingBusKey, type DeviceInfo } from '@adi-family/plugin-signaling';
-import { CocoonBusKey, CocoonSelectElement, type ConnectionSettings } from '@adi-family/cocoon-plugin-interface';
+import {
+  AdiSignalingBusKey,
+  type DeviceInfo,
+} from '@adi-family/plugin-signaling';
+import {
+  CocoonBusKey,
+  CocoonSelectElement,
+  type ConnectionSettings,
+} from '@adi-family/cocoon-plugin-interface';
 import { CocoonClient } from './cocoon-client';
 import { CocoonConnection } from './cocoon-connection';
 import type { WebRTCConfig } from './cocoon-webrtc';
 import { PLUGIN_ID, PLUGIN_VERSION } from './config';
 import type { AdiCocoonDebugElement, CocoonDebugInfo } from './debug-section';
-import type { AdiCocoonListElement, CocoonListItem, SetupConnectEvent } from './component';
+import type {
+  AdiCocoonListElement,
+  CocoonListItem,
+  SetupConnectEvent,
+} from './component';
 import './generated';
 
 interface RegistryPlugin {
   id: string;
 }
 
-async function fetchRegistryPlugins(registryUrls: string[]): Promise<RegistryPlugin[]> {
+async function fetchRegistryPlugins(
+  registryUrls: string[],
+): Promise<RegistryPlugin[]> {
   const seen = new Set<string>();
   const result: RegistryPlugin[] = [];
 
@@ -39,7 +53,11 @@ async function fetchRegistryPlugins(registryUrls: string[]): Promise<RegistryPlu
 export interface CocoonApi {
   getClient(cocoonId: string): CocoonClient | undefined;
   allClients(): ReadonlyMap<string, CocoonClient>;
-  createClient(cocoonId: string, signalingUrl: string, rtcConfig?: WebRTCConfig): CocoonClient | undefined;
+  createClient(
+    cocoonId: string,
+    signalingUrl: string,
+    rtcConfig?: WebRTCConfig,
+  ): Promise<CocoonClient | undefined>;
   removeClient(cocoonId: string): void;
   getSettings(cocoonId: string): ConnectionSettings;
   updateSettings(cocoonId: string, patch: Partial<ConnectionSettings>): void;
@@ -77,17 +95,25 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
     const current = this.connectionSettings.get(cocoonId) ?? {};
     const updated = { ...current, ...patch };
     this.connectionSettings.set(cocoonId, updated);
-    this.bus.emit(CocoonBusKey.SettingsChanged, { id: cocoonId, settings: updated }, PLUGIN_ID);
+    this.bus.emit(
+      CocoonBusKey.SettingsChanged,
+      { id: cocoonId, settings: updated },
+      PLUGIN_ID,
+    );
 
     if (patch.autoinstallPlugins) {
       void this.autoinstallIfNeeded(cocoonId);
     }
   }
 
-  createClient(cocoonId: string, signalingUrl: string, rtcConfig?: WebRTCConfig): CocoonClient | undefined {
+  async createClient(
+    cocoonId: string,
+    signalingUrl: string,
+    rtcConfig?: WebRTCConfig,
+  ): Promise<CocoonClient | undefined> {
     if (this.clients.has(cocoonId)) return this.clients.get(cocoonId);
 
-    const signalingApi = this.app.api('adi.signaling');
+    const signalingApi = await this.app.api('adi.signaling');
     const server = signalingApi.getServer(signalingUrl);
     if (!server) return undefined;
 
@@ -96,7 +122,11 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
 
     const connection = client.createConnection();
     this.connections.set(cocoonId, connection);
-    this.bus.emit(CocoonBusKey.ConnectionAdded, { id: cocoonId, connection }, PLUGIN_ID);
+    this.bus.emit(
+      CocoonBusKey.ConnectionAdded,
+      { id: cocoonId, connection },
+      PLUGIN_ID,
+    );
 
     void this.autoinstallIfNeeded(cocoonId);
     this.syncViews();
@@ -111,7 +141,11 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
     if (connection) {
       connection.dispose();
       this.connections.delete(cocoonId);
-      this.bus.emit(CocoonBusKey.ConnectionRemoved, { id: cocoonId }, PLUGIN_ID);
+      this.bus.emit(
+        CocoonBusKey.ConnectionRemoved,
+        { id: cocoonId },
+        PLUGIN_ID,
+      );
     }
 
     client.dispose();
@@ -133,25 +167,31 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
       customElements.define('cocoon-select', CocoonSelectElement);
     }
 
-    this.listEl = document.createElement('adi-cocoon-list') as AdiCocoonListElement;
+    this.listEl = document.createElement(
+      'adi-cocoon-list',
+    ) as AdiCocoonListElement;
     this.listEl.subtokenProvider = () => this.getSetupSubtoken();
-    this.listEl.addEventListener('setup-connect', ((e: CustomEvent<SetupConnectEvent>) => {
+    this.listEl.addEventListener('setup-connect', (async (
+      e: CustomEvent<SetupConnectEvent>,
+    ) => {
       const url = e.detail.signalingUrl;
-      const signalingApi = this.app.api('adi.signaling');
+      const signalingApi = await this.app.api('adi.signaling');
       if (!signalingApi.getServer(url)) {
         signalingApi.addServer(url);
       }
-    }) as EventListener);
-    this.syncList();
+    }) as unknown as EventListener);
+    void this.syncList();
 
     this.bus.emit(
       AdiDebugScreenBusKey.RegisterSection,
       {
         pluginId: PLUGIN_ID,
         init: () => {
-          this.debugEl = document.createElement('adi-cocoon-debug') as AdiCocoonDebugElement;
+          this.debugEl = document.createElement(
+            'adi-cocoon-debug',
+          ) as AdiCocoonDebugElement;
           this.debugEl.subtokenProvider = () => this.getSetupSubtoken();
-          this.syncDebug();
+          void this.syncDebug();
           return this.debugEl;
         },
         label: 'Cocoon',
@@ -159,21 +199,29 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
       PLUGIN_ID,
     );
 
-    const signalingApi = this.app.api('adi.signaling');
+    const signalingApi = await this.app.api('adi.signaling');
     this.lastDevices = [...signalingApi.allDevices()];
 
     const onSetupRequested = () => this.listEl?.startSetup();
     document.addEventListener('cocoon-setup-requested', onSetupRequested);
 
     this.unsubs.push(
-      () => document.removeEventListener('cocoon-setup-requested', onSetupRequested),
+      () =>
+        document.removeEventListener(
+          'cocoon-setup-requested',
+          onSetupRequested,
+        ),
       this.bus.on('cocoon:session-created', () => this.syncViews(), PLUGIN_ID),
       this.bus.on('cocoon:session-closed', () => this.syncViews(), PLUGIN_ID),
       this.bus.on('cocoon:error', () => this.syncViews(), PLUGIN_ID),
-      this.bus.on(AdiSignalingBusKey.Devices, ({ devices }) => {
-        this.lastDevices = devices;
-        this.debugEl?.updateDevices(devices);
-      }, PLUGIN_ID),
+      this.bus.on(
+        AdiSignalingBusKey.Devices,
+        ({ devices }) => {
+          this.lastDevices = devices;
+          this.debugEl?.updateDevices(devices);
+        },
+        PLUGIN_ID,
+      ),
     );
   }
 
@@ -188,11 +236,11 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
   }
 
   private syncViews(): void {
-    this.syncDebug();
-    this.syncList();
+    void this.syncDebug();
+    void this.syncList();
   }
 
-  private syncDebug(): void {
+  private async syncDebug(): Promise<void> {
     if (!this.debugEl) return;
     const infos: CocoonDebugInfo[] = [];
     for (const [cocoonId, client] of this.clients) {
@@ -200,12 +248,12 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
     }
     this.debugEl.cocoons = infos;
     this.debugEl.updateDevices(this.lastDevices);
-    const signalingApi = this.app.api('adi.signaling');
+    const signalingApi = await this.app.api('adi.signaling');
     this.debugEl.signalingUrls = [...signalingApi.allServers().keys()];
   }
 
-  private getAuthDomain(): string | null {
-    const signalingApi = this.app.api('adi.signaling');
+  private async getAuthDomain(): Promise<string | null> {
+    const signalingApi = await this.app.api('adi.signaling');
     const firstServer = signalingApi.allServers().values().next().value;
     if (!firstServer) return null;
 
@@ -214,18 +262,19 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
   }
 
   private async getSetupSubtoken(): Promise<string | null> {
-    const authDomain = this.getAuthDomain();
+    const authDomain = await this.getAuthDomain();
     if (!authDomain) return null;
 
     try {
-      const token = await this.app.api('adi.auth').getToken(authDomain);
+      const authApi = await this.app.api('adi.auth');
+      const token = await authApi.getToken(authDomain);
       if (!token) return null;
 
       const resp = await fetch(`${authDomain}/subtoken`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ ttlSeconds: 600 }),
       });
@@ -238,11 +287,11 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
     }
   }
 
-  private syncList(): void {
+  private async syncList(): Promise<void> {
     if (!this.listEl) return;
     const items: CocoonListItem[] = [];
     for (const [cocoonId, client] of this.clients) {
-      const sessions = [...client.allSessions().values()].map(s => ({
+      const sessions = [...client.allSessions().values()].map((s) => ({
         sessionId: s.sessionId,
         cwd: s.cwd,
         shell: s.shell,
@@ -252,7 +301,7 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
     }
     this.listEl.cocoons = items;
 
-    const signalingApi = this.app.api('adi.signaling');
+    const signalingApi = await this.app.api('adi.signaling');
     this.listEl.signalingUrls = [...signalingApi.allServers().keys()];
   }
 
@@ -264,7 +313,8 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
     if (!connection) return;
 
     try {
-      const registryUrls: string[] = this.app.env('DEFAULT_REGISTRY_URLS') ?? [];
+      const registryUrls: string[] =
+        this.app.env('DEFAULT_REGISTRY_URLS') ?? [];
       if (registryUrls.length === 0) return;
 
       const [registryPlugins] = await Promise.all([
@@ -273,7 +323,7 @@ export class CocoonPlugin extends AdiPlugin implements CocoonApi {
       ]);
 
       const installedIds = new Set(connection.plugins);
-      const missing = registryPlugins.filter(p => !installedIds.has(p.id));
+      const missing = registryPlugins.filter((p) => !installedIds.has(p.id));
 
       if (missing.length === 0) return;
 
