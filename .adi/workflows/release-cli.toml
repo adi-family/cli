@@ -4,6 +4,7 @@
 [workflow]
 name = "release-cli"
 description = "Release CLI binary to GitHub"
+pre_run = "echo \"Current release: $(gh release view --json tagName -q .tagName -R adi-family/adi-cli 2>/dev/null || echo 'none')\""
 
 [[inputs]]
 name = "version"

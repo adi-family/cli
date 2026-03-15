@@ -45,3 +45,10 @@ export interface CocoonKind {
   runner_config: unknown;
   image: string;
 }
+
+export interface RoomInfo {
+  room_id: string;
+  owner_user_id: string;
+  granted_users: string[];
+  actors: DeviceInfo[];
+}

@@ -19,6 +19,9 @@ pub struct WorkflowMeta {
     pub name: String,
     #[serde(default)]
     pub description: Option<String>,
+    /// Shell command to run before collecting inputs (e.g. show current state)
+    #[serde(default)]
+    pub pre_run: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

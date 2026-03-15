@@ -1,7 +1,7 @@
 //! CLI command handling
 
 use crate::discovery::{discover_workflows, find_workflow};
-use crate::executor::execute_steps;
+use crate::executor::{execute_pre_run, execute_steps};
 use crate::options::resolve_options;
 use crate::parser::{load_workflow, InputType, WorkflowScope};
 use crate::prompts::collect_inputs_with_prefilled;
@@ -369,6 +369,10 @@ fn cmd_run_with_inputs(
     info(&t!("workflow-run-title", "name" => workflow.workflow.name.as_str()));
     if let Some(desc) = &workflow.workflow.description {
         debug(&format!("  {}", desc));
+    }
+
+    if let Some(pre_run) = &workflow.workflow.pre_run {
+        execute_pre_run(pre_run)?;
     }
 
     let variables = if workflow.inputs.is_empty() {

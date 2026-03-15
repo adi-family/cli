@@ -10,6 +10,11 @@ use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 
+/// Run a shell command before input collection (e.g. show current state).
+pub fn execute_pre_run(command: &str) -> Result<(), String> {
+    execute_command(command, None)
+}
+
 pub fn execute_steps(
     steps: &[Step],
     variables: &HashMap<String, serde_json::Value>,
