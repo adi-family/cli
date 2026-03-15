@@ -6,6 +6,7 @@ use adi_registry_core_shared::validation::{validate_id, validate_version};
 use adi_registry_core_shared::{now_unix, semver_greater};
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
+use tokio::sync::RwLock;
 
 use crate::types::{WebPluginEntry, WebPluginInfo, WebRegistryIndex};
 
@@ -14,12 +15,15 @@ const PLUGINS_DIR: &str = "plugins";
 
 pub struct WebRegistryStorage {
     storage: FileStorage,
+    /// Protects read-modify-write cycles on index.json from concurrent mutation.
+    index_lock: RwLock<()>,
 }
 
 impl WebRegistryStorage {
     pub fn new(root: std::path::PathBuf) -> Self {
         Self {
             storage: FileStorage::new(root),
+            index_lock: RwLock::new(()),
         }
     }
 
@@ -34,11 +38,8 @@ impl WebRegistryStorage {
     }
 
     pub async fn load_index(&self) -> Result<WebRegistryIndex> {
+        let _guard = self.index_lock.read().await;
         self.storage.load_json(INDEX_FILE).await
-    }
-
-    pub async fn save_index(&self, index: &WebRegistryIndex) -> Result<()> {
-        self.storage.save_json_atomic(INDEX_FILE, index).await
     }
 
     pub fn plugin_dir(&self, id: &str, version: &str) -> std::path::PathBuf {
@@ -199,8 +200,9 @@ impl WebRegistryStorage {
         fs::write(&tmp_path, json).await?;
         fs::rename(&tmp_path, &info_path).await?;
 
-        // Update index
-        let mut index = self.load_index().await?;
+        // Update index under write lock
+        let _guard = self.index_lock.write().await;
+        let mut index: WebRegistryIndex = self.storage.load_json(INDEX_FILE).await?;
         if let Some(entry) = index.plugins.iter_mut().find(|p| p.id == id) {
             if semver_greater(version, &entry.latest_version) {
                 entry.latest_version = version.to_string();
@@ -221,7 +223,7 @@ impl WebRegistryStorage {
             });
         }
         index.updated_at = now_unix();
-        self.save_index(&index).await
+        self.storage.save_json_atomic(INDEX_FILE, &index).await
     }
 
     pub async fn list_plugin_versions(&self, id: &str) -> Result<Vec<String>> {
@@ -229,10 +231,11 @@ impl WebRegistryStorage {
     }
 
     pub async fn increment_downloads(&self, id: &str) -> Result<()> {
-        let mut index = self.load_index().await?;
+        let _guard = self.index_lock.write().await;
+        let mut index: WebRegistryIndex = self.storage.load_json(INDEX_FILE).await?;
         if let Some(entry) = index.plugins.iter_mut().find(|p| p.id == id) {
             entry.downloads += 1;
         }
-        self.save_index(&index).await
+        self.storage.save_json_atomic(INDEX_FILE, &index).await
     }
 }

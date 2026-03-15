@@ -11,9 +11,9 @@
   },
   "scripts": {
     "generate": "cargo check -p slots-plugin",
-    "build": "bun run generate && bun build src/index.ts --outdir ../../../../dist/adi.slots --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --external 'lit' --external 'lit/*'",
+    "build": "bun run generate && bun build src/index.ts --outdir ../../../../dist/adi.slots --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/sdk-plugin' --external 'lit' --external 'lit/*'",
     "typecheck": "tsc --noEmit",
-    "dev": "bun build src/index.ts --outdir ../../../../dist/adi.slots --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --external 'lit' --external 'lit/*' --watch"
+    "dev": "bun build src/index.ts --outdir ../../../../dist/adi.slots --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/sdk-plugin' --external 'lit' --external 'lit/*' --watch"
   },
   "dependencies": {
     "@adi-family/sdk-plugin": "workspace:*",

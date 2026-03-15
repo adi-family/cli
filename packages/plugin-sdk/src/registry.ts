@@ -22,6 +22,60 @@ export function configureApp(options: AppContextOptions): void {
   appOptions = { ...appOptions, ...options };
 }
 
+/**
+ * Load a remote ES module with the page's import map applied.
+ *
+ * Creates a tiny inline <script type="module"> shim that dynamically imports
+ * the real URL. Inline module scripts participate in the document's import map,
+ * so when the remote module uses bare specifiers like "lit", the browser
+ * resolves them through the import map — including transitive imports.
+ */
+const IMPORT_TIMEOUT_MS = 15_000;
+
+let importModule: (url: string) => Promise<Record<string, unknown>> = (url) =>
+  new Promise((resolve, reject) => {
+    const id = `__adiPlugin${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Plugin module timed out after ${IMPORT_TIMEOUT_MS}ms: ${url}`));
+    }, IMPORT_TIMEOUT_MS);
+
+    const script = document.createElement('script');
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      delete (globalThis as Record<string, unknown>)[id];
+      delete (globalThis as Record<string, unknown>)[`${id}_err`];
+      script.remove();
+    };
+
+    (globalThis as Record<string, unknown>)[id] = (mod: Record<string, unknown>) => {
+      cleanup();
+      resolve(mod);
+    };
+    (globalThis as Record<string, unknown>)[`${id}_err`] = (err: unknown) => {
+      cleanup();
+      reject(
+        err instanceof Error
+          ? err
+          : new Error(`Failed to load plugin module: ${url}: ${err}`),
+      );
+    };
+
+    script.type = 'module';
+    script.textContent =
+      `import("${url}").then(m=>globalThis["${id}"](m),e=>globalThis["${id}_err"](e));`;
+    document.head.appendChild(script);
+  });
+
+/** @internal Test helper — override the dynamic import used by fetchAndImport. */
+export function _setImportModule(
+  fn: ((url: string) => Promise<Record<string, unknown>>) | null,
+): void {
+  importModule = fn ?? ((url) => import(/* @vite-ignore */ url));
+}
+
 /** @internal Test helper. */
 export function _resetRegistry(): void {
   registry.clear();
@@ -325,53 +379,37 @@ async function fetchAndImport(descriptor: PluginDescriptor): Promise<void> {
     descriptor.installedVersion,
   );
 
-  const fetches: Promise<Response | null>[] = [fetch(bundleInfo.jsUrl)];
   if (bundleInfo.cssUrl) {
-    fetches.push(fetch(bundleInfo.cssUrl).catch(() => null));
-  }
-
-  const [res, cssRes] = await Promise.all(fetches);
-
-  if (!res?.ok) {
-    throw new Error(
-      `Failed to fetch plugin bundle: ${res?.status} ${res?.statusText} (${bundleInfo.jsUrl})`,
-    );
-  }
-
-  if (cssRes?.ok) {
-    const cssText = await cssRes.text();
-    if (cssText) {
-      const style = document.createElement('style');
-      style.setAttribute('data-plugin', descriptor.id);
-      style.textContent = cssText;
-      document.head.appendChild(style);
+    const cssRes = await fetch(bundleInfo.cssUrl).catch(() => null);
+    if (cssRes?.ok) {
+      const cssText = await cssRes.text();
+      if (cssText) {
+        const style = document.createElement('style');
+        style.setAttribute('data-plugin', descriptor.id);
+        style.textContent = cssText;
+        document.head.appendChild(style);
+      }
     }
   }
 
-  const blob = await res.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  try {
-    const mod = await import(/* @vite-ignore */ blobUrl);
-    if ('PluginShell' in mod) {
-      if (typeof mod.PluginShell !== 'function') {
-        throw new Error(
-          `PluginShell export must be a class, got ${typeof mod.PluginShell}`,
-        );
-      }
-      const instance = new (mod.PluginShell as new () => unknown)();
-      if (
-        typeof instance !== 'object' ||
-        instance === null ||
-        typeof (instance as Record<string, unknown>)['id'] !== 'string' ||
-        typeof (instance as Record<string, unknown>)['_init'] !== 'function' ||
-        typeof (instance as Record<string, unknown>)['_destroy'] !== 'function'
-      ) {
-        throw new Error(`PluginShell must extend AdiPlugin`);
-      }
-      registerPlugin(instance as AdiPlugin);
+  const mod = await importModule(bundleInfo.jsUrl);
+  if ('PluginShell' in mod) {
+    if (typeof mod.PluginShell !== 'function') {
+      throw new Error(
+        `PluginShell export must be a class, got ${typeof mod.PluginShell}`,
+      );
     }
-  } finally {
-    URL.revokeObjectURL(blobUrl);
+    const instance = new (mod.PluginShell as new () => unknown)();
+    if (
+      typeof instance !== 'object' ||
+      instance === null ||
+      typeof (instance as Record<string, unknown>)['id'] !== 'string' ||
+      typeof (instance as Record<string, unknown>)['_init'] !== 'function' ||
+      typeof (instance as Record<string, unknown>)['_destroy'] !== 'function'
+    ) {
+      throw new Error(`PluginShell must extend AdiPlugin`);
+    }
+    registerPlugin(instance as AdiPlugin);
   }
 }
 

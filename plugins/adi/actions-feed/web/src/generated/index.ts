@@ -5,5 +5,5 @@
 
 export * from './models';
 export * from './enums';
-export * from './bus-types';
+export * from './bus';
 import './bus-events';

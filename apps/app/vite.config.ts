@@ -28,6 +28,7 @@ const LIT_CACHE = resolve('node_modules/.cache/lit-bundle');
 const LIT_ENTRIES: Record<string, string> = {
   'lit.js': 'lit',
   'lit-decorators.js': 'lit/decorators.js',
+  'lit-unsafe-html.js': 'lit/directives/unsafe-html.js',
 };
 
 const buildLit = async () => {
@@ -53,41 +54,64 @@ const buildLit = async () => {
 };
 
 const sharedLibs = (): Plugin => {
-  let litBuilt = false;
+  let litReady: Promise<void> | undefined;
 
-  const ensureLitBuilt = async () => {
-    if (litBuilt) return;
-    await buildLit();
-    litBuilt = true;
+  const ensureLitBuilt = () => {
+    if (!litReady) litReady = buildLit();
+    return litReady;
   };
 
   return {
     name: 'shared-libs',
 
-    async configureServer(server) {
-      await ensureLitBuilt();
+    configureServer: (server) => {
+      ensureLitBuilt();
 
       server.middlewares.use((req, res, next) => {
         if (!req.url?.startsWith(`${LIB_ROUTE}/`)) return next();
         const file = req.url.slice(LIB_ROUTE.length + 1);
 
-        // Try sdk-plugin files
-        const sdkPath = join(SDK_DIST, file.replace('sdk-plugin/', ''));
-        if (file.startsWith('sdk-plugin/') && existsSync(sdkPath)) {
-          res.setHeader('Content-Type', 'application/javascript');
-          createReadStream(sdkPath).pipe(res);
-          return;
+        // Try sdk-plugin files — resolve .js to .ts for Vite transform
+        if (file.startsWith('sdk-plugin/')) {
+          const relative = file.replace('sdk-plugin/', '');
+          const jsPath = join(SDK_DIST, relative);
+          const tsPath = jsPath.replace(/\.js$/, '.ts');
+          const resolved = existsSync(jsPath)
+            ? jsPath
+            : existsSync(tsPath)
+              ? tsPath
+              : null;
+          if (resolved) {
+            const moduleId = `/@fs/${resolved}`;
+            server
+              .transformRequest(moduleId)
+              .then((result) => {
+                if (!result) {
+                  next();
+                  return;
+                }
+                res.setHeader('Content-Type', 'application/javascript');
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.end(result.code);
+              })
+              .catch(() => next());
+            return;
+          }
         }
 
-        // Try lit files
-        const litPath = join(LIT_CACHE, file);
-        if (existsSync(litPath)) {
-          res.setHeader('Content-Type', 'application/javascript');
-          createReadStream(litPath).pipe(res);
-          return;
-        }
-
-        next();
+        // Wait for lit build to finish before serving lit files
+        ensureLitBuilt()
+          .then(() => {
+            const litPath = join(LIT_CACHE, file);
+            if (existsSync(litPath)) {
+              res.setHeader('Content-Type', 'application/javascript');
+              res.setHeader('Access-Control-Allow-Origin', '*');
+              createReadStream(litPath).pipe(res);
+              return;
+            }
+            next();
+          })
+          .catch(() => next());
       });
     },
 

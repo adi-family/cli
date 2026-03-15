@@ -4,7 +4,6 @@ import type { PluginFilter, PluginItem, View } from './models.js';
 import { renderPluginList } from './views/plugin-list.js';
 import { renderPluginDetail } from './views/plugin-detail.js';
 import { getBus } from './context.js';
-import './styles.css';
 
 export class AdiPluginsElement extends LitElement {
   @state() private plugins: PluginItem[] = [];

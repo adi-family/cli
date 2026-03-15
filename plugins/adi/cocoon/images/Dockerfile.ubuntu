@@ -8,25 +8,49 @@
 # =============================================================================
 # Stage 1: Build cocoon binary
 # =============================================================================
-FROM rust:1.85-alpine AS builder
+FROM rust:1.88-alpine AS builder
 
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig
 
 WORKDIR /build
 
-COPY crates/_lib/lib-tarminal-sync ./lib-tarminal-sync
-COPY crates/_lib/lib-plugin-abi ./lib-plugin-abi
-COPY plugins/adi/cocoon/Cargo.toml ./Cargo.toml
-COPY plugins/adi/cocoon/src ./src
+# Copy cocoon core source
+COPY plugins/adi/cocoon/core/Cargo.toml ./Cargo.toml
+COPY plugins/adi/cocoon/core/src ./src
+COPY plugins/adi/cocoon/core/build.rs ./build.rs
+COPY plugins/adi/cocoon/cocoon.tsp ../cocoon.tsp
 
-RUN sed -i 's|path = "../_lib/lib-tarminal-sync"|path = "./lib-tarminal-sync"|g' Cargo.toml && \
-    sed -i 's|path = "../_lib/lib-plugin-abi"|path = "./lib-plugin-abi"|g' Cargo.toml
+# Copy local path dependencies
+COPY crates/_lib/lib-adi-service ./crates/_lib/lib-adi-service
+COPY crates/_lib/lib-env-parse ./crates/_lib/lib-env-parse
+COPY crates/_lib/lib-console-output ./crates/_lib/lib-console-output
+COPY packages/theme/generated/themes.rs ./packages/theme/generated/themes.rs
+COPY crates/_lib/lib-daemon-client ./crates/_lib/lib-daemon-client
+COPY crates/_lib/lib-daemon-core ./crates/_lib/lib-daemon-core
+COPY plugins/adi/signaling/protocol ./plugins/adi/signaling/protocol
+COPY plugins/adi/signaling/signaling.tsp ./plugins/adi/signaling/signaling.tsp
+COPY crates/tsp-gen/core ./crates/tsp-gen/core
 
-RUN cd lib-plugin-abi && \
-    sed -i 's|version.workspace = true|version = "0.1.0"|g' Cargo.toml && \
-    sed -i 's|edition.workspace = true|edition = "2021"|g' Cargo.toml && \
-    sed -i 's|authors.workspace = true|authors = ["ADI Team"]|g' Cargo.toml && \
-    sed -i 's|abi_stable.workspace = true|abi_stable = "0.11"|g' Cargo.toml
+# Rewrite path dependencies to match Docker build layout
+RUN sed -i 's|path = "../../../../crates/_lib/|path = "./crates/_lib/|g' Cargo.toml && \
+    sed -i 's|path = "../../signaling/protocol"|path = "./plugins/adi/signaling/protocol"|g' Cargo.toml && \
+    sed -i 's|path = "../../../../crates/tsp-gen/core"|path = "./crates/tsp-gen/core"|g' Cargo.toml
+
+# Remove optional service deps and dev-dependencies (Cargo validates all path deps even if unused)
+RUN sed -i '/^tasks-core.*optional.*$/d' Cargo.toml && \
+    sed -i '/^tools-core.*optional.*$/d' Cargo.toml && \
+    sed -i '/^llm-proxy-core.*optional.*$/d' Cargo.toml && \
+    sed -i '/^embed-proxy-core.*optional.*$/d' Cargo.toml && \
+    sed -i 's|services = \[.*\]|services = []|g' Cargo.toml && \
+    sed -i '/^\[dev-dependencies\]/,$d' Cargo.toml
+
+# Remove workspace inheritance from all local crates
+RUN find . -name "Cargo.toml" -exec sed -i \
+    -e 's|version\.workspace = true|version = "0.1.0"|g' \
+    -e 's|edition\.workspace = true|edition = "2021"|g' \
+    -e 's|authors\.workspace = true|authors = ["ADI Team"]|g' \
+    -e 's|license\.workspace = true|license = "MIT"|g' \
+    {} +
 
 RUN cargo build --release --features standalone
 

@@ -210,11 +210,10 @@ async fn plugin_download(
         return Err(not_found("Artifact not found"));
     }
 
-    let storage_clone = st.storage.inner().root().to_path_buf();
+    let state = st.clone();
     let id_clone = id.clone();
     tokio::spawn(async move {
-        let s = adi_registry_core_cli::CliRegistryStorage::new(storage_clone);
-        let _ = s.increment_downloads(&id_clone).await;
+        let _ = state.storage.increment_downloads(&id_clone).await;
     });
 
     serve_file(path, "application/gzip").await

@@ -11,9 +11,9 @@
   },
   "scripts": {
     "generate": "cargo check -p auth-plugin",
-    "build": "bun run generate && bun build src/index.ts --outdir ../../../../dist/adi.auth --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*'",
+    "build": "bun run generate && bun build src/index.ts --outdir ../../../../dist/adi.auth --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/sdk-plugin' --external 'lit' --external 'lit/*'",
     "typecheck": "tsc --noEmit",
-    "dev": "bun build src/index.ts --outdir ../../../../dist/adi.auth --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --watch"
+    "dev": "bun build src/index.ts --outdir ../../../../dist/adi.auth --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/sdk-plugin' --external 'lit' --external 'lit/*' --watch"
   },
   "dependencies": {
     "@adi-family/plugin-router": "workspace:*",

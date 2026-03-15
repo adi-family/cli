@@ -42,12 +42,16 @@ export class PluginCore {
     reasons: Record<string, string>;
   }> {
     const all = dedupeById(await this.registryHub.fetchAllDescriptors());
+    const foundIds = new Set(all.map((d) => d.id));
     const toLoad = all.filter((d) => this.pendingIds.has(d.id));
+    const notFound = [...this.pendingIds].filter((id) => !foundIds.has(id));
 
     let loaded: string[] = [];
-    let failed: string[] = [];
+    let failed: string[] = [...notFound];
     let timedOut: string[] = [];
-    let reasons: Record<string, string> = {};
+    let reasons: Record<string, string> = Object.fromEntries(
+      notFound.map((id) => [id, 'plugin not found in registry']),
+    );
 
     if (toLoad.length > 0) {
       const resultPromise = new Promise<{ loaded: string[]; failed: string[]; timedOut: string[]; reasons: Record<string, string> }>((resolve) => {
@@ -62,7 +66,11 @@ export class PluginCore {
       });
 
       await loadPlugins(this.bus, toLoad, { availablePlugins: all });
-      ({ loaded, failed, timedOut, reasons } = await resultPromise);
+      const result = await resultPromise;
+      loaded = result.loaded;
+      failed = [...failed, ...result.failed];
+      timedOut = result.timedOut;
+      reasons = { ...reasons, ...result.reasons };
     }
 
     this.pendingIds.clear();

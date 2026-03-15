@@ -1,6 +1,6 @@
 // src/registry.test.ts
 import { describe, it, expect, mock, spyOn, jest, beforeEach, afterEach } from 'bun:test';
-import { registerPlugin, loadPlugins, configureApp, initInternalPlugin, _resetRegistry } from './registry.js';
+import { registerPlugin, loadPlugins, configureApp, initInternalPlugin, _resetRegistry, _setImportModule } from './registry.js';
 import { AdiPlugin } from './plugin.js';
 import { EventBus } from './bus.js';
 import type { PluginDescriptor } from './types.js';
@@ -24,12 +24,10 @@ function makePlugin(id: string, version = '1.0.0', opts: PluginOpts = {}): AdiPl
 }
 
 /**
- * Set up fetch + URL mocks so fetchAndImport works in bun test.
+ * Set up mocks so fetchAndImport works in bun test.
  *
- * Bun's import() with data/blob URLs has caching issues across test cases,
- * so we register plugins directly as a side effect of URL.createObjectURL.
- * The import() call will produce an empty module (no PluginShell), but the
- * plugin is already registered by then.
+ * Overrides the dynamic import to register plugins as a side effect
+ * and return an empty module (no PluginShell export).
  */
 function mockFetchChain(
   pluginDefs: Array<{ id: string; version?: string; requires?: string[] }>
@@ -39,13 +37,12 @@ function mockFetchChain(
   );
 
   let idx = 0;
-  spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(new Blob([''])));
-  spyOn(URL, 'createObjectURL').mockImplementation(() => {
+  spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(''));
+  _setImportModule(async () => {
     const plugin = plugins[idx++];
     if (plugin) registerPlugin(plugin);
-    return `data:text/javascript,${encodeURIComponent('export default {};')}`;
+    return {};
   });
-  spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 }
 
 beforeEach(() => {
@@ -53,6 +50,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  _setImportModule(null);
   jest.restoreAllMocks();
 });
 

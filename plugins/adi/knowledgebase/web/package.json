@@ -12,9 +12,9 @@
   "scripts": {
     "generate": "cargo check -p knowledgebase-plugin-v2",
     "generate:protocol": "adi tsp-gen generate ../api.tsp -l typescript -s protocol --protocol-tag type --protocol-rename snake_case --protocol-enum-name KnowledgebaseMessage -o src/generated",
-    "build": "bun run generate && npm run generate:protocol && bun build src/index.ts --outdir ../../../../dist/adi.knowledgebase --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*'",
+    "build": "bun run generate && npm run generate:protocol && bun build src/index.ts --outdir ../../../../dist/adi.knowledgebase --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/sdk-plugin' --external 'lit' --external 'lit/*'",
     "typecheck": "tsc --noEmit",
-    "dev": "bun build src/index.ts --outdir ../../../../dist/adi.knowledgebase --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --watch"
+    "dev": "bun build src/index.ts --outdir ../../../../dist/adi.knowledgebase --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/sdk-plugin' --external 'lit' --external 'lit/*' --watch"
   },
   "dependencies": {
     "@adi-family/cocoon-plugin-interface": "workspace:*",

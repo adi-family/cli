@@ -11,9 +11,9 @@
   },
   "scripts": {
     "generate": "cargo check -p monaco-editor-plugin",
-    "build": "bun run generate && bun build src/index.ts --outdir ../../../dist/adi.monaco-editor --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*'",
+    "build": "bun run generate && bunx vite build",
     "typecheck": "tsc --noEmit",
-    "dev": "bun build src/index.ts --outdir ../../../dist/adi.monaco-editor --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --watch"
+    "dev": "bunx vite build --watch"
   },
   "dependencies": {
     "@adi-family/plugin-router": "workspace:*",
@@ -22,6 +22,7 @@
     "monaco-editor": "catalog:"
   },
   "devDependencies": {
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": "catalog:"
   }
 }

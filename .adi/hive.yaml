@@ -7,7 +7,7 @@ defaults:
 
   # Cocoon spawner runner for containerized cocoon environments
   hive.runner.cocoon-spawner:
-    signaling_url: ws://localhost:8080/ws
+    signaling_url: ws://localhost:8011/ws
 
   # File-based logging with rotation (defaults to ~/.adi/hive/logs/)
   hive.obs.file:
@@ -605,5 +605,5 @@ services:
       type: cocoon-spawner
       cocoon-spawner:
         image: adi/cocoon-ubuntu:latest
-        signaling_url: ws://localhost:8080/ws
+        signaling_url: ws://localhost:8011/ws
     restart: never

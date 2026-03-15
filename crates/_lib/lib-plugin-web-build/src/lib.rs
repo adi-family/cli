@@ -105,7 +105,7 @@ impl PluginWebBuild {
             // Generate generated/index.ts re-exporting everything
             write_if_changed(
                 &generated_dir.join("index.ts"),
-                &generate_generated_index_ts(has_eventbus, has_adi_client),
+                &generate_generated_index_ts(&generated_dir, has_eventbus, has_adi_client),
             );
         }
 
@@ -332,7 +332,11 @@ fn generate_index_ts(plugin_class: &str, has_generated: bool) -> String {
 }
 
 /// Generate the index.ts for the generated/ directory.
-fn generate_generated_index_ts(has_eventbus: bool, has_adi_client: bool) -> String {
+fn generate_generated_index_ts(
+    generated_dir: &Path,
+    has_eventbus: bool,
+    has_adi_client: bool,
+) -> String {
     let mut out = String::new();
     writeln!(out, "/**").unwrap();
     writeln!(out, " * Auto-generated from TypeSpec.").unwrap();
@@ -343,7 +347,12 @@ fn generate_generated_index_ts(has_eventbus: bool, has_adi_client: bool) -> Stri
     writeln!(out, "export * from './enums';").unwrap();
 
     if has_eventbus {
-        writeln!(out, "export * from './bus-types';").unwrap();
+        // Prefer bus/ directory (complete output) over flat bus-types.ts
+        if generated_dir.join("bus").is_dir() {
+            writeln!(out, "export * from './bus';").unwrap();
+        } else {
+            writeln!(out, "export * from './bus-types';").unwrap();
+        }
         writeln!(out, "import './bus-events';").unwrap();
     }
 

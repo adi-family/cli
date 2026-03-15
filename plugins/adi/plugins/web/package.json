@@ -11,7 +11,7 @@
   },
   "scripts": {
     "generate": "cargo check -p plugins-plugin",
-    "build": "bun run generate && bunx @tailwindcss/cli -i src/styles.css -o ../../../../dist/adi.plugins/style.css --minify && bun build src/index.ts --outdir ../../../../dist/adi.plugins --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --external '*.css'",
+    "build": "bun run generate && bunx @tailwindcss/cli -i src/styles.css -o ../../../../dist/adi.plugins/style.css --minify && bun build src/index.ts --outdir ../../../../dist/adi.plugins --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/sdk-plugin' --external 'lit' --external 'lit/*' ",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

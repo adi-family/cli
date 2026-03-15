@@ -144,11 +144,10 @@ async fn download_js(
     let path = st.storage.js_path(&id, &version);
     if !path.exists() { return Err(not_found("JS bundle not found")); }
 
-    let root = st.storage.inner().root().to_path_buf();
+    let storage = st.clone();
     let id_clone = id.clone();
     tokio::spawn(async move {
-        let s = WebRegistryStorage::new(root);
-        let _ = s.increment_downloads(&id_clone).await;
+        let _ = storage.storage.increment_downloads(&id_clone).await;
     });
 
     serve_static(path, "application/javascript").await

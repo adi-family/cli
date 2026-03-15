@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use adi_registry_core_shared::storage::{FileStorage, PublishRequest, MAX_CLI_ARCHIVE_SIZE};
 use adi_registry_core_shared::{now_unix, semver_greater};
+use tokio::sync::RwLock;
 
 use crate::types::{CliPluginEntry, CliPluginInfo, CliRegistryIndex};
 use crate::validate_platform;
@@ -10,12 +11,15 @@ const PLUGINS_DIR: &str = "plugins";
 
 pub struct CliRegistryStorage {
     storage: FileStorage,
+    /// Protects read-modify-write cycles on index.json from concurrent mutation.
+    index_lock: RwLock<()>,
 }
 
 impl CliRegistryStorage {
     pub fn new(root: std::path::PathBuf) -> Self {
         Self {
             storage: FileStorage::new(root),
+            index_lock: RwLock::new(()),
         }
     }
 
@@ -30,11 +34,8 @@ impl CliRegistryStorage {
     }
 
     pub async fn load_index(&self) -> Result<CliRegistryIndex> {
+        let _guard = self.index_lock.read().await;
         self.storage.load_json(INDEX_FILE).await
-    }
-
-    pub async fn save_index(&self, index: &CliRegistryIndex) -> Result<()> {
-        self.storage.save_json_atomic(INDEX_FILE, index).await
     }
 
     pub fn artifact_path(&self, id: &str, version: &str, platform: &str) -> std::path::PathBuf {
@@ -99,13 +100,14 @@ impl CliRegistryStorage {
             })
             .await?;
 
-        // Update index
+        // Update index under write lock
         let name = name.to_string();
         let description = description.to_string();
         let version = version.to_string();
         let author = author.to_string();
         let id = id.to_string();
-        let mut index = self.load_index().await?;
+        let _guard = self.index_lock.write().await;
+        let mut index: CliRegistryIndex = self.storage.load_json(INDEX_FILE).await?;
         if let Some(entry) = index.plugins.iter_mut().find(|p| p.id == id) {
             if semver_greater(&version, &entry.latest_version) {
                 entry.latest_version = version;
@@ -127,7 +129,7 @@ impl CliRegistryStorage {
             });
         }
         index.updated_at = now_unix();
-        self.save_index(&index).await
+        self.storage.save_json_atomic(INDEX_FILE, &index).await
     }
 
     pub async fn list_plugin_versions(&self, id: &str) -> Result<Vec<String>> {
@@ -135,10 +137,11 @@ impl CliRegistryStorage {
     }
 
     pub async fn increment_downloads(&self, id: &str) -> Result<()> {
-        let mut index = self.load_index().await?;
+        let _guard = self.index_lock.write().await;
+        let mut index: CliRegistryIndex = self.storage.load_json(INDEX_FILE).await?;
         if let Some(entry) = index.plugins.iter_mut().find(|p| p.id == id) {
             entry.downloads += 1;
         }
-        self.save_index(&index).await
+        self.storage.save_json_atomic(INDEX_FILE, &index).await
     }
 }

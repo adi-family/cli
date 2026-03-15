@@ -10,9 +10,9 @@
     "./build": "./src/index.ts"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir ../../../dist/adi.cocoon-control-center --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*'",
+    "build": "bun build src/index.ts --outdir ../../../dist/adi.cocoon-control-center --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/sdk-plugin' --external 'lit' --external 'lit/*'",
     "typecheck": "tsc --noEmit",
-    "dev": "bun build src/index.ts --outdir ../../../dist/adi.cocoon-control-center --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --watch"
+    "dev": "bun build src/index.ts --outdir ../../../dist/adi.cocoon-control-center --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/sdk-plugin' --external 'lit' --external 'lit/*' --watch"
   },
   "dependencies": {
     "@adi-family/plugin-cocoon": "workspace:*",
