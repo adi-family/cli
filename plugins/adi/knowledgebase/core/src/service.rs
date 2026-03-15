@@ -834,4 +834,49 @@ mod tests {
         let impact = svc.get_impact(&ctx(), root.id, None).await.unwrap();
         assert_eq!(impact.nodes.len(), 2);
     }
+
+    #[tokio::test]
+    async fn get_subgraph() {
+        let (svc, _dir) = test_service();
+        let n1 = svc
+            .create_node(&ctx(), "Postgres setup".into(), "Install Postgres".into(), NodeType::Decision, "human".into(), None, None)
+            .await
+            .unwrap();
+        let n2 = svc
+            .create_node(&ctx(), "Postgres config".into(), "Configure Postgres".into(), NodeType::Guide, "human".into(), None, None)
+            .await
+            .unwrap();
+        svc.create_edge(&ctx(), n1.id, n2.id, EdgeType::Requires, None, None)
+            .await
+            .unwrap();
+
+        let subgraph = svc
+            .get_subgraph(&ctx(), "Postgres setup Install Postgres".into(), Some(1), Some(10))
+            .await
+            .unwrap();
+        assert!(!subgraph.nodes.is_empty());
+        assert!(subgraph.nodes.iter().any(|n| n.id == n1.id));
+    }
+
+    #[tokio::test]
+    async fn get_neighbors() {
+        let (svc, _dir) = test_service();
+        let n1 = svc
+            .create_node(&ctx(), "Root".into(), "Root node".into(), NodeType::Fact, "human".into(), None, None)
+            .await
+            .unwrap();
+        let n2 = svc
+            .create_node(&ctx(), "Neighbor".into(), "Neighbor node".into(), NodeType::Fact, "human".into(), None, None)
+            .await
+            .unwrap();
+        svc.create_edge(&ctx(), n1.id, n2.id, EdgeType::RelatedTo, None, None)
+            .await
+            .unwrap();
+
+        let subgraph = svc.get_neighbors(&ctx(), n1.id, Some(1)).await.unwrap();
+        assert!(subgraph.nodes.len() >= 2);
+        assert!(subgraph.nodes.iter().any(|n| n.id == n1.id));
+        assert!(subgraph.nodes.iter().any(|n| n.id == n2.id));
+        assert!(!subgraph.edges.is_empty());
+    }
 }
