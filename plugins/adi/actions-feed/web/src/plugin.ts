@@ -1,6 +1,6 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
 import { AdiRouterBusKey } from '@adi-family/plugin-router';
-import { ActionsBusKey, NavBusKey } from './generated/bus-types';
+import { ActionsBusKey } from './generated/bus-types';
 import type { ActionCard, RenderFn, KindMode } from './types.js';
 import './generated/bus';
 
@@ -36,12 +36,6 @@ export class ActionsFeedPlugin extends AdiPlugin {
       path: '',
       init: () => document.createElement('adi-actions-feed'),
       label: 'Actions',
-    }, PLUGIN_ID);
-
-    this.bus.emit(NavBusKey.Add, {
-      id: PLUGIN_ID,
-      label: 'Actions',
-      path: `/${PLUGIN_ID}`,
     }, PLUGIN_ID);
 
     this.bus.on(ActionsBusKey.RegisterKind, ({ plugin, kind, mode }) => {

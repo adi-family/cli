@@ -55,6 +55,7 @@
       },
       "devDependencies": {
         "typescript": "catalog:",
+        "vite": "catalog:",
       },
     },
     "crates/payment/web": {
@@ -152,7 +153,7 @@
       "name": "@adi-family/plugin-actions-feed",
       "version": "0.1.0",
       "dependencies": {
-        "@adi-family/plugin-slots": "workspace:*",
+        "@adi-family/plugin-router": "workspace:*",
         "@adi-family/sdk-plugin": "workspace:*",
         "lit": "catalog:",
       },

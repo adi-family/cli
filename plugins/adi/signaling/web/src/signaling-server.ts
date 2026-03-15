@@ -1,7 +1,7 @@
 import { Logger, trace, type EventBus } from '@adi-family/sdk-plugin';
 import { ActionsBusKey } from '@adi-family/plugin-actions-feed';
 import { AdiAuthBusKey, AdiSignalingBusKey, WsState } from './generated';
-import type { RoomInfo } from './generated';
+import type { RoomInfo, ConnectionInfo } from './generated';
 import type { DeviceInfo, SignalingMessage } from './generated/channels';
 import { createWebSocket, type WsControl } from './websocket';
 
@@ -28,6 +28,11 @@ export class SignalingServer {
   private authenticating = false;
   private disposed = false;
   private state: WsState = WsState.Disconnected;
+  private authDomain: string | null = null;
+  private authKind: string | null = null;
+  private authRequirement: string | null = null;
+  private authOptions: string[] = [];
+  private connectionInfo: ConnectionInfo | null = null;
   constructor(
     url: string,
     bus: EventBus,
@@ -48,6 +53,11 @@ export class SignalingServer {
           this.knownDevices = [];
           this.knownRooms.clear();
           this.authenticating = false;
+          this.authDomain = null;
+          this.authKind = null;
+          this.authRequirement = null;
+          this.authOptions = [];
+          this.connectionInfo = null;
         }
       },
       onMessage: (msg) => void this.handleMessage(msg),
@@ -98,6 +108,30 @@ export class SignalingServer {
 
   getDevices(): readonly DeviceInfo[] {
     return this.knownDevices;
+  }
+
+  isAuthenticating(): boolean {
+    return this.authenticating;
+  }
+
+  getAuthDomain(): string | null {
+    return this.authDomain;
+  }
+
+  getAuthKind(): string | null {
+    return this.authKind;
+  }
+
+  getAuthRequirement(): string | null {
+    return this.authRequirement;
+  }
+
+  getAuthOptions(): readonly string[] {
+    return this.authOptions;
+  }
+
+  getConnectionInfo(): ConnectionInfo | null {
+    return this.connectionInfo;
   }
 
   @trace('registering device')
@@ -238,6 +272,7 @@ export class SignalingServer {
         break;
 
       case 'auth_hello_authed':
+        this.connectionInfo = msg.connection_info;
         this.bus.emit(
           AdiSignalingBusKey.ConnectionInfo,
           { url: this.url, connectionInfo: msg.connection_info },
@@ -435,6 +470,10 @@ export class SignalingServer {
     authOptions: string[],
   ): Promise<void> {
     this.authenticating = true;
+    this.authKind = authKind;
+    this.authDomain = authDomain;
+    this.authRequirement = authRequirement;
+    this.authOptions = authOptions;
 
     const token = await this.getToken(authDomain);
     if (token) {

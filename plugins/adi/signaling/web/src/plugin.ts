@@ -90,6 +90,8 @@ export class SignalingPlugin extends AdiPlugin implements SignalingApi {
       this.bus.on(AdiSignalingBusKey.RoomUpdated, () => this.syncDebug(), PLUGIN_ID),
       this.bus.on(AdiSignalingBusKey.RoomActorJoined, () => this.syncDebug(), PLUGIN_ID),
       this.bus.on(AdiSignalingBusKey.RoomActorLeft, () => this.syncDebug(), PLUGIN_ID),
+      this.bus.on(AdiSignalingBusKey.AuthError, () => this.syncDebug(), PLUGIN_ID),
+      this.bus.on(AdiSignalingBusKey.ConnectionInfo, () => this.syncDebug(), PLUGIN_ID),
     );
   }
 
@@ -107,8 +109,14 @@ export class SignalingPlugin extends AdiPlugin implements SignalingApi {
         url,
         state: server.getState(),
         authenticated: server.isAuthenticated(),
+        authenticating: server.isAuthenticating(),
         userId: server.getUserId(),
         deviceId: server.getDeviceId(),
+        authDomain: server.getAuthDomain(),
+        authKind: server.getAuthKind(),
+        authRequirement: server.getAuthRequirement(),
+        authOptions: [...server.getAuthOptions()],
+        connectionInfo: server.getConnectionInfo(),
         peers: [...server.getPeers()],
         devices: [...server.getDevices()],
         rooms: [...server.getRooms().values()],
