@@ -9,10 +9,7 @@ import {
   mkdirSync,
   copyFileSync,
   writeFileSync,
-  readFileSync,
 } from 'node:fs';
-
-const OUT_DIR = '../../';
 
 const requireEnv = (name: string): string => {
   const value = process.env[name];
@@ -20,101 +17,104 @@ const requireEnv = (name: string): string => {
   return value;
 };
 
+const LIB_ROUTE = '/lib';
+
 const SDK_DIST = dirname(
   createRequire(import.meta.url).resolve('@adi-family/sdk-plugin'),
 );
-const SDK_ROUTE = '/vendor/sdk-plugin';
 
-const sdkExternal = (): Plugin => ({
-  name: 'sdk-external',
-
-  configureServer(server) {
-    server.middlewares.use((req, res, next) => {
-      if (!req.url?.startsWith(`${SDK_ROUTE}/`)) return next();
-      const file = req.url.slice(SDK_ROUTE.length + 1);
-      const filePath = join(SDK_DIST, file);
-      if (!existsSync(filePath)) return next();
-      res.setHeader('Content-Type', 'application/javascript');
-      createReadStream(filePath).pipe(res);
-    });
-  },
-
-  closeBundle() {
-    const out = resolve(OUT_DIR, SDK_ROUTE.slice(1));
-    mkdirSync(out, { recursive: true });
-    for (const f of readdirSync(SDK_DIST).filter((f) => f.endsWith('.js'))) {
-      copyFileSync(join(SDK_DIST, f), join(out, f));
-    }
-  },
-});
-
-const LIT_VENDOR_DIR = resolve('node_modules/.cache/lit-vendor');
-const LIT_ROUTE = '/vendor/lit';
+const LIT_CACHE = resolve('node_modules/.cache/lit-bundle');
 
 const LIT_ENTRIES: Record<string, string> = {
   'lit.js': 'lit',
-  'decorators.js': 'lit/decorators.js',
+  'lit-decorators.js': 'lit/decorators.js',
 };
 
-const litVendor = (): Plugin => {
-  let built = false;
+const buildLit = async () => {
+  if (existsSync(join(LIT_CACHE, 'lit.js'))) return;
+  mkdirSync(LIT_CACHE, { recursive: true });
 
-  const ensureBuilt = async () => {
-    if (built && existsSync(join(LIT_VENDOR_DIR, 'lit.js'))) return;
-    mkdirSync(LIT_VENDOR_DIR, { recursive: true });
+  for (const [outFile, entry] of Object.entries(LIT_ENTRIES)) {
+    const entryFile = join(LIT_CACHE, `_entry_${outFile.replace('.js', '.ts')}`);
+    writeFileSync(entryFile, `export * from "${entry}";`);
 
-    for (const [outFile, entry] of Object.entries(LIT_ENTRIES)) {
-      const entryFile = join(
-        LIT_VENDOR_DIR,
-        `_entry_${outFile.replace('.js', '.ts')}`,
-      );
-      writeFileSync(entryFile, `export * from "${entry}";`);
+    await viteBuild({
+      configFile: false,
+      logLevel: 'warn',
+      build: {
+        lib: { entry: entryFile, formats: ['es'], fileName: () => outFile },
+        outDir: LIT_CACHE,
+        emptyOutDir: false,
+        minify: true,
+        rollupOptions: { output: { inlineDynamicImports: true } },
+      },
+    });
+  }
+};
 
-      await viteBuild({
-        configFile: false,
-        logLevel: 'warn',
-        build: {
-          lib: { entry: entryFile, formats: ['es'], fileName: () => outFile },
-          outDir: LIT_VENDOR_DIR,
-          emptyOutDir: false,
-          minify: true,
-          rollupOptions: { output: { inlineDynamicImports: true } },
-        },
-      });
-    }
-    built = true;
+const sharedLibs = (): Plugin => {
+  let litBuilt = false;
+
+  const ensureLitBuilt = async () => {
+    if (litBuilt) return;
+    await buildLit();
+    litBuilt = true;
   };
 
   return {
-    name: 'lit-vendor',
+    name: 'shared-libs',
 
     async configureServer(server) {
-      await ensureBuilt();
+      await ensureLitBuilt();
+
       server.middlewares.use((req, res, next) => {
-        if (!req.url?.startsWith(`${LIT_ROUTE}/`)) return next();
-        const file = req.url.slice(LIT_ROUTE.length + 1);
-        const filePath = join(LIT_VENDOR_DIR, file);
-        if (!existsSync(filePath)) return next();
-        res.setHeader('Content-Type', 'application/javascript');
-        createReadStream(filePath).pipe(res);
+        if (!req.url?.startsWith(`${LIB_ROUTE}/`)) return next();
+        const file = req.url.slice(LIB_ROUTE.length + 1);
+
+        // Try sdk-plugin files
+        const sdkPath = join(SDK_DIST, file.replace('sdk-plugin/', ''));
+        if (file.startsWith('sdk-plugin/') && existsSync(sdkPath)) {
+          res.setHeader('Content-Type', 'application/javascript');
+          createReadStream(sdkPath).pipe(res);
+          return;
+        }
+
+        // Try lit files
+        const litPath = join(LIT_CACHE, file);
+        if (existsSync(litPath)) {
+          res.setHeader('Content-Type', 'application/javascript');
+          createReadStream(litPath).pipe(res);
+          return;
+        }
+
+        next();
       });
     },
 
     async closeBundle() {
-      await ensureBuilt();
-      const out = resolve(OUT_DIR, LIT_ROUTE.slice(1));
+      await ensureLitBuilt();
+      const out = resolve('dist', 'lib');
+
+      // Copy sdk-plugin
+      const sdkOut = join(out, 'sdk-plugin');
+      mkdirSync(sdkOut, { recursive: true });
+      for (const f of readdirSync(SDK_DIST).filter((f) => f.endsWith('.js'))) {
+        copyFileSync(join(SDK_DIST, f), join(sdkOut, f));
+      }
+
+      // Copy lit bundles
       mkdirSync(out, { recursive: true });
-      for (const f of readdirSync(LIT_VENDOR_DIR).filter(
+      for (const f of readdirSync(LIT_CACHE).filter(
         (f) => f.endsWith('.js') && !f.startsWith('_'),
       )) {
-        copyFileSync(join(LIT_VENDOR_DIR, f), join(out, f));
+        copyFileSync(join(LIT_CACHE, f), join(out, f));
       }
     },
   };
 };
 
 export default defineConfig({
-  plugins: [tailwindcss(), sdkExternal(), litVendor()],
+  plugins: [tailwindcss(), sharedLibs()],
   resolve: {
     alias: {
       '@adi-family/plugin-debug-screen/bus': resolve(

@@ -44,6 +44,7 @@ export interface Node {
   source: string;
   approval_status: ApprovalStatus;
   metadata: Record<string, unknown>;
+  tags: string[];
   created_at: string;
   updated_at: string;
 }
@@ -93,6 +94,11 @@ export interface NodeStats {
   conflict_count: number;
 }
 
+export interface TagInfo {
+  tag: string;
+  count: number;
+}
+
 export interface DeleteResult {
   deleted: boolean;
 }
@@ -105,6 +111,7 @@ export interface NodeWithCocoon {
   source: string;
   approval_status: ApprovalStatus;
   metadata: Record<string, unknown>;
+  tags: string[];
   created_at: string;
   updated_at: string;
   cocoonId: string;
