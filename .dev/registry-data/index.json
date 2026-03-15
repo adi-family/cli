@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": 1773526701,
+  "updatedAt": 1773530032,
   "plugins": [
     {
       "id": "adi.auth",
       "name": "Auth",
       "description": "CLI commands for authentication",
       "latestVersion": "0.1.0",
-      "downloads": 24,
+      "downloads": 72,
       "author": "ADI Team",
       "tags": []
     },
@@ -34,7 +34,7 @@
       "name": "ADI Router",
       "description": "Client-side SPA router with navigation management",
       "latestVersion": "0.1.0",
-      "downloads": 25,
+      "downloads": 70,
       "author": "ADI Team",
       "tags": []
     },
@@ -43,7 +43,7 @@
       "name": "ADI Command Palette",
       "description": "Command palette for quick command search and execution",
       "latestVersion": "0.1.0",
-      "downloads": 28,
+      "downloads": 70,
       "author": "ADI Team",
       "tags": []
     },
@@ -52,7 +52,7 @@
       "name": "ADI Slots",
       "description": "Content slots for cross-plugin UI extension points",
       "latestVersion": "0.1.0",
-      "downloads": 27,
+      "downloads": 70,
       "author": "ADI Team",
       "tags": []
     },
@@ -61,7 +61,7 @@
       "name": "ADI Signaling",
       "description": "CLI commands for signaling server",
       "latestVersion": "0.1.0",
-      "downloads": 21,
+      "downloads": 55,
       "author": "ADI Team",
       "tags": []
     },
@@ -70,7 +70,7 @@
       "name": "ADI Debug Screen",
       "description": "Debug screen and operations log",
       "latestVersion": "0.1.0",
-      "downloads": 19,
+      "downloads": 58,
       "author": "ADI Team",
       "tags": []
     },
@@ -79,7 +79,7 @@
       "name": "Cocoon",
       "description": "CLI commands for cocoon management",
       "latestVersion": "0.2.7",
-      "downloads": 22,
+      "downloads": 68,
       "author": "ADI Team",
       "tags": []
     },
@@ -88,7 +88,7 @@
       "name": "ADI Actions Feed",
       "description": "Action feed system for cross-plugin notifications",
       "latestVersion": "0.1.0",
-      "downloads": 21,
+      "downloads": 66,
       "author": "ADI Team",
       "tags": []
     },
@@ -97,7 +97,7 @@
       "name": "Cocoon Control Center",
       "description": "ADI plugin: Cocoon Control Center - terminal UI for remote cocoon management",
       "latestVersion": "0.1.0",
-      "downloads": 15,
+      "downloads": 56,
       "author": "ADI Team",
       "tags": []
     },
@@ -106,7 +106,7 @@
       "name": "Credentials",
       "description": "CLI commands for credentials",
       "latestVersion": "0.1.0",
-      "downloads": 23,
+      "downloads": 79,
       "author": "ADI Team",
       "tags": []
     },
@@ -115,7 +115,7 @@
       "name": "Plugins",
       "description": "ADI plugin: Plugins - browse and install plugins from the registry",
       "latestVersion": "0.1.0",
-      "downloads": 24,
+      "downloads": 80,
       "author": "ADI Team",
       "tags": []
     },

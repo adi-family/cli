@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use lib_plugin_abi_v3::*;
 
 #[allow(dead_code)]

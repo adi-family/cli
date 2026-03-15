@@ -4,7 +4,7 @@
 //! with unified service management across all sources.
 
 use crate::global_registry::GlobalRegistry;
-use crate::hive_config::{validate_config, HiveConfig, HiveConfigParser, ServiceInfo, ServiceState, SourceType};
+use crate::hive_config::{validate_config, HiveConfig, HiveConfigParser, ServiceConfig, ServiceInfo, ServiceState, SourceType};
 use crate::exposure::ExposureManager;
 use crate::observability::EventCollector;
 use crate::service_manager::ServiceManager;
@@ -86,6 +86,39 @@ impl SourceManager {
 
         self.load_saved_sources().await?;
 
+        Ok(())
+    }
+
+    /// Add an in-memory source with no backing file.
+    ///
+    /// Used for ephemeral sources like dynamically-created cocoon services.
+    pub async fn add_virtual_source(&self, name: &str) -> Result<()> {
+        let sources = self.sources.read().await;
+        if sources.contains_key(name) {
+            return Ok(());
+        }
+        drop(sources);
+
+        let config = HiveConfig::default();
+        let info = SourceInfo {
+            name: name.to_string(),
+            path: PathBuf::from(format!("<virtual:{name}>")),
+            source_type: SourceType::Yaml,
+            enabled: true,
+            service_count: 0,
+            status: SourceStatus::Loaded,
+        };
+
+        let managed = ManagedSource {
+            info,
+            config: Some(config),
+            service_manager: None,
+        };
+
+        let mut sources = self.sources.write().await;
+        sources.insert(name.to_string(), managed);
+
+        info!("Added virtual source '{}'", name);
         Ok(())
     }
 
@@ -458,6 +491,70 @@ impl SourceManager {
         Ok(None)
     }
 
+    /// Create a new service dynamically in an existing source.
+    ///
+    /// Adds the service config to the source's in-memory config and updates
+    /// the service manager so the service can be started immediately.
+    pub async fn create_service(
+        &self,
+        source_id: &str,
+        name: &str,
+        config: ServiceConfig,
+    ) -> Result<()> {
+        let mut sources = self.sources.write().await;
+        let source = sources.get_mut(source_id)
+            .ok_or_else(|| anyhow!("Unknown source: {}", source_id))?;
+
+        let hive_config = source.config.as_mut()
+            .ok_or_else(|| anyhow!("Source '{}' has no configuration", source_id))?;
+
+        if hive_config.services.contains_key(name) {
+            return Err(anyhow!("Service '{}' already exists in source '{}'", name, source_id));
+        }
+
+        hive_config.services.insert(name.to_string(), config);
+        source.info.service_count = hive_config.services.len();
+
+        if let Some(manager) = &mut source.service_manager {
+            manager.update_config(hive_config.clone());
+        }
+
+        info!("Created service {}:{}", source_id, name);
+        Ok(())
+    }
+
+    /// Delete a service from an existing source.
+    ///
+    /// Stops the service if running, then removes it from the source config.
+    pub async fn delete_service(&self, fqn: &str) -> Result<()> {
+        let (source_name, service_name) = parse_fqn(fqn)?;
+
+        // Stop the service first (ignore errors if already stopped)
+        if let Err(e) = self.stop_service(fqn).await {
+            debug!("Stop during delete (ignored): {}", e);
+        }
+
+        let mut sources = self.sources.write().await;
+        let source = sources.get_mut(&source_name)
+            .ok_or_else(|| anyhow!("Unknown source: {}", source_name))?;
+
+        let hive_config = source.config.as_mut()
+            .ok_or_else(|| anyhow!("Source '{}' has no configuration", source_name))?;
+
+        if hive_config.services.remove(&service_name).is_none() {
+            return Err(anyhow!("Service '{}' not found in source '{}'", service_name, source_name));
+        }
+
+        source.info.service_count = hive_config.services.len();
+
+        if let Some(manager) = &mut source.service_manager {
+            manager.update_config(hive_config.clone());
+        }
+
+        info!("Deleted service {}:{}", source_name, service_name);
+        Ok(())
+    }
+
     pub fn exposure_manager(&self) -> &Arc<ExposureManager> {
         &self.exposure_manager
     }
@@ -465,7 +562,6 @@ impl SourceManager {
     pub fn proxy_state(&self) -> &Arc<ServiceProxyState> {
         &self.proxy_state
     }
-
 
     async fn check_conflicts(&self, config: &HiveConfig, new_source: &str) -> Result<()> {
         let sources = self.sources.read().await;

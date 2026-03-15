@@ -10,10 +10,7 @@ use lib_plugin_abi_v3::{
     Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult,
 };
 use once_cell::sync::OnceCell;
-use std::path::PathBuf;
-use std::sync::Arc;
 use tokio::runtime::Runtime;
-use tokio::sync::RwLock;
 
 /// Global tokio runtime for async operations.
 static RUNTIME: OnceCell<Runtime> = OnceCell::new();
@@ -27,35 +24,12 @@ fn get_runtime() -> &'static Runtime {
     })
 }
 
-/// Plugin state
-struct PluginState {
-    project_path: PathBuf,
-    indexer: Option<Arc<indexer_core::Adi>>,
-}
-
-impl Default for PluginState {
-    fn default() -> Self {
-        Self {
-            project_path: PathBuf::from("."),
-            indexer: None,
-        }
-    }
-}
-
-// ============================================================================
-// PLUGIN IMPLEMENTATION
-// ============================================================================
-
 /// ADI Indexer Plugin
-pub struct IndexerPlugin {
-    state: Arc<RwLock<PluginState>>,
-}
+pub struct IndexerPlugin;
 
 impl IndexerPlugin {
     pub fn new() -> Self {
-        Self {
-            state: Arc::new(RwLock::new(PluginState::default())),
-        }
+        Self
     }
 }
 

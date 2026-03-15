@@ -1,6 +1,6 @@
 import { LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
-import type { PluginFilter, PluginItem, View } from './types.js';
+import type { PluginFilter, PluginItem, View } from './models.js';
 import { renderPluginList } from './views/plugin-list.js';
 import { renderPluginDetail } from './views/plugin-detail.js';
 import { getBus } from './context.js';
@@ -9,7 +9,7 @@ import './styles.css';
 export class AdiPluginsElement extends LitElement {
   @state() private plugins: PluginItem[] = [];
   @state() private searchQuery = '';
-  @state() private filter: PluginFilter = 'all';
+  @state() private filter: PluginFilter = 'web';
   @state() private view: View = 'list';
   @state() private selectedPluginId: string | null = null;
   @state() private loading = false;
@@ -24,7 +24,7 @@ export class AdiPluginsElement extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.unsubs.push(
-      this.bus.on('plugins:search-changed', ({ plugins, total }) => {
+      this.bus.on('plugins:search-changed', ({ plugins }) => {
         this.plugins = plugins;
         this.loading = false;
         this.error = null;
@@ -44,7 +44,12 @@ export class AdiPluginsElement extends LitElement {
             };
           }
 
-          return { ...item, webInstalling: false, webInstalled: success || item.webInstalled };
+          return {
+            ...item,
+            webStatus: success
+              ? { kind: 'installed' as const }
+              : { kind: 'error' as const, message: error ?? 'Install failed' },
+          };
         });
       }, 'plugins-ui'),
     );
@@ -83,7 +88,7 @@ export class AdiPluginsElement extends LitElement {
 
   private handleInstallWeb(pluginId: string): void {
     this.plugins = this.plugins.map(item =>
-      item.plugin.id === pluginId ? { ...item, webInstalling: true } : item,
+      item.plugin.id === pluginId ? { ...item, webStatus: { kind: 'installing' as const } } : item,
     );
     this.bus.emit('plugins:install-web', { pluginId }, 'plugins-ui');
   }

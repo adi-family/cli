@@ -832,7 +832,7 @@ fn generate_server(
         "//! Implement the handler traits and use the generated router."
     )?;
     writeln!(out)?;
-    writeln!(out, "#![allow(unused_imports)]")?;
+    writeln!(out, "#![allow(unused_imports, dead_code)]")?;
     writeln!(out)?;
     if let Some(tc) = types_crate {
         let crate_ident = tc.replace('-', "_");
@@ -1432,12 +1432,14 @@ fn generate_adi_service(
     writeln!(out, "// Implement the handler trait and wrap with the generated AdiService struct.")?;
     writeln!(out)?;
     if !types_crate_ident.is_empty() {
+        writeln!(out, "#[allow(unused_imports)]")?;
         writeln!(out, "use {}::models::*;", types_crate_ident)?;
+        writeln!(out, "#[allow(unused_imports)]")?;
         writeln!(out, "use {}::enums::*;", types_crate_ident)?;
     }
 
     writeln!(out, "use {}::{{AdiCallerContext, AdiHandleResult, AdiService, AdiServiceError}};", cocoon)?;
-    writeln!(out, "use {}::protocol::types::{{AdiMethodInfo, AdiPluginCapabilities}};", cocoon)?;
+    writeln!(out, "use {}::protocol::types::AdiMethodInfo;", cocoon)?;
     writeln!(out, "use async_trait::async_trait;")?;
     writeln!(out, "use serde_json::Value as JsonValue;")?;
     writeln!(out, "use bytes::Bytes;")?;

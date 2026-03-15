@@ -3,7 +3,7 @@
  * DO NOT EDIT.
  */
 
-import type { ConnectionInfo, DeviceInfo } from './models';
+import type { ConnectionInfo, DeviceInfo, RoomInfo } from './models';
 
 import { WsState } from './enums';
 
@@ -91,6 +91,30 @@ export interface AdiSignalingSyncDataEvent {
   payload: unknown;
 }
 
+export interface AdiSignalingRoomUpdatedEvent {
+  url: string;
+  room: RoomInfo;
+}
+
+export interface AdiSignalingRoomActorJoinedEvent {
+  url: string;
+  roomId: string;
+  deviceId: string;
+}
+
+export interface AdiSignalingRoomActorLeftEvent {
+  url: string;
+  roomId: string;
+  deviceId: string;
+}
+
+export interface AdiSignalingRoomMessageEvent {
+  url: string;
+  roomId: string;
+  from: string;
+  payload: unknown;
+}
+
 export interface AdiAuthStateChangedEvent {
   user: unknown;
 }
@@ -136,4 +160,8 @@ export enum AdiSignalingBusKey {
   PairingConnected = 'adi.signaling:pairing-connected',
   PairingFailed = 'adi.signaling:pairing-failed',
   SyncData = 'adi.signaling:sync-data',
+  RoomUpdated = 'adi.signaling:room-updated',
+  RoomActorJoined = 'adi.signaling:room-actor-joined',
+  RoomActorLeft = 'adi.signaling:room-actor-left',
+  RoomMessage = 'adi.signaling:room-message',
 }

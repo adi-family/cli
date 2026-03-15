@@ -10,15 +10,16 @@ use futures::{
     stream::{SplitSink, SplitStream},
 };
 use lib_signaling_protocol::{
-    AuthOption, AuthRequirement, ConnectionInfo, DeviceInfo, IceServer, SignalingMessage,
+    AuthOption, AuthRequirement, ConnectionInfo, DeviceInfo, IceServer, RoomInfo, SignalingMessage,
 };
 use serde::Deserialize;
 use signaling_core::{
     security::{derive_device_id, validate_secret},
-    state::{AppState, DeviceMeta, UserDevice},
+    state::{AppState, DeviceMeta, RegisteredHive, Room, UserDevice},
     tokens::extract_user_id,
     utils::generate_pairing_code,
 };
+use std::collections::HashSet;
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
@@ -27,6 +28,7 @@ use tracing::{debug, info, warn};
 pub enum ClientKind {
     App,
     Cocoon,
+    Hive,
 }
 
 #[derive(Deserialize)]
@@ -135,6 +137,9 @@ async fn handle_socket(socket: WebSocket, state: AppState, kind: ClientKind) {
         }
         ClientKind::Cocoon => {
             debug!("Cocoon client connected, waiting for device_register");
+        }
+        ClientKind::Hive => {
+            debug!("Hive client connected, waiting for hive_register");
         }
     }
 
@@ -279,6 +284,18 @@ async fn handle_socket(socket: WebSocket, state: AppState, kind: ClientKind) {
                 // Notify owner's app connections about updated device list
                 if let Some(ref uid) = owner_id {
                     notify_device_list(&state, uid);
+                }
+
+                // Notify rooms that this actor came online
+                if let Some(rooms) = state.device_rooms.get(&derived_id) {
+                    for room_id in rooms.iter() {
+                        if let Ok(json) = serde_json::to_string(&SignalingMessage::RoomActorJoined {
+                            room_id: room_id.clone(),
+                            device_id: derived_id.clone(),
+                        }) {
+                            state.notify_room(room_id, &json, Some(&derived_id));
+                        }
+                    }
                 }
 
                 if let Some(peer_id) = state.paired_devices.get(&derived_id) {
@@ -528,6 +545,129 @@ async fn handle_socket(socket: WebSocket, state: AppState, kind: ClientKind) {
                 send_msg(&tx, &SignalingMessage::DeviceQueryDevicesResponse { devices });
             }
 
+            // ── Hive channel: register, spawn, terminate ──
+
+            SignalingMessage::HiveRegister {
+                hive_id,
+                version,
+                cocoon_kinds,
+                hive_id_signature: _,
+            } if kind == ClientKind::Hive => {
+                info!(hive_id = %hive_id, version = %version, kinds = cocoon_kinds.len(), "Hive registering");
+
+                let connection_id = format!("hive-{hive_id}");
+                state.connections.insert(connection_id.clone(), tx.clone());
+
+                let kind_ids: Vec<String> = cocoon_kinds.iter().map(|k| k.id.clone()).collect();
+                state.hives.insert(hive_id.clone(), RegisteredHive {
+                    hive_id: hive_id.clone(),
+                    connection_id,
+                    cocoon_kinds: kind_ids,
+                });
+
+                device_id = Some(format!("hive-{hive_id}"));
+                send_msg(&tx, &SignalingMessage::HiveRegisterResponse { hive_id });
+            }
+
+            SignalingMessage::HiveSpawnCocoon {
+                request_id,
+                setup_token,
+                name,
+                kind: cocoon_kind,
+            } if kind == ClientKind::App => {
+                // Find a hive that supports this cocoon kind
+                let target_hive = state.hives.iter().find(|entry| {
+                    entry.value().cocoon_kinds.contains(&cocoon_kind)
+                });
+
+                if let Some(hive_entry) = target_hive {
+                    let hive = hive_entry.value().clone();
+                    drop(hive_entry);
+
+                    // Forward spawn request to the hive
+                    if let Some(hive_tx) = state.connections.get(&hive.connection_id) {
+                        send_msg(hive_tx.value(), &SignalingMessage::HiveSpawnCocoon {
+                            request_id: request_id.clone(),
+                            setup_token,
+                            name,
+                            kind: cocoon_kind,
+                        });
+                    } else {
+                        send_msg(&tx, &SignalingMessage::HiveSpawnCocoonResult {
+                            request_id,
+                            success: false,
+                            device_id: None,
+                            container_id: None,
+                            error: Some("Hive is not connected".to_string()),
+                        });
+                    }
+                } else {
+                    send_msg(&tx, &SignalingMessage::HiveSpawnCocoonResult {
+                        request_id,
+                        success: false,
+                        device_id: None,
+                        container_id: None,
+                        error: Some(format!("No hive supports cocoon kind '{cocoon_kind}'")),
+                    });
+                }
+            }
+
+            SignalingMessage::HiveTerminateCocoon {
+                request_id,
+                container_id,
+            } if kind == ClientKind::App => {
+                // Forward terminate to first connected hive
+                let target_hive = state.hives.iter().next();
+
+                if let Some(hive_entry) = target_hive {
+                    let hive = hive_entry.value().clone();
+                    drop(hive_entry);
+
+                    if let Some(hive_tx) = state.connections.get(&hive.connection_id) {
+                        send_msg(hive_tx.value(), &SignalingMessage::HiveTerminateCocoon {
+                            request_id,
+                            container_id,
+                        });
+                    } else {
+                        send_msg(&tx, &SignalingMessage::HiveTerminateCocoonResult {
+                            request_id,
+                            success: false,
+                            error: Some("Hive is not connected".to_string()),
+                        });
+                    }
+                } else {
+                    send_msg(&tx, &SignalingMessage::HiveTerminateCocoonResult {
+                        request_id,
+                        success: false,
+                        error: Some("No hive registered".to_string()),
+                    });
+                }
+            }
+
+            // Hive sends results back → broadcast to all app connections for the requesting user
+            SignalingMessage::HiveSpawnCocoonResult { .. } if kind == ClientKind::Hive => {
+                if let Some(ref uid) = user_id {
+                    let json = text.clone();
+                    state.notify_user(uid, &json);
+                }
+                // Also broadcast to all user connections since we don't track per-request routing
+                for entry in state.user_connections.iter() {
+                    for conn_tx in entry.value().values() {
+                        let _ = conn_tx.send(text.clone().to_string());
+                    }
+                }
+            }
+
+            SignalingMessage::HiveTerminateCocoonResult { .. } if kind == ClientKind::Hive => {
+                for entry in state.user_connections.iter() {
+                    for conn_tx in entry.value().values() {
+                        let _ = conn_tx.send(text.clone().to_string());
+                    }
+                }
+            }
+
+            ref other if handle_room_message(&state, &tx, user_id.as_deref(), device_id.as_deref(), kind, other) => {}
+
             other => {
                 warn!(kind = ?kind, msg_type = ?std::mem::discriminant(&other), "Unsupported message type for client kind");
                 send_msg(&tx, &SignalingMessage::SystemError {
@@ -541,6 +681,24 @@ async fn handle_socket(socket: WebSocket, state: AppState, kind: ClientKind) {
         info!(device_id = %did, "Device disconnected");
         state.connections.remove(did);
         state.device_meta.remove(did);
+
+        // Clean up hive registration on disconnect
+        if kind == ClientKind::Hive {
+            let hive_id = did.strip_prefix("hive-").unwrap_or(did);
+            state.hives.remove(hive_id);
+            info!(hive_id = %hive_id, "Hive unregistered");
+        }
+
+        // Notify room participants that this actor went offline
+        let affected_rooms = state.cleanup_device_rooms(did);
+        for room_id in &affected_rooms {
+            if let Ok(json) = serde_json::to_string(&SignalingMessage::RoomActorLeft {
+                room_id: room_id.clone(),
+                device_id: did.clone(),
+            }) {
+                state.notify_room(room_id, &json, None);
+            }
+        }
 
         // Notify owner's app connections about device going offline
         if let Some(owner) = state.device_owners.get(did).map(|o| o.value().clone()) {
@@ -574,6 +732,355 @@ async fn handle_socket(socket: WebSocket, state: AppState, kind: ClientKind) {
     send_task.abort();
 }
 
+fn build_room_info(state: &AppState, room: &Room) -> RoomInfo {
+    let actors: Vec<DeviceInfo> = room
+        .actors
+        .iter()
+        .map(|did| {
+            let meta = state.device_meta.get(did);
+            let (tags, device_type, device_config) = match meta {
+                Some(m) => (m.tags.clone(), m.device_type.clone(), m.device_config.clone()),
+                None => (std::collections::HashMap::new(), None, None),
+            };
+            DeviceInfo {
+                device_id: did.clone(),
+                tags,
+                online: state.connections.contains_key(did),
+                device_type,
+                device_config,
+            }
+        })
+        .collect();
+
+    RoomInfo {
+        room_id: room.room_id.clone(),
+        owner_user_id: room.owner_user_id.clone(),
+        granted_users: room.granted_users.iter().cloned().collect(),
+        actors,
+    }
+}
+
+fn notify_room_updated(state: &AppState, room_id: &str) {
+    let Some(room) = state.rooms.get(room_id) else { return };
+    let info = build_room_info(state, &room);
+    if let Ok(json) = serde_json::to_string(&SignalingMessage::RoomUpdated { room: info }) {
+        drop(room);
+        state.notify_room(room_id, &json, None);
+    }
+}
+
+/// Handles all Room* message variants. Returns true if the message was handled.
+fn handle_room_message(
+    state: &AppState,
+    tx: &mpsc::UnboundedSender<String>,
+    user_id: Option<&str>,
+    device_id: Option<&str>,
+    kind: ClientKind,
+    msg: &SignalingMessage,
+) -> bool {
+    match msg {
+        SignalingMessage::RoomCreate { room_id } => {
+            let Some(uid) = user_id else {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "Authentication required for room operations".to_string(),
+                });
+                return true;
+            };
+
+            let rid = room_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+
+            if state.rooms.contains_key(&rid) {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "Room already exists".to_string(),
+                });
+                return true;
+            }
+
+            let room = Room {
+                room_id: rid.clone(),
+                owner_user_id: uid.to_string(),
+                granted_users: HashSet::new(),
+                actors: HashSet::new(),
+            };
+            state.rooms.insert(rid.clone(), room);
+            info!(room_id = %rid, owner = %uid, "Room created");
+
+            send_msg(tx, &SignalingMessage::RoomCreateResponse { room_id: rid });
+            true
+        }
+
+        SignalingMessage::RoomDelete { room_id } => {
+            let Some(uid) = user_id else {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "Authentication required for room operations".to_string(),
+                });
+                return true;
+            };
+
+            let is_owner = state.rooms.get(room_id).map(|r| r.owner_user_id == uid).unwrap_or(false);
+            if !is_owner {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "Only the room owner can delete a room".to_string(),
+                });
+                return true;
+            }
+
+            if let Some((_, room)) = state.rooms.remove(room_id) {
+                for actor_id in &room.actors {
+                    if let Some(mut rooms) = state.device_rooms.get_mut(actor_id) {
+                        rooms.remove(room_id);
+                    }
+                }
+                info!(room_id = %room_id, "Room deleted");
+            }
+
+            send_msg(tx, &SignalingMessage::RoomDeleteResponse { room_id: room_id.clone() });
+            true
+        }
+
+        SignalingMessage::RoomAddActor { room_id, device_id: actor_did } => {
+            let Some(uid) = user_id else {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "Authentication required for room operations".to_string(),
+                });
+                return true;
+            };
+
+            if !state.user_has_room_access(room_id, uid) {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "No access to this room".to_string(),
+                });
+                return true;
+            }
+
+            state.add_actor_to_room(room_id, actor_did);
+            info!(room_id = %room_id, device_id = %actor_did, "Actor added to room");
+
+            send_msg(tx, &SignalingMessage::RoomAddActorResponse {
+                room_id: room_id.clone(),
+                device_id: actor_did.clone(),
+            });
+
+            if state.connections.contains_key(actor_did) {
+                if let Ok(json) = serde_json::to_string(&SignalingMessage::RoomActorJoined {
+                    room_id: room_id.clone(),
+                    device_id: actor_did.clone(),
+                }) {
+                    state.notify_room(room_id, &json, None);
+                }
+            }
+
+            notify_room_updated(state, room_id);
+            true
+        }
+
+        SignalingMessage::RoomRemoveActor { room_id, device_id: actor_did } => {
+            let Some(uid) = user_id else {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "Authentication required for room operations".to_string(),
+                });
+                return true;
+            };
+
+            if !state.user_has_room_access(room_id, uid) {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "No access to this room".to_string(),
+                });
+                return true;
+            }
+
+            state.remove_actor_from_room(room_id, actor_did);
+            info!(room_id = %room_id, device_id = %actor_did, "Actor removed from room");
+
+            send_msg(tx, &SignalingMessage::RoomRemoveActorResponse {
+                room_id: room_id.clone(),
+                device_id: actor_did.clone(),
+            });
+
+            if let Ok(json) = serde_json::to_string(&SignalingMessage::RoomActorLeft {
+                room_id: room_id.clone(),
+                device_id: actor_did.clone(),
+            }) {
+                state.notify_room(room_id, &json, None);
+            }
+
+            notify_room_updated(state, room_id);
+            true
+        }
+
+        SignalingMessage::RoomGrantAccess { room_id, user_id: target_uid } => {
+            let Some(uid) = user_id else {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "Authentication required for room operations".to_string(),
+                });
+                return true;
+            };
+
+            if !state.user_has_room_access(room_id, uid) {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "No access to this room".to_string(),
+                });
+                return true;
+            }
+
+            if let Some(mut room) = state.rooms.get_mut(room_id) {
+                room.granted_users.insert(target_uid.clone());
+            }
+            info!(room_id = %room_id, granted_to = %target_uid, "Access granted");
+
+            send_msg(tx, &SignalingMessage::RoomGrantAccessResponse {
+                room_id: room_id.clone(),
+                user_id: target_uid.clone(),
+            });
+
+            notify_room_updated(state, room_id);
+            true
+        }
+
+        SignalingMessage::RoomRevokeAccess { room_id, user_id: target_uid } => {
+            let Some(uid) = user_id else {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "Authentication required for room operations".to_string(),
+                });
+                return true;
+            };
+
+            if !state.user_has_room_access(room_id, uid) {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "No access to this room".to_string(),
+                });
+                return true;
+            }
+
+            let is_owner_target = state.rooms.get(room_id)
+                .map(|r| r.owner_user_id == *target_uid)
+                .unwrap_or(false);
+            if is_owner_target {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "Cannot revoke access from the room owner".to_string(),
+                });
+                return true;
+            }
+
+            if let Some(mut room) = state.rooms.get_mut(room_id) {
+                room.granted_users.remove(target_uid.as_str());
+            }
+            info!(room_id = %room_id, revoked_from = %target_uid, "Access revoked");
+
+            send_msg(tx, &SignalingMessage::RoomRevokeAccessResponse {
+                room_id: room_id.clone(),
+                user_id: target_uid.clone(),
+            });
+
+            notify_room_updated(state, room_id);
+            true
+        }
+
+        SignalingMessage::RoomList => {
+            let Some(uid) = user_id else {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "Authentication required for room operations".to_string(),
+                });
+                return true;
+            };
+
+            let rooms: Vec<RoomInfo> = state
+                .get_user_rooms(uid)
+                .iter()
+                .map(|room| build_room_info(state, room))
+                .collect();
+
+            send_msg(tx, &SignalingMessage::RoomListResponse { rooms });
+            true
+        }
+
+        SignalingMessage::RoomGet { room_id } => {
+            let Some(uid) = user_id else {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "Authentication required for room operations".to_string(),
+                });
+                return true;
+            };
+
+            if !state.user_has_room_access(room_id, uid) {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "No access to this room".to_string(),
+                });
+                return true;
+            }
+
+            if let Some(room) = state.rooms.get(room_id) {
+                let info = build_room_info(state, &room);
+                send_msg(tx, &SignalingMessage::RoomGetResponse {
+                    room_id: info.room_id,
+                    owner_user_id: info.owner_user_id,
+                    granted_users: info.granted_users,
+                    actors: info.actors,
+                });
+            }
+            true
+        }
+
+        SignalingMessage::RoomSend { room_id, to, payload } => {
+            let has_access = match kind {
+                ClientKind::App => user_id.map(|uid| state.user_has_room_access(room_id, uid)).unwrap_or(false),
+                ClientKind::Cocoon => device_id
+                    .and_then(|did| state.device_rooms.get(did))
+                    .map(|rooms| rooms.contains(room_id))
+                    .unwrap_or(false),
+                ClientKind::Hive => false,
+            };
+
+            if !has_access {
+                send_msg(tx, &SignalingMessage::SystemError {
+                    message: "No access to this room".to_string(),
+                });
+                return true;
+            }
+
+            let sender_id = match kind {
+                ClientKind::Cocoon => device_id.unwrap_or("unknown"),
+                ClientKind::App => user_id.unwrap_or("unknown"),
+                ClientKind::Hive => device_id.unwrap_or("unknown"),
+            };
+
+            if let Some(target) = to {
+                let target_in_room = state.rooms.get(room_id)
+                    .map(|r| r.actors.contains(target))
+                    .unwrap_or(false);
+
+                if !target_in_room {
+                    send_msg(tx, &SignalingMessage::SystemError {
+                        message: "Target device is not in this room".to_string(),
+                    });
+                    return true;
+                }
+
+                if let Some(peer_tx) = state.connections.get(target) {
+                    send_msg(peer_tx.value(), &SignalingMessage::RoomSend {
+                        room_id: room_id.clone(),
+                        to: None,
+                        payload: payload.clone(),
+                    });
+                }
+            } else {
+                if let Ok(json) = serde_json::to_string(&SignalingMessage::RoomSend {
+                    room_id: room_id.clone(),
+                    to: None,
+                    payload: payload.clone(),
+                }) {
+                    state.notify_room(room_id, &json, device_id);
+                }
+            }
+
+            debug!(room_id = %room_id, sender = %sender_id, "Room message routed");
+            true
+        }
+
+        _ => false,
+    }
+}
+
 fn send_msg(tx: &mpsc::UnboundedSender<String>, msg: &SignalingMessage) {
     if let Ok(json) = serde_json::to_string(msg) {
         let _ = tx.send(json);
@@ -588,6 +1095,18 @@ mod tests {
     use lib_signaling_protocol::SignalingMessage;
     use std::collections::HashMap;
     use tokio_tungstenite::{connect_async, tungstenite::Message as TsMessage};
+
+    /// Drain all pending messages from a stream with a short timeout.
+    async fn drain_pending(
+        stream: &mut (impl StreamExt<Item = Result<TsMessage, tokio_tungstenite::tungstenite::Error>> + Unpin),
+    ) {
+        loop {
+            match tokio::time::timeout(std::time::Duration::from_millis(50), stream.next()).await {
+                Ok(Some(Ok(_))) => continue,
+                _ => break,
+            }
+        }
+    }
 
     async fn spawn_server() -> String {
         spawn_server_with_auth(None).await
@@ -927,6 +1446,219 @@ mod tests {
                 assert_eq!(t["name"], "my-cocoon");
             }
             other => panic!("Expected DeviceRegisterResponse, got: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_room_create_list_get() {
+        let url = spawn_server().await;
+        let (ws, _) = connect_async(&url).await.unwrap();
+        let (mut sink, mut stream) = ws.split();
+
+        // Consume AuthHello
+        let _ = recv_msg(&mut stream).await;
+
+        // Authenticate
+        let token = make_jwt("user-room-owner");
+        send(&mut sink, &SignalingMessage::AuthAuthenticate { access_token: token }).await;
+        let _ = recv_msg(&mut stream).await; // AuthAuthenticateResponse
+        let _ = recv_msg(&mut stream).await; // AuthHelloAuthed
+
+        // Create room
+        send(&mut sink, &SignalingMessage::RoomCreate { room_id: Some("test-room-1".to_string()) }).await;
+        let resp = recv_msg(&mut stream).await;
+        match resp {
+            SignalingMessage::RoomCreateResponse { room_id } => {
+                assert_eq!(room_id, "test-room-1");
+            }
+            other => panic!("Expected RoomCreateResponse, got: {:?}", other),
+        }
+
+        // List rooms
+        send(&mut sink, &SignalingMessage::RoomList).await;
+        let resp = recv_msg(&mut stream).await;
+        match resp {
+            SignalingMessage::RoomListResponse { rooms } => {
+                assert_eq!(rooms.len(), 1);
+                assert_eq!(rooms[0].room_id, "test-room-1");
+                assert_eq!(rooms[0].owner_user_id, "user-room-owner");
+                assert!(rooms[0].granted_users.is_empty());
+                assert!(rooms[0].actors.is_empty());
+            }
+            other => panic!("Expected RoomListResponse, got: {:?}", other),
+        }
+
+        // Get room
+        send(&mut sink, &SignalingMessage::RoomGet { room_id: "test-room-1".to_string() }).await;
+        let resp = recv_msg(&mut stream).await;
+        match resp {
+            SignalingMessage::RoomGetResponse { room_id, owner_user_id, .. } => {
+                assert_eq!(room_id, "test-room-1");
+                assert_eq!(owner_user_id, "user-room-owner");
+            }
+            other => panic!("Expected RoomGetResponse, got: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_room_add_actor_communication() {
+        let url = spawn_server().await;
+        let cocoon_url = format!("{}?kind=cocoon", url);
+
+        // App client: authenticate and create room
+        let (ws_app, _) = connect_async(&url).await.unwrap();
+        let (mut sink_app, mut stream_app) = ws_app.split();
+        let _ = recv_msg(&mut stream_app).await; // AuthHello
+        send(&mut sink_app, &SignalingMessage::AuthAuthenticate { access_token: make_jwt("room-user") }).await;
+        let _ = recv_msg(&mut stream_app).await; // AuthAuthenticateResponse
+        let _ = recv_msg(&mut stream_app).await; // AuthHelloAuthed
+
+        send(&mut sink_app, &SignalingMessage::RoomCreate { room_id: Some("comm-room".to_string()) }).await;
+        let _ = recv_msg(&mut stream_app).await; // RoomCreateResponse
+
+        // Cocoon A registers
+        let (ws_a, _) = connect_async(&cocoon_url).await.unwrap();
+        let (mut sink_a, mut stream_a) = ws_a.split();
+        send(&mut sink_a, &SignalingMessage::DeviceRegister {
+            secret: "aB3cD4eF5gH6iJ7kL8mN9oP0qR1sT2uV".to_string(),
+            device_id: None, version: "1.0.0".to_string(),
+            tags: None, device_type: None, device_config: None,
+        }).await;
+        let id_a = match recv_msg(&mut stream_a).await {
+            SignalingMessage::DeviceRegisterResponse { device_id, .. } => device_id,
+            other => panic!("Expected DeviceRegisterResponse, got: {:?}", other),
+        };
+
+        // Cocoon B registers
+        let (ws_b, _) = connect_async(&cocoon_url).await.unwrap();
+        let (mut sink_b, mut stream_b) = ws_b.split();
+        send(&mut sink_b, &SignalingMessage::DeviceRegister {
+            secret: "xY9wV8uT7sR6qP5oN4mL3kJ2iH1gF0eD".to_string(),
+            device_id: None, version: "1.0.0".to_string(),
+            tags: None, device_type: None, device_config: None,
+        }).await;
+        let id_b = match recv_msg(&mut stream_b).await {
+            SignalingMessage::DeviceRegisterResponse { device_id, .. } => device_id,
+            other => panic!("Expected DeviceRegisterResponse, got: {:?}", other),
+        };
+
+        // Add both actors to room
+        send(&mut sink_app, &SignalingMessage::RoomAddActor {
+            room_id: "comm-room".to_string(), device_id: id_a.clone(),
+        }).await;
+        let _ = recv_msg(&mut stream_app).await; // RoomAddActorResponse
+
+        send(&mut sink_app, &SignalingMessage::RoomAddActor {
+            room_id: "comm-room".to_string(), device_id: id_b.clone(),
+        }).await;
+        // Drain notifications (RoomActorJoined, RoomUpdated, RoomAddActorResponse)
+        let _ = recv_msg(&mut stream_app).await;
+
+        // Drain any RoomActorJoined/RoomUpdated notifications on cocoon streams
+        // Cocoon A gets notified when B joins (RoomActorJoined + RoomUpdated)
+        // Use a short timeout drain to consume pending notifications
+        drain_pending(&mut stream_a).await;
+        drain_pending(&mut stream_b).await;
+
+        // Cocoon A sends targeted message to Cocoon B via room
+        send(&mut sink_a, &SignalingMessage::RoomSend {
+            room_id: "comm-room".to_string(),
+            to: Some(id_b.clone()),
+            payload: serde_json::json!({"action": "hello-from-a"}),
+        }).await;
+
+        let msg_b = recv_msg(&mut stream_b).await;
+        match msg_b {
+            SignalingMessage::RoomSend { room_id, payload, .. } => {
+                assert_eq!(room_id, "comm-room");
+                assert_eq!(payload["action"], "hello-from-a");
+            }
+            other => panic!("Expected RoomSend, got: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_room_grant_access() {
+        let url = spawn_server().await;
+
+        // User A creates a room
+        let (ws_a, _) = connect_async(&url).await.unwrap();
+        let (mut sink_a, mut stream_a) = ws_a.split();
+        let _ = recv_msg(&mut stream_a).await;
+        send(&mut sink_a, &SignalingMessage::AuthAuthenticate { access_token: make_jwt("user-a") }).await;
+        let _ = recv_msg(&mut stream_a).await;
+        let _ = recv_msg(&mut stream_a).await;
+
+        send(&mut sink_a, &SignalingMessage::RoomCreate { room_id: Some("shared-room".to_string()) }).await;
+        let _ = recv_msg(&mut stream_a).await;
+
+        // Grant access to user-b
+        send(&mut sink_a, &SignalingMessage::RoomGrantAccess {
+            room_id: "shared-room".to_string(),
+            user_id: "user-b".to_string(),
+        }).await;
+        let _ = recv_msg(&mut stream_a).await; // RoomGrantAccessResponse
+
+        // User B connects and can see the room
+        let (ws_b, _) = connect_async(&url).await.unwrap();
+        let (mut sink_b, mut stream_b) = ws_b.split();
+        let _ = recv_msg(&mut stream_b).await;
+        send(&mut sink_b, &SignalingMessage::AuthAuthenticate { access_token: make_jwt("user-b") }).await;
+        let _ = recv_msg(&mut stream_b).await;
+        let _ = recv_msg(&mut stream_b).await;
+
+        send(&mut sink_b, &SignalingMessage::RoomList).await;
+        let resp = recv_msg(&mut stream_b).await;
+        match resp {
+            SignalingMessage::RoomListResponse { rooms } => {
+                assert_eq!(rooms.len(), 1);
+                assert_eq!(rooms[0].room_id, "shared-room");
+                assert!(rooms[0].granted_users.contains(&"user-b".to_string()));
+            }
+            other => panic!("Expected RoomListResponse, got: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_room_unauthorized_access() {
+        let url = spawn_server().await;
+
+        // User A creates a room
+        let (ws_a, _) = connect_async(&url).await.unwrap();
+        let (mut sink_a, mut stream_a) = ws_a.split();
+        let _ = recv_msg(&mut stream_a).await;
+        send(&mut sink_a, &SignalingMessage::AuthAuthenticate { access_token: make_jwt("user-a") }).await;
+        let _ = recv_msg(&mut stream_a).await;
+        let _ = recv_msg(&mut stream_a).await;
+
+        send(&mut sink_a, &SignalingMessage::RoomCreate { room_id: Some("private-room".to_string()) }).await;
+        let _ = recv_msg(&mut stream_a).await;
+
+        // User C (not granted) tries to get the room
+        let (ws_c, _) = connect_async(&url).await.unwrap();
+        let (mut sink_c, mut stream_c) = ws_c.split();
+        let _ = recv_msg(&mut stream_c).await;
+        send(&mut sink_c, &SignalingMessage::AuthAuthenticate { access_token: make_jwt("user-c") }).await;
+        let _ = recv_msg(&mut stream_c).await;
+        let _ = recv_msg(&mut stream_c).await;
+
+        send(&mut sink_c, &SignalingMessage::RoomGet { room_id: "private-room".to_string() }).await;
+        let resp = recv_msg(&mut stream_c).await;
+        match resp {
+            SignalingMessage::SystemError { message } => {
+                assert!(message.contains("No access"));
+            }
+            other => panic!("Expected SystemError, got: {:?}", other),
+        }
+
+        // User C can't see it in list either
+        send(&mut sink_c, &SignalingMessage::RoomList).await;
+        let resp = recv_msg(&mut stream_c).await;
+        match resp {
+            SignalingMessage::RoomListResponse { rooms } => {
+                assert!(rooms.is_empty());
+            }
+            other => panic!("Expected empty RoomListResponse, got: {:?}", other),
         }
     }
 

@@ -3,8 +3,6 @@ import {
   Logger,
   trace,
   configureApp,
-  initInternalPlugin,
-  type AdiPlugin,
   type PluginDescriptor,
 } from '@adi-family/sdk-plugin';
 import { AdiDebugScreenBusKey } from '@adi-family/plugin-debug-screen';
@@ -18,7 +16,9 @@ import { getEnabledWebPluginIds } from '../plugin-prefs';
 const SIGNALING_CONNECT_TIMEOUT_MS = 10_000;
 const MIN_LOADING_MS = 1_500;
 const REQUIRED_PLUGINS = new Set(
-  (import.meta.env.VITE_REQUIRED_PLUGINS as string ?? '').split(',').filter(Boolean),
+  ((import.meta.env.VITE_REQUIRED_PLUGINS as string) ?? '')
+    .split(',')
+    .filter(Boolean),
 );
 
 export interface Context {
@@ -71,11 +71,15 @@ export class App {
     const db = DbConnection.init();
     db.registerStore('prefs');
 
-    window.dispatchEvent(new CustomEvent('loading-step', { detail: 'registry' }));
+    window.dispatchEvent(
+      new CustomEvent('loading-step', { detail: 'registry' }),
+    );
     const registryHub = RegistryHub.init();
     await registryHub.start({ db });
 
-    window.dispatchEvent(new CustomEvent('loading-step', { detail: 'plugins' }));
+    window.dispatchEvent(
+      new CustomEvent('loading-step', { detail: 'plugins' }),
+    );
     const core = new PluginCore(bus, registryHub);
     const app = new App(bus, db, core, registryHub);
     App._instance = app;
@@ -100,7 +104,8 @@ export class App {
     this.core.registerPluginById('adi.plugins');
 
     await this.registerEnabledPlugins();
-    const { allPlugins, loaded, failed, timedOut, reasons } = await this.core.fetchPlugins();
+    const { allPlugins, loaded, failed, timedOut, reasons } =
+      await this.core.fetchPlugins();
     this.allPlugins = allPlugins;
     this.debug = { loaded, failed, timedOut };
 
@@ -109,12 +114,18 @@ export class App {
     const optionalBroken = broken.filter((id) => !REQUIRED_PLUGINS.has(id));
 
     if (optionalBroken.length > 0) {
-      const details = optionalBroken.map((id) => `${id}: ${reasons[id] ?? 'unknown'}`);
-      console.warn(`[app] optional plugins failed to load:\n  ${details.join('\n  ')}`);
+      const details = optionalBroken.map(
+        (id) => `${id}: ${reasons[id] ?? 'unknown'}`,
+      );
+      console.warn(
+        `[app] optional plugins failed to load:\n  ${details.join('\n  ')}`,
+      );
     }
 
     if (requiredBroken.length > 0) {
-      const details = requiredBroken.map((id) => `${id}: ${reasons[id] ?? 'unknown'}`);
+      const details = requiredBroken.map(
+        (id) => `${id}: ${reasons[id] ?? 'unknown'}`,
+      );
       throw new Error(`Required plugins failed:\n  ${details.join('\n  ')}`);
     }
 
@@ -136,7 +147,9 @@ export class App {
 
   @trace('starting')
   async start(): Promise<void> {
-    window.dispatchEvent(new CustomEvent('loading-step', { detail: 'signaling' }));
+    window.dispatchEvent(
+      new CustomEvent('loading-step', { detail: 'signaling' }),
+    );
 
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {

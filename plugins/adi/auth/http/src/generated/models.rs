@@ -69,9 +69,3 @@ pub struct UserInfo {
 pub struct MessageResponse {
     pub message: String,
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ErrorResponse {
-    pub error: String,
-}

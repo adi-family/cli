@@ -197,6 +197,74 @@ interface Hive {
     ): void;
 }
 
+// ── Room Types ─────────────────────────────────────────────
+
+model RoomInfo {
+    room_id: string;
+    owner_user_id: string;
+    granted_users: string[];
+    actors: DeviceInfo[];
+}
+
+// ── Room Channel ───────────────────────────────────────────
+
+@channel("room")
+interface Room {
+    @request
+    create(room_id?: string): {
+        room_id: string;
+    };
+
+    @request
+    delete(room_id: string): {
+        room_id: string;
+    };
+
+    @request
+    addActor(room_id: string, device_id: string): {
+        room_id: string;
+        device_id: string;
+    };
+
+    @request
+    removeActor(room_id: string, device_id: string): {
+        room_id: string;
+        device_id: string;
+    };
+
+    @request
+    grantAccess(room_id: string, user_id: string): {
+        room_id: string;
+        user_id: string;
+    };
+
+    @request
+    revokeAccess(room_id: string, user_id: string): {
+        room_id: string;
+        user_id: string;
+    };
+
+    @request
+    list(): {
+        rooms: RoomInfo[];
+    };
+
+    @request
+    get(room_id: string): RoomInfo;
+
+    @relay
+    send(room_id: string, to?: string, payload: unknown): void;
+
+    @event
+    actorJoined(room_id: string, device_id: string): void;
+
+    @event
+    actorLeft(room_id: string, device_id: string): void;
+
+    @serverPush
+    updated(room: RoomInfo): void;
+}
+
 // ── System Channel ──────────────────────────────────────────
 
 @channel("system")
@@ -225,6 +293,10 @@ interface SignalingBus {
     @event pairingConnected(url: string, peerId: string): void;
     @event pairingFailed(url: string, reason: string): void;
     @event syncData(url: string, payload: unknown): void;
+    @event roomUpdated(url: string, room: RoomInfo): void;
+    @event roomActorJoined(url: string, roomId: string, deviceId: string): void;
+    @event roomActorLeft(url: string, roomId: string, deviceId: string): void;
+    @event roomMessage(url: string, roomId: string, from: string, payload: unknown): void;
 }
 
 // ── EventBus: Auth ─────────────────────────────────────────

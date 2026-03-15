@@ -1,4 +1,4 @@
-use cocoon_core::{CocoonInfo, CocoonStatus, RuntimeManager, RuntimeType};
+use cocoon_core::{CocoonStatus, RuntimeManager, RuntimeType};
 use lib_console_output::{out_error, out_info, out_success, theme, KeyValue, Renderable};
 use lib_env_parse::{env_opt, env_vars};
 use once_cell::sync::OnceCell;

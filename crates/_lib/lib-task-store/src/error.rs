@@ -13,10 +13,6 @@ pub enum TaskStoreError {
     #[error("SQLite error: {0}")]
     Sqlite(#[from] sqlx::Error),
 
-    #[cfg(feature = "postgres")]
-    #[error("PostgreSQL error: {0}")]
-    Postgres(sqlx::Error),
-
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 

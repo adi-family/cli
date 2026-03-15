@@ -41,6 +41,9 @@ tracing = "0.1"
 # Daemon client for core plugins
 lib-hive-daemon-client = { path = "../../_lib/lib-hive-daemon-client" }
 
+# Signaling protocol (for cocoon spawning via hive remote control)
+lib-signaling-protocol = { path = "../../../plugins/adi/signaling/protocol" }
+
 # Time
 chrono = { version = "0.4", features = ["serde"] }
 

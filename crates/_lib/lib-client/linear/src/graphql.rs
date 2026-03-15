@@ -41,13 +41,4 @@ pub struct GraphQLResponse<T> {
 #[derive(Debug, Clone, Deserialize)]
 pub struct GraphQLError {
     pub message: String,
-    pub locations: Option<Vec<ErrorLocation>>,
-    pub path: Option<Vec<serde_json::Value>>,
-    pub extensions: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct ErrorLocation {
-    pub line: u32,
-    pub column: u32,
 }

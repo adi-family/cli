@@ -3,7 +3,7 @@
  * DO NOT EDIT.
  */
 
-import type { AuthOption, AuthRequirement, CocoonKind, ConnectionInfo, DeviceInfo } from './types';
+import type { AuthOption, AuthRequirement, CocoonKind, ConnectionInfo, DeviceInfo, RoomInfo } from './types';
 
 export type SignalingMessage =
   // ── auth ──
@@ -44,6 +44,28 @@ export type SignalingMessage =
   | { type: 'hive_terminate_cocoon'; request_id: string; container_id: string }
   | { type: 'hive_spawn_cocoon_result'; request_id: string; success: boolean; device_id?: string; container_id?: string; error?: string }
   | { type: 'hive_terminate_cocoon_result'; request_id: string; success: boolean; error?: string }
+
+  // ── room ──
+  | { type: 'room_create'; room_id?: string }
+  | { type: 'room_create_response'; room_id: string }
+  | { type: 'room_delete'; room_id: string }
+  | { type: 'room_delete_response'; room_id: string }
+  | { type: 'room_add_actor'; room_id: string; device_id: string }
+  | { type: 'room_add_actor_response'; room_id: string; device_id: string }
+  | { type: 'room_remove_actor'; room_id: string; device_id: string }
+  | { type: 'room_remove_actor_response'; room_id: string; device_id: string }
+  | { type: 'room_grant_access'; room_id: string; user_id: string }
+  | { type: 'room_grant_access_response'; room_id: string; user_id: string }
+  | { type: 'room_revoke_access'; room_id: string; user_id: string }
+  | { type: 'room_revoke_access_response'; room_id: string; user_id: string }
+  | { type: 'room_list' }
+  | { type: 'room_list_response'; rooms: RoomInfo[] }
+  | { type: 'room_get'; room_id: string }
+  | { type: 'room_get_response'; room_id: string; owner_user_id: string; granted_users: string[]; actors: DeviceInfo[] }
+  | { type: 'room_send'; room_id: string; to?: string; payload: unknown }
+  | { type: 'room_actor_joined'; room_id: string; device_id: string }
+  | { type: 'room_actor_left'; room_id: string; device_id: string }
+  | { type: 'room_updated'; room: RoomInfo }
 
   // ── system ──
   | { type: 'system_error'; message: string };

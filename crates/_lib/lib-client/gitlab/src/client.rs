@@ -75,14 +75,6 @@ impl Client {
         self.request(reqwest::Method::POST, path, Some(body)).await
     }
 
-    async fn put<T: DeserializeOwned, B: serde::Serialize>(
-        &self,
-        path: &str,
-        body: &B,
-    ) -> Result<T> {
-        self.request(reqwest::Method::PUT, path, Some(body)).await
-    }
-
     async fn request<T: DeserializeOwned>(
         &self,
         method: reqwest::Method,

@@ -1,0 +1,40 @@
+[package]
+name = "hive-runner-cocoon-spawner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Cocoon Spawner runner plugin for Hive"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lib-plugin-abi-v3 = { path = "../../../_lib/lib-plugin-abi-v3" }
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+futures = "0.3"
+uuid.workspace = true
+bollard = "0.17"
+
+[features]
+default = ["plugin"]
+plugin = []
+
+[package.metadata.plugin]
+id = "hive.runner.cocoon-spawner"
+name = "Cocoon Spawner"
+type = "hive-plugin"
+
+[package.metadata.plugin.compatibility]
+min_host_version = "0.8.0"
+
+[package.metadata.plugin.tags]
+categories = ["hive", "runner", "cocoon", "containers"]
+
+[package.metadata.plugin.hive]
+category = "runner"
+name = "cocoon-spawner"

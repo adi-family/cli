@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult } from 'lit';
-import type { CocoonInstallStatus, PluginItem } from '../types.js';
+import type { CocoonInstallStatus, PluginItem } from '../models.js';
 
 export interface PluginDetailProps {
   item: PluginItem;
@@ -22,10 +22,10 @@ const statusRow = (
     </div>
     <div>
       ${status.installing
-        ? html`<span class="text-xs text-gray-400">Installing...</span>`
+        ? html`<span class="plugins-status-text">Installing...</span>`
         : status.installed
           ? html`<span class="plugins-installed-badge">Installed</span>`
-          : html`<button class="plugins-btn-primary text-xs" @click=${() => onInstall(status.cocoonId)}>Install</button>`}
+          : html`<button class="plugins-btn-secondary text-xs" @click=${() => onInstall(status.cocoonId)}>Install</button>`}
     </div>
   </div>
 `;
@@ -70,11 +70,15 @@ export const renderPluginDetail = (props: PluginDetailProps): TemplateResult => 
           <h2 class="text-sm font-semibold text-gray-300 mb-3">Web Plugin</h2>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-400">Load plugin in browser</span>
-            ${item.webInstalled
+            ${item.webStatus.kind === 'installed'
               ? html`<span class="plugins-installed-badge">Loaded</span>`
-              : item.webInstalling
-                ? html`<span class="text-xs text-gray-400">Loading...</span>`
-                : html`<button class="plugins-btn-primary" @click=${onInstallWeb}>Install Web Plugin</button>`}
+              : item.webStatus.kind === 'installing'
+                ? html`<span class="plugins-status-text">Installing...</span>`
+                : item.webStatus.kind === 'loading'
+                  ? html`<span class="plugins-status-text">Loading...</span>`
+                  : item.webStatus.kind === 'error'
+                    ? html`<span class="plugins-status-error">${item.webStatus.message}</span>`
+                    : html`<button class="plugins-btn-secondary" @click=${onInstallWeb}>Install Web Plugin</button>`}
           </div>
         </div>
       ` : nothing}

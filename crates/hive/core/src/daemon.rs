@@ -31,6 +31,8 @@ pub struct DaemonConfig {
     pub proxy_bind: Vec<String>,
     pub activated_listeners: Vec<std::net::TcpListener>,
     pub dns: DnsConfig,
+    /// Optional signaling server connection for remote cocoon spawning.
+    pub signaling: Option<crate::hive_signaling::HiveSignalingConfig>,
 }
 
 impl DaemonConfig {
@@ -43,6 +45,7 @@ impl DaemonConfig {
             proxy_bind: Vec::new(),
             activated_listeners: Vec::new(),
             dns: DnsConfig::default(),
+            signaling: None,
         }
     }
 
@@ -57,6 +60,7 @@ impl DaemonConfig {
             proxy_bind: Vec::new(),
             activated_listeners: Vec::new(),
             dns: DnsConfig::default(),
+            signaling: None,
         }
     }
 
@@ -67,6 +71,11 @@ impl DaemonConfig {
 
     pub fn with_dns(mut self, dns: DnsConfig) -> Self {
         self.dns = dns;
+        self
+    }
+
+    pub fn with_signaling(mut self, config: crate::hive_signaling::HiveSignalingConfig) -> Self {
+        self.signaling = Some(config);
         self
     }
 
@@ -156,6 +165,18 @@ impl HiveDaemon {
 
         self.source_manager.init().await?;
 
+        // Create virtual source for dynamic cocoon services if signaling is configured
+        if let Some(ref signaling_config) = self.config.signaling {
+            self.source_manager
+                .add_virtual_source(&signaling_config.cocoon_source_id)
+                .await?;
+            info!(
+                "Cocoon support enabled (source: '{}', kinds: {})",
+                signaling_config.cocoon_source_id,
+                signaling_config.cocoon_kinds.len()
+            );
+        }
+
         let proxy_state = self.source_manager.proxy_state().clone();
         proxy_state.set_log_buffer(self.log_buffer.clone());
 
@@ -226,6 +247,18 @@ impl HiveDaemon {
             .ok_or_else(|| anyhow!("Daemon already started"))?;
         let shutdown_handle = shutdown_coordinator.handle();
 
+        // Spawn signaling connection for remote cocoon management
+        let signaling_handle = if let Some(signaling_config) = self.config.signaling.clone() {
+            let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+            let sm = self.source_manager.clone();
+            let handle = tokio::spawn(async move {
+                crate::hive_signaling::run_signaling_loop(signaling_config, sm, shutdown_rx).await;
+            });
+            Some((handle, shutdown_tx))
+        } else {
+            None
+        };
+
         let ctx = Arc::new(ClientContext {
             source_manager: self.source_manager.clone(),
             exposure_manager: self.exposure_manager.clone(),
@@ -258,6 +291,12 @@ impl HiveDaemon {
                     break;
                 }
             }
+        }
+
+        // Shut down signaling connection
+        if let Some((handle, shutdown_tx)) = signaling_handle {
+            let _ = shutdown_tx.send(true);
+            let _ = handle.await;
         }
 
         if let Some(handle) = dns_handle {
@@ -771,24 +810,31 @@ async fn process_request(
         DaemonRequest::CreateService {
             source_id,
             name,
-            config: _,
-        } => DaemonResponse::Error {
-            code: "NOT_IMPLEMENTED".to_string(),
-            message: format!(
-                "CreateService not yet implemented for source '{}' service '{}'",
-                source_id, name
-            ),
-        },
+            config,
+        } => {
+            match serde_json::from_value::<crate::hive_config::ServiceConfig>(config) {
+                Ok(service_config) => ok_or_error(
+                    source_manager.create_service(&source_id, &name, service_config).await,
+                    "CREATE_SERVICE_FAILED",
+                    format!("Created service {}:{}", source_id, name),
+                ),
+                Err(e) => DaemonResponse::Error {
+                    code: "INVALID_CONFIG".to_string(),
+                    message: format!("Invalid service config: {}", e),
+                },
+            }
+        }
 
         DaemonRequest::UpdateService { fqn, patch: _ } => DaemonResponse::Error {
             code: "NOT_IMPLEMENTED".to_string(),
             message: format!("UpdateService not yet implemented for '{}'", fqn),
         },
 
-        DaemonRequest::DeleteService { fqn } => DaemonResponse::Error {
-            code: "NOT_IMPLEMENTED".to_string(),
-            message: format!("DeleteService not yet implemented for '{}'", fqn),
-        },
+        DaemonRequest::DeleteService { fqn } => ok_or_error(
+            source_manager.delete_service(&fqn).await,
+            "DELETE_SERVICE_FAILED",
+            format!("Deleted service: {}", fqn),
+        ),
 
         DaemonRequest::ListExposed => {
             let exposed = exposure_manager.list_exposed().await;

@@ -89,13 +89,6 @@ enum SilkResponse {
     SessionClosed {
         session_id: Uuid,
     },
-    #[serde(rename = "silk_pty_output")]
-    PtyOutput {
-        session_id: Uuid,
-        command_id: String,
-        pty_session_id: Uuid,
-        data: String,
-    },
     #[serde(rename = "silk_error")]
     Error {
         #[serde(skip_serializing_if = "Option::is_none")]

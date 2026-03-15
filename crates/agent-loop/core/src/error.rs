@@ -88,6 +88,9 @@ pub enum AgentError {
 
     #[error("Rate limited, retry after {0}s")]
     RateLimited(u64),
+
+    #[error("Signaling error: {0}")]
+    SignalingError(String),
 }
 
 pub type Result<T> = std::result::Result<T, AgentError>;

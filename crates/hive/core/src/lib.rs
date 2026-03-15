@@ -22,6 +22,7 @@ pub mod error_pages;
 pub mod exposure;
 pub mod global_registry;
 pub mod hive_config;
+pub mod hive_signaling;
 pub mod observability;
 pub mod observability_plugins;
 pub mod plugin_system;
@@ -73,11 +74,12 @@ pub use service_proxy::{
     create_service_proxy_router, start_service_proxy_server, Route, ServiceProxyState,
 };
 pub use signaling_control::{
-    parse_fqn as parse_service_fqn, DaemonStatus as RemoteDaemonStatus, ErrorCode, ExposedInfo,
-    HiveControlMessage, HiveDeviceType, HiveRegistration, HiveRequest, HiveResponse,
-    RemoteControlHandler, RequestHandler, ServiceInfo as RemoteServiceInfo,
+    parse_fqn as parse_service_fqn, CocoonKindInfo, DaemonStatus as RemoteDaemonStatus,
+    ErrorCode, ExposedInfo, HiveControlMessage, HiveDeviceType, HiveRegistration, HiveRequest,
+    HiveResponse, RemoteControlHandler, RequestHandler, ServiceInfo as RemoteServiceInfo,
     ServiceState as RemoteServiceState, SimpleRequestHandler, SourceConfig,
 };
+pub use hive_signaling::HiveSignalingConfig;
 pub use global_registry::{GlobalRegistry, RegisteredSource};
 pub use runtime_db::RuntimeDb;
 pub use source_manager::{read_sources_registry, SourceInfo, SourceManager, SourceStatus};

@@ -4,7 +4,7 @@ import { AdiRouterBusKey } from '@adi-family/plugin-router';
 import { PLUGIN_ID, PLUGIN_VERSION } from './config.js';
 import { setBus } from './context.js';
 import * as api from './api.js';
-import type { CocoonDevice, CocoonInstallStatus, PluginItem, RegistryPlugin } from './types.js';
+import type { CocoonDevice, CocoonInstallStatus, PluginItem, RegistryPlugin } from './models.js';
 import './events.js';
 
 interface TrackedCocoon {
@@ -170,7 +170,9 @@ export class PluginsPlugin extends AdiPlugin {
 
   private buildPluginItems(plugins: RegistryPlugin[]): PluginItem[] {
     return plugins.map(plugin => {
-      const webInstalled = this.loadedWebPlugins.has(plugin.id);
+      const webStatus = this.loadedWebPlugins.has(plugin.id)
+        ? { kind: 'installed' as const }
+        : { kind: 'available' as const };
       const cocoonStatuses: CocoonInstallStatus[] = [];
 
       for (const [deviceId, tracked] of this.cocoons) {
@@ -184,7 +186,7 @@ export class PluginsPlugin extends AdiPlugin {
         });
       }
 
-      return { plugin, webInstalled, webInstalling: false, cocoonStatuses };
+      return { plugin, webStatus, cocoonStatuses };
     });
   }
 

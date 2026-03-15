@@ -25,6 +25,8 @@ lib-client-anthropic = { path = "../../_lib/lib-client/anthropic" }
 lib-client-openai = { path = "../../_lib/lib-client/openai" }
 lib-client-openrouter = { path = "../../_lib/lib-client/openrouter" }
 lib-client-ollama = { path = "../../_lib/lib-client/ollama" }
+lib-signaling-protocol = { path = "../../../plugins/adi/signaling/protocol" }
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-native-roots"] }
 jsonschema = "0.26"
 toml = "0.8"
 

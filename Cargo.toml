@@ -75,6 +75,7 @@ members = [
     "crates/hive/core",
     # Hive plugins
     "crates/hive/plugins/proxy-ssl",
+    "crates/hive/plugins/runner-cocoon-spawner",
     "crates/hive/plugins/runner-docker",
     "crates/hive/plugins/runner-script",
     "crates/hive/plugins/obs-stdout",
@@ -215,10 +216,6 @@ members = [
     "crates/cli/plugins/ko-KR",
     "crates/cli/plugins/ru-RU",
 
-    # Cocoon Spawner
-    "crates/cocoon-spawner/core",
-    "crates/cocoon-spawner/plugin",
-
     # Signaling server
     "plugins/adi/signaling/core",
     "plugins/adi/signaling/plugin",
@@ -289,11 +286,11 @@ video-core = { path = "crates/video/core" }
 adi-registry-core-shared = { path = "plugins/adi/registry/core/shared" }
 adi-registry-core-cli = { path = "plugins/adi/registry/core/cli" }
 adi-registry-core-web = { path = "plugins/adi/registry/core/web" }
-cocoon-spawner-core = { path = "crates/cocoon-spawner/core" }
 signaling-core = { path = "plugins/adi/signaling/core" }
 
 # Hive plugin system
 hive-plugin-abi = { path = "crates/hive/plugins/abi" }
+hive-runner-cocoon-spawner = { path = "crates/hive/plugins/runner-cocoon-spawner" }
 hive-runner-docker = { path = "crates/hive/plugins/runner-docker" }
 hive-runner-script = { path = "crates/hive/plugins/runner-script" }
 hive-obs-stdout = { path = "crates/hive/plugins/obs-stdout" }

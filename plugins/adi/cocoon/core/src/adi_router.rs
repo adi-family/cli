@@ -7,9 +7,12 @@
 //! for routing, then passes raw bytes through to the target plugin untouched.
 //! Each plugin decides its own payload serialization format.
 
+#[cfg(test)]
 use async_trait::async_trait;
 use bytes::Bytes;
-use crate::adi_frame::{self, RequestHeader, ResponseStatus};
+use crate::adi_frame::{self, ResponseStatus};
+#[cfg(test)]
+use crate::adi_frame::RequestHeader;
 use serde::{Serialize, Deserialize};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;

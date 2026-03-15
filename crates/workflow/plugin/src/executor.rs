@@ -3,7 +3,7 @@
 use crate::parser::Step;
 use crate::prelude::get_prelude;
 use crate::template::{create_env, render, render_env_vars};
-use lib_console_output::{debug, info, warn};
+use lib_console_output::{info, warn};
 use lib_plugin_prelude::t;
 use minijinja::Environment;
 use std::collections::HashMap;

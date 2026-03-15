@@ -8,14 +8,28 @@ use axum::{
     response::{IntoResponse, Redirect},
     routing::{get, post},
 };
+use axum::http::StatusCode;
 use generated::models::*;
-use generated::server::ApiError;
 use lib_http_common::version_header_layer;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use uuid::Uuid;
+
+#[derive(Debug, serde::Serialize)]
+pub struct ApiError {
+    pub status: u16,
+    pub code: String,
+    pub message: String,
+}
+
+impl IntoResponse for ApiError {
+    fn into_response(self) -> axum::response::Response {
+        let status = StatusCode::from_u16(self.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        (status, Json(self)).into_response()
+    }
+}
 
 struct AppState {
     auth: AuthManager,

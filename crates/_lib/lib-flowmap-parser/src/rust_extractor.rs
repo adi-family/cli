@@ -28,12 +28,6 @@ impl Scope {
         self.defined.insert(name.to_string());
     }
 
-    fn use_var(&mut self, name: &str) {
-        if !self.defined.contains(name) {
-            self.used_external.insert(name.to_string());
-        }
-    }
-
     fn is_defined(&self, name: &str) -> bool {
         self.defined.contains(name)
     }
@@ -1949,15 +1943,13 @@ impl RustBlockExtractor {
         // Look for attribute_item siblings before this node
         if let Some(parent) = node.parent() {
             let mut cursor = parent.walk();
-            let mut found_self = false;
 
             for child in parent.children(&mut cursor) {
                 if child.id() == node.id() {
-                    found_self = true;
                     break;
                 }
 
-                if child.kind() == "attribute_item" && !found_self {
+                if child.kind() == "attribute_item" {
                     let name = self.extract_attribute_name(&child, source);
                     let block = Block::new(format!("#[{}]", name), BlockType::Decorator)
                         .with_code(self.node_text(&child, source));

@@ -8,7 +8,7 @@ use lib_plugin_abi_v3::{
     async_trait, Plugin, PluginContext, PluginMetadata, PluginType, Result as PluginResult,
 };
 use once_cell::sync::OnceCell;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::sync::Mutex;
 
 /// Global embedder instance
@@ -18,28 +18,12 @@ static EMBEDDER: OnceCell<Mutex<TextEmbedding>> = OnceCell::new();
 const MODEL_NAME: &str = "jinaai/jina-embeddings-v2-base-code";
 const DIMENSIONS: u32 = 768;
 
-// === Request/Response Types ===
-
-#[derive(Deserialize)]
-struct EmbedRequest {
-    texts: Vec<String>,
-}
-
+/// Model information returned by [`EmbedPlugin::model_info`].
 #[derive(Serialize)]
-struct EmbedResponse {
-    embeddings: Vec<Vec<f32>>,
-}
-
-#[derive(Serialize)]
-struct DimensionsResponse {
-    dimensions: u32,
-}
-
-#[derive(Serialize)]
-struct ModelInfoResponse {
-    model_name: String,
-    dimensions: u32,
-    provider: String,
+pub struct ModelInfoResponse {
+    pub model_name: String,
+    pub dimensions: u32,
+    pub provider: String,
 }
 
 /// Embed Plugin

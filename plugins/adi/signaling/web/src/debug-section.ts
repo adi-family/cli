@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import type { WsState, DeviceInfo } from './generated';
+import type { WsState, DeviceInfo, RoomInfo } from './generated';
 
 export interface SignalingServerDebugInfo {
   url: string;
@@ -10,6 +10,7 @@ export interface SignalingServerDebugInfo {
   deviceId: string | null;
   peers: string[];
   devices: DeviceInfo[];
+  rooms: RoomInfo[];
 }
 
 @customElement('adi-signaling-debug')
@@ -91,6 +92,23 @@ export class AdiSignalingDebugElement extends LitElement {
                           ${Object.keys(d.tags).length > 0
                             ? html`<span class="text-xs" style="color:var(--adi-text-muted);margin-left:0.25rem">${Object.entries(d.tags).map(([k, v]) => `${k}=${v}`).join(', ')}</span>`
                             : nothing}
+                        </div>`,
+                    )}
+              </td>
+            </tr>
+            <tr class="dr-row">
+              <td class="dr-td" style="color:var(--adi-text-muted)">Rooms</td>
+              <td class="dr-td">
+                ${s.rooms.length === 0
+                  ? html`<span style="color:var(--adi-text-muted)">none</span>`
+                  : s.rooms.map(
+                      (r) => html`
+                        <div style="margin-bottom:0.25rem">
+                          <code style="font-size:0.75rem">${r.room_id}</code>
+                          <span class="text-xs" style="color:var(--adi-text-muted);margin-left:0.25rem">
+                            ${r.actors.length} actor${r.actors.length !== 1 ? 's' : ''},
+                            ${r.granted_users.length + 1} user${r.granted_users.length !== 0 ? 's' : ''}
+                          </span>
                         </div>`,
                     )}
               </td>

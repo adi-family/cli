@@ -28,12 +28,6 @@ impl Scope {
         self.defined.insert(name.to_string());
     }
 
-    fn use_var(&mut self, name: &str) {
-        if !self.defined.contains(name) {
-            self.used_external.insert(name.to_string());
-        }
-    }
-
     fn is_defined(&self, name: &str) -> bool {
         self.defined.contains(name)
     }

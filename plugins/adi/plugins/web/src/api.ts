@@ -1,4 +1,4 @@
-import type { RegistryPlugin } from './types.js';
+import type { RegistryPlugin } from './models.js';
 
 interface WebPluginEntry {
   id: string;

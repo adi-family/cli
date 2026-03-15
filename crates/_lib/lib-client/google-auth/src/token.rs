@@ -89,34 +89,3 @@ pub trait TokenStore: Send + Sync {
     async fn delete(&self, key: &str) -> crate::Result<()>;
 }
 
-/// In-memory token store (tokens lost on restart).
-#[derive(Debug, Default)]
-pub struct MemoryTokenStore {
-    tokens: std::sync::RwLock<std::collections::HashMap<String, Token>>,
-}
-
-impl MemoryTokenStore {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
-#[async_trait]
-impl TokenStore for MemoryTokenStore {
-    async fn load(&self, key: &str) -> crate::Result<Option<Token>> {
-        Ok(self.tokens.read().unwrap().get(key).cloned())
-    }
-
-    async fn store(&self, key: &str, token: &Token) -> crate::Result<()> {
-        self.tokens
-            .write()
-            .unwrap()
-            .insert(key.to_string(), token.clone());
-        Ok(())
-    }
-
-    async fn delete(&self, key: &str) -> crate::Result<()> {
-        self.tokens.write().unwrap().remove(key);
-        Ok(())
-    }
-}

@@ -327,6 +327,16 @@ pub struct HiveRegistration {
 pub struct HiveDeviceType {
     pub name: String,
     pub sources: Vec<SourceInfo>,
+    /// Cocoon kinds this hive can spawn (empty if cocoon support is disabled).
+    #[serde(default)]
+    pub cocoon_kinds: Vec<CocoonKindInfo>,
+}
+
+/// Minimal cocoon kind info advertised by the hive.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CocoonKindInfo {
+    pub id: String,
+    pub image: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

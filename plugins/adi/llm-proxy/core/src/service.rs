@@ -1,9 +1,13 @@
 include!(concat!(env!("OUT_DIR"), "/llm_proxy_adi_service.rs"));
 
+use std::time::Instant;
+
 use crate::crypto::SecretManager;
 use crate::db;
 use crate::models::*;
 use crate::providers;
+use crate::transform::TransformEngine;
+use crate::types::ProxyRequest;
 use sqlx::PgPool;
 
 pub struct LlmProxyService {
@@ -481,5 +485,176 @@ impl LlmProxyServiceHandler for LlmProxyService {
                 .collect(),
             total: summary.total_requests,
         })
+    }
+
+    // -- LLM completion (proxied via AdiService) --
+
+    async fn complete(
+        &self,
+        _ctx: &AdiCallerContext,
+        proxy_token: String,
+        endpoint: String,
+        mut body: serde_json::Value,
+    ) -> Result<serde_json::Value, AdiServiceError> {
+        let start = Instant::now();
+
+        let token_hash = db::tokens::hash_token(&proxy_token);
+        let token = db::get_proxy_token_by_hash(&self.db, &token_hash)
+            .await
+            .map_err(Self::map_error)?;
+
+        if !token.is_active {
+            return Err(AdiServiceError::new("unauthorized", "Proxy token is inactive"));
+        }
+        if let Some(expires) = token.expires_at {
+            if expires < chrono::Utc::now() {
+                return Err(AdiServiceError::new("unauthorized", "Proxy token expired"));
+            }
+        }
+
+        let requested_model = body.get("model").and_then(|m| m.as_str()).map(String::from);
+        if let Some(ref model) = requested_model {
+            if let Some(ref allowed) = token.allowed_models {
+                if !allowed.iter().any(|m| m == model) {
+                    return Err(AdiServiceError::new(
+                        "forbidden",
+                        format!("Model '{model}' not allowed"),
+                    ));
+                }
+            }
+            if let Some(ref blocked) = token.blocked_models {
+                if blocked.iter().any(|m| m == model) {
+                    return Err(AdiServiceError::new(
+                        "forbidden",
+                        format!("Model '{model}' is blocked"),
+                    ));
+                }
+            }
+        }
+
+        let (api_key, provider_type, base_url) = match token.key_mode {
+            KeyMode::Byok => {
+                let key_id = token.upstream_key_id.ok_or_else(|| {
+                    AdiServiceError::invalid_params("BYOK token missing upstream_key_id")
+                })?;
+                let key = db::get_upstream_key(&self.db, key_id, token.user_id)
+                    .await
+                    .map_err(Self::map_error)?;
+                let decrypted = self
+                    .secrets
+                    .decrypt(&key.api_key_encrypted)
+                    .map_err(|e| AdiServiceError::internal(e.to_string()))?;
+                (decrypted, key.provider_type, key.base_url)
+            }
+            KeyMode::Platform => {
+                let provider = token.platform_provider.ok_or_else(|| {
+                    AdiServiceError::invalid_params("Platform token missing provider")
+                })?;
+                let keys = db::list_platform_keys(&self.db)
+                    .await
+                    .map_err(Self::map_error)?;
+                let key = keys
+                    .into_iter()
+                    .find(|k| k.provider_type == provider && k.is_active)
+                    .ok_or_else(|| {
+                        AdiServiceError::internal(format!(
+                            "No active platform key for {provider:?}"
+                        ))
+                    })?;
+                let decrypted = self
+                    .secrets
+                    .decrypt(&key.api_key_encrypted)
+                    .map_err(|e| AdiServiceError::internal(e.to_string()))?;
+                (decrypted, key.provider_type, key.base_url)
+            }
+        };
+
+        if let Some(ref script) = token.request_script {
+            let engine = TransformEngine::new();
+            body = engine
+                .transform_request_body(script, "POST", &endpoint, &http::HeaderMap::new(), body)
+                .map_err(|e| AdiServiceError::internal(e.to_string()))?;
+        }
+
+        let provider = providers::create_provider(provider_type, base_url);
+        let proxy_request = ProxyRequest {
+            method: http::Method::POST,
+            path: endpoint.clone(),
+            headers: http::HeaderMap::new(),
+            body: body.clone(),
+        };
+
+        let config = crate::Config::from_env()
+            .map_err(|e| AdiServiceError::internal(e.to_string()))?;
+        let response = provider
+            .forward(&api_key, &endpoint, proxy_request, config.upstream_timeout_secs)
+            .await
+            .map_err(|e| AdiServiceError::internal(e.to_string()))?;
+
+        let mut response_body = response.body.clone();
+        if let Some(ref script) = token.response_script {
+            let engine = TransformEngine::new();
+            let usage = provider.extract_usage(&response);
+            response_body = engine
+                .transform_response_body(
+                    script,
+                    response.status.as_u16(),
+                    &response.headers,
+                    response_body,
+                    usage.as_ref().and_then(|u| u.input_tokens),
+                    usage.as_ref().and_then(|u| u.output_tokens),
+                )
+                .map_err(|e| AdiServiceError::internal(e.to_string()))?;
+        }
+
+        let latency_ms = start.elapsed().as_millis() as i32;
+        let usage = provider.extract_usage(&response);
+        let cost = provider.extract_cost(&response);
+        let upstream_req_id = provider.extract_request_id(&response);
+        let actual_model = provider.extract_model(&response);
+
+        let pool = self.db.clone();
+        let req_id = Uuid::new_v4().to_string();
+        let req_model = requested_model.clone();
+        let log_req = if token.log_requests {
+            Some(body.clone())
+        } else {
+            None
+        };
+        let log_resp = if token.log_responses {
+            Some(response_body.clone())
+        } else {
+            None
+        };
+        tokio::spawn(async move {
+            let _ = db::log_usage(
+                &pool,
+                token.id,
+                token.user_id,
+                &req_id,
+                upstream_req_id.as_deref(),
+                req_model.as_deref(),
+                actual_model.as_deref(),
+                provider_type,
+                token.key_mode,
+                usage.as_ref().and_then(|u| u.input_tokens),
+                usage.as_ref().and_then(|u| u.output_tokens),
+                usage.as_ref().and_then(|u| u.total_tokens),
+                cost,
+                &endpoint,
+                false,
+                Some(latency_ms),
+                None,
+                RequestStatus::Success,
+                Some(response.status.as_u16() as i16),
+                None,
+                None,
+                log_req.as_ref(),
+                log_resp.as_ref(),
+            )
+            .await;
+        });
+
+        Ok(response_body)
     }
 }

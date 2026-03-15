@@ -23,7 +23,6 @@ pub struct Claims {
 #[derive(Debug, Clone)]
 pub struct AuthUser {
     pub id: Uuid,
-    pub email: String,
 }
 
 impl<S> FromRequestParts<S> for AuthUser
@@ -55,7 +54,6 @@ where
 
             Ok(AuthUser {
                 id: data.claims.sub,
-                email: data.claims.email,
             })
         })
     }

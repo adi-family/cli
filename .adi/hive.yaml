@@ -534,30 +534,6 @@ services:
       - postgres
     restart: on-failure
 
-  cocoon-spawner:
-    hooks:
-      pre-up:
-        - type: script
-          run: python3 .adi/workflows/_core/patch.py plugin adi.cocoon-spawner
-    runner:
-      type: script
-      script:
-        run: adi run adi.cocoon-spawner run
-    environment:
-      static:
-        SIGNALING_SERVER_URL: 'ws://adi.test/api/signaling/ws'
-        COCOON_SPAWNER_ID: ${env.COCOON_SPAWNER_ID:-local-spawner}
-        COCOON_SPAWNER_SECRET: ${env.COCOON_SPAWNER_SECRET:-}
-        COCOON_SPAWNER_KINDS: ${env.COCOON_SPAWNER_KINDS:-ubuntu}
-        COCOON_SPAWNER_MAX_CONCURRENT: ${env.COCOON_SPAWNER_MAX_CONCURRENT:-10}
-        WEBRTC_ICE_SERVERS: 'stun:stun.l.google.com:19302,turn:host.docker.internal:8039'
-        WEBRTC_TURN_USERNAME: 'adi'
-        WEBRTC_TURN_CREDENTIAL: 'adi'
-    depends_on:
-      - signaling
-      - coturn
-    restart: on-failure
-
   cli-registry:
     hooks:
       pre-up:

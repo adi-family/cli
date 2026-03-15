@@ -3,7 +3,7 @@
  * DO NOT EDIT.
  */
 
-import type { AdiAuthGetTokenEvent, AdiAuthSessionSaveEvent, AdiAuthStateChangedEvent, AdiAuthTokenResolvedEvent, AdiSignalingAuthAnonymousEvent, AdiSignalingAuthErrorEvent, AdiSignalingAuthOkEvent, AdiSignalingConnectionInfoEvent, AdiSignalingDeviceDeregisteredEvent, AdiSignalingDeviceRegisteredEvent, AdiSignalingDeviceUpdatedEvent, AdiSignalingDevicesEvent, AdiSignalingPairingCodeEvent, AdiSignalingPairingConnectedEvent, AdiSignalingPairingFailedEvent, AdiSignalingPeerConnectedEvent, AdiSignalingPeerDisconnectedEvent, AdiSignalingStateEvent, AdiSignalingSyncDataEvent, AdiSignalingTagsUpdatedEvent } from './bus-types';
+import type { AdiAuthGetTokenEvent, AdiAuthSessionSaveEvent, AdiAuthStateChangedEvent, AdiAuthTokenResolvedEvent, AdiSignalingAuthAnonymousEvent, AdiSignalingAuthErrorEvent, AdiSignalingAuthOkEvent, AdiSignalingConnectionInfoEvent, AdiSignalingDeviceDeregisteredEvent, AdiSignalingDeviceRegisteredEvent, AdiSignalingDeviceUpdatedEvent, AdiSignalingDevicesEvent, AdiSignalingPairingCodeEvent, AdiSignalingPairingConnectedEvent, AdiSignalingPairingFailedEvent, AdiSignalingPeerConnectedEvent, AdiSignalingPeerDisconnectedEvent, AdiSignalingRoomActorJoinedEvent, AdiSignalingRoomActorLeftEvent, AdiSignalingRoomMessageEvent, AdiSignalingRoomUpdatedEvent, AdiSignalingStateEvent, AdiSignalingSyncDataEvent, AdiSignalingTagsUpdatedEvent } from './bus-types';
 
 declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
@@ -24,6 +24,10 @@ declare module '@adi-family/sdk-plugin/types' {
     'adi.signaling:pairing-connected': AdiSignalingPairingConnectedEvent;
     'adi.signaling:pairing-failed': AdiSignalingPairingFailedEvent;
     'adi.signaling:sync-data': AdiSignalingSyncDataEvent;
+    'adi.signaling:room-updated': AdiSignalingRoomUpdatedEvent;
+    'adi.signaling:room-actor-joined': AdiSignalingRoomActorJoinedEvent;
+    'adi.signaling:room-actor-left': AdiSignalingRoomActorLeftEvent;
+    'adi.signaling:room-message': AdiSignalingRoomMessageEvent;
 
     // ── adi.auth ──
     'adi.auth:state-changed': AdiAuthStateChangedEvent;

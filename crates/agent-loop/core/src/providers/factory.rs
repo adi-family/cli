@@ -6,7 +6,9 @@ use crate::types::Message;
 use lib_env_parse::{env_vars, env_opt};
 use std::sync::Arc;
 
-use super::{AnthropicProvider, OllamaProvider, OpenAiProvider, OpenRouterProvider};
+use super::{
+    AnthropicProvider, OllamaProvider, OpenAiProvider, OpenRouterProvider, SignalingConfig,
+};
 
 env_vars! {
     AnthropicApiKey => "ANTHROPIC_API_KEY",
@@ -15,6 +17,11 @@ env_vars! {
     OpenrouterApiKey => "OPENROUTER_API_KEY",
     OpenrouterSiteName => "OPENROUTER_SITE_NAME",
     OllamaHost => "OLLAMA_HOST",
+    SignalingUrl => "SIGNALING_URL",
+    SignalingAccessToken => "SIGNALING_ACCESS_TOKEN",
+    SignalingProxyToken => "SIGNALING_PROXY_TOKEN",
+    SignalingDeviceId => "SIGNALING_DEVICE_ID",
+    SignalingPairingCode => "SIGNALING_PAIRING_CODE",
 }
 
 /// Provider configuration
@@ -39,6 +46,9 @@ pub enum ProviderConfig {
 
     /// Ollama local provider
     Ollama { host: Option<String>, model: String },
+
+    /// Signaling-based provider (routes through KAKUN signaling server to LLM proxy)
+    Signaling { config: SignalingConfig },
 
     /// Mock provider for testing
     Mock { responses: Vec<Message> },
@@ -66,6 +76,27 @@ impl ProviderConfig {
                 host: env_opt(EnvVar::OllamaHost.as_str()),
                 model: model.to_string(),
             }),
+            "signaling" => {
+                let signaling_url = env_opt(EnvVar::SignalingUrl.as_str())
+                    .ok_or_else(|| AgentError::ProviderConfig("SIGNALING_URL required".into()))?;
+                let access_token = env_opt(EnvVar::SignalingAccessToken.as_str())
+                    .ok_or_else(|| {
+                        AgentError::ProviderConfig("SIGNALING_ACCESS_TOKEN required".into())
+                    })?;
+                let proxy_token = env_opt(EnvVar::SignalingProxyToken.as_str())
+                    .ok_or_else(|| {
+                        AgentError::ProviderConfig("SIGNALING_PROXY_TOKEN required".into())
+                    })?;
+                Ok(Self::Signaling {
+                    config: SignalingConfig {
+                        signaling_url,
+                        access_token,
+                        proxy_token,
+                        device_id: env_opt(EnvVar::SignalingDeviceId.as_str()),
+                        pairing_code: env_opt(EnvVar::SignalingPairingCode.as_str()),
+                    },
+                })
+            }
             _ => Err(AgentError::ProviderConfig(format!(
                 "Unknown provider: {}",
                 provider
@@ -79,8 +110,10 @@ fn api_key_from_env(var_name: &str) -> Result<String> {
     env_opt(var_name).ok_or_else(|| AgentError::ApiKeyMissing(var_name.to_string()))
 }
 
-/// Create a provider from configuration
-pub fn create_provider(config: ProviderConfig) -> Result<Arc<dyn LlmProvider>> {
+/// Create a provider from configuration.
+///
+/// Async because the signaling provider needs to establish a WebSocket connection.
+pub async fn create_provider(config: ProviderConfig) -> Result<Arc<dyn LlmProvider>> {
     match config {
         ProviderConfig::Anthropic { api_key, model } => {
             Ok(Arc::new(AnthropicProvider::new(api_key, model)?))
@@ -98,6 +131,9 @@ pub fn create_provider(config: ProviderConfig) -> Result<Arc<dyn LlmProvider>> {
             api_key, model, site_name,
         )?)),
         ProviderConfig::Ollama { host, model } => Ok(Arc::new(OllamaProvider::new(host, model)?)),
+        ProviderConfig::Signaling { config } => {
+            Ok(Arc::new(super::SignalingLlmProvider::connect(config).await?))
+        }
         ProviderConfig::Mock { responses } => {
             Ok(Arc::new(MockLlmProvider::with_responses(responses)))
         }

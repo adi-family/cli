@@ -111,10 +111,8 @@ fn build_ice_servers() -> Vec<RTCIceServer> {
 }
 
 struct SilkPtySession {
-    id: Uuid,
     pair: portable_pty::PtyPair,
-    #[allow(dead_code)]
-    child: Box<dyn portable_pty::Child + Send>,
+    _child: Box<dyn portable_pty::Child + Send>,
     writer: Box<dyn std::io::Write + Send>,
 }
 
@@ -973,9 +971,8 @@ async fn handle_silk_dc_msg(
 
                                         let pty_writer = pair.master.take_writer().unwrap();
                                         let pty_session = SilkPtySession {
-                                            id: pty_id,
                                             pair,
-                                            child,
+                                            _child: child,
                                             writer: pty_writer,
                                         };
                                         state_for_pty.pty_sessions.lock().await.insert(command_id.clone(), pty_session);

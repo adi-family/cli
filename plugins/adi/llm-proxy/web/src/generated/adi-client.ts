@@ -61,3 +61,6 @@ export const listProviders = (c: Connection) =>
 
 export const queryUsage = (c: Connection, params?: { proxy_token_id?: string; from?: string; to?: string; limit?: number; offset?: number; }) =>
   c.request<UsageResponse>(SVC, 'query_usage', params ?? {});
+
+export const complete = (c: Connection, params: { proxy_token: string; endpoint: string; body: unknown; }) =>
+  c.request<unknown>(SVC, 'complete', params);

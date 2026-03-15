@@ -10,7 +10,6 @@ Components with plugin for `adi` CLI integration.
 | `agent-loop` | core,plugin | Core library for ADI Agent Loop - autonomous LLM agent with tool use |
 | `analytics` | core,plugin | Core analytics types, events, errors, and migrations for ADI platform |
 | `auth` | core,http,plugin | Core library for ADI Auth - email-based passwordless authentication |
-| `cocoon-spawner` | core,plugin | Core library for ADI Cocoon Spawner - Docker-based cocoon lifecycle management via signaling |
 | `credentials` | core,http,plugin | Core library for ADI Credentials API - secure credentials storage |
 | `flags` | core,plugin | Core library for ADI file flag tracking |
 | `hive` | core,plugin | Hive core library - local service orchestration business logic |

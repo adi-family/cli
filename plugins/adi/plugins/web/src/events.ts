@@ -1,4 +1,4 @@
-import type { PluginItem, RegistryPlugin } from './types.js';
+import type { PluginItem, RegistryPlugin } from './models.js';
 
 declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {

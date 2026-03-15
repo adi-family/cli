@@ -198,6 +198,13 @@ interface LlmProxyService {
     limit?: int64,
     offset?: int64,
   ): UsageResponse;
+
+  // LLM completion (proxied via AdiService protocol)
+  @request complete(
+    proxy_token: string,
+    endpoint: string,
+    body: unknown,
+  ): unknown;
 }
 
 // -- Bus: UI event bus --

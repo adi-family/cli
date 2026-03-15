@@ -3,7 +3,7 @@
 //!
 //! Implement the handler traits and use the generated router.
 
-#![allow(unused_imports)]
+#![allow(unused_imports, dead_code)]
 
 use super::models::*;
 use super::enums::*;
