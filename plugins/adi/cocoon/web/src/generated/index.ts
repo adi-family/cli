@@ -5,4 +5,4 @@
 
 export * from './models';
 export * from './enums';
-export * as adiClient from './adi-client';
+// export * as adiClient from './adi-client'; // regenerate via: cargo check -p cocoon-plugin

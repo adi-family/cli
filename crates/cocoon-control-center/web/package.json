@@ -10,9 +10,9 @@
     "./build": "./src/index.ts"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "bun build src/index.ts --outdir ../../../dist/adi.cocoon-control-center --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*'",
     "typecheck": "tsc --noEmit",
-    "dev": "vite build --watch"
+    "dev": "bun build src/index.ts --outdir ../../../dist/adi.cocoon-control-center --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --watch"
   },
   "dependencies": {
     "@adi-family/plugin-cocoon": "workspace:*",
@@ -20,12 +20,11 @@
     "@adi-family/plugin-router": "workspace:*",
     "@adi-family/plugin-debug-screen": "workspace:*",
     "@adi-family/sdk-plugin": "workspace:*",
-    "@xterm/xterm": "^5.5.0",
-    "@xterm/addon-fit": "^0.10.0",
-    "lit": "^3.3.2"
+    "@xterm/xterm": "catalog:",
+    "@xterm/addon-fit": "catalog:",
+    "lit": "catalog:"
   },
   "devDependencies": {
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1"
+    "typescript": "catalog:"
   }
 }

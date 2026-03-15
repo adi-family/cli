@@ -57,9 +57,26 @@ pub fn generate(
 
     fs::create_dir_all(output_dir)?;
 
-    let services = collect_channel_services(file, &models);
+    let mut services = collect_channel_services(file, &models);
     if services.is_empty() {
         return Ok(Vec::new());
+    }
+
+    // Prefix function names with channel name when multiple channels exist
+    if services.len() > 1 {
+        for service in &mut services {
+            let prefix = service.channel.to_case(Case::Camel);
+            for op in &mut service.operations {
+                let capitalized = {
+                    let mut chars = op.fn_name.chars();
+                    match chars.next() {
+                        Some(c) => c.to_uppercase().to_string() + chars.as_str(),
+                        None => String::new(),
+                    }
+                };
+                op.fn_name = format!("{}{}", prefix, capitalized);
+            }
+        }
     }
 
     let mut generated = Vec::new();
@@ -180,12 +197,13 @@ fn generate_adi_client(
     }
 
     for service in services {
+        let svc_const = format!("SVC_{}", service.channel.replace('.', "_").to_case(Case::ScreamingSnake));
         writeln!(out)?;
-        writeln!(out, "const SVC = '{}';", service.channel)?;
+        writeln!(out, "const {} = '{}';", svc_const, service.channel)?;
 
         for op in &service.operations {
             writeln!(out)?;
-            write_operation(&mut out, op)?;
+            write_operation(&mut out, op, &svc_const)?;
         }
     }
 
@@ -193,7 +211,7 @@ fn generate_adi_client(
 }
 
 /// Write a single operation as an exported function.
-fn write_operation(out: &mut String, op: &ServiceOperation) -> Result<(), CodegenError> {
+fn write_operation(out: &mut String, op: &ServiceOperation, svc_const: &str) -> Result<(), CodegenError> {
     let required: Vec<&OpParam> = op.params.iter().filter(|p| !p.optional).collect();
     let optional: Vec<&OpParam> = op.params.iter().filter(|p| p.optional).collect();
 
@@ -209,8 +227,8 @@ fn write_operation(out: &mut String, op: &ServiceOperation) -> Result<(), Codege
         )?;
         writeln!(
             out,
-            "  c.request<{}>(SVC, '{}', {{ {} }});",
-            op.return_type, op.wire_name, param.name
+            "  c.request<{}>({}, '{}', {{ {} }});",
+            op.return_type, svc_const, op.wire_name, param.name
         )?;
     } else if op.params.is_empty() {
         writeln!(
@@ -220,8 +238,8 @@ fn write_operation(out: &mut String, op: &ServiceOperation) -> Result<(), Codege
         )?;
         writeln!(
             out,
-            "  c.request<{}>(SVC, '{}', {{}});",
-            op.return_type, op.wire_name
+            "  c.request<{}>({}, '{}', {{}});",
+            op.return_type, svc_const, op.wire_name
         )?;
     } else {
         // Build params object type
@@ -264,8 +282,8 @@ fn write_operation(out: &mut String, op: &ServiceOperation) -> Result<(), Codege
         )?;
         writeln!(
             out,
-            "  c.request<{}>(SVC, '{}', params{});",
-            op.return_type, op.wire_name, fallback
+            "  c.request<{}>({}, '{}', params{});",
+            op.return_type, svc_const, op.wire_name, fallback
         )?;
     }
 
@@ -415,8 +433,8 @@ interface CredentialsService {
         assert!(content.contains("CredentialType"));
         assert!(content.contains("DeleteResult"));
 
-        // Check SVC constant
-        assert!(content.contains("const SVC = 'adi.credentials';"));
+        // Check SVC constant (uniquified per channel)
+        assert!(content.contains("const SVC_ADI_CREDENTIALS = 'adi.credentials';"));
 
         // Check function signatures
         // list: all optional → params object with ?
@@ -456,6 +474,37 @@ interface TestService {
         assert!(content.contains("export const getWithData ="));
         // Wire name is snake_case
         assert!(content.contains("'get_with_data'"));
+    }
+
+    #[test]
+    fn test_multi_channel_prefixed_names() {
+        let source = r#"
+@channel("auth")
+interface Auth {
+  @request authenticate(token: string): { user_id: string; };
+}
+
+@channel("device")
+interface Device {
+  @request register(secret: string): { device_id: string; };
+}
+"#;
+
+        let file = parse(source).expect("parse failed");
+        let dir = tempfile::tempdir().unwrap();
+        generate(&file, dir.path(), "test").unwrap();
+
+        let content = std::fs::read_to_string(dir.path().join("adi-client.ts")).unwrap();
+
+        // Unique SVC constants
+        assert!(content.contains("const SVC_AUTH = 'auth';"));
+        assert!(content.contains("const SVC_DEVICE = 'device';"));
+        // No duplicate `const SVC`
+        assert!(!content.contains("const SVC ="));
+
+        // Function names prefixed with channel
+        assert!(content.contains("export const authAuthenticate ="));
+        assert!(content.contains("export const deviceRegister ="));
     }
 
     #[test]

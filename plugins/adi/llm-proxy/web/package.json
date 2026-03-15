@@ -11,9 +11,9 @@
   },
   "scripts": {
     "generate": "cargo check -p llm-proxy-plugin",
-    "build": "bun run generate && vite build",
+    "build": "bun run generate && bun build src/index.ts --outdir ../../../../dist/adi.llm-proxy --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*'",
     "typecheck": "tsc --noEmit",
-    "dev": "vite build --watch"
+    "dev": "bun build src/index.ts --outdir ../../../../dist/adi.llm-proxy --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --watch"
   },
   "dependencies": {
     "@adi-family/cocoon-plugin-interface": "workspace:*",
@@ -22,12 +22,9 @@
     "@adi-family/plugin-router": "workspace:*",
     "@adi-family/plugin-actions-feed": "workspace:*",
     "@adi-family/sdk-plugin": "workspace:*",
-    "lit": "^3.3.2"
+    "lit": "catalog:"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.2.0",
-    "tailwindcss": "^4.2.0",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1"
+    "typescript": "catalog:"
   }
 }

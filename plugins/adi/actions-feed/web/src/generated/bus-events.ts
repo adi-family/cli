@@ -3,7 +3,7 @@
  * DO NOT EDIT.
  */
 
-import type { ActionsDismissEvent, ActionsDismissedEvent, ActionsPushEvent, ActionsRegisterKindEvent, ActionsRegisterRendererEvent, CommandExecuteEvent, CommandRegisterEvent, NavAddEvent } from './bus-types';
+import type { ActionsDismissEvent, ActionsDismissedEvent, ActionsPushEvent, ActionsRegisterKindEvent, ActionsRegisterRendererEvent } from './bus-types';
 
 declare module '@adi-family/sdk-plugin/types' {
   interface EventRegistry {
@@ -13,12 +13,5 @@ declare module '@adi-family/sdk-plugin/types' {
     'actions:push': ActionsPushEvent;
     'actions:dismiss': ActionsDismissEvent;
     'actions:dismissed': ActionsDismissedEvent;
-
-    // ── nav ──
-    'nav:add': NavAddEvent;
-
-    // ── command ──
-    'command:register': CommandRegisterEvent;
-    'command:execute': CommandExecuteEvent;
   }
 }

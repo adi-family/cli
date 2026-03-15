@@ -7,4 +7,4 @@ export * from './models';
 export * from './enums';
 export * from './bus-types';
 import './bus-events';
-export * as adiClient from './adi-client';
+// export * as adiClient from './adi-client'; // regenerate via: cargo check -p signaling-plugin

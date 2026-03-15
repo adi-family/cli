@@ -12,19 +12,18 @@
   "scripts": {
     "generate:protocol": "adi tsp-gen generate ../signaling.tsp -l typescript -s protocol --protocol-tag type --protocol-rename snake_case --protocol-enum-name SignalingMessage -o src/generated/channels",
     "generate": "bun run generate:protocol && cargo check -p signaling-plugin",
-    "build": "bun run generate && vite build",
+    "build": "bun run generate && bun build src/index.ts --outdir ../../../../dist/adi.signaling --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*'",
     "typecheck": "tsc --noEmit",
-    "dev": "vite build --watch"
+    "dev": "bun build src/index.ts --outdir ../../../../dist/adi.signaling --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --watch"
   },
   "dependencies": {
     "@adi-family/plugin-actions-feed": "workspace:*",
     "@adi-family/plugin-auth": "workspace:*",
     "@adi-family/plugin-debug-screen": "workspace:*",
     "@adi-family/sdk-plugin": "workspace:*",
-    "lit": "^3.3.2"
+    "lit": "catalog:"
   },
   "devDependencies": {
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1"
+    "typescript": "catalog:"
   }
 }

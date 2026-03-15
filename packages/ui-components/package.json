@@ -4,41 +4,22 @@
   "description": "ADI shared Lit web components — buttons, inputs, loading indicators with Tailwind styling",
   "license": "MIT",
   "type": "module",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./index.ts",
+  "types": "./index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./buttons": {
-      "types": "./dist/buttons/index.d.ts",
-      "import": "./dist/buttons/index.js"
-    },
-    "./inputs": {
-      "types": "./dist/inputs/index.d.ts",
-      "import": "./dist/inputs/index.js"
-    },
-    "./feedback": {
-      "types": "./dist/feedback/index.d.ts",
-      "import": "./dist/feedback/index.js"
-    }
+    ".": "./index.ts",
+    "./buttons": "./buttons/index.ts",
+    "./inputs": "./inputs/index.ts",
+    "./feedback": "./feedback/index.ts"
   },
-  "files": [
-    "dist/",
-    "CLAUDE.md"
-  ],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "clean": "rm -rf dist"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "lit": "^3.3.2"
+    "lit": "catalog:"
   },
   "devDependencies": {
-    "typescript": "~5.9.3"
+    "typescript": "catalog:"
   },
   "keywords": [
     "lit",

@@ -5,6 +5,10 @@ defaults:
   hive.runner.script:
     shell: zsh
 
+  # Cocoon spawner runner for containerized cocoon environments
+  hive.runner.cocoon-spawner:
+    signaling_url: ws://localhost:8080/ws
+
   # File-based logging with rotation (defaults to ~/.adi/hive/logs/)
   hive.obs.file:
     rotate: true
@@ -589,3 +593,11 @@ services:
         port: '{{runtime.port.http}}'
         path: /health
     restart: on-failure
+
+  cocoon-spawner:
+    runner:
+      type: cocoon-spawner
+      cocoon-spawner:
+        image: adi/cocoon-ubuntu:latest
+        signaling_url: ws://localhost:8080/ws
+    restart: never

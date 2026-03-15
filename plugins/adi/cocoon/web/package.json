@@ -12,9 +12,9 @@
   "scripts": {
     "generate": "cargo check -p cocoon-plugin",
     "generate:protocol": "adi tsp-gen generate ../cocoon.tsp -l typescript -s protocol --protocol-tag type --protocol-rename snake_case --protocol-enum-name CocoonMessage -o src/generated",
-    "build": "bun run generate && npm run generate:protocol && vite build",
+    "build": "bun run generate && npm run generate:protocol && bun build src/index.ts --outdir ../../../../dist/adi.cocoon --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*'",
     "typecheck": "tsc --noEmit",
-    "dev": "vite build --watch"
+    "dev": "bun build src/index.ts --outdir ../../../../dist/adi.cocoon --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --watch"
   },
   "dependencies": {
     "@adi-family/cocoon-plugin-interface": "workspace:*",
@@ -23,10 +23,9 @@
     "@adi-family/plugin-debug-screen": "workspace:*",
     "@adi-family/plugin-router": "workspace:*",
     "@adi-family/plugin-signaling": "workspace:*",
-    "lit": "^3.3.2"
+    "lit": "catalog:"
   },
   "devDependencies": {
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1"
+    "typescript": "catalog:"
   }
 }

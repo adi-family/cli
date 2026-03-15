@@ -2,15 +2,19 @@
   "name": "@adi-family/video-sdk",
   "version": "0.1.0",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "lit": "^3.3.2",
-    "html2canvas": "^1.4.1"
+    "lit": "catalog:",
+    "html2canvas": "catalog:"
   },
   "devDependencies": {
-    "typescript": "~5.9.3"
+    "typescript": "catalog:"
   }
 }

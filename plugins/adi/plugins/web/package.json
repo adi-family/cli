@@ -11,21 +11,18 @@
   },
   "scripts": {
     "generate": "cargo check -p plugins-plugin",
-    "build": "bun run generate && vite build",
-    "typecheck": "tsc --noEmit",
-    "dev": "vite build --watch"
+    "build": "bun run generate && bunx @tailwindcss/cli -i src/styles.css -o ../../../../dist/adi.plugins/style.css --minify && bun build src/index.ts --outdir ../../../../dist/adi.plugins --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --external '*.css'",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@adi-family/plugin-cocoon": "workspace:*",
     "@adi-family/plugin-signaling": "workspace:*",
     "@adi-family/plugin-router": "workspace:*",
     "@adi-family/sdk-plugin": "workspace:*",
-    "lit": "^3.3.2"
+    "lit": "catalog:"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.2.0",
-    "tailwindcss": "^4.2.0",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1"
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:"
   }
 }

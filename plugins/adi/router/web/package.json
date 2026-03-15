@@ -11,21 +11,18 @@
   },
   "scripts": {
     "generate": "cargo check -p router-plugin",
-    "build": "bun run generate && vite build",
+    "build": "bun run generate && bun build src/index.ts --outdir ../../../../dist/adi.router --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*'",
     "typecheck": "tsc --noEmit",
-    "dev": "vite build --watch"
+    "dev": "bun build src/index.ts --outdir ../../../../dist/adi.router --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/*' --watch"
   },
   "dependencies": {
     "@adi-family/plugin-command-palette": "workspace:*",
     "@adi-family/plugin-debug-screen": "workspace:*",
     "@adi-family/plugin-slots": "workspace:*",
     "@adi-family/sdk-plugin": "workspace:*",
-    "lit": "^3.3.2"
+    "lit": "catalog:"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.2.0",
-    "tailwindcss": "^4.2.0",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1"
+    "typescript": "catalog:"
   }
 }
