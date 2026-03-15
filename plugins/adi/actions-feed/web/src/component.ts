@@ -64,17 +64,17 @@ export class AdiActionsFeedElement extends LitElement {
     });
 
     return html`
-      <div class="h-full bg-bg p-4 space-y-3 overflow-y-auto border-l border-border w-72">
-        <div class="mb-1">
-          <h2 class="text-sm font-semibold text-text">Actions</h2>
-          <p class="text-xs text-text-muted">
+      <div class="h-full bg-bg p-6 space-y-4 overflow-y-auto">
+        <div class="mb-2">
+          <h2 class="text-lg font-semibold text-text">Actions</h2>
+          <p class="text-sm text-text-muted">
             ${this.actions.length} pending
           </p>
         </div>
 
         ${sorted.length > 0
-          ? html`<div class="flex flex-col gap-2">${sorted.map((card) => this.#renderCard(card))}</div>`
-          : html`<div class="flex items-center justify-center py-12 text-text-muted text-xs">No pending actions.</div>`}
+          ? html`<div class="grid gap-3 max-w-2xl">${sorted.map((card) => this.#renderCard(card))}</div>`
+          : html`<div class="flex items-center justify-center py-24 text-text-muted text-sm">No pending actions.</div>`}
       </div>
     `;
   }

@@ -16,7 +16,7 @@
     "dev": "bun build src/index.ts --outdir ../../../../dist/adi.actions-feed --entry-naming 'web.[ext]' --format esm --minify --external '@adi-family/sdk-plugin' --external 'lit' --external 'lit/*' --watch"
   },
   "dependencies": {
-    "@adi-family/plugin-slots": "workspace:*",
+    "@adi-family/plugin-router": "workspace:*",
     "@adi-family/sdk-plugin": "workspace:*",
     "lit": "catalog:"
   },

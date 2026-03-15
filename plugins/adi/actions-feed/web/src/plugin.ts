@@ -1,6 +1,6 @@
 import { AdiPlugin } from '@adi-family/sdk-plugin';
-import { SlotsBusKey } from '@adi-family/plugin-slots';
-import { ActionsBusKey } from './generated/bus-types';
+import { AdiRouterBusKey } from '@adi-family/plugin-router';
+import { ActionsBusKey, NavBusKey } from './generated/bus-types';
 import type { ActionCard, RenderFn, KindMode } from './types.js';
 import './generated/bus';
 
@@ -31,11 +31,17 @@ export class ActionsFeedPlugin extends AdiPlugin {
       customElements.define('adi-actions-feed', AdiActionsFeedElement);
     }
 
-    this.bus.emit(SlotsBusKey.Place, {
-      slot: 'right',
-      elementRef: document.createElement('adi-actions-feed'),
-      priority: 0,
+    this.bus.emit(AdiRouterBusKey.RegisterRoute, {
       pluginId: PLUGIN_ID,
+      path: '',
+      init: () => document.createElement('adi-actions-feed'),
+      label: 'Actions',
+    }, PLUGIN_ID);
+
+    this.bus.emit(NavBusKey.Add, {
+      id: PLUGIN_ID,
+      label: 'Actions',
+      path: `/${PLUGIN_ID}`,
     }, PLUGIN_ID);
 
     this.bus.on(ActionsBusKey.RegisterKind, ({ plugin, kind, mode }) => {
