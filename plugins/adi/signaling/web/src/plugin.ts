@@ -80,6 +80,15 @@ export class SignalingPlugin extends AdiPlugin implements SignalingApi {
     );
 
     this.debugUnsubs.push(
+      this.bus.on(
+        'adi.signaling:query-state' as never,
+        () => {
+          for (const [url, server] of this.hub.allServers()) {
+            this.bus.emit(AdiSignalingBusKey.State, { url, state: server.getState() }, PLUGIN_ID);
+          }
+        },
+        PLUGIN_ID,
+      ),
       this.bus.on(AdiSignalingBusKey.State, () => this.syncDebug(), PLUGIN_ID),
       this.bus.on(AdiSignalingBusKey.AuthOk, () => this.syncDebug(), PLUGIN_ID),
       this.bus.on(AdiSignalingBusKey.DeviceRegistered, () => this.syncDebug(), PLUGIN_ID),

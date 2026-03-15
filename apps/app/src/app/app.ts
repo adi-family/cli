@@ -157,17 +157,23 @@ export class App {
         reject(new Error('Signaling connection timed out after 10s'));
       }, SIGNALING_CONNECT_TIMEOUT_MS);
 
+      const done = () => {
+        clearTimeout(timer);
+        unsub();
+        resolve();
+      };
+
       const unsub = this.bus.on(
         'adi.signaling:state',
         ({ state }: { state: string }) => {
-          if (state === 'connected') {
-            clearTimeout(timer);
-            unsub();
-            resolve();
-          }
+          if (state === 'connected') done();
         },
         'app',
       );
+
+      // Request signaling plugin to re-emit current state (handles case where
+      // connection was established during init(), before this listener was set up)
+      this.bus.emit('adi.signaling:query-state' as never, {} as never, 'app');
     });
 
     const elapsed = Date.now() - this.loadingStart;
