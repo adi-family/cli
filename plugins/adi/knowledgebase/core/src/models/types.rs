@@ -135,6 +135,7 @@ pub struct Node {
     pub source: String,
     pub approval_status: ApprovalStatus,
     pub metadata: serde_json::Value,
+    pub tags: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -221,6 +222,12 @@ pub struct NodeStats {
     pub by_status: std::collections::HashMap<String, i32>,
     pub orphan_count: i32,
     pub conflict_count: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TagInfo {
+    pub tag: String,
+    pub count: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

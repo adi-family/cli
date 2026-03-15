@@ -46,6 +46,7 @@ model Node {
   source: string;
   approval_status: ApprovalStatus;
   metadata: Record<unknown>;
+  tags: string[];
   created_at: utcDateTime;
   updated_at: utcDateTime;
 }
@@ -95,6 +96,11 @@ model NodeStats {
   conflict_count: int32;
 }
 
+model TagInfo {
+  tag: string;
+  count: int32;
+}
+
 model DeleteResult {
   deleted: boolean;
 }
@@ -110,6 +116,7 @@ interface KnowledgebaseService {
     node_type: NodeType,
     source: string,
     metadata?: Record<unknown>,
+    tags?: string[],
   ): Node;
 
   @request getNode(id: uuid): Node;
@@ -120,6 +127,7 @@ interface KnowledgebaseService {
     content?: string,
     node_type?: NodeType,
     metadata?: Record<unknown>,
+    tags?: string[],
   ): Node;
 
   @request deleteNode(id: uuid): DeleteResult;
@@ -128,6 +136,7 @@ interface KnowledgebaseService {
     node_type?: NodeType,
     approval_status?: ApprovalStatus,
     source?: string,
+    tags?: string[],
     limit?: int32,
     offset?: int32,
   ): Node[];
@@ -163,6 +172,9 @@ interface KnowledgebaseService {
   // Audit + Stats
   @request getAuditLog(node_id: uuid, limit?: int32): AuditEntry[];
   @request getStats(): NodeStats;
+
+  // Tags
+  @request listTags(limit?: int32): TagInfo[];
 }
 
 // ── Event Bus ──

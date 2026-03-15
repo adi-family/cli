@@ -3,7 +3,7 @@ include!(concat!(env!("OUT_DIR"), "/knowledgebase_adi_service.rs"));
 use crate::embedder::Embedder;
 use crate::models::{
     ApprovalStatus, AuditAction, AuditEntry, ConflictPair, DeleteResult, Edge, EdgeType, Node,
-    NodeStats, NodeType, SearchResult, Subgraph,
+    NodeStats, NodeType, SearchResult, Subgraph, TagInfo,
 };
 use crate::search::{sanitize_weight, SearchConfig, SearchEngine};
 use crate::storage::Storage;
@@ -65,6 +65,7 @@ impl KnowledgebaseServiceHandler for KnowledgebaseService {
         node_type: NodeType,
         source: String,
         metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
+        tags: Option<Vec<String>>,
     ) -> Result<Node, AdiServiceError> {
         let now = Utc::now();
         let node = Node {
@@ -77,6 +78,7 @@ impl KnowledgebaseServiceHandler for KnowledgebaseService {
             metadata: metadata
                 .map(|m| serde_json::to_value(m).unwrap_or_default())
                 .unwrap_or_else(|| serde_json::json!({})),
+            tags: tags.unwrap_or_default(),
             created_at: now,
             updated_at: now,
         };
@@ -109,10 +111,11 @@ impl KnowledgebaseServiceHandler for KnowledgebaseService {
         content: Option<String>,
         node_type: Option<NodeType>,
         metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
+        tags: Option<Vec<String>>,
     ) -> Result<Node, AdiServiceError> {
         let metadata_value = metadata.map(|m| serde_json::to_value(m).unwrap_or_default());
 
-        let node = self
+        let mut node = self
             .storage
             .update_node(
                 id,
@@ -123,6 +126,13 @@ impl KnowledgebaseServiceHandler for KnowledgebaseService {
             )
             .map_err(|e| AdiServiceError::internal(e.to_string()))?
             .ok_or_else(|| AdiServiceError::not_found("Node not found"))?;
+
+        if let Some(new_tags) = tags {
+            self.storage
+                .set_tags(id, &new_tags)
+                .map_err(|e| AdiServiceError::internal(e.to_string()))?;
+            node.tags = new_tags;
+        }
 
         // Re-embed if content changed
         if content.is_some() || title.is_some() {
@@ -171,6 +181,7 @@ impl KnowledgebaseServiceHandler for KnowledgebaseService {
         node_type: Option<NodeType>,
         approval_status: Option<ApprovalStatus>,
         source: Option<String>,
+        tags: Option<Vec<String>>,
         limit: Option<i32>,
         offset: Option<i32>,
     ) -> Result<Vec<Node>, AdiServiceError> {
@@ -179,6 +190,7 @@ impl KnowledgebaseServiceHandler for KnowledgebaseService {
                 node_type,
                 approval_status,
                 source.as_deref(),
+                tags.as_deref(),
                 limit.unwrap_or(50),
                 offset.unwrap_or(0),
             )
@@ -227,7 +239,7 @@ impl KnowledgebaseServiceHandler for KnowledgebaseService {
         limit: Option<i32>,
     ) -> Result<Vec<Node>, AdiServiceError> {
         self.storage
-            .list_nodes(None, Some(ApprovalStatus::Pending), None, limit.unwrap_or(50), 0)
+            .list_nodes(None, Some(ApprovalStatus::Pending), None, None, limit.unwrap_or(50), 0)
             .map_err(|e| AdiServiceError::internal(e.to_string()))
     }
 
@@ -426,6 +438,16 @@ impl KnowledgebaseServiceHandler for KnowledgebaseService {
             .get_stats()
             .map_err(|e| AdiServiceError::internal(e.to_string()))
     }
+
+    async fn list_tags(
+        &self,
+        _ctx: &AdiCallerContext,
+        limit: Option<i32>,
+    ) -> Result<Vec<TagInfo>, AdiServiceError> {
+        self.storage
+            .list_tags(limit.unwrap_or(100))
+            .map_err(|e| AdiServiceError::internal(e.to_string()))
+    }
 }
 
 #[cfg(test)]
@@ -464,6 +486,7 @@ mod tests {
                 NodeType::Decision,
                 "human".into(),
                 None,
+                None,
             )
             .await
             .unwrap();
@@ -487,12 +510,12 @@ mod tests {
     async fn update_node() {
         let (svc, _dir) = test_service();
         let node = svc
-            .create_node(&ctx(), "Title".into(), "Content".into(), NodeType::Fact, "ai".into(), None)
+            .create_node(&ctx(), "Title".into(), "Content".into(), NodeType::Fact, "ai".into(), None, None)
             .await
             .unwrap();
 
         let updated = svc
-            .update_node(&ctx(), node.id, Some("New Title".into()), None, None, None)
+            .update_node(&ctx(), node.id, Some("New Title".into()), None, None, None, None)
             .await
             .unwrap();
         assert_eq!(updated.title, "New Title");
@@ -503,7 +526,7 @@ mod tests {
     async fn delete_node() {
         let (svc, _dir) = test_service();
         let node = svc
-            .create_node(&ctx(), "T".into(), "C".into(), NodeType::Fact, "human".into(), None)
+            .create_node(&ctx(), "T".into(), "C".into(), NodeType::Fact, "human".into(), None, None)
             .await
             .unwrap();
 
@@ -517,18 +540,18 @@ mod tests {
     #[tokio::test]
     async fn list_and_filter_nodes() {
         let (svc, _dir) = test_service();
-        svc.create_node(&ctx(), "A".into(), "C".into(), NodeType::Decision, "human".into(), None)
+        svc.create_node(&ctx(), "A".into(), "C".into(), NodeType::Decision, "human".into(), None, None)
             .await
             .unwrap();
-        svc.create_node(&ctx(), "B".into(), "C".into(), NodeType::Fact, "ai:gpt-4".into(), None)
+        svc.create_node(&ctx(), "B".into(), "C".into(), NodeType::Fact, "ai:gpt-4".into(), None, None)
             .await
             .unwrap();
 
-        let all = svc.list_nodes(&ctx(), None, None, None, None, None).await.unwrap();
+        let all = svc.list_nodes(&ctx(), None, None, None, None, None, None).await.unwrap();
         assert_eq!(all.len(), 2);
 
         let decisions = svc
-            .list_nodes(&ctx(), Some(NodeType::Decision), None, None, None, None)
+            .list_nodes(&ctx(), Some(NodeType::Decision), None, None, None, None, None)
             .await
             .unwrap();
         assert_eq!(decisions.len(), 1);
@@ -538,7 +561,7 @@ mod tests {
     async fn approval_workflow() {
         let (svc, _dir) = test_service();
         let node = svc
-            .create_node(&ctx(), "T".into(), "C".into(), NodeType::Assumption, "ai".into(), None)
+            .create_node(&ctx(), "T".into(), "C".into(), NodeType::Assumption, "ai".into(), None, None)
             .await
             .unwrap();
         assert_eq!(node.approval_status, ApprovalStatus::Pending);
@@ -557,7 +580,7 @@ mod tests {
     async fn reject_with_reason() {
         let (svc, _dir) = test_service();
         let node = svc
-            .create_node(&ctx(), "T".into(), "C".into(), NodeType::Fact, "ai".into(), None)
+            .create_node(&ctx(), "T".into(), "C".into(), NodeType::Fact, "ai".into(), None, None)
             .await
             .unwrap();
 
@@ -578,11 +601,11 @@ mod tests {
     async fn edge_crud() {
         let (svc, _dir) = test_service();
         let n1 = svc
-            .create_node(&ctx(), "A".into(), "C".into(), NodeType::Decision, "human".into(), None)
+            .create_node(&ctx(), "A".into(), "C".into(), NodeType::Decision, "human".into(), None, None)
             .await
             .unwrap();
         let n2 = svc
-            .create_node(&ctx(), "B".into(), "C".into(), NodeType::Decision, "human".into(), None)
+            .create_node(&ctx(), "B".into(), "C".into(), NodeType::Decision, "human".into(), None, None)
             .await
             .unwrap();
 
@@ -610,6 +633,7 @@ mod tests {
             NodeType::Decision,
             "human".into(),
             None,
+            None,
         )
         .await
         .unwrap();
@@ -624,7 +648,7 @@ mod tests {
     #[tokio::test]
     async fn find_duplicates() {
         let (svc, _dir) = test_service();
-        svc.create_node(&ctx(), "Exact text".into(), "Exact content".into(), NodeType::Fact, "human".into(), None)
+        svc.create_node(&ctx(), "Exact text".into(), "Exact content".into(), NodeType::Fact, "human".into(), None, None)
             .await
             .unwrap();
 
@@ -638,10 +662,10 @@ mod tests {
     #[tokio::test]
     async fn get_stats() {
         let (svc, _dir) = test_service();
-        svc.create_node(&ctx(), "A".into(), "C".into(), NodeType::Decision, "human".into(), None)
+        svc.create_node(&ctx(), "A".into(), "C".into(), NodeType::Decision, "human".into(), None, None)
             .await
             .unwrap();
-        svc.create_node(&ctx(), "B".into(), "C".into(), NodeType::Fact, "ai".into(), None)
+        svc.create_node(&ctx(), "B".into(), "C".into(), NodeType::Fact, "ai".into(), None, None)
             .await
             .unwrap();
 
@@ -654,10 +678,10 @@ mod tests {
     async fn audit_trail_records_mutations() {
         let (svc, _dir) = test_service();
         let node = svc
-            .create_node(&ctx(), "T".into(), "C".into(), NodeType::Fact, "human".into(), None)
+            .create_node(&ctx(), "T".into(), "C".into(), NodeType::Fact, "human".into(), None, None)
             .await
             .unwrap();
-        svc.update_node(&ctx(), node.id, Some("T2".into()), None, None, None)
+        svc.update_node(&ctx(), node.id, Some("T2".into()), None, None, None, None)
             .await
             .unwrap();
         svc.approve_node(&ctx(), node.id).await.unwrap();
@@ -675,18 +699,18 @@ mod tests {
     async fn get_orphans() {
         let (svc, _dir) = test_service();
         let n1 = svc
-            .create_node(&ctx(), "A".into(), "C".into(), NodeType::Fact, "human".into(), None)
+            .create_node(&ctx(), "A".into(), "C".into(), NodeType::Fact, "human".into(), None, None)
             .await
             .unwrap();
         let n2 = svc
-            .create_node(&ctx(), "B".into(), "C".into(), NodeType::Fact, "human".into(), None)
+            .create_node(&ctx(), "B".into(), "C".into(), NodeType::Fact, "human".into(), None, None)
             .await
             .unwrap();
         svc.create_edge(&ctx(), n1.id, n2.id, EdgeType::RelatedTo, None, None)
             .await
             .unwrap();
         let orphan = svc
-            .create_node(&ctx(), "Orphan".into(), "C".into(), NodeType::Fact, "human".into(), None)
+            .create_node(&ctx(), "Orphan".into(), "C".into(), NodeType::Fact, "human".into(), None, None)
             .await
             .unwrap();
 
@@ -699,11 +723,11 @@ mod tests {
     async fn get_conflicts() {
         let (svc, _dir) = test_service();
         let n1 = svc
-            .create_node(&ctx(), "A".into(), "C".into(), NodeType::Fact, "human".into(), None)
+            .create_node(&ctx(), "A".into(), "C".into(), NodeType::Fact, "human".into(), None, None)
             .await
             .unwrap();
         let n2 = svc
-            .create_node(&ctx(), "B".into(), "C".into(), NodeType::Fact, "ai".into(), None)
+            .create_node(&ctx(), "B".into(), "C".into(), NodeType::Fact, "ai".into(), None, None)
             .await
             .unwrap();
         svc.create_edge(&ctx(), n1.id, n2.id, EdgeType::Contradicts, None, None)
@@ -715,14 +739,92 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_node_with_tags() {
+        let (svc, _dir) = test_service();
+        let node = svc
+            .create_node(
+                &ctx(),
+                "Tagged".into(),
+                "Content".into(),
+                NodeType::Fact,
+                "human".into(),
+                None,
+                Some(vec!["rust".into(), "backend".into()]),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(node.tags, vec!["rust", "backend"]);
+
+        let fetched = svc.get_node(&ctx(), node.id).await.unwrap();
+        assert_eq!(fetched.tags.len(), 2);
+        assert!(fetched.tags.contains(&"rust".to_string()));
+        assert!(fetched.tags.contains(&"backend".to_string()));
+    }
+
+    #[tokio::test]
+    async fn update_node_tags() {
+        let (svc, _dir) = test_service();
+        let node = svc
+            .create_node(&ctx(), "T".into(), "C".into(), NodeType::Fact, "human".into(), None, Some(vec!["old".into()]))
+            .await
+            .unwrap();
+        assert_eq!(node.tags, vec!["old"]);
+
+        let updated = svc
+            .update_node(&ctx(), node.id, None, None, None, None, Some(vec!["new1".into(), "new2".into()]))
+            .await
+            .unwrap();
+        assert_eq!(updated.tags.len(), 2);
+        assert!(updated.tags.contains(&"new1".to_string()));
+        assert!(updated.tags.contains(&"new2".to_string()));
+    }
+
+    #[tokio::test]
+    async fn list_nodes_filter_by_tags() {
+        let (svc, _dir) = test_service();
+        svc.create_node(&ctx(), "A".into(), "C".into(), NodeType::Fact, "human".into(), None, Some(vec!["rust".into()]))
+            .await
+            .unwrap();
+        svc.create_node(&ctx(), "B".into(), "C".into(), NodeType::Fact, "human".into(), None, Some(vec!["python".into()]))
+            .await
+            .unwrap();
+        svc.create_node(&ctx(), "C".into(), "C".into(), NodeType::Fact, "human".into(), None, Some(vec!["rust".into(), "wasm".into()]))
+            .await
+            .unwrap();
+
+        let rust_nodes = svc
+            .list_nodes(&ctx(), None, None, None, Some(vec!["rust".into()]), None, None)
+            .await
+            .unwrap();
+        assert_eq!(rust_nodes.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn list_tags() {
+        let (svc, _dir) = test_service();
+        svc.create_node(&ctx(), "A".into(), "C".into(), NodeType::Fact, "human".into(), None, Some(vec!["rust".into(), "backend".into()]))
+            .await
+            .unwrap();
+        svc.create_node(&ctx(), "B".into(), "C".into(), NodeType::Fact, "human".into(), None, Some(vec!["rust".into()]))
+            .await
+            .unwrap();
+
+        let tags = svc.list_tags(&ctx(), None).await.unwrap();
+        assert_eq!(tags.len(), 2);
+        assert_eq!(tags[0].tag, "rust");
+        assert_eq!(tags[0].count, 2);
+    }
+
+    #[tokio::test]
     async fn get_impact() {
         let (svc, _dir) = test_service();
         let root = svc
-            .create_node(&ctx(), "Root".into(), "C".into(), NodeType::Decision, "human".into(), None)
+            .create_node(&ctx(), "Root".into(), "C".into(), NodeType::Decision, "human".into(), None, None)
             .await
             .unwrap();
         let child = svc
-            .create_node(&ctx(), "Child".into(), "C".into(), NodeType::Decision, "human".into(), None)
+            .create_node(&ctx(), "Child".into(), "C".into(), NodeType::Decision, "human".into(), None, None)
             .await
             .unwrap();
         svc.create_edge(&ctx(), root.id, child.id, EdgeType::DerivedFrom, None, None)

@@ -3,24 +3,24 @@
  * DO NOT EDIT.
  */
 import type { Connection } from '@adi-family/cocoon-plugin-interface';
-import type { AuditEntry, ConflictPair, DeleteResult, Edge, Node, NodeStats, SearchResult, Subgraph } from './models.js';
+import type { AuditEntry, ConflictPair, DeleteResult, Edge, Node, NodeStats, SearchResult, Subgraph, TagInfo } from './models.js';
 import { ApprovalStatus, EdgeType, NodeType } from './enums.js';
 
 const SVC = 'adi.knowledgebase';
 
-export const createNode = (c: Connection, params: { title: string; content: string; node_type: NodeType; source: string; metadata?: Record<string, unknown>; }) =>
+export const createNode = (c: Connection, params: { title: string; content: string; node_type: NodeType; source: string; metadata?: Record<string, unknown>; tags?: string[]; }) =>
   c.request<Node>(SVC, 'create_node', params);
 
 export const getNode = (c: Connection, id: string) =>
   c.request<Node>(SVC, 'get_node', { id });
 
-export const updateNode = (c: Connection, params: { id: string; title?: string; content?: string; node_type?: NodeType; metadata?: Record<string, unknown>; }) =>
+export const updateNode = (c: Connection, params: { id: string; title?: string; content?: string; node_type?: NodeType; metadata?: Record<string, unknown>; tags?: string[]; }) =>
   c.request<Node>(SVC, 'update_node', params);
 
 export const deleteNode = (c: Connection, id: string) =>
   c.request<DeleteResult>(SVC, 'delete_node', { id });
 
-export const listNodes = (c: Connection, params?: { node_type?: NodeType; approval_status?: ApprovalStatus; source?: string; limit?: number; offset?: number; }) =>
+export const listNodes = (c: Connection, params?: { node_type?: NodeType; approval_status?: ApprovalStatus; source?: string; tags?: string[]; limit?: number; offset?: number; }) =>
   c.request<Node[]>(SVC, 'list_nodes', params ?? {});
 
 export const approveNode = (c: Connection, id: string) =>
@@ -67,3 +67,6 @@ export const getAuditLog = (c: Connection, params: { node_id: string; limit?: nu
 
 export const getStats = (c: Connection) =>
   c.request<NodeStats>(SVC, 'get_stats', {});
+
+export const listTags = (c: Connection, params?: { limit?: number; }) =>
+  c.request<TagInfo[]>(SVC, 'list_tags', params ?? {});

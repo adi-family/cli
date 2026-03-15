@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::models::{
     ApprovalStatus, AuditAction, AuditEntry, ConflictPair, Edge, EdgeType, Node, NodeStats,
-    NodeType, Subgraph,
+    NodeType, Subgraph, TagInfo,
 };
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
@@ -54,6 +54,13 @@ impl GraphStorage {
                 FOREIGN KEY (to_id) REFERENCES nodes(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS node_tags (
+                node_id TEXT NOT NULL,
+                tag TEXT NOT NULL,
+                PRIMARY KEY (node_id, tag),
+                FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
+            );
+
             CREATE TABLE IF NOT EXISTS audit_log (
                 id TEXT PRIMARY KEY,
                 node_id TEXT NOT NULL,
@@ -67,6 +74,7 @@ impl GraphStorage {
             CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(node_type);
             CREATE INDEX IF NOT EXISTS idx_nodes_status ON nodes(approval_status);
             CREATE INDEX IF NOT EXISTS idx_nodes_source ON nodes(source);
+            CREATE INDEX IF NOT EXISTS idx_node_tags_tag ON node_tags(tag);
             CREATE INDEX IF NOT EXISTS idx_edges_from ON edges(from_id);
             CREATE INDEX IF NOT EXISTS idx_edges_to ON edges(to_id);
             CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(edge_type);
@@ -187,28 +195,48 @@ impl GraphStorage {
         node_type: Option<NodeType>,
         approval_status: Option<ApprovalStatus>,
         source: Option<&str>,
+        tags: Option<&[String]>,
         limit: i32,
         offset: i32,
     ) -> Result<Vec<Node>> {
         let conn = self.conn.lock().unwrap();
 
-        let mut sql = "SELECT * FROM nodes WHERE 1=1".to_string();
+        let mut sql = "SELECT DISTINCT n.* FROM nodes n".to_string();
         let mut param_values: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+        let has_tags = tags.is_some_and(|t| !t.is_empty());
+        if has_tags {
+            let tag_list = tags.unwrap();
+            let placeholders: Vec<_> = tag_list
+                .iter()
+                .enumerate()
+                .map(|(i, _)| format!("?{}", param_values.len() + i + 1))
+                .collect();
+            sql.push_str(&format!(
+                " INNER JOIN node_tags nt ON nt.node_id = n.id AND nt.tag IN ({})",
+                placeholders.join(", ")
+            ));
+            for tag in tag_list {
+                param_values.push(Box::new(tag.clone()));
+            }
+        }
+
+        sql.push_str(" WHERE 1=1");
 
         if let Some(nt) = node_type {
             param_values.push(Box::new(nt.as_str().to_string()));
-            sql.push_str(&format!(" AND node_type = ?{}", param_values.len()));
+            sql.push_str(&format!(" AND n.node_type = ?{}", param_values.len()));
         }
         if let Some(status) = approval_status {
             param_values.push(Box::new(status.as_str().to_string()));
-            sql.push_str(&format!(" AND approval_status = ?{}", param_values.len()));
+            sql.push_str(&format!(" AND n.approval_status = ?{}", param_values.len()));
         }
         if let Some(src) = source {
             param_values.push(Box::new(src.to_string()));
-            sql.push_str(&format!(" AND source = ?{}", param_values.len()));
+            sql.push_str(&format!(" AND n.source = ?{}", param_values.len()));
         }
 
-        sql.push_str(" ORDER BY created_at DESC");
+        sql.push_str(" ORDER BY n.created_at DESC");
 
         param_values.push(Box::new(limit));
         sql.push_str(&format!(" LIMIT ?{}", param_values.len()));
@@ -439,6 +467,95 @@ impl GraphStorage {
         })
     }
 
+    // ── Tags ──
+
+    pub fn set_tags(&self, node_id: Uuid, tags: &[String]) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let id_str = node_id.to_string();
+        conn.execute("DELETE FROM node_tags WHERE node_id = ?1", params![id_str])?;
+        for tag in tags {
+            conn.execute(
+                "INSERT OR IGNORE INTO node_tags (node_id, tag) VALUES (?1, ?2)",
+                params![id_str, tag],
+            )?;
+        }
+        Ok(())
+    }
+
+    pub fn get_tags(&self, node_id: Uuid) -> Result<Vec<String>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT tag FROM node_tags WHERE node_id = ?1 ORDER BY tag")?;
+        let tags = stmt
+            .query_map(params![node_id.to_string()], |row| row.get(0))?
+            .collect::<std::result::Result<Vec<String>, _>>()?;
+        Ok(tags)
+    }
+
+    pub fn get_tags_for_nodes(&self, node_ids: &[Uuid]) -> Result<HashMap<Uuid, Vec<String>>> {
+        if node_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let conn = self.conn.lock().unwrap();
+        let placeholders: Vec<_> = node_ids.iter().map(|_| "?").collect();
+        let sql = format!(
+            "SELECT node_id, tag FROM node_tags WHERE node_id IN ({}) ORDER BY tag",
+            placeholders.join(", ")
+        );
+        let mut stmt = conn.prepare(&sql)?;
+        let id_strings: Vec<_> = node_ids.iter().map(|id| id.to_string()).collect();
+        let params: Vec<&dyn rusqlite::ToSql> = id_strings
+            .iter()
+            .map(|s| s as &dyn rusqlite::ToSql)
+            .collect();
+
+        let mut result: HashMap<Uuid, Vec<String>> = HashMap::new();
+        let rows = stmt.query_map(params.as_slice(), |row| {
+            let node_id_str: String = row.get(0)?;
+            let tag: String = row.get(1)?;
+            Ok((node_id_str, tag))
+        })?;
+        for row in rows {
+            let (node_id_str, tag) = row?;
+            let node_id = Uuid::parse_str(&node_id_str).unwrap();
+            result.entry(node_id).or_default().push(tag);
+        }
+        Ok(result)
+    }
+
+    pub fn list_tags(&self, limit: i32) -> Result<Vec<TagInfo>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT tag, COUNT(*) as cnt FROM node_tags GROUP BY tag ORDER BY cnt DESC, tag ASC LIMIT ?1",
+        )?;
+        let tags = stmt
+            .query_map(params![limit], |row| {
+                Ok(TagInfo {
+                    tag: row.get(0)?,
+                    count: row.get(1)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(tags)
+    }
+
+    /// Populate tags on a single node from the node_tags table.
+    pub fn fill_tags(&self, node: &mut Node) -> Result<()> {
+        node.tags = self.get_tags(node.id)?;
+        Ok(())
+    }
+
+    /// Populate tags on a list of nodes in a single batch query.
+    pub fn fill_tags_batch(&self, nodes: &mut [Node]) -> Result<()> {
+        let ids: Vec<Uuid> = nodes.iter().map(|n| n.id).collect();
+        let mut tags_map = self.get_tags_for_nodes(&ids)?;
+        for node in nodes.iter_mut() {
+            if let Some(tags) = tags_map.remove(&node.id) {
+                node.tags = tags;
+            }
+        }
+        Ok(())
+    }
+
     // ── Audit ──
 
     pub fn insert_audit(&self, entry: &AuditEntry) -> Result<()> {
@@ -487,6 +604,7 @@ fn row_to_node(row: &rusqlite::Row) -> rusqlite::Result<Node> {
         source: row.get("source")?,
         approval_status: ApprovalStatus::from_str(&approval_str),
         metadata: serde_json::from_str(&metadata_str).unwrap_or_default(),
+        tags: Vec::new(),
         created_at: DateTime::parse_from_rfc3339(&created_at_str)
             .unwrap()
             .with_timezone(&Utc),
@@ -573,6 +691,7 @@ mod tests {
             source: source.into(),
             approval_status: ApprovalStatus::Pending,
             metadata: serde_json::json!({}),
+            tags: Vec::new(),
             created_at: now,
             updated_at: now,
         }
@@ -659,20 +778,20 @@ mod tests {
         storage.insert_node(&n2).unwrap();
         storage.insert_node(&n3).unwrap();
 
-        let all = storage.list_nodes(None, None, None, 50, 0).unwrap();
+        let all = storage.list_nodes(None, None, None, None, 50, 0).unwrap();
         assert_eq!(all.len(), 3);
 
         let decisions = storage
-            .list_nodes(Some(NodeType::Decision), None, None, 50, 0)
+            .list_nodes(Some(NodeType::Decision), None, None, None, 50, 0)
             .unwrap();
         assert_eq!(decisions.len(), 2);
 
         let ai_nodes = storage
-            .list_nodes(None, None, Some("ai:gpt-4"), 50, 0)
+            .list_nodes(None, None, Some("ai:gpt-4"), None, 50, 0)
             .unwrap();
         assert_eq!(ai_nodes.len(), 2);
 
-        let limited = storage.list_nodes(None, None, None, 1, 0).unwrap();
+        let limited = storage.list_nodes(None, None, None, None, 1, 0).unwrap();
         assert_eq!(limited.len(), 1);
     }
 
@@ -693,7 +812,7 @@ mod tests {
         assert_eq!(approved.approval_status, ApprovalStatus::Approved);
 
         let pending = storage
-            .list_nodes(None, Some(ApprovalStatus::Pending), None, 50, 0)
+            .list_nodes(None, Some(ApprovalStatus::Pending), None, None, 50, 0)
             .unwrap();
         assert!(pending.is_empty());
     }
@@ -993,6 +1112,113 @@ mod tests {
             log_after.len(), 2,
             "audit entries must be preserved after node deletion for compliance"
         );
+    }
+
+    #[test]
+    fn set_and_get_tags() {
+        let (storage, _dir) = test_storage();
+        let node = make_node(NodeType::Fact, "human");
+        storage.insert_node(&node).unwrap();
+
+        storage.set_tags(node.id, &["rust".into(), "database".into()]).unwrap();
+        let tags = storage.get_tags(node.id).unwrap();
+        assert_eq!(tags, vec!["database", "rust"]); // sorted
+    }
+
+    #[test]
+    fn set_tags_replaces_existing() {
+        let (storage, _dir) = test_storage();
+        let node = make_node(NodeType::Fact, "human");
+        storage.insert_node(&node).unwrap();
+
+        storage.set_tags(node.id, &["old_tag".into()]).unwrap();
+        storage.set_tags(node.id, &["new_tag".into()]).unwrap();
+        let tags = storage.get_tags(node.id).unwrap();
+        assert_eq!(tags, vec!["new_tag"]);
+    }
+
+    #[test]
+    fn tags_cascade_on_node_delete() {
+        let (storage, _dir) = test_storage();
+        let node = make_node(NodeType::Fact, "human");
+        storage.insert_node(&node).unwrap();
+        storage.set_tags(node.id, &["important".into()]).unwrap();
+
+        storage.delete_node(node.id).unwrap();
+        let tags = storage.get_tags(node.id).unwrap();
+        assert!(tags.is_empty());
+    }
+
+    #[test]
+    fn list_tags_with_counts() {
+        let (storage, _dir) = test_storage();
+        let n1 = make_node(NodeType::Fact, "human");
+        let n2 = make_node(NodeType::Decision, "human");
+        let n3 = make_node(NodeType::Fact, "human");
+        storage.insert_node(&n1).unwrap();
+        storage.insert_node(&n2).unwrap();
+        storage.insert_node(&n3).unwrap();
+
+        storage.set_tags(n1.id, &["rust".into(), "backend".into()]).unwrap();
+        storage.set_tags(n2.id, &["rust".into()]).unwrap();
+        storage.set_tags(n3.id, &["backend".into(), "database".into()]).unwrap();
+
+        let tags = storage.list_tags(10).unwrap();
+        assert_eq!(tags.len(), 3);
+        // sorted by count DESC
+        assert_eq!(tags[0].tag, "backend");
+        assert_eq!(tags[0].count, 2);
+        assert_eq!(tags[1].tag, "rust");
+        assert_eq!(tags[1].count, 2);
+        assert_eq!(tags[2].tag, "database");
+        assert_eq!(tags[2].count, 1);
+    }
+
+    #[test]
+    fn list_nodes_filter_by_tags() {
+        let (storage, _dir) = test_storage();
+        let n1 = make_node(NodeType::Fact, "human");
+        let n2 = make_node(NodeType::Fact, "human");
+        let n3 = make_node(NodeType::Fact, "human");
+        storage.insert_node(&n1).unwrap();
+        storage.insert_node(&n2).unwrap();
+        storage.insert_node(&n3).unwrap();
+
+        storage.set_tags(n1.id, &["rust".into(), "backend".into()]).unwrap();
+        storage.set_tags(n2.id, &["python".into()]).unwrap();
+        storage.set_tags(n3.id, &["rust".into()]).unwrap();
+
+        let rust_nodes = storage
+            .list_nodes(None, None, None, Some(&["rust".into()]), 50, 0)
+            .unwrap();
+        assert_eq!(rust_nodes.len(), 2);
+
+        let python_nodes = storage
+            .list_nodes(None, None, None, Some(&["python".into()]), 50, 0)
+            .unwrap();
+        assert_eq!(python_nodes.len(), 1);
+
+        let no_match = storage
+            .list_nodes(None, None, None, Some(&["nonexistent".into()]), 50, 0)
+            .unwrap();
+        assert!(no_match.is_empty());
+    }
+
+    #[test]
+    fn fill_tags_batch() {
+        let (storage, _dir) = test_storage();
+        let n1 = make_node(NodeType::Fact, "human");
+        let n2 = make_node(NodeType::Fact, "human");
+        storage.insert_node(&n1).unwrap();
+        storage.insert_node(&n2).unwrap();
+
+        storage.set_tags(n1.id, &["a".into(), "b".into()]).unwrap();
+        storage.set_tags(n2.id, &["c".into()]).unwrap();
+
+        let mut nodes = vec![n1.clone(), n2.clone()];
+        storage.fill_tags_batch(&mut nodes).unwrap();
+        assert_eq!(nodes[0].tags, vec!["a", "b"]);
+        assert_eq!(nodes[1].tags, vec!["c"]);
     }
 
     #[test]

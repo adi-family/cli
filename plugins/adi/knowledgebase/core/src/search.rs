@@ -152,6 +152,7 @@ mod tests {
             source: "human".into(),
             approval_status: ApprovalStatus::Approved,
             metadata: serde_json::json!({}),
+            tags: Vec::new(),
             created_at: now,
             updated_at: now,
         }
@@ -280,6 +281,7 @@ mod tests {
             source: "human".into(),
             approval_status: ApprovalStatus::Approved,
             metadata: serde_json::json!({}),
+            tags: Vec::new(),
             created_at: now,
             updated_at: now + chrono::Duration::days(7),
         };
@@ -321,6 +323,7 @@ mod tests {
             source: "human".into(),
             approval_status: ApprovalStatus::Approved,
             metadata: serde_json::json!({}),
+            tags: Vec::new(),
             created_at: now,
             updated_at: now,
         };
@@ -332,6 +335,7 @@ mod tests {
             source: "human".into(),
             approval_status: ApprovalStatus::Approved,
             metadata: serde_json::json!({}),
+            tags: Vec::new(),
             created_at: now - chrono::Duration::days(30),
             updated_at: now - chrono::Duration::days(30),
         };

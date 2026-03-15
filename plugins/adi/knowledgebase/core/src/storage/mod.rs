@@ -7,6 +7,7 @@ pub use graph::GraphStorage;
 use crate::error::Result;
 use crate::models::{
     ApprovalStatus, AuditEntry, ConflictPair, Edge, EdgeType, Node, NodeStats, NodeType, Subgraph,
+    TagInfo,
 };
 use uuid::Uuid;
 
@@ -24,6 +25,7 @@ impl Storage {
 
     pub fn store_node(&self, node: &Node, embedding: &[f32]) -> Result<()> {
         self.graph.insert_node(node)?;
+        self.graph.set_tags(node.id, &node.tags)?;
         self.embedding.insert(node.id, embedding)?;
         Ok(())
     }
@@ -38,7 +40,11 @@ impl Storage {
     }
 
     pub fn get_node(&self, id: Uuid) -> Result<Option<Node>> {
-        self.graph.get_node(id)
+        let mut node = self.graph.get_node(id)?;
+        if let Some(ref mut n) = node {
+            self.graph.fill_tags(n)?;
+        }
+        Ok(node)
     }
 
     pub fn update_node(
@@ -49,7 +55,15 @@ impl Storage {
         node_type: Option<NodeType>,
         metadata: Option<&serde_json::Value>,
     ) -> Result<Option<Node>> {
-        self.graph.update_node(id, title, content, node_type, metadata)
+        let mut node = self.graph.update_node(id, title, content, node_type, metadata)?;
+        if let Some(ref mut n) = node {
+            self.graph.fill_tags(n)?;
+        }
+        Ok(node)
+    }
+
+    pub fn set_tags(&self, node_id: Uuid, tags: &[String]) -> Result<()> {
+        self.graph.set_tags(node_id, tags)
     }
 
     pub fn list_nodes(
@@ -57,14 +71,25 @@ impl Storage {
         node_type: Option<NodeType>,
         approval_status: Option<ApprovalStatus>,
         source: Option<&str>,
+        tags: Option<&[String]>,
         limit: i32,
         offset: i32,
     ) -> Result<Vec<Node>> {
-        self.graph.list_nodes(node_type, approval_status, source, limit, offset)
+        let mut nodes = self.graph.list_nodes(node_type, approval_status, source, tags, limit, offset)?;
+        self.graph.fill_tags_batch(&mut nodes)?;
+        Ok(nodes)
     }
 
     pub fn update_approval_status(&self, id: Uuid, status: ApprovalStatus) -> Result<Option<Node>> {
-        self.graph.update_approval_status(id, status)
+        let mut node = self.graph.update_approval_status(id, status)?;
+        if let Some(ref mut n) = node {
+            self.graph.fill_tags(n)?;
+        }
+        Ok(node)
+    }
+
+    pub fn list_tags(&self, limit: i32) -> Result<Vec<TagInfo>> {
+        self.graph.list_tags(limit)
     }
 
     pub fn get_edges(&self, node_id: Uuid) -> Result<Vec<Edge>> {
@@ -128,6 +153,7 @@ mod tests {
             source: "human".into(),
             approval_status: ApprovalStatus::Approved,
             metadata: serde_json::json!({}),
+            tags: Vec::new(),
             created_at: now,
             updated_at: now,
         }
