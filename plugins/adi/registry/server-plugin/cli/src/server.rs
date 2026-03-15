@@ -172,6 +172,34 @@ async fn plugin_version(
     serde_json::to_value(&info).map(Json).map_err(internal_error)
 }
 
+async fn serve_plugin_asset(
+    storage: &CliRegistryStorage,
+    id: &str,
+    version: &str,
+    filename: &str,
+    content_type: &str,
+) -> Result<axum::response::Response, ApiError> {
+    let path = storage.inner().artifact_version_dir("plugins", id, version).join(filename);
+    if !path.exists() {
+        return Err(not_found("Asset not found"));
+    }
+    serve_file(path, content_type).await
+}
+
+async fn plugin_js(
+    State(st): State<Arc<AppState>>,
+    Path((id, version, name)): Path<(String, String, String)>,
+) -> Result<axum::response::Response, ApiError> {
+    serve_plugin_asset(&st.storage, &id, &version, &format!("{name}.js"), "application/javascript").await
+}
+
+async fn plugin_css(
+    State(st): State<Arc<AppState>>,
+    Path((id, version, name)): Path<(String, String, String)>,
+) -> Result<axum::response::Response, ApiError> {
+    serve_plugin_asset(&st.storage, &id, &version, &format!("{name}.css"), "text/css").await
+}
+
 async fn plugin_download(
     State(st): State<Arc<AppState>>,
     Path((id, version, platform)): Path<(String, String, String)>,
@@ -322,6 +350,8 @@ fn build_router(state: Arc<AppState>) -> Router {
         .route("/v1/search", get(search))
         .route("/v1/:id/latest", get(plugin_latest))
         .route("/v1/:id/:version", get(plugin_version))
+        .route("/v1/:id/:version/{name}.js", get(plugin_js))
+        .route("/v1/:id/:version/{name}.css", get(plugin_css))
         .route("/v1/:id/:version/{platform}.tar.gz", get(plugin_download))
         .route("/v1/:id/versions", get(plugin_versions))
         .route("/v1/registry/public-key", get(registry_public_key))

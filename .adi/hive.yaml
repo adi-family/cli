@@ -547,6 +547,9 @@ services:
       type: script
       script:
         run: adi run cli.adi.cli-registry-server start --port 8019
+    environment:
+      static:
+        REGISTRY_DATA_DIR: .dev/cli-registry-data
     rollout:
       type: recreate
       recreate:
@@ -575,6 +578,9 @@ services:
       type: script
       script:
         run: adi run cli.adi.web-registry-server start --port 8063
+    environment:
+      static:
+        REGISTRY_DATA_DIR: .dev/web-registry-data
     rollout:
       type: recreate
       recreate:

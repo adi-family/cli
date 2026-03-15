@@ -15,5 +15,7 @@ dist/
 docs/plans/
 apps/public/.next/
 .dev/registry-data/
+.dev/cli-registry-data/
+.dev/web-registry-data/
 release/
 apps/public.old/
