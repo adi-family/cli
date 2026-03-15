@@ -1,0 +1,7 @@
+- **Theme respect**: Never hardcode colors. CLI uses `theme::*` functions, GUI uses `UiColors::from_theme()`, web uses `var(--adi-*)` CSS properties. Source of truth: `packages/theme/themes.json`.
+- **Console output**: Never use raw `println!`/`eprintln!`. Use `out_info!`, `out_success!`, `out_warn!`, `out_error!`, `fg_println!`. Use block components (`Section`, `KeyValue`, `Table`, `Columns`, `List`, `Card`) for structured data.
+- **Layouts**: Never use magic numbers for spacing/sizing. Use layout tokens from `lib-terminal-theme` (`content_padding`, `element_spacing`, `border_radius`, etc.) and typography tokens (`command_size`, `output_size`, `hint_size`, `header_size`).
+- **GUI components**: Use `lib-iced-ui` components (`primary_button`, `card`, `status_pill`, `command_input`, etc.) instead of hand-styling. All accept `UiColors`.
+- **Internationalization**: All user-facing strings use `t!("domain-action-detail")`. English first (`en-US`), 9 locales supported. Log messages exempt.
+- **Plugin structure**: `core/` (logic) + `http/` (axum) + `plugin/` (cdylib). Dependencies flow inward to `core/`. Use `lib-plugin-prelude`.
+- **Dual mode**: All output must work in both text mode (terminal) and JSON stream mode (`SILK_MODE=true`). Only `lib-console-output` guarantees this. Never branch on mode manually.

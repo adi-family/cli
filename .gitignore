@@ -12,7 +12,7 @@ dist/
 .adi/hive/*.db-wal
 .DS_Store
 *.bak
-docs/
+docs/plans/
 apps/public/.next/
 .dev/registry-data/
 release/
