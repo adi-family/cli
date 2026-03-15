@@ -78,7 +78,7 @@ services:
           - '8027:5432'
         volumes:
           - adi-postgres-data:/var/lib/postgresql/data
-          - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+          - ./.adi/hive/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
         environment:
           POSTGRES_USER: adi
           POSTGRES_PASSWORD: adi
@@ -114,7 +114,7 @@ services:
           - '8028:5432'
         volumes:
           - adi-timescaledb-data:/var/lib/postgresql/data
-          - ./scripts/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql:ro
+          - ./.adi/hive/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql:ro
         environment:
           POSTGRES_USER: adi
           POSTGRES_PASSWORD: adi
